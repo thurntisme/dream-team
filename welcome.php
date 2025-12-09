@@ -13,8 +13,9 @@ $result = $stmt->execute();
 $user_club = $result->fetchArray(SQLITE3_ASSOC);
 $has_club = !empty($user_club['club_name']);
 
-// Get other clubs
-$stmt = $db->prepare('SELECT club_name, name FROM users WHERE club_name IS NOT NULL AND club_name != "" ORDER BY id DESC LIMIT 10');
+// Get other clubs (exclude current user)
+$stmt = $db->prepare('SELECT club_name, name FROM users WHERE club_name IS NOT NULL AND club_name != "" AND id != :user_id ORDER BY id DESC LIMIT 10');
+$stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
 $result = $stmt->execute();
 $other_clubs = [];
 while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
@@ -56,14 +57,16 @@ while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
                         <div>
                             <div class="text-xl font-bold"><?php echo htmlspecialchars($user_club['club_name']); ?></div>
                             <div class="text-sm text-gray-600">Formation:
-                                <?php echo htmlspecialchars($user_club['formation'] ?? 'Not set'); ?></div>
+                                <?php echo htmlspecialchars($user_club['formation'] ?? 'Not set'); ?>
+                            </div>
                         </div>
                     </div>
 
                     <?php
                     $team = json_decode($user_club['team'] ?? '[]', true);
                     $player_count = is_array($team) ? count(array_filter($team, function ($p) {
-                        return $p !== null; })) : 0;
+                        return $p !== null;
+                    })) : 0;
                     ?>
                     <div class="text-sm text-gray-600 mb-4">
                         <i data-lucide="users" class="w-4 h-4 inline"></i>
