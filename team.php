@@ -76,7 +76,11 @@ try {
                     <?php endforeach; ?>
                 </select>
 
-                <h2 class="text-xl font-bold mt-6 mb-4">Your Players</h2>
+                <h2 class="text-xl font-bold mt-6 mb-2">Your Players</h2>
+                <p class="text-xs text-gray-500 mb-4">Click to select • <i data-lucide="user-plus"
+                        class="w-3 h-3 inline"></i> Choose • <i data-lucide="arrow-left-right"
+                        class="w-3 h-3 inline"></i> Switch • <i data-lucide="trash-2" class="w-3 h-3 inline"></i> Remove
+                </p>
                 <div id="teamValueSummary" class="mb-4 p-3 bg-gray-50 rounded-lg border">
                     <div class="flex justify-between items-center mb-2">
                         <div class="text-sm text-gray-600">Budget</div>
@@ -196,6 +200,8 @@ try {
         const players = <?php echo json_encode(getDefaultPlayers()); ?>;
         const maxBudget = <?php echo $user_budget; ?>; // User's maximum budget
 
+        let selectedPlayerIdx = null; // Track which player is currently selected
+
         let savedTeam = <?php echo $saved_team; ?>;
         let selectedPlayers = Array.isArray(savedTeam) && savedTeam.length > 0 ? savedTeam : [];
         let currentSlotIdx = null;
@@ -239,23 +245,30 @@ try {
                     totalValue += player.value || 0;
 
                     const isCustom = player.isCustom || false;
-                    const bgClass = isCustom ? 'bg-purple-50 border-purple-200' : 'bg-blue-50';
+                    const isSelected = selectedPlayerIdx === idx;
+
+                    // Base styling
+                    let bgClass = isCustom ? 'bg-purple-50 border-purple-200' : 'bg-blue-50';
                     const nameClass = isCustom ? 'font-medium text-purple-700' : 'font-medium';
                     const valueClass = isCustom ? 'text-sm text-purple-600 font-semibold' : 'text-sm text-green-600 font-semibold';
                     const customBadge = isCustom ? '<span class="text-xs text-purple-600 bg-purple-100 px-1 py-0.5 rounded ml-1">CUSTOM</span>' : '';
 
+                    // Selected styling
+                    if (isSelected) {
+                        bgClass = isCustom ? 'bg-purple-100 border-purple-400' : 'bg-blue-100 border-blue-400';
+                    }
+
                     $list.append(`
-                        <div class="flex items-center justify-between p-2 border rounded ${bgClass}">
-                            <div class="flex-1">
+                        <div class="flex items-center justify-between p-2 border rounded ${bgClass} cursor-pointer transition-all duration-200 player-list-item" data-idx="${idx}">
+                            <div class="flex-1" onclick="selectPlayer(${idx})">
                                 <div class="${nameClass}">${player.name}${customBadge}</div>
                                 <div class="${valueClass}">${formatMarketValue(player.value || 0)}</div>
+                                <div class="text-xs text-gray-500 mt-1">${player.position} • ★${player.rating || 'N/A'}</div>
                             </div>
-                            <div class="flex flex-col items-end gap-1">
-                                <span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">${player.position}</span>
-                                <div class="flex items-center gap-1">
-                                    <span class="text-xs text-yellow-600">★</span>
-                                    <span class="text-xs text-gray-600">${player.rating || 'N/A'}</span>
-                                </div>
+                            <div class="flex items-center gap-1 ml-2">
+                                <button onclick="removePlayer(${idx})" class="p-1 text-red-600 hover:bg-red-100 rounded transition-colors" title="Remove Player">
+                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                </button>
                             </div>
                         </div>
                     `);
@@ -294,8 +307,97 @@ try {
             }
 
             if ($list.children().length === 0) {
-                $list.append('<div class="text-center text-gray-500 py-8">No players selected</div>');
+                $list.append('<div class="text-center text-gray-500 py-8">No players selected<br><small class="text-xs">Click on field positions to add players</small></div>');
+            } else if (selectedPlayerIdx === null && playerCount > 0) {
+                $list.append('<div class="text-center text-gray-400 py-2 text-xs border-t mt-2">💡 Click on a player to select and see options</div>');
             }
+
+            lucide.createIcons();
+        }
+
+        // Function to select a player (highlight only)
+        function selectPlayer(idx) {
+            selectedPlayerIdx = selectedPlayerIdx === idx ? null : idx; // Toggle selection
+            renderPlayers();
+            renderField(); // Update field to show selection
+        }
+
+        // Function to choose a player (open modal to select any player)
+        function choosePlayer(idx) {
+            currentSlotIdx = idx;
+            openPlayerModal();
+        }
+
+        // Function to switch player with currently selected player
+        function switchPlayer(idx) {
+            if (selectedPlayerIdx === null) {
+                // No player selected, just open modal to choose
+                choosePlayer(idx);
+                return;
+            }
+
+            if (selectedPlayerIdx === idx) {
+                // Clicking on the same selected player, open modal to change
+                choosePlayer(idx);
+                return;
+            }
+
+            // Switch positions between selected player and clicked player
+            const selectedPlayer = selectedPlayers[selectedPlayerIdx];
+            const clickedPlayer = selectedPlayers[idx];
+
+            // Swap the players
+            selectedPlayers[selectedPlayerIdx] = clickedPlayer;
+            selectedPlayers[idx] = selectedPlayer;
+
+            // Clear selection after switch
+            selectedPlayerIdx = null;
+
+            // Update display
+            renderPlayers();
+            renderField();
+
+            // Show confirmation
+            Swal.fire({
+                icon: 'success',
+                title: 'Players Switched!',
+                text: `${selectedPlayer ? selectedPlayer.name : 'Empty position'} and ${clickedPlayer ? clickedPlayer.name : 'Empty position'} have been switched`,
+                timer: 2000,
+                showConfirmButton: false
+            });
+        }
+
+        // Function to remove a player
+        function removePlayer(idx) {
+            const player = selectedPlayers[idx];
+
+            Swal.fire({
+                title: `Remove ${player.name}?`,
+                text: 'This will remove the player from your team',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: 'Remove Player',
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    selectedPlayers[idx] = null;
+                    if (selectedPlayerIdx === idx) {
+                        selectedPlayerIdx = null; // Clear selection if removed player was selected
+                    }
+                    renderPlayers();
+                    renderField();
+
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Player Removed',
+                        text: `${player.name} has been removed from your team`,
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                }
+            });
         }
 
         function getPositionForSlot(slotIdx) {
@@ -442,17 +544,40 @@ try {
                     const colors = getPositionColors(requiredPosition);
 
                     if (player) {
+                        const isSelected = selectedPlayerIdx === idx;
+
                         $field.append(`
-                            <div class="absolute cursor-pointer player-slot" 
+                            <div class="absolute cursor-pointer player-slot transition-all duration-200" 
                                  style="left: ${xPos}%; top: ${yPos}%; transform: translate(-50%, -50%);" data-idx="${idx}">
                                 <div class="relative">
-                                    <div class="w-16 h-16 bg-white rounded-full flex flex-col items-center justify-center shadow-lg border-2 ${colors.border}">
+                                    <div class="w-16 h-16 bg-white rounded-full flex flex-col items-center justify-center shadow-lg border-2 ${colors.border} transition-all duration-200 player-circle ${isSelected ? 'ring-4 ring-yellow-400 ring-opacity-80' : ''}">
                                         <i data-lucide="user" class="w-5 h-5 text-gray-600"></i>
                                         <span class="text-xs font-bold text-gray-700">${requiredPosition}</span>
                                     </div>
                                     <div class="absolute top-full left-1/2 transform -translate-x-1/2 mt-1 whitespace-nowrap">
                                         <div class="text-white text-xs font-bold bg-black bg-opacity-70 px-2 py-1 rounded">${player.name}</div>
                                     </div>
+                                    
+                                    <!-- Action buttons for selected player -->
+                                    ${isSelected ? `
+                                        <div class="absolute -bottom-2 left-1/2 transform -translate-x-1/2 flex gap-2 action-buttons">
+                                            <button onclick="removePlayer(${idx})" class="w-7 h-7 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-lg transition-all duration-200 hover:scale-110" title="Remove Player">
+                                                <i data-lucide="trash-2" class="w-3 h-3"></i>
+                                            </button>
+                                            <button onclick="choosePlayer(${idx})" class="w-7 h-7 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center shadow-lg transition-all duration-200 hover:scale-110" title="Choose Different Player">
+                                                <i data-lucide="user-plus" class="w-3 h-3"></i>
+                                            </button>
+                                        </div>
+                                    ` : ''}
+                                    
+                                    <!-- Hover switch button for non-selected players -->
+                                    ${!isSelected && selectedPlayerIdx !== null ? `
+                                        <div class="absolute -bottom-2 left-1/2 transform -translate-x-1/2 hover-switch-btn opacity-0 transition-all duration-200">
+                                            <button onclick="switchPlayer(${idx})" class="w-7 h-7 bg-blue-500 hover:bg-blue-600 text-white rounded-full flex items-center justify-center shadow-lg transition-all duration-200 hover:scale-110" title="Switch with Selected Player">
+                                                <i data-lucide="arrow-left-right" class="w-3 h-3"></i>
+                                            </button>
+                                        </div>
+                                    ` : ''}
                                 </div>
                             </div>
                         `);
@@ -460,7 +585,7 @@ try {
                         $field.append(`
                             <div class="absolute cursor-pointer empty-slot" 
                                  style="left: ${xPos}%; top: ${yPos}%; transform: translate(-50%, -50%);" data-idx="${idx}">
-                                <div class="w-16 h-16 bg-white bg-opacity-20 rounded-full flex flex-col items-center justify-center border-2 border-white border-dashed hover:bg-opacity-30 transition">
+                                <div class="w-16 h-16 bg-white bg-opacity-20 rounded-full flex flex-col items-center justify-center border-2 border-white border-dashed hover:border-blue-300 hover:bg-opacity-30 transition-all duration-200">
                                     <i data-lucide="plus" class="w-4 h-4 text-white"></i>
                                     <span class="text-xs font-bold text-white">${requiredPosition}</span>
                                 </div>
@@ -473,22 +598,52 @@ try {
 
             lucide.createIcons();
 
+            // Click handlers
             $('.player-slot').click(function () {
-                currentSlotIdx = $(this).data('idx');
-                openPlayerModal();
+                const idx = $(this).data('idx');
+                selectPlayer(idx);
             });
 
             $('.empty-slot').click(function () {
-                currentSlotIdx = $(this).data('idx');
-                openPlayerModal();
+                const idx = $(this).data('idx');
+                choosePlayer(idx);
             });
 
+            // Hover effects
+            $('.player-slot').hover(
+                function () {
+                    const idx = $(this).data('idx');
+                    const isSelected = selectedPlayerIdx === idx;
+
+                    if (!isSelected) {
+                        // Highlight border for non-selected players
+                        if (selectedPlayerIdx !== null) {
+                            // If there's a selected player, show switch-ready highlight
+                            $(this).find('.player-circle').addClass('ring-2 ring-blue-400 ring-opacity-70');
+                            $(this).find('.hover-switch-btn').removeClass('opacity-0').addClass('opacity-100');
+                        } else {
+                            // No selected player, just basic hover
+                            $(this).find('.player-circle').addClass('ring-2 ring-gray-300 ring-opacity-50');
+                        }
+                    }
+                },
+                function () {
+                    const idx = $(this).data('idx');
+                    const isSelected = selectedPlayerIdx === idx;
+
+                    if (!isSelected) {
+                        // Remove all hover effects
+                        $(this).find('.player-circle').removeClass('ring-2 ring-blue-400 ring-opacity-70 ring-gray-300 ring-opacity-50');
+                        $(this).find('.hover-switch-btn').removeClass('opacity-100').addClass('opacity-0');
+                    }
+                }
+            );
+
+            // Right-click context menu for quick removal
             $('.player-slot').on('contextmenu', function (e) {
                 e.preventDefault();
                 const idx = $(this).data('idx');
-                selectedPlayers[idx] = null;
-                renderPlayers();
-                renderField();
+                removePlayer(idx);
             });
         }
 
