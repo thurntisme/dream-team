@@ -2,6 +2,7 @@
 session_start();
 
 require_once 'config.php';
+require_once 'constants.php';
 
 // Check if database is available, redirect to install if not
 if (!isDatabaseAvailable()) {
@@ -65,10 +66,12 @@ try {
                 <h2 class="text-xl font-bold mb-4">Formation</h2>
                 <select id="formation"
                     class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <option value="4-4-2">4-4-2</option>
-                    <option value="4-3-3">4-3-3</option>
-                    <option value="3-5-2">3-5-2</option>
-                    <option value="4-2-3-1">4-2-3-1</option>
+                    <?php foreach (FORMATIONS as $key => $formation): ?>
+                        <option value="<?php echo htmlspecialchars($key); ?>"
+                            title="<?php echo htmlspecialchars($formation['description']); ?>">
+                            <?php echo htmlspecialchars($formation['name']); ?>
+                        </option>
+                    <?php endforeach; ?>
                 </select>
 
                 <h2 class="text-xl font-bold mt-6 mb-4">Your Players</h2>
@@ -127,11 +130,13 @@ try {
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <div class="lg:block"></div>
             <div class="lg:col-span-2 mt-4 flex justify-center gap-3">
-                <button id="resetTeam" class="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 flex items-center gap-2">
+                <button id="resetTeam"
+                    class="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 flex items-center gap-2">
                     <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
                     Reset Team
                 </button>
-                <button id="saveTeam" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2">
+                <button id="saveTeam"
+                    class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2">
                     <i data-lucide="save" class="w-4 h-4"></i>
                     Save Team
                 </button>
@@ -143,14 +148,14 @@ try {
     <div id="playerModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white rounded-lg p-6 w-full max-w-md">
             <div class="flex justify-between items-center mb-4">
-                <h3 class="text-xl font-bold">Select Player</h3>
+                <h3 id="modalTitle" class="text-xl font-bold">Select Player</h3>
                 <button id="closeModal" class="text-gray-500 hover:text-gray-700">
                     <i data-lucide="x" class="w-6 h-6"></i>
                 </button>
             </div>
 
             <div class="mb-4">
-                <label class="block text-sm font-medium mb-2">Custom Player Name</label>
+                <label id="customPlayerLabel" class="block text-sm font-medium mb-2">Custom Player Name</label>
                 <div class="flex gap-2">
                     <input type="text" id="customPlayerName" placeholder="Enter custom name..."
                         class="flex-1 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -171,24 +176,12 @@ try {
 
     <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
     <script>
-        const players = [
-            { name: 'Alisson', position: 'GK' }, { name: 'Ederson', position: 'GK' },
-            { name: 'Van Dijk', position: 'DEF' }, { name: 'Ramos', position: 'DEF' }, { name: 'Dias', position: 'DEF' }, { name: 'Marquinhos', position: 'DEF' }, { name: 'Koulibaly', position: 'DEF' },
-            {
-                name: 'De Bruyne', position: 'MID'
-            }, { name: 'Modric', position: 'MID' }, { name: 'Kante', position: 'MID' }, { name: 'Kroos', position: 'MID' }, { name: 'Casemiro', position: 'MID' },
-            { name: 'Mbappe', position: 'FWD' }, { name: 'Haaland', position: 'FWD' }, { name: 'Benzema', position: 'FWD' }, { name: 'Lewandowski', position: 'FWD' }, { name: 'Salah', position: 'FWD' }
-        ];
+        const players = <?php echo json_encode(getDefaultPlayers()); ?>;
 
         let savedTeam = <?php echo $saved_team; ?>;
         let selectedPlayers = Array.isArray(savedTeam) && savedTeam.length > 0 ? savedTeam : [];
         let currentSlotIdx = null;
-        const formations = {
-            '4-4-2': { positions: [[50], [20, 40, 60, 80], [20, 40, 60, 80], [35, 65]], roles: ['GK', 'DEF', 'MID', 'FWD'] },
-            '4-3-3': { positions: [[50], [20, 40, 60, 80], [30, 50, 70], [20, 50, 80]], roles: ['GK', 'DEF', 'MID', 'FWD'] },
-            '3-5-2': { positions: [[50], [25, 50, 75], [15, 35, 50, 65, 85], [35, 65]], roles: ['GK', 'DEF', 'MID', 'FWD'] },
-            '4-2-3-1': { positions: [[50], [20, 40, 60, 80], [35, 65], [20, 50, 80], [50]], roles: ['GK', 'DEF', 'MID', 'MID', 'FWD'] }
-        };
+        const formations = <?php echo json_encode(FORMATIONS); ?>;
 
         lucide.createIcons();
 
@@ -228,17 +221,11 @@ try {
         function getPositionForSlot(slotIdx) {
             const formation = $('#formation').val();
             const formationData = formations[formation];
-            const positions = formationData.positions;
             const roles = formationData.roles;
 
-            let playerIdx = 0;
-            for (let lineIdx = 0; lineIdx < positions.length; lineIdx++) {
-                for (let i = 0; i < positions[lineIdx].length; i++) {
-                    if (playerIdx === slotIdx) {
-                        return roles[lineIdx];
-                    }
-                    playerIdx++;
-                }
+            // Now roles array directly maps to slot indices
+            if (slotIdx >= 0 && slotIdx < roles.length) {
+                return roles[slotIdx];
             }
             return 'GK';
         }
@@ -255,13 +242,16 @@ try {
                     const yPos = 100 - ((lineIdx + 1) * (100 / (positions.length + 1)));
                     const idx = playerIdx;
 
+                    const requiredPosition = getPositionForSlot(idx);
+
                     if (player) {
                         $field.append(`
                             <div class="absolute cursor-pointer player-slot" 
                                  style="left: ${xPos}%; top: ${yPos}%; transform: translate(-50%, -50%);" data-idx="${idx}">
                                 <div class="relative">
-                                    <div class="w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-lg border-2 border-blue-500">
-                                        <i data-lucide="user" class="w-7 h-7 text-blue-600"></i>
+                                    <div class="w-16 h-16 bg-white rounded-full flex flex-col items-center justify-center shadow-lg border-2 border-blue-500">
+                                        <i data-lucide="user" class="w-5 h-5 text-blue-600"></i>
+                                        <span class="text-xs font-bold text-blue-600">${requiredPosition}</span>
                                     </div>
                                     <div class="absolute top-full left-1/2 transform -translate-x-1/2 mt-1 whitespace-nowrap">
                                         <div class="text-white text-xs font-bold bg-black bg-opacity-70 px-2 py-1 rounded">${player.name}</div>
@@ -273,8 +263,9 @@ try {
                         $field.append(`
                             <div class="absolute cursor-pointer empty-slot" 
                                  style="left: ${xPos}%; top: ${yPos}%; transform: translate(-50%, -50%);" data-idx="${idx}">
-                                <div class="w-14 h-14 bg-white bg-opacity-20 rounded-full flex items-center justify-center border-2 border-white border-dashed hover:bg-opacity-30 transition">
-                                    <i data-lucide="plus" class="w-7 h-7 text-white"></i>
+                                <div class="w-16 h-16 bg-white bg-opacity-20 rounded-full flex flex-col items-center justify-center border-2 border-white border-dashed hover:bg-opacity-30 transition">
+                                    <i data-lucide="plus" class="w-4 h-4 text-white"></i>
+                                    <span class="text-xs font-bold text-white">${requiredPosition}</span>
                                 </div>
                             </div>
                         `);
@@ -305,6 +296,10 @@ try {
         }
 
         function openPlayerModal() {
+            const requiredPosition = getPositionForSlot(currentSlotIdx);
+            $('#modalTitle').text(`Select ${requiredPosition} Player`);
+            $('#customPlayerLabel').text(`Custom ${requiredPosition} Player Name`);
+            $('#customPlayerName').attr('placeholder', `Enter custom ${requiredPosition} name...`);
             $('#playerModal').removeClass('hidden');
             $('#customPlayerName').val('');
             $('#playerSearch').val('');
@@ -378,44 +373,36 @@ try {
 
         $('#formation').change(function () {
             const formation = $('#formation').val();
-            const positions = formations[formation].positions;
-            let totalSlots = 0;
-            positions.forEach(line => totalSlots += line.length);
+            const newFormation = formations[formation];
+            const newRoles = newFormation.roles;
 
             // Keep ALL existing players
             const existingPlayers = selectedPlayers.filter(p => p !== null);
-            const newPlayers = new Array(totalSlots).fill(null);
+            const newPlayers = new Array(newRoles.length).fill(null);
 
-            // Group existing players by position
-            const playersByPosition = {
-                'GK': [...existingPlayers.filter(p => p.position === 'GK')],
-                'DEF': [...existingPlayers.filter(p => p.position === 'DEF')],
-                'MID': [...existingPlayers.filter(p => p.position === 'MID')],
-                'FWD': [...existingPlayers.filter(p => p.position === 'FWD')]
-            };
+            // Group existing players by their exact position
+            const playersByPosition = {};
+            existingPlayers.forEach(player => {
+                if (!playersByPosition[player.position]) {
+                    playersByPosition[player.position] = [];
+                }
+                playersByPosition[player.position].push(player);
+            });
 
-            // Assign players to new formation slots
-            let slotIdx = 0;
-            const newFormation = formations[formation];
-            newFormation.roles.forEach((role, lineIdx) => {
-                const slotsInLine = newFormation.positions[lineIdx].length;
-
-                for (let i = 0; i < slotsInLine; i++) {
-                    if (playersByPosition[role].length > 0) {
-                        newPlayers[slotIdx] = playersByPosition[role].shift();
-                    }
-                    slotIdx++;
+            // Assign players to new formation slots based on exact position match
+            newRoles.forEach((requiredRole, slotIdx) => {
+                if (playersByPosition[requiredRole] && playersByPosition[requiredRole].length > 0) {
+                    newPlayers[slotIdx] = playersByPosition[requiredRole].shift();
                 }
             });
 
-            // Add any remaining players that didn't fit in the formation to empty slots
-            const remainingPlayers = [
-                ...playersByPosition['GK'],
-                ...playersByPosition['DEF'],
-                ...playersByPosition['MID'],
-                ...playersByPosition['FWD']
-            ];
+            // Try to fit remaining players in compatible positions
+            const remainingPlayers = [];
+            Object.values(playersByPosition).forEach(positionPlayers => {
+                remainingPlayers.push(...positionPlayers);
+            });
 
+            // Fill empty slots with any remaining players (less strict matching)
             for (let i = 0; i < newPlayers.length && remainingPlayers.length > 0; i++) {
                 if (newPlayers[i] === null) {
                     newPlayers[i] = remainingPlayers.shift();
