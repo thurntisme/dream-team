@@ -236,6 +236,17 @@ startContent();
     </div>
 </div>
 
+<style>
+    .swal-wide {
+        width: 600px !important;
+    }
+
+    .swal-wide .swal2-html-container {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+</style>
+
 <script>
     lucide.createIcons();
 
@@ -371,6 +382,14 @@ startContent();
                             <span class="ml-2 text-gray-600">Loading field...</span>
                         </div>
                     </div>
+                </div>
+
+                <!-- Challenge Button -->
+                <div class="flex justify-center pt-4 border-t">
+                    <button onclick="challengeClub(${club.id})" class="inline-flex items-center gap-2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold px-6 py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105">
+                        <i data-lucide="sword" class="w-5 h-5"></i>
+                        Challenge ${club.club_name}
+                    </button>
                 </div>
             </div>
         `;
@@ -561,6 +580,80 @@ startContent();
             confirmButtonColor: '#3b82f6'
         });
     }
+
+    function challengeClub(clubId) {
+        const club = clubsData.find(c => c.id == clubId);
+        if (!club) return;
+
+        const team = JSON.parse(club.team || '[]');
+        const playerCount = team.filter(p => p !== null).length;
+        const teamValue = calculateTeamValue(team);
+
+        // Check if opponent has enough players
+        if (playerCount < 1) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Cannot Challenge',
+                text: `${club.club_name} doesn't have any players yet. They need at least 1 player to accept challenges.`,
+                confirmButtonColor: '#3b82f6'
+            });
+            return;
+        }
+
+        Swal.fire({
+            title: `Challenge ${club.club_name}?`,
+            html: `
+                <div class="text-left space-y-3">
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <h4 class="font-semibold text-gray-900 mb-2">Opponent Details:</h4>
+                        <div class="space-y-1 text-sm">
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Manager:</span>
+                                <span class="font-medium">${club.name}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Formation:</span>
+                                <span class="font-medium">${club.formation}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Players:</span>
+                                <span class="font-medium">${playerCount}/11</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Team Value:</span>
+                                <span class="font-medium text-green-600">${formatMarketValue(teamValue)}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-blue-50 p-4 rounded-lg">
+                        <p class="text-sm text-blue-800">
+                            <i data-lucide="info" class="w-4 h-4 inline mr-1"></i>
+                            Challenge this club to a friendly match! The match will be simulated based on team values and formations.
+                        </p>
+                    </div>
+                </div>
+            `,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: '<i data-lucide="sword" class="w-4 h-4 inline mr-1"></i> Send Challenge',
+            cancelButtonText: 'Cancel',
+            customClass: {
+                popup: 'swal-wide'
+            },
+            didOpen: () => {
+                lucide.createIcons();
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Redirect to match simulator
+                window.location.href = `match-simulator.php?opponent=${clubId}`;
+            }
+        });
+    }
+
+
 
     function calculateTeamValue(team) {
         if (!Array.isArray(team)) return 0;

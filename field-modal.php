@@ -1,84 +1,83 @@
 <?php
-// Field Modal Endpoint
-// Returns HTML for field display in modals
-
+// Field Modal API - Returns club data for modal display
 session_start();
+
 require_once 'config.php';
 require_once 'constants.php';
-require_once 'field-component.php';
 
-// Check if user is logged in
-if (!isset($_SESSION['user_id'])) {
-    http_response_code(403);
-    exit('Unauthorized');
+// Set JSON header
+header('Content-Type: application/json');
+
+// Check if database is available
+if (!isDatabaseAvailable()) {
+    http_response_code(500);
+    echo json_encode(['error' => 'Database not available']);
+    exit;
 }
 
 // Get parameters
 $club_id = $_GET['club_id'] ?? null;
 $formation = $_GET['formation'] ?? '4-4-2';
-$team_data = $_GET['team'] ?? '[]';
 
 if (!$club_id) {
     http_response_code(400);
-    exit('Missing club_id');
+    echo json_encode(['error' => 'Club ID required']);
+    exit;
 }
 
 try {
     $db = getDbConnection();
 
     // Get club data
-    $stmt = $db->prepare('SELECT name, formation, team FROM users WHERE id = :id AND id != :current_user_id');
-    $stmt->bindValue(':id', $club_id, SQLITE3_INTEGER);
-    $stmt->bindValue(':current_user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+    $stmt = $db->prepare('SELECT id, name, club_name, formation, team, budget FROM users WHERE id = :club_id');
+    $stmt->bindValue(':club_id', $club_id, SQLITE3_INTEGER);
     $result = $stmt->execute();
     $club = $result->fetchArray(SQLITE3_ASSOC);
 
     if (!$club) {
         http_response_code(404);
-        exit('Club not found');
+        echo json_encode(['error' => 'Club not found']);
+        exit;
     }
 
+    // Parse team data
     $team = json_decode($club['team'] ?? '[]', true);
     if (!is_array($team)) {
         $team = [];
     }
 
-    // Ensure team array has the correct length for the formation
-    $formationData = FORMATIONS[$formation] ?? FORMATIONS['4-4-2'];
-    $expectedLength = count($formationData['roles']);
-
-    // Pad or trim the team array to match the formation
-    if (count($team) < $expectedLength) {
-        $team = array_pad($team, $expectedLength, null);
-    } elseif (count($team) > $expectedLength) {
-        $team = array_slice($team, 0, $expectedLength);
+    // Ensure team array has correct length for formation
+    $formationData = getFormationData($formation);
+    $totalSlots = 0;
+    foreach ($formationData['positions'] as $line) {
+        $totalSlots += count($line);
     }
 
-    // Debug: Ensure we have the formation data
-    $formation = $club['formation'] ?? '4-4-2';
-    if (!isset(FORMATIONS[$formation])) {
-        $formation = '4-4-2'; // Fallback to default
+    // Pad or trim team array to match formation
+    while (count($team) < $totalSlots) {
+        $team[] = null;
     }
-
-    echo json_encode([
-        'club' => $club['name'],
-        'formation' => $formation,
-        'players' => $team,
-    ]);
-
-    // Render field component
-    // echo renderFootballField($team, $formation, [
-    //     'interactive' => false,
-    //     'size' => 'medium',
-    //     'show_names' => true,
-    //     'show_actions' => false,
-    //     'field_id' => 'modalField'
-    // ]);
+    if (count($team) > $totalSlots) {
+        $team = array_slice($team, 0, $totalSlots);
+    }
 
     $db->close();
 
+    // Return data
+    echo json_encode([
+        'club' => [
+            'id' => $club['id'],
+            'name' => $club['name'],
+            'club_name' => $club['club_name'],
+            'formation' => $formation,
+            'budget' => $club['budget']
+        ],
+        'formation' => $formationData,
+        'players' => $team
+    ]);
+
 } catch (Exception $e) {
     http_response_code(500);
-    exit('Server error');
+    echo json_encode(['error' => 'Server error: ' . $e->getMessage()]);
 }
 ?>
