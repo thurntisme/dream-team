@@ -323,12 +323,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reset'])) {
                             </p>
                         </div>
 
-                        <div class="flex justify-center gap-3">
+                        <div class="flex justify-center gap-3 flex-wrap">
                             <a href="index.php"
                                 class="inline-flex items-center gap-2 bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 font-semibold">
                                 <i data-lucide="play" class="w-5 h-5"></i>
                                 Go to <?php echo htmlspecialchars($app_name); ?>
                             </a>
+
+                            <button type="button" id="seedClubsBtn"
+                                class="inline-flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 font-semibold">
+                                <i data-lucide="users" class="w-5 h-5"></i>
+                                Seed Demo Clubs
+                            </button>
 
                             <form method="POST" class="inline">
                                 <button type="button" id="resetSystemBtn"
@@ -444,6 +450,63 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reset'])) {
                     form.innerHTML = '<input type="hidden" name="reset" value="1">';
                     document.body.appendChild(form);
                     form.submit();
+                }
+            });
+        });
+
+        // SweetAlert for seed clubs button
+        document.getElementById('seedClubsBtn')?.addEventListener('click', function () {
+            Swal.fire({
+                icon: 'question',
+                title: 'Seed Demo Clubs?',
+                html: `
+                    <p>This will create 4 demo clubs with realistic teams:</p>
+                    <ul class="text-left mt-3 space-y-1">
+                        <li>• Manchester Legends (4-4-2)</li>
+                        <li>• Barcelona Dreams (4-3-3)</li>
+                        <li>• Real Madrid Elite (4-2-3-1)</li>
+                        <li>• Liverpool Warriors (4-3-3)</li>
+                    </ul>
+                    <p class="mt-3 text-sm text-gray-600">Each club will have a complete team and login credentials.</p>
+                `,
+                showCancelButton: true,
+                confirmButtonColor: '#3b82f6',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: 'Create Demo Clubs',
+                cancelButtonText: 'Cancel',
+                showLoaderOnConfirm: true,
+                preConfirm: () => {
+                    return fetch('seed.php?seed=clubs')
+                        .then(response => response.text())
+                        .then(data => {
+                            return data;
+                        })
+                        .catch(error => {
+                            Swal.showValidationMessage(`Request failed: ${error}`);
+                        });
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Demo Clubs Created!',
+                        html: `
+                            <div class="text-left">
+                                <p class="mb-3">4 demo clubs have been created successfully!</p>
+                                <div class="bg-gray-50 p-3 rounded text-sm">
+                                    <strong>Login Credentials:</strong><br>
+                                    • alex@manchester-legends.com / legends123<br>
+                                    • pep@barca-dreams.com / dreams123<br>
+                                    • zidane@real-elite.com / elite123<br>
+                                    • jurgen@liverpool-warriors.com / warriors123
+                                </div>
+                            </div>
+                        `,
+                        confirmButtonColor: '#10b981',
+                        confirmButtonText: 'Go to Login'
+                    }).then(() => {
+                        window.location.href = 'index.php';
+                    });
                 }
             });
         });
