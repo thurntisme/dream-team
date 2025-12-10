@@ -33,9 +33,9 @@ if (isset($_SESSION['user_id'])) {
         </div>
         <h1 class="text-3xl font-bold text-center mb-8">Dream Team</h1>
 
-        <div class="mb-6">
-            <button id="loginTab" class="w-1/2 py-2 border-b-2 border-blue-600 font-semibold">Login</button>
-            <button id="registerTab" class="w-1/2 py-2 border-b-2 border-gray-200 text-gray-500">Register</button>
+        <div class="mb-6 grid grid-cols-2">
+            <button id="loginTab" class="py-2 border-b-2 border-blue-600 font-semibold">Login</button>
+            <button id="registerTab" class="py-2 border-b-2 border-gray-200 text-gray-500">Register</button>
         </div>
 
         <form id="loginForm" class="space-y-4">

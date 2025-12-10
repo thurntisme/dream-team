@@ -44,14 +44,18 @@ try {
 </head>
 
 <body class="bg-gray-50 min-h-screen">
-    <nav class="bg-white shadow px-4 py-3 flex justify-between items-center">
-        <div class="flex items-center gap-2">
-            <i data-lucide="shield" class="w-6 h-6 text-blue-600"></i>
-            <span class="font-bold text-lg"><?php echo htmlspecialchars($_SESSION['club_name']); ?></span>
+    <nav class="bg-white shadow">
+        <div class="container mx-auto p-4 max-w-6xl flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <a href="index.php" class="flex items-center">
+                    <i data-lucide="shield" class="w-6 h-6 text-blue-600"></i>
+                    <span class="font-bold text-lg ml-1"><?php echo htmlspecialchars($_SESSION['club_name']); ?></span>
+                </a>
+            </div>
+            <button id="logoutBtn" class="text-gray-600 hover:text-gray-900">
+                <i data-lucide="log-out" class="w-5 h-5"></i>
+            </button>
         </div>
-        <button id="logoutBtn" class="text-gray-600 hover:text-gray-900">
-            <i data-lucide="log-out" class="w-5 h-5"></i>
-        </button>
     </nav>
 
     <div class="container mx-auto p-4 max-w-6xl">
@@ -120,11 +124,18 @@ try {
             </div>
         </div>
 
-        <div class="mt-4 flex justify-end gap-3">
-            <button id="resetTeam" class="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700">Reset
-                Team</button>
-            <button id="saveTeam" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">Save
-                Team</button>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div class="lg:block"></div>
+            <div class="lg:col-span-2 mt-4 flex justify-center gap-3">
+                <button id="resetTeam" class="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 flex items-center gap-2">
+                    <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                    Reset Team
+                </button>
+                <button id="saveTeam" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2">
+                    <i data-lucide="save" class="w-4 h-4"></i>
+                    Save Team
+                </button>
+            </div>
         </div>
     </div>
 
