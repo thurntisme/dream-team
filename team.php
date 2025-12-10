@@ -231,6 +231,122 @@ try {
             return 'GK';
         }
 
+        function getPositionColors(position) {
+            const colorMap = {
+                // Goalkeeper - Yellow/Orange
+                'GK': {
+                    bg: 'bg-amber-400',
+                    border: 'border-amber-500',
+                    text: 'text-amber-800',
+                    emptyBg: 'bg-amber-400 bg-opacity-30',
+                    emptyBorder: 'border-amber-400'
+                },
+                // Defenders - Green
+                'CB': {
+                    bg: 'bg-emerald-400',
+                    border: 'border-emerald-500',
+                    text: 'text-emerald-800',
+                    emptyBg: 'bg-emerald-400 bg-opacity-30',
+                    emptyBorder: 'border-emerald-400'
+                },
+                'LB': {
+                    bg: 'bg-emerald-400',
+                    border: 'border-emerald-500',
+                    text: 'text-emerald-800',
+                    emptyBg: 'bg-emerald-400 bg-opacity-30',
+                    emptyBorder: 'border-emerald-400'
+                },
+                'RB': {
+                    bg: 'bg-emerald-400',
+                    border: 'border-emerald-500',
+                    text: 'text-emerald-800',
+                    emptyBg: 'bg-emerald-400 bg-opacity-30',
+                    emptyBorder: 'border-emerald-400'
+                },
+                'LWB': {
+                    bg: 'bg-emerald-400',
+                    border: 'border-emerald-500',
+                    text: 'text-emerald-800',
+                    emptyBg: 'bg-emerald-400 bg-opacity-30',
+                    emptyBorder: 'border-emerald-400'
+                },
+                'RWB': {
+                    bg: 'bg-emerald-400',
+                    border: 'border-emerald-500',
+                    text: 'text-emerald-800',
+                    emptyBg: 'bg-emerald-400 bg-opacity-30',
+                    emptyBorder: 'border-emerald-400'
+                },
+                // Midfielders - Blue
+                'CDM': {
+                    bg: 'bg-blue-400',
+                    border: 'border-blue-500',
+                    text: 'text-blue-800',
+                    emptyBg: 'bg-blue-400 bg-opacity-30',
+                    emptyBorder: 'border-blue-400'
+                },
+                'CM': {
+                    bg: 'bg-blue-400',
+                    border: 'border-blue-500',
+                    text: 'text-blue-800',
+                    emptyBg: 'bg-blue-400 bg-opacity-30',
+                    emptyBorder: 'border-blue-400'
+                },
+                'CAM': {
+                    bg: 'bg-blue-400',
+                    border: 'border-blue-500',
+                    text: 'text-blue-800',
+                    emptyBg: 'bg-blue-400 bg-opacity-30',
+                    emptyBorder: 'border-blue-400'
+                },
+                'LM': {
+                    bg: 'bg-blue-400',
+                    border: 'border-blue-500',
+                    text: 'text-blue-800',
+                    emptyBg: 'bg-blue-400 bg-opacity-30',
+                    emptyBorder: 'border-blue-400'
+                },
+                'RM': {
+                    bg: 'bg-blue-400',
+                    border: 'border-blue-500',
+                    text: 'text-blue-800',
+                    emptyBg: 'bg-blue-400 bg-opacity-30',
+                    emptyBorder: 'border-blue-400'
+                },
+                // Forwards/Strikers - Red
+                'LW': {
+                    bg: 'bg-red-400',
+                    border: 'border-red-500',
+                    text: 'text-red-800',
+                    emptyBg: 'bg-red-400 bg-opacity-30',
+                    emptyBorder: 'border-red-400'
+                },
+                'RW': {
+                    bg: 'bg-red-400',
+                    border: 'border-red-500',
+                    text: 'text-red-800',
+                    emptyBg: 'bg-red-400 bg-opacity-30',
+                    emptyBorder: 'border-red-400'
+                },
+                'ST': {
+                    bg: 'bg-red-400',
+                    border: 'border-red-500',
+                    text: 'text-red-800',
+                    emptyBg: 'bg-red-400 bg-opacity-30',
+                    emptyBorder: 'border-red-400'
+                },
+                'CF': {
+                    bg: 'bg-red-400',
+                    border: 'border-red-500',
+                    text: 'text-red-800',
+                    emptyBg: 'bg-red-400 bg-opacity-30',
+                    emptyBorder: 'border-red-400'
+                }
+            };
+
+            return colorMap[position] || colorMap['GK'];
+        }
+
         function renderField() {
             const formation = $('#formation').val();
             const positions = formations[formation].positions;
@@ -244,15 +360,16 @@ try {
                     const idx = playerIdx;
 
                     const requiredPosition = getPositionForSlot(idx);
+                    const colors = getPositionColors(requiredPosition);
 
                     if (player) {
                         $field.append(`
                             <div class="absolute cursor-pointer player-slot" 
                                  style="left: ${xPos}%; top: ${yPos}%; transform: translate(-50%, -50%);" data-idx="${idx}">
                                 <div class="relative">
-                                    <div class="w-16 h-16 bg-white rounded-full flex flex-col items-center justify-center shadow-lg border-2 border-blue-500">
-                                        <i data-lucide="user" class="w-5 h-5 text-blue-600"></i>
-                                        <span class="text-xs font-bold text-blue-600">${requiredPosition}</span>
+                                    <div class="w-16 h-16 bg-white rounded-full flex flex-col items-center justify-center shadow-lg border-2 ${colors.border}">
+                                        <i data-lucide="user" class="w-5 h-5 text-gray-600"></i>
+                                        <span class="text-xs font-bold text-gray-700">${requiredPosition}</span>
                                     </div>
                                     <div class="absolute top-full left-1/2 transform -translate-x-1/2 mt-1 whitespace-nowrap">
                                         <div class="text-white text-xs font-bold bg-black bg-opacity-70 px-2 py-1 rounded">${player.name}</div>
