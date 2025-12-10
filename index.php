@@ -2,6 +2,7 @@
 session_start();
 
 require_once 'config.php';
+require_once 'layout.php';
 
 // Check if database is available, redirect to install if not
 if (!isDatabaseAvailable()) {
@@ -13,20 +14,11 @@ if (isset($_SESSION['user_id'])) {
     header('Location: welcome.php');
     exit;
 }
+
+// Start content capture
+startContent();
 ?>
-<!DOCTYPE html>
-<html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dream Team - Login</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-</head>
-
-<body class="bg-gray-50 min-h-screen flex items-center justify-center">
+<div class="flex items-center justify-center min-h-[calc(100vh-200px)]">
     <div class="w-full max-w-md p-8 bg-white rounded-lg shadow">
         <div class="flex items-center justify-center mb-8">
             <i data-lucide="trophy" class="w-12 h-12 text-blue-600"></i>
@@ -118,6 +110,10 @@ if (isset($_SESSION['user_id'])) {
             }, 'json');
         });
     </script>
-</body>
+</div>
+</div>
 
-</html>
+<?php
+// End content capture and render layout
+endContent('Login', '', false);
+?>

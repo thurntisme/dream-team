@@ -161,20 +161,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reset'])) {
         }
     }
 }
+
+require_once 'layout.php';
+
+// Start content capture
+startContent();
 ?>
-<!DOCTYPE html>
-<html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo htmlspecialchars($app_name); ?> - Installation</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-</head>
-
-<body class="bg-gray-50 min-h-screen flex items-center justify-center p-4">
+<div class="flex items-center justify-center min-h-[calc(100vh-200px)] p-4">
     <div class="w-full max-w-2xl bg-white rounded-lg shadow p-8">
         <div class="flex items-center justify-center mb-8">
             <i data-lucide="trophy" class="w-16 h-16 text-blue-600"></i>
@@ -510,6 +503,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reset'])) {
             });
         });
     </script>
-</body>
+</div>
+</div>
 
-</html>
+<?php
+// End content capture and render layout
+endContent($app_name . ' - Installation', '', false);
+?>

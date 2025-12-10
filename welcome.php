@@ -2,6 +2,7 @@
 session_start();
 
 require_once 'config.php';
+require_once 'layout.php';
 
 // Check if database is available, redirect to install if not
 if (!isDatabaseAvailable()) {
@@ -89,20 +90,11 @@ function formatMarketValue($value)
         return '€' . number_format($value);
     }
 }
+
+// Start content capture
+startContent();
 ?>
-<!DOCTYPE html>
-<html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dream Team - Welcome</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-</head>
-
-<body class="bg-gray-50 min-h-screen flex items-center justify-center p-4">
+<div class="container mx-auto p-4 max-w-4xl flex items-center justify-center min-h-[calc(100vh-200px)]">
     <div class="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-6">
         <!-- Club Creation Form or User Club Info -->
         <div class="p-8 bg-white rounded-lg shadow">
@@ -124,25 +116,30 @@ function formatMarketValue($value)
                         </div>
                         <div class="flex-1">
                             <div class="flex items-center gap-2">
-                                <div class="text-xl font-bold"><?php echo htmlspecialchars($user_club['club_name']); ?></div>
+                                <div class="text-xl font-bold"><?php echo htmlspecialchars($user_club['club_name']); ?>
+                                </div>
                                 <?php if ($user_ranking && $user_team_value > 0): ?>
                                     <?php if ($user_ranking === 1): ?>
-                                        <span class="inline-flex items-center gap-1 bg-yellow-100 text-yellow-800 text-xs font-semibold px-2 py-1 rounded-full">
+                                        <span
+                                            class="inline-flex items-center gap-1 bg-yellow-100 text-yellow-800 text-xs font-semibold px-2 py-1 rounded-full">
                                             <i data-lucide="crown" class="w-3 h-3"></i>
                                             #1
                                         </span>
                                     <?php elseif ($user_ranking === 2): ?>
-                                        <span class="inline-flex items-center gap-1 bg-gray-100 text-gray-700 text-xs font-semibold px-2 py-1 rounded-full">
+                                        <span
+                                            class="inline-flex items-center gap-1 bg-gray-100 text-gray-700 text-xs font-semibold px-2 py-1 rounded-full">
                                             <i data-lucide="medal" class="w-3 h-3"></i>
                                             #2
                                         </span>
                                     <?php elseif ($user_ranking === 3): ?>
-                                        <span class="inline-flex items-center gap-1 bg-orange-100 text-orange-700 text-xs font-semibold px-2 py-1 rounded-full">
+                                        <span
+                                            class="inline-flex items-center gap-1 bg-orange-100 text-orange-700 text-xs font-semibold px-2 py-1 rounded-full">
                                             <i data-lucide="award" class="w-3 h-3"></i>
                                             #3
                                         </span>
                                     <?php elseif ($user_ranking <= 10): ?>
-                                        <span class="inline-flex items-center gap-1 bg-blue-100 text-blue-700 text-xs font-semibold px-2 py-1 rounded-full">
+                                        <span
+                                            class="inline-flex items-center gap-1 bg-blue-100 text-blue-700 text-xs font-semibold px-2 py-1 rounded-full">
                                             <i data-lucide="hash" class="w-3 h-3"></i>
                                             #<?php echo $user_ranking; ?>
                                         </span>
@@ -272,21 +269,22 @@ function formatMarketValue($value)
             <?php endif; ?>
         </div>
     </div>
+</div>
 
-    <script>
-        lucide.createIcons();
+<script>
+    $('#clubForm').submit(function (e) {
+        e.preventDefault();
+        $.post('save_club.php', $(this).serialize(), function (response) {
+            if (response.redirect) {
+                window.location.href = response.redirect;
+            } else if (response.success) {
+                window.location.href = 'team.php';
+            }
+        }, 'json');
+    });
+</script>
 
-        $('#clubForm').submit(function (e) {
-            e.preventDefault();
-            $.post('save_club.php', $(this).serialize(), function (response) {
-                if (response.redirect) {
-                    window.location.href = response.redirect;
-                } else if (response.success) {
-                    window.location.href = 'team.php';
-                }
-            }, 'json');
-        });
-    </script>
-</body>
-
-</html>
+<?php
+// End content capture and render layout
+endContent('Welcome', 'welcome');
+?>
