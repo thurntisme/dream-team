@@ -460,14 +460,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reset'])) {
                 icon: 'question',
                 title: 'Seed Demo Clubs?',
                 html: `
-                    <p>This will create 4 demo clubs with realistic teams:</p>
+                    <p>This will create <?php echo count(DEMO_CLUBS); ?> demo clubs with realistic teams:</p>
                     <ul class="text-left mt-3 space-y-1">
-                        <li>• Manchester Legends (4-4-2)</li>
-                        <li>• Barcelona Dreams (4-3-3)</li>
-                        <li>• Real Madrid Elite (4-2-3-1)</li>
-                        <li>• Liverpool Warriors (4-3-3)</li>
+                        <?php foreach (DEMO_CLUBS as $club): ?>
+                        <li>• <?php echo htmlspecialchars($club['name']); ?> (<?php echo htmlspecialchars($club['formation']); ?>)</li>
+                        <?php endforeach; ?>
                     </ul>
-                    <p class="mt-3 text-sm text-gray-600">Each club will have a complete team and login credentials.</p>
+                    <p class="mt-3 text-sm text-gray-600">Each club will have a complete team with €1B+ budget and login credentials.</p>
                 `,
                 showCancelButton: true,
                 confirmButtonColor: '#3b82f6',

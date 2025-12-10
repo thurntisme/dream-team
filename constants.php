@@ -4,6 +4,64 @@
 // Budget configuration
 define('DEFAULT_BUDGET', 500000000); // €500M default budget - optimal for competitive lineups
 
+// Demo clubs for seeding
+define('DEMO_CLUBS', [
+    [
+        'name' => 'Thunder Bay United',
+        'manager' => 'Marcus Thompson',
+        'email' => 'marcus.thompson@thunderbay.com',
+        'password' => 'thunder123',
+        'formation' => '4-4-2',
+        'budget' => 1200000000, // €1.2B
+        'strategy' => 'balanced'
+    ],
+    [
+        'name' => 'Golden Eagles FC',
+        'manager' => 'Sofia Rodriguez',
+        'email' => 'sofia.rodriguez@goldeneagles.com',
+        'password' => 'eagles123',
+        'formation' => '4-3-3',
+        'budget' => 1100000000, // €1.1B
+        'strategy' => 'attacking'
+    ],
+    [
+        'name' => 'Crystal Wolves',
+        'manager' => 'David Chen',
+        'email' => 'david.chen@crystalwolves.com',
+        'password' => 'wolves123',
+        'formation' => '4-2-3-1',
+        'budget' => 1300000000, // €1.3B
+        'strategy' => 'galactico'
+    ],
+    [
+        'name' => 'Phoenix Rising',
+        'manager' => 'Emma Johnson',
+        'email' => 'emma.johnson@phoenixrising.com',
+        'password' => 'phoenix123',
+        'formation' => '4-3-3',
+        'budget' => 1000000000, // €1.0B
+        'strategy' => 'high_intensity'
+    ],
+    [
+        'name' => 'Midnight Strikers',
+        'manager' => 'Alessandro Rossi',
+        'email' => 'alessandro.rossi@midnightstrikers.com',
+        'password' => 'midnight123',
+        'formation' => '3-5-2',
+        'budget' => 1150000000, // €1.15B
+        'strategy' => 'defensive'
+    ],
+    [
+        'name' => 'Velocity FC',
+        'manager' => 'Priya Patel',
+        'email' => 'priya.patel@velocityfc.com',
+        'password' => 'velocity123',
+        'formation' => '4-1-4-1',
+        'budget' => 1250000000, // €1.25B
+        'strategy' => 'counter_attack'
+    ]
+]);
+
 // Formation configurations
 define('FORMATIONS', [
     '4-4-2' => [
@@ -245,6 +303,11 @@ function getFormationsList()
 function getPositionsList()
 {
     return array_keys(PLAYER_POSITIONS);
+}
+
+function getDemoClubs()
+{
+    return DEMO_CLUBS;
 }
 
 // Format market value for display

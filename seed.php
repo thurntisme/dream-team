@@ -4,7 +4,8 @@ require_once 'config.php';
 require_once 'constants.php';
 
 /**
- * Seed function to create 4 fake clubs with realistic teams
+ * Seed function to create demo clubs with realistic teams
+ * Players can be shared across multiple clubs (realistic scenario)
  */
 function seedFakeClubs()
 {
@@ -21,7 +22,7 @@ function seedFakeClubs()
             return false;
         }
 
-        $clubs = getFakeClubData();
+        $clubs = getDemoClubs();
         $players = getDefaultPlayers();
 
         if (empty($players)) {
@@ -72,53 +73,11 @@ function seedFakeClubs()
     }
 }
 
-/**
- * Get fake club data with realistic information
- */
-function getFakeClubData()
-{
-    return [
-        [
-            'name' => 'Manchester Legends',
-            'manager' => 'Alex Ferguson Jr',
-            'email' => 'alex@manchester-legends.com',
-            'password' => 'legends123',
-            'formation' => '4-4-2',
-            'budget' => 450000000, // €450M
-            'strategy' => 'balanced'
-        ],
-        [
-            'name' => 'Barcelona Dreams',
-            'manager' => 'Pep Guardiola II',
-            'email' => 'pep@barca-dreams.com',
-            'password' => 'dreams123',
-            'formation' => '4-3-3',
-            'budget' => 520000000, // €520M
-            'strategy' => 'attacking'
-        ],
-        [
-            'name' => 'Real Madrid Elite',
-            'manager' => 'Zinedine Zidane Jr',
-            'email' => 'zidane@real-elite.com',
-            'password' => 'elite123',
-            'formation' => '4-2-3-1',
-            'budget' => 480000000, // €480M
-            'strategy' => 'galactico'
-        ],
-        [
-            'name' => 'Liverpool Warriors',
-            'manager' => 'Jurgen Klopp II',
-            'email' => 'jurgen@liverpool-warriors.com',
-            'password' => 'warriors123',
-            'formation' => '4-3-3',
-            'budget' => 400000000, // €400M
-            'strategy' => 'high_intensity'
-        ]
-    ];
-}
+
 
 /**
  * Generate a realistic team based on formation and budget
+ * Each club can independently select any player (same player can be in multiple clubs)
  */
 function generateRealisticTeam($players, $formation, $budget)
 {
@@ -136,33 +95,29 @@ function generateRealisticTeam($players, $formation, $budget)
         $playersByPosition[$pos][] = $player;
     }
 
-    // Sort players by rating (descending) within each position
+    // Shuffle players randomly within each position (no rating preference)
     foreach ($playersByPosition as $pos => $posPlayers) {
-        usort($playersByPosition[$pos], function ($a, $b) {
-            return $b['rating'] - $a['rating'];
-        });
+        shuffle($playersByPosition[$pos]);
     }
 
-    $usedPlayers = [];
+    // Track players used within THIS team only (prevent duplicates within same team)
+    $usedPlayersInTeam = [];
     $currentBudget = $budget;
 
     // Fill positions with strategy-based selection
     foreach ($roles as $slotIdx => $requiredPos) {
         $availablePlayers = array_filter(
             $playersByPosition[$requiredPos] ?? [],
-            function ($player) use ($usedPlayers, $currentBudget) {
-                return !in_array($player['name'], $usedPlayers) &&
-                    $player['value'] <= $currentBudget;
-            }
+            fn($player) => !in_array($player['name'], $usedPlayersInTeam) && $player['value'] <= $currentBudget
         );
 
         if (!empty($availablePlayers)) {
-            // Select player based on budget and strategy
-            $selectedPlayer = selectPlayerByStrategy($availablePlayers, $currentBudget, $requiredPos);
+            // Select random player that fits position and budget
+            $selectedPlayer = selectRandomPlayer($availablePlayers, $currentBudget);
 
             if ($selectedPlayer) {
                 $team[$slotIdx] = $selectedPlayer;
-                $usedPlayers[] = $selectedPlayer['name'];
+                $usedPlayersInTeam[] = $selectedPlayer['name']; // Only track within this team
                 $currentBudget -= $selectedPlayer['value'];
             }
         }
@@ -172,37 +127,23 @@ function generateRealisticTeam($players, $formation, $budget)
 }
 
 /**
- * Select player based on strategy and budget
+ * Select random player that fits position and budget constraints
+ * No preference for rating - completely random selection
  */
-function selectPlayerByStrategy($players, $budget, $position)
+function selectRandomPlayer($players, $budget)
 {
     if (empty($players))
         return null;
 
     // Filter affordable players
-    $affordablePlayers = array_filter($players, function ($player) use ($budget) {
-        return $player['value'] <= $budget;
-    });
+    $affordablePlayers = array_filter($players, fn($player) => $player['value'] <= $budget);
 
     if (empty($affordablePlayers))
         return null;
 
-    // Strategy: Mix of high-rated and budget-conscious selections
-    $budgetTier = $budget / DEFAULT_BUDGET;
-
-    if ($budgetTier > 0.8) {
-        // High budget: Go for top players (top 20%)
-        $topIndex = max(0, floor(count($affordablePlayers) * 0.2));
-        return $affordablePlayers[rand(0, $topIndex)];
-    } elseif ($budgetTier > 0.5) {
-        // Medium budget: Mix of good players (top 50%)
-        $midIndex = max(0, floor(count($affordablePlayers) * 0.5));
-        return $affordablePlayers[rand(0, $midIndex)];
-    } else {
-        // Low budget: More careful selection (top 70%)
-        $budgetIndex = max(0, floor(count($affordablePlayers) * 0.7));
-        return $affordablePlayers[rand(0, $budgetIndex)];
-    }
+    // Select completely random player from affordable options
+    $randomIndex = rand(0, count($affordablePlayers) - 1);
+    return array_values($affordablePlayers)[$randomIndex];
 }
 
 /**
@@ -250,7 +191,8 @@ if (php_sapi_name() === 'cli') {
         exit(1);
     }
 
-    echo "This will create 4 demo clubs with realistic teams and formations.\n";
+    $clubCount = count(getDemoClubs());
+    echo "This will create {$clubCount} demo clubs with realistic teams and formations.\n";
     echo "Each club will have different strategies and budgets.\n\n";
 
     seedFakeClubs();
@@ -272,4 +214,3 @@ if (isset($_GET['seed']) && $_GET['seed'] === 'clubs') {
 
     seedFakeClubs();
 }
-?>

@@ -928,5 +928,581 @@
         "position": "RM",
         "rating": 81,
         "value": 25000000
+    },
+    {
+        "name": "Messi",
+        "position": "RW",
+        "rating": 93,
+        "value": 50000000
+    },
+    {
+        "name": "Ronaldo",
+        "position": "ST",
+        "rating": 90,
+        "value": 15000000
+    },
+    {
+        "name": "Buffon",
+        "position": "GK",
+        "rating": 83,
+        "value": 5000000
+    },
+    {
+        "name": "Casillas",
+        "position": "GK",
+        "rating": 84,
+        "value": 8000000
+    },
+    {
+        "name": "Maldini",
+        "position": "LB",
+        "rating": 94,
+        "value": 15000000
+    },
+    {
+        "name": "Cafu",
+        "position": "RB",
+        "rating": 92,
+        "value": 12000000
+    },
+    {
+        "name": "Puyol",
+        "position": "CB",
+        "rating": 90,
+        "value": 10000000
+    },
+    {
+        "name": "Nesta",
+        "position": "CB",
+        "rating": 91,
+        "value": 8000000
+    },
+    {
+        "name": "Cannavaro",
+        "position": "CB",
+        "rating": 89,
+        "value": 7000000
+    },
+    {
+        "name": "Roberto Carlos",
+        "position": "LB",
+        "rating": 91,
+        "value": 10000000
+    },
+    {
+        "name": "Xavi",
+        "position": "CM",
+        "rating": 93,
+        "value": 8000000
+    },
+    {
+        "name": "Iniesta",
+        "position": "CAM",
+        "rating": 92,
+        "value": 6000000
+    },
+    {
+        "name": "Pirlo",
+        "position": "CM",
+        "rating": 91,
+        "value": 5000000
+    },
+    {
+        "name": "Gerrard",
+        "position": "CM",
+        "rating": 90,
+        "value": 7000000
+    },
+    {
+        "name": "Lampard",
+        "position": "CAM",
+        "rating": 89,
+        "value": 6000000
+    },
+    {
+        "name": "Scholes",
+        "position": "CM",
+        "rating": 88,
+        "value": 5000000
+    },
+    {
+        "name": "Kaka",
+        "position": "CAM",
+        "rating": 91,
+        "value": 8000000
+    },
+    {
+        "name": "Ronaldinho",
+        "position": "LW",
+        "rating": 94,
+        "value": 12000000
+    },
+    {
+        "name": "Ronaldo Nazario",
+        "position": "ST",
+        "rating": 94,
+        "value": 15000000
+    },
+    {
+        "name": "Zidane",
+        "position": "CAM",
+        "rating": 94,
+        "value": 10000000
+    },
+    {
+        "name": "Maradona",
+        "position": "CAM",
+        "rating": 97,
+        "value": 20000000
+    },
+    {
+        "name": "Pele",
+        "position": "ST",
+        "rating": 98,
+        "value": 25000000
+    },
+    {
+        "name": "Cruyff",
+        "position": "CF",
+        "rating": 94,
+        "value": 18000000
+    },
+    {
+        "name": "Beckham",
+        "position": "RM",
+        "rating": 89,
+        "value": 8000000
+    },
+    {
+        "name": "Figo",
+        "position": "RW",
+        "rating": 90,
+        "value": 7000000
+    },
+    {
+        "name": "Henry",
+        "position": "LW",
+        "rating": 91,
+        "value": 10000000
+    },
+    {
+        "name": "Raul",
+        "position": "ST",
+        "rating": 88,
+        "value": 6000000
+    },
+    {
+        "name": "Totti",
+        "position": "CAM",
+        "rating": 90,
+        "value": 7000000
+    },
+    {
+        "name": "Del Piero",
+        "position": "CF",
+        "rating": 89,
+        "value": 6000000
+    },
+    {
+        "name": "Baggio",
+        "position": "CAM",
+        "rating": 93,
+        "value": 8000000
+    },
+    {
+        "name": "Rivaldo",
+        "position": "LW",
+        "rating": 91,
+        "value": 7000000
+    },
+    {
+        "name": "Romario",
+        "position": "ST",
+        "rating": 91,
+        "value": 8000000
+    },
+    {
+        "name": "Matthaus",
+        "position": "CDM",
+        "rating": 91,
+        "value": 6000000
+    },
+    {
+        "name": "Gullit",
+        "position": "CM",
+        "rating": 90,
+        "value": 7000000
+    },
+    {
+        "name": "Van Basten",
+        "position": "ST",
+        "rating": 92,
+        "value": 9000000
+    },
+    {
+        "name": "Baresi",
+        "position": "CB",
+        "rating": 93,
+        "value": 8000000
+    },
+    {
+        "name": "Yashin",
+        "position": "GK",
+        "rating": 94,
+        "value": 10000000
+    },
+    {
+        "name": "Garrincha",
+        "position": "RW",
+        "rating": 93,
+        "value": 12000000
+    },
+    {
+        "name": "Best",
+        "position": "RW",
+        "rating": 91,
+        "value": 8000000
+    },
+    {
+        "name": "Charlton",
+        "position": "CAM",
+        "rating": 89,
+        "value": 6000000
+    },
+    {
+        "name": "Eusebio",
+        "position": "ST",
+        "rating": 91,
+        "value": 8000000
+    },
+    {
+        "name": "Puskas",
+        "position": "ST",
+        "rating": 92,
+        "value": 9000000
+    },
+    {
+        "name": "Di Stefano",
+        "position": "CF",
+        "rating": 93,
+        "value": 10000000
+    },
+    {
+        "name": "Gento",
+        "position": "LW",
+        "rating": 88,
+        "value": 5000000
+    },
+    {
+        "name": "Platini",
+        "position": "CAM",
+        "rating": 92,
+        "value": 7000000
+    },
+    {
+        "name": "Socrates",
+        "position": "CAM",
+        "rating": 88,
+        "value": 5000000
+    },
+    {
+        "name": "Zico",
+        "position": "CAM",
+        "rating": 90,
+        "value": 6000000
+    },
+    {
+        "name": "Falcao",
+        "position": "ST",
+        "rating": 84,
+        "value": 20000000
+    },
+    {
+        "name": "Cavani",
+        "position": "ST",
+        "rating": 83,
+        "value": 12000000
+    },
+    {
+        "name": "Suarez",
+        "position": "ST",
+        "rating": 85,
+        "value": 15000000
+    },
+    {
+        "name": "Forlan",
+        "position": "ST",
+        "rating": 86,
+        "value": 8000000
+    },
+    {
+        "name": "Godin",
+        "position": "CB",
+        "rating": 85,
+        "value": 10000000
+    },
+    {
+        "name": "Gimenez",
+        "position": "CB",
+        "rating": 83,
+        "value": 45000000
+    },
+    {
+        "name": "Muslera",
+        "position": "GK",
+        "rating": 82,
+        "value": 8000000
+    },
+    {
+        "name": "Vidal",
+        "position": "CM",
+        "rating": 84,
+        "value": 15000000
+    },
+    {
+        "name": "Alexis Sanchez",
+        "position": "RW",
+        "rating": 82,
+        "value": 18000000
+    },
+    {
+        "name": "Bravo",
+        "position": "GK",
+        "rating": 81,
+        "value": 5000000
+    },
+    {
+        "name": "Medel",
+        "position": "CDM",
+        "rating": 80,
+        "value": 8000000
+    },
+    {
+        "name": "Vargas",
+        "position": "LW",
+        "rating": 79,
+        "value": 12000000
+    },
+    {
+        "name": "Aránguiz",
+        "position": "CM",
+        "rating": 80,
+        "value": 10000000
+    },
+    {
+        "name": "Brereton",
+        "position": "ST",
+        "rating": 78,
+        "value": 15000000
+    },
+    {
+        "name": "James Rodriguez",
+        "position": "CAM",
+        "rating": 83,
+        "value": 25000000
+    },
+    {
+        "name": "Cuadrado",
+        "position": "RW",
+        "rating": 83,
+        "value": 15000000
+    },
+    {
+        "name": "Ospina",
+        "position": "GK",
+        "rating": 81,
+        "value": 8000000
+    },
+    {
+        "name": "Yerry Mina",
+        "position": "CB",
+        "rating": 80,
+        "value": 20000000
+    },
+    {
+        "name": "Zapata",
+        "position": "ST",
+        "rating": 82,
+        "value": 25000000
+    },
+    {
+        "name": "Muriel",
+        "position": "ST",
+        "rating": 81,
+        "value": 20000000
+    },
+    {
+        "name": "Quintero",
+        "position": "CAM",
+        "rating": 79,
+        "value": 15000000
+    },
+    {
+        "name": "Barrios",
+        "position": "CDM",
+        "rating": 78,
+        "value": 12000000
+    },
+    {
+        "name": "Lozano",
+        "position": "RW",
+        "rating": 80,
+        "value": 30000000
+    },
+    {
+        "name": "Jimenez",
+        "position": "ST",
+        "rating": 81,
+        "value": 35000000
+    },
+    {
+        "name": "Ochoa",
+        "position": "GK",
+        "rating": 81,
+        "value": 8000000
+    },
+    {
+        "name": "Herrera",
+        "position": "CDM",
+        "rating": 80,
+        "value": 15000000
+    },
+    {
+        "name": "Corona",
+        "position": "RW",
+        "rating": 79,
+        "value": 20000000
+    },
+    {
+        "name": "Guardado",
+        "position": "CM",
+        "rating": 79,
+        "value": 8000000
+    },
+    {
+        "name": "Moreno",
+        "position": "LB",
+        "rating": 78,
+        "value": 12000000
+    },
+    {
+        "name": "Araujo",
+        "position": "CB",
+        "rating": 79,
+        "value": 18000000
+    },
+    {
+        "name": "Vega",
+        "position": "LW",
+        "rating": 77,
+        "value": 15000000
+    },
+    {
+        "name": "Alaba",
+        "position": "CB",
+        "rating": 84,
+        "value": 40000000
+    },
+    {
+        "name": "Sabitzer",
+        "position": "CM",
+        "rating": 82,
+        "value": 25000000
+    },
+    {
+        "name": "Arnautovic",
+        "position": "ST",
+        "rating": 81,
+        "value": 15000000
+    },
+    {
+        "name": "Laimer",
+        "position": "CDM",
+        "rating": 81,
+        "value": 30000000
+    },
+    {
+        "name": "Baumgartner",
+        "position": "CAM",
+        "rating": 79,
+        "value": 20000000
+    },
+    {
+        "name": "Schlager",
+        "position": "CDM",
+        "rating": 78,
+        "value": 15000000
+    },
+    {
+        "name": "Kalajdzic",
+        "position": "ST",
+        "rating": 78,
+        "value": 25000000
+    },
+    {
+        "name": "Lindner",
+        "position": "GK",
+        "rating": 77,
+        "value": 8000000
+    },
+    {
+        "name": "Lewandowski",
+        "position": "ST",
+        "rating": 88,
+        "value": 45000000
+    },
+    {
+        "name": "Szczesny",
+        "position": "GK",
+        "rating": 82,
+        "value": 15000000
+    },
+    {
+        "name": "Zielinski",
+        "position": "CM",
+        "rating": 83,
+        "value": 35000000
+    },
+    {
+        "name": "Milik",
+        "position": "ST",
+        "rating": 81,
+        "value": 25000000
+    },
+    {
+        "name": "Klich",
+        "position": "CM",
+        "rating": 79,
+        "value": 15000000
+    },
+    {
+        "name": "Glik",
+        "position": "CB",
+        "rating": 80,
+        "value": 8000000
+    },
+    {
+        "name": "Rybus",
+        "position": "LB",
+        "rating": 78,
+        "value": 10000000
+    },
+    {
+        "name": "Bereszynski",
+        "position": "RB",
+        "rating": 78,
+        "value": 12000000
+    },
+    {
+        "name": "Krychowiak",
+        "position": "CDM",
+        "rating": 79,
+        "value": 10000000
+    },
+    {
+        "name": "Frankowski",
+        "position": "RM",
+        "rating": 77,
+        "value": 15000000
     }
 ]
