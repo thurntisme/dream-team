@@ -156,83 +156,83 @@ define('PLAYER_POSITIONS', [
 // Default player database
 define('DEFAULT_PLAYERS', [
     // Goalkeepers
-    ['name' => 'Alisson', 'position' => 'GK', 'rating' => 89],
-    ['name' => 'Ederson', 'position' => 'GK', 'rating' => 88],
-    ['name' => 'Courtois', 'position' => 'GK', 'rating' => 87],
-    ['name' => 'Neuer', 'position' => 'GK', 'rating' => 86],
+    ['name' => 'Alisson', 'position' => 'GK', 'rating' => 89, 'value' => 65000000],
+    ['name' => 'Ederson', 'position' => 'GK', 'rating' => 88, 'value' => 40000000],
+    ['name' => 'Courtois', 'position' => 'GK', 'rating' => 87, 'value' => 35000000],
+    ['name' => 'Neuer', 'position' => 'GK', 'rating' => 86, 'value' => 15000000],
 
     // Centre Backs
-    ['name' => 'Van Dijk', 'position' => 'CB', 'rating' => 90],
-    ['name' => 'Ramos', 'position' => 'CB', 'rating' => 88],
-    ['name' => 'Dias', 'position' => 'CB', 'rating' => 87],
-    ['name' => 'Marquinhos', 'position' => 'CB', 'rating' => 86],
-    ['name' => 'Koulibaly', 'position' => 'CB', 'rating' => 85],
-    ['name' => 'Varane', 'position' => 'CB', 'rating' => 84],
-    ['name' => 'Laporte', 'position' => 'CB', 'rating' => 83],
+    ['name' => 'Van Dijk', 'position' => 'CB', 'rating' => 90, 'value' => 70000000],
+    ['name' => 'Ramos', 'position' => 'CB', 'rating' => 88, 'value' => 25000000],
+    ['name' => 'Dias', 'position' => 'CB', 'rating' => 87, 'value' => 80000000],
+    ['name' => 'Marquinhos', 'position' => 'CB', 'rating' => 86, 'value' => 60000000],
+    ['name' => 'Koulibaly', 'position' => 'CB', 'rating' => 85, 'value' => 40000000],
+    ['name' => 'Varane', 'position' => 'CB', 'rating' => 84, 'value' => 35000000],
+    ['name' => 'Laporte', 'position' => 'CB', 'rating' => 83, 'value' => 50000000],
 
     // Full Backs
-    ['name' => 'Robertson', 'position' => 'LB', 'rating' => 85],
-    ['name' => 'Cancelo', 'position' => 'RB', 'rating' => 84],
-    ['name' => 'Davies', 'position' => 'LB', 'rating' => 83],
-    ['name' => 'Walker', 'position' => 'RB', 'rating' => 82],
-    ['name' => 'Mendy', 'position' => 'LB', 'rating' => 81],
-    ['name' => 'Hakimi', 'position' => 'RB', 'rating' => 84],
+    ['name' => 'Robertson', 'position' => 'LB', 'rating' => 85, 'value' => 45000000],
+    ['name' => 'Cancelo', 'position' => 'RB', 'rating' => 84, 'value' => 50000000],
+    ['name' => 'Davies', 'position' => 'LB', 'rating' => 83, 'value' => 70000000],
+    ['name' => 'Walker', 'position' => 'RB', 'rating' => 82, 'value' => 30000000],
+    ['name' => 'Mendy', 'position' => 'LB', 'rating' => 81, 'value' => 35000000],
+    ['name' => 'Hakimi', 'position' => 'RB', 'rating' => 84, 'value' => 60000000],
 
     // Defensive Midfielders
-    ['name' => 'Casemiro', 'position' => 'CDM', 'rating' => 85],
-    ['name' => 'Kante', 'position' => 'CDM', 'rating' => 87],
-    ['name' => 'Fabinho', 'position' => 'CDM', 'rating' => 84],
-    ['name' => 'Rodri', 'position' => 'CDM', 'rating' => 85],
+    ['name' => 'Casemiro', 'position' => 'CDM', 'rating' => 85, 'value' => 40000000],
+    ['name' => 'Kante', 'position' => 'CDM', 'rating' => 87, 'value' => 35000000],
+    ['name' => 'Fabinho', 'position' => 'CDM', 'rating' => 84, 'value' => 45000000],
+    ['name' => 'Rodri', 'position' => 'CDM', 'rating' => 85, 'value' => 80000000],
 
     // Central Midfielders
-    ['name' => 'Modric', 'position' => 'CM', 'rating' => 88],
-    ['name' => 'Kroos', 'position' => 'CM', 'rating' => 86],
-    ['name' => 'Pedri', 'position' => 'CM', 'rating' => 84],
-    ['name' => 'Bellingham', 'position' => 'CM', 'rating' => 85],
-    ['name' => 'Gavi', 'position' => 'CM', 'rating' => 82],
-    ['name' => 'Verratti', 'position' => 'CM', 'rating' => 85],
+    ['name' => 'Modric', 'position' => 'CM', 'rating' => 88, 'value' => 20000000],
+    ['name' => 'Kroos', 'position' => 'CM', 'rating' => 86, 'value' => 15000000],
+    ['name' => 'Pedri', 'position' => 'CM', 'rating' => 84, 'value' => 90000000],
+    ['name' => 'Bellingham', 'position' => 'CM', 'rating' => 85, 'value' => 120000000],
+    ['name' => 'Gavi', 'position' => 'CM', 'rating' => 82, 'value' => 80000000],
+    ['name' => 'Verratti', 'position' => 'CM', 'rating' => 85, 'value' => 55000000],
 
     // Attacking Midfielders
-    ['name' => 'De Bruyne', 'position' => 'CAM', 'rating' => 91],
-    ['name' => 'Bruno Fernandes', 'position' => 'CAM', 'rating' => 86],
-    ['name' => 'Muller', 'position' => 'CAM', 'rating' => 85],
-    ['name' => 'Odegaard', 'position' => 'CAM', 'rating' => 83],
+    ['name' => 'De Bruyne', 'position' => 'CAM', 'rating' => 91, 'value' => 100000000],
+    ['name' => 'Bruno Fernandes', 'position' => 'CAM', 'rating' => 86, 'value' => 75000000],
+    ['name' => 'Muller', 'position' => 'CAM', 'rating' => 85, 'value' => 25000000],
+    ['name' => 'Odegaard', 'position' => 'CAM', 'rating' => 83, 'value' => 70000000],
 
     // Wingers
-    ['name' => 'Vinicius Jr', 'position' => 'LW', 'rating' => 84],
-    ['name' => 'Salah', 'position' => 'RW', 'rating' => 87],
-    ['name' => 'Mane', 'position' => 'LW', 'rating' => 86],
-    ['name' => 'Mahrez', 'position' => 'RW', 'rating' => 84],
-    ['name' => 'Neymar', 'position' => 'LW', 'rating' => 85],
-    ['name' => 'Saka', 'position' => 'RW', 'rating' => 83],
+    ['name' => 'Vinicius Jr', 'position' => 'LW', 'rating' => 84, 'value' => 120000000],
+    ['name' => 'Salah', 'position' => 'RW', 'rating' => 87, 'value' => 65000000],
+    ['name' => 'Mane', 'position' => 'LW', 'rating' => 86, 'value' => 40000000],
+    ['name' => 'Mahrez', 'position' => 'RW', 'rating' => 84, 'value' => 30000000],
+    ['name' => 'Neymar', 'position' => 'LW', 'rating' => 85, 'value' => 90000000],
+    ['name' => 'Saka', 'position' => 'RW', 'rating' => 83, 'value' => 90000000],
 
     // Strikers
-    ['name' => 'Mbappe', 'position' => 'ST', 'rating' => 92],
-    ['name' => 'Haaland', 'position' => 'ST', 'rating' => 91],
-    ['name' => 'Benzema', 'position' => 'ST', 'rating' => 89],
-    ['name' => 'Lewandowski', 'position' => 'ST', 'rating' => 88],
-    ['name' => 'Kane', 'position' => 'ST', 'rating' => 87],
+    ['name' => 'Mbappe', 'position' => 'ST', 'rating' => 92, 'value' => 180000000],
+    ['name' => 'Haaland', 'position' => 'ST', 'rating' => 91, 'value' => 170000000],
+    ['name' => 'Benzema', 'position' => 'ST', 'rating' => 89, 'value' => 35000000],
+    ['name' => 'Lewandowski', 'position' => 'ST', 'rating' => 88, 'value' => 45000000],
+    ['name' => 'Kane', 'position' => 'ST', 'rating' => 87, 'value' => 100000000],
 
     // Centre Forwards
-    ['name' => 'Osimhen', 'position' => 'CF', 'rating' => 85],
-    ['name' => 'Vlahovic', 'position' => 'CF', 'rating' => 84],
-    ['name' => 'Nunez', 'position' => 'CF', 'rating' => 83],
+    ['name' => 'Osimhen', 'position' => 'CF', 'rating' => 85, 'value' => 120000000],
+    ['name' => 'Vlahovic', 'position' => 'CF', 'rating' => 84, 'value' => 70000000],
+    ['name' => 'Nunez', 'position' => 'CF', 'rating' => 83, 'value' => 75000000],
 
     // Wing-Backs
-    ['name' => 'Theo Hernandez', 'position' => 'LWB', 'rating' => 84],
-    ['name' => 'Chilwell', 'position' => 'LWB', 'rating' => 82],
-    ['name' => 'Gosens', 'position' => 'LWB', 'rating' => 81],
-    ['name' => 'Reece James', 'position' => 'RWB', 'rating' => 84],
-    ['name' => 'Dumfries', 'position' => 'RWB', 'rating' => 82],
-    ['name' => 'Perisic', 'position' => 'LWB', 'rating' => 83],
+    ['name' => 'Theo Hernandez', 'position' => 'LWB', 'rating' => 84, 'value' => 60000000],
+    ['name' => 'Chilwell', 'position' => 'LWB', 'rating' => 82, 'value' => 45000000],
+    ['name' => 'Gosens', 'position' => 'LWB', 'rating' => 81, 'value' => 25000000],
+    ['name' => 'Reece James', 'position' => 'RWB', 'rating' => 84, 'value' => 65000000],
+    ['name' => 'Dumfries', 'position' => 'RWB', 'rating' => 82, 'value' => 40000000],
+    ['name' => 'Perisic', 'position' => 'LWB', 'rating' => 83, 'value' => 20000000],
 
     // Side Midfielders
-    ['name' => 'Kostic', 'position' => 'LM', 'rating' => 82],
-    ['name' => 'Cuadrado', 'position' => 'RM', 'rating' => 83],
-    ['name' => 'Spinazzola', 'position' => 'LM', 'rating' => 81],
-    ['name' => 'Berardi', 'position' => 'RM', 'rating' => 82],
-    ['name' => 'Chiesa', 'position' => 'LM', 'rating' => 84],
-    ['name' => 'Di Maria', 'position' => 'RM', 'rating' => 85]
+    ['name' => 'Kostic', 'position' => 'LM', 'rating' => 82, 'value' => 25000000],
+    ['name' => 'Cuadrado', 'position' => 'RM', 'rating' => 83, 'value' => 15000000],
+    ['name' => 'Spinazzola', 'position' => 'LM', 'rating' => 81, 'value' => 30000000],
+    ['name' => 'Berardi', 'position' => 'RM', 'rating' => 82, 'value' => 35000000],
+    ['name' => 'Chiesa', 'position' => 'LM', 'rating' => 84, 'value' => 70000000],
+    ['name' => 'Di Maria', 'position' => 'RM', 'rating' => 85, 'value' => 20000000]
 ]);
 
 // Helper functions
@@ -259,4 +259,16 @@ function getFormationsList()
 function getPositionsList()
 {
     return array_keys(PLAYER_POSITIONS);
+}
+
+// Format market value for display
+function formatMarketValue($value)
+{
+    if ($value >= 1000000) {
+        return '€' . number_format($value / 1000000, 1) . 'M';
+    } elseif ($value >= 1000) {
+        return '€' . number_format($value / 1000, 0) . 'K';
+    } else {
+        return '€' . number_format($value, 0);
+    }
 }

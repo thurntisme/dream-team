@@ -76,7 +76,12 @@ try {
                 </select>
 
                 <h2 class="text-xl font-bold mt-6 mb-4">Your Players</h2>
-                <div id="playerList" class="space-y-2 max-h-96 overflow-y-auto"></div>
+                <div id="teamValueSummary" class="mb-4 p-3 bg-gray-50 rounded-lg border">
+                    <div class="text-sm text-gray-600">Team Value</div>
+                    <div id="totalTeamValue" class="text-lg font-bold text-green-600">€0.0M</div>
+                    <div id="playerCount" class="text-xs text-gray-500">0/11 players selected</div>
+                </div>
+                <div id="playerList" class="space-y-2 max-h-80 overflow-y-auto"></div>
             </div>
 
             <!-- Field -->
@@ -200,19 +205,48 @@ try {
         renderPlayers();
         renderField();
 
+        // Format market value for display
+        function formatMarketValue(value) {
+            if (value >= 1000000) {
+                return '€' + (value / 1000000).toFixed(1) + 'M';
+            } else if (value >= 1000) {
+                return '€' + Math.round(value / 1000) + 'K';
+            } else {
+                return '€' + value.toLocaleString();
+            }
+        }
+
         function renderPlayers() {
             const $list = $('#playerList').empty();
+            let totalValue = 0;
+            let playerCount = 0;
 
             selectedPlayers.forEach((player, idx) => {
                 if (player) {
+                    playerCount++;
+                    totalValue += player.value || 0;
+                    
                     $list.append(`
                         <div class="flex items-center justify-between p-2 border rounded bg-blue-50">
-                            <span class="font-medium">${player.name}</span>
-                            <span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">${player.position}</span>
+                            <div class="flex-1">
+                                <div class="font-medium">${player.name}</div>
+                                <div class="text-sm text-green-600 font-semibold">${formatMarketValue(player.value || 0)}</div>
+                            </div>
+                            <div class="flex flex-col items-end gap-1">
+                                <span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">${player.position}</span>
+                                <div class="flex items-center gap-1">
+                                    <span class="text-xs text-yellow-600">★</span>
+                                    <span class="text-xs text-gray-600">${player.rating || 'N/A'}</span>
+                                </div>
+                            </div>
                         </div>
                     `);
                 }
             });
+
+            // Update team value summary
+            $('#totalTeamValue').text(formatMarketValue(totalValue));
+            $('#playerCount').text(`${playerCount}/${selectedPlayers.length} players selected`);
 
             if ($list.children().length === 0) {
                 $list.append('<div class="text-center text-gray-500 py-8">No players selected</div>');
@@ -438,8 +472,17 @@ try {
                 if (!isSelected && matchesPosition && matchesSearch) {
                     $list.append(`
                         <div class="flex items-center justify-between p-3 border rounded hover:bg-blue-50 cursor-pointer modal-player-item" data-idx="${idx}">
-                            <span class="font-medium">${player.name}</span>
-                            <span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">${player.position}</span>
+                            <div class="flex-1">
+                                <div class="font-medium">${player.name}</div>
+                                <div class="text-sm text-green-600 font-semibold">${formatMarketValue(player.value || 0)}</div>
+                            </div>
+                            <div class="flex flex-col items-end gap-1">
+                                <span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">${player.position}</span>
+                                <div class="flex items-center gap-1">
+                                    <span class="text-xs text-yellow-600">★</span>
+                                    <span class="text-xs text-gray-600">${player.rating || 'N/A'}</span>
+                                </div>
+                            </div>
                         </div>
                     `);
                 }
