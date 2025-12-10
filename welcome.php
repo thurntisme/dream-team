@@ -24,19 +24,70 @@ try {
     $user_club = $result->fetchArray(SQLITE3_ASSOC);
     $has_club = !empty($user_club['club_name']);
 
-    // Get other clubs (exclude current user)
-    $stmt = $db->prepare('SELECT club_name, name FROM users WHERE club_name IS NOT NULL AND club_name != "" AND id != :user_id ORDER BY id DESC LIMIT 10');
+    // Get other clubs (exclude current user) - ordered by team value
+    $stmt = $db->prepare('SELECT club_name, name, team FROM users WHERE club_name IS NOT NULL AND club_name != "" AND id != :user_id');
     $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
     $result = $stmt->execute();
     $other_clubs = [];
     while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+        // Calculate team value for sorting
+        $team = json_decode($row['team'] ?? '[]', true);
+        $teamValue = 0;
+        if (is_array($team)) {
+            foreach ($team as $player) {
+                if ($player && isset($player['value'])) {
+                    $teamValue += $player['value'];
+                }
+            }
+        }
+        $row['team_value'] = $teamValue;
         $other_clubs[] = $row;
     }
+
+    // Sort by team value (highest first) and limit to 10
+    usort($other_clubs, fn($a, $b) => $b['team_value'] - $a['team_value']);
+
+    // Calculate user's ranking among all clubs (if user has a club)
+    $user_ranking = null;
+    if ($has_club) {
+        $user_team = json_decode($user_club['team'] ?? '[]', true);
+        $user_team_value = 0;
+        if (is_array($user_team)) {
+            foreach ($user_team as $player) {
+                if ($player && isset($player['value'])) {
+                    $user_team_value += $player['value'];
+                }
+            }
+        }
+
+        // Count how many clubs have higher team value
+        $higher_clubs = 0;
+        foreach ($other_clubs as $club) {
+            if ($club['team_value'] > $user_team_value) {
+                $higher_clubs++;
+            }
+        }
+        $user_ranking = $higher_clubs + 1; // +1 because ranking starts from 1
+    }
+
+    $other_clubs = array_slice($other_clubs, 0, 10);
 
     $db->close();
 } catch (Exception $e) {
     header('Location: install.php');
     exit;
+}
+
+// Helper function to format market value
+function formatMarketValue($value)
+{
+    if ($value >= 1000000) {
+        return '€' . number_format($value / 1000000, 1) . 'M';
+    } else if ($value >= 1000) {
+        return '€' . number_format($value / 1000, 0) . 'K';
+    } else {
+        return '€' . number_format($value);
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -71,8 +122,33 @@ try {
                         <div class="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
                             <i data-lucide="shield" class="w-6 h-6 text-white"></i>
                         </div>
-                        <div>
-                            <div class="text-xl font-bold"><?php echo htmlspecialchars($user_club['club_name']); ?></div>
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2">
+                                <div class="text-xl font-bold"><?php echo htmlspecialchars($user_club['club_name']); ?></div>
+                                <?php if ($user_ranking && $user_team_value > 0): ?>
+                                    <?php if ($user_ranking === 1): ?>
+                                        <span class="inline-flex items-center gap-1 bg-yellow-100 text-yellow-800 text-xs font-semibold px-2 py-1 rounded-full">
+                                            <i data-lucide="crown" class="w-3 h-3"></i>
+                                            #1
+                                        </span>
+                                    <?php elseif ($user_ranking === 2): ?>
+                                        <span class="inline-flex items-center gap-1 bg-gray-100 text-gray-700 text-xs font-semibold px-2 py-1 rounded-full">
+                                            <i data-lucide="medal" class="w-3 h-3"></i>
+                                            #2
+                                        </span>
+                                    <?php elseif ($user_ranking === 3): ?>
+                                        <span class="inline-flex items-center gap-1 bg-orange-100 text-orange-700 text-xs font-semibold px-2 py-1 rounded-full">
+                                            <i data-lucide="award" class="w-3 h-3"></i>
+                                            #3
+                                        </span>
+                                    <?php elseif ($user_ranking <= 10): ?>
+                                        <span class="inline-flex items-center gap-1 bg-blue-100 text-blue-700 text-xs font-semibold px-2 py-1 rounded-full">
+                                            <i data-lucide="hash" class="w-3 h-3"></i>
+                                            #<?php echo $user_ranking; ?>
+                                        </span>
+                                    <?php endif; ?>
+                                <?php endif; ?>
+                            </div>
                             <div class="text-sm text-gray-600">Formation:
                                 <?php echo htmlspecialchars($user_club['formation'] ?? 'Not set'); ?>
                             </div>
@@ -81,13 +157,29 @@ try {
 
                     <?php
                     $team = json_decode($user_club['team'] ?? '[]', true);
-                    $player_count = is_array($team) ? count(array_filter($team, function ($p) {
-                        return $p !== null;
-                    })) : 0;
+                    $player_count = is_array($team) ? count(array_filter($team, fn($p) => $p !== null)) : 0;
+
+                    // Calculate user's team value
+                    $user_team_value = 0;
+                    if (is_array($team)) {
+                        foreach ($team as $player) {
+                            if ($player && isset($player['value'])) {
+                                $user_team_value += $player['value'];
+                            }
+                        }
+                    }
                     ?>
-                    <div class="text-sm text-gray-600 mb-4">
-                        <i data-lucide="users" class="w-4 h-4 inline"></i>
-                        <?php echo $player_count; ?> / 11 players selected
+                    <div class="space-y-2 mb-4">
+                        <div class="text-sm text-gray-600">
+                            <i data-lucide="users" class="w-4 h-4 inline"></i>
+                            <?php echo $player_count; ?> / 11 players selected
+                        </div>
+                        <?php if ($user_team_value > 0): ?>
+                            <div class="text-sm text-green-600 font-semibold">
+                                <i data-lucide="trending-up" class="w-4 h-4 inline"></i>
+                                Team Value: <?php echo formatMarketValue($user_team_value); ?>
+                            </div>
+                        <?php endif; ?>
                     </div>
                 </div>
 
@@ -112,27 +204,66 @@ try {
             <?php endif; ?>
         </div>
 
-        <!-- Other Clubs List -->
+        <!-- Top Clubs List -->
         <div class="p-8 bg-white rounded-lg shadow">
             <div class="flex items-center gap-2 mb-6">
                 <i data-lucide="users" class="w-6 h-6 text-gray-600"></i>
-                <h2 class="text-xl font-bold">Other Clubs</h2>
+                <h2 class="text-xl font-bold">Top Clubs</h2>
             </div>
 
             <?php if (count($other_clubs) > 0): ?>
-                <div class="space-y-3 max-h-96 overflow-y-auto">
-                    <?php foreach ($other_clubs as $club): ?>
+                <div class="space-y-3 max-h-80 overflow-y-auto mb-4">
+                    <?php foreach (array_slice($other_clubs, 0, 5) as $index => $club): ?>
                         <div class="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50">
                             <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
                                 <i data-lucide="shield" class="w-5 h-5 text-blue-600"></i>
                             </div>
                             <div class="flex-1">
-                                <div class="font-semibold"><?php echo htmlspecialchars($club['club_name']); ?></div>
+                                <div class="flex items-center gap-2">
+                                    <div class="font-semibold"><?php echo htmlspecialchars($club['club_name']); ?></div>
+                                    <?php if ($club['team_value'] > 0): ?>
+                                        <?php if ($index === 0): ?>
+                                            <span
+                                                class="inline-flex items-center gap-1 bg-yellow-100 text-yellow-800 text-xs font-semibold px-1.5 py-0.5 rounded-full">
+                                                <i data-lucide="crown" class="w-2.5 h-2.5"></i>
+                                                #1
+                                            </span>
+                                        <?php elseif ($index === 1): ?>
+                                            <span
+                                                class="inline-flex items-center gap-1 bg-gray-100 text-gray-700 text-xs font-semibold px-1.5 py-0.5 rounded-full">
+                                                <i data-lucide="medal" class="w-2.5 h-2.5"></i>
+                                                #2
+                                            </span>
+                                        <?php elseif ($index === 2): ?>
+                                            <span
+                                                class="inline-flex items-center gap-1 bg-orange-100 text-orange-700 text-xs font-semibold px-1.5 py-0.5 rounded-full">
+                                                <i data-lucide="award" class="w-2.5 h-2.5"></i>
+                                                #3
+                                            </span>
+                                        <?php endif; ?>
+                                    <?php endif; ?>
+                                </div>
                                 <div class="text-sm text-gray-500">by <?php echo htmlspecialchars($club['name']); ?></div>
+                                <?php if ($club['team_value'] > 0): ?>
+                                    <div class="text-xs text-green-600 font-semibold">
+                                        <i data-lucide="trending-up" class="w-3 h-3 inline mr-1"></i>
+                                        <?php echo formatMarketValue($club['team_value']); ?>
+                                    </div>
+                                <?php endif; ?>
                             </div>
                         </div>
                     <?php endforeach; ?>
+                    <?php if (count($other_clubs) > 5): ?>
+                        <div class="text-center text-sm text-gray-500 py-2">
+                            and <?php echo count($other_clubs) - 5; ?> more clubs...
+                        </div>
+                    <?php endif; ?>
                 </div>
+                <a href="clubs.php"
+                    class="block w-full bg-gray-100 text-gray-700 py-2 rounded-lg hover:bg-gray-200 text-center transition-colors">
+                    <i data-lucide="eye" class="w-4 h-4 inline mr-1"></i>
+                    View All Clubs
+                </a>
             <?php else: ?>
                 <div class="text-center text-gray-500 py-8">
                     <i data-lucide="inbox" class="w-12 h-12 mx-auto mb-2 text-gray-400"></i>

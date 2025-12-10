@@ -49,15 +49,25 @@ try {
 <body class="bg-gray-50 min-h-screen">
     <nav class="bg-white shadow">
         <div class="container mx-auto p-4 max-w-6xl flex justify-between items-center">
-            <div class="flex items-center gap-2">
+            <div class="flex items-center justify-between gap-4 w-full">
                 <a href="index.php" class="flex items-center">
                     <i data-lucide="shield" class="w-6 h-6 text-blue-600"></i>
                     <span class="font-bold text-lg ml-1"><?php echo htmlspecialchars($_SESSION['club_name']); ?></span>
                 </a>
+                <nav class="hidden md:flex items-center gap-4">
+                    <a href="team.php" class="text-blue-600 font-semibold flex items-center gap-1">
+                        <i data-lucide="users" class="w-4 h-4"></i>
+                        My Team
+                    </a>
+                    <a href="clubs.php" class="text-gray-600 hover:text-blue-600 flex items-center gap-1">
+                        <i data-lucide="trophy" class="w-4 h-4"></i>
+                        Other Clubs
+                    </a>
+                </nav>
+                <button id="logoutBtn" class="text-gray-600 hover:text-gray-900">
+                    <i data-lucide="log-out" class="w-5 h-5"></i>
+                </button>
             </div>
-            <button id="logoutBtn" class="text-gray-600 hover:text-gray-900">
-                <i data-lucide="log-out" class="w-5 h-5"></i>
-            </button>
         </div>
     </nav>
 
