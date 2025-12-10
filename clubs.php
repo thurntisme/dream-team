@@ -4,6 +4,7 @@ session_start();
 require_once 'config.php';
 require_once 'constants.php';
 require_once 'layout.php';
+require_once 'field-component.php';
 
 // Check if database is available, redirect to install if not
 if (!isDatabaseAvailable()) {
@@ -252,36 +253,39 @@ startContent();
         document.getElementById('modalClubName').textContent = club.club_name;
 
         let content = `
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <h3 class="text-lg font-semibold mb-4">Club Information</h3>
-                        <div class="space-y-3">
-                            <div class="flex justify-between">
-                                <span class="text-gray-600">Manager:</span>
-                                <span class="font-semibold">${club.name}</span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span class="text-gray-600">Formation:</span>
-                                <span class="font-semibold">${club.formation}</span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span class="text-gray-600">Budget:</span>
-                                <span class="font-semibold">${formatMarketValue(club.budget)}</span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span class="text-gray-600">Team Value:</span>
-                                <span class="font-semibold text-green-600">${formatMarketValue(calculateTeamValue(team))}</span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span class="text-gray-600">Remaining Budget:</span>
-                                <span class="font-semibold text-blue-600">${formatMarketValue(club.budget - calculateTeamValue(team))}</span>
-                            </div>
+            <div class="space-y-6">
+                <!-- Club Information -->
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <h3 class="text-lg font-semibold mb-4">Club Information</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
+                        <div class="text-center">
+                            <div class="text-gray-600">Manager</div>
+                            <div class="font-semibold">${club.name}</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-gray-600">Formation</div>
+                            <div class="font-semibold">${club.formation}</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-gray-600">Budget</div>
+                            <div class="font-semibold">${formatMarketValue(club.budget)}</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-gray-600">Team Value</div>
+                            <div class="font-semibold text-green-600">${formatMarketValue(calculateTeamValue(team))}</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-gray-600">Remaining</div>
+                            <div class="font-semibold text-blue-600">${formatMarketValue(club.budget - calculateTeamValue(team))}</div>
                         </div>
                     </div>
-                    
-                    <div>
+                </div>
+
+                <div class="grid grid-cols-12 gap-4">
+                    <!-- Team Lineup List -->
+                    <div class="col-span-6">
                         <h3 class="text-lg font-semibold mb-4">Team Lineup</h3>
-                        <div class="space-y-2">
+                        <div class="grid grid-cols-1 gap-2 max-h-[500px] overflow-y-auto pr-2">
             `;
 
         if (formationData && formationData.roles) {
@@ -293,21 +297,21 @@ startContent();
                     const badge = isCustom ? '<span class="text-xs bg-purple-100 text-purple-600 px-1 py-0.5 rounded ml-1">CUSTOM</span>' : '';
 
                     content += `
-                            <div class="flex justify-between items-center p-2 bg-gray-50 rounded">
+                            <div class="flex justify-between items-center p-2 bg-gray-50 rounded text-sm">
                                 <div>
-                                    <span class="text-sm font-medium text-gray-600">${position}:</span>
+                                    <span class="font-medium text-gray-600">${position}:</span>
                                     <span class="ml-2 ${playerClass}">${player.name}${badge}</span>
                                 </div>
                                 <div class="text-right">
-                                    <div class="text-sm text-green-600 font-semibold">${formatMarketValue(player.value || 0)}</div>
+                                    <div class="text-green-600 font-semibold">${formatMarketValue(player.value || 0)}</div>
                                     <div class="text-xs text-gray-500">★${player.rating || 'N/A'}</div>
                                 </div>
                             </div>
                         `;
                 } else {
                     content += `
-                            <div class="flex justify-between items-center p-2 bg-gray-50 rounded opacity-50">
-                                <span class="text-sm text-gray-500">${position}: <em>Empty</em></span>
+                            <div class="flex justify-between items-center p-2 bg-gray-50 rounded opacity-50 text-sm">
+                                <span class="text-gray-500">${position}: <em>Empty</em></span>
                             </div>
                         `;
                 }
@@ -317,12 +321,235 @@ startContent();
         content += `
                         </div>
                     </div>
+
+                    <!-- Football Field -->
+                    <div class="mt-10 col-span-6 relative bg-gradient-to-b from-green-500 to-green-600 rounded-lg shadow ">
+                        <!-- Field Lines -->
+                        <div class="absolute inset-8 border-2 border-white border-opacity-40 rounded overflow-hidden">
+                            <!-- Center Line -->
+                            <div class="absolute top-1/2 left-0 right-0 h-0.5 bg-white opacity-40"></div>
+                            <!-- Center Circle -->
+                            <div
+                                class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-24 h-24 border-2 border-white border-opacity-40 rounded-full">
+                            </div>
+                            <div
+                                class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-2 h-2 bg-white opacity-40 rounded-full">
+                            </div>
+
+                            <!-- Top Penalty Area -->
+                            <div
+                                class="absolute top-0 left-1/2 transform -translate-x-1/2 w-48 h-20 border-2 border-t-0 border-white border-opacity-40">
+                            </div>
+                            <div
+                                class="absolute top-0 left-1/2 transform -translate-x-1/2 w-24 h-10 border-2 border-t-0 border-white border-opacity-40">
+                            </div>
+
+                            <!-- Bottom Penalty Area -->
+                            <div
+                                class="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-48 h-20 border-2 border-b-0 border-white border-opacity-40">
+                            </div>
+                            <div
+                                class="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-24 h-10 border-2 border-b-0 border-white border-opacity-40">
+                            </div>
+
+                            <!-- Corner Arcs -->
+                            <div
+                                class="absolute top-0 left-0 w-8 h-8 border-2 border-t-0 border-l-0 border-white border-opacity-40 rounded-br-full">
+                            </div>
+                            <div
+                                class="absolute top-0 right-0 w-8 h-8 border-2 border-t-0 border-r-0 border-white border-opacity-40 rounded-bl-full">
+                            </div>
+                            <div
+                                class="absolute bottom-0 left-0 w-8 h-8 border-2 border-b-0 border-l-0 border-white border-opacity-40 rounded-tr-full">
+                            </div>
+                            <div
+                                class="absolute bottom-0 right-0 w-8 h-8 border-2 border-b-0 border-r-0 border-white border-opacity-40 rounded-tl-full">
+                            </div>
+                        </div>
+                        <div id="modalFieldContainer" class="flex items-center justify-center py-8">
+                            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                            <span class="ml-2 text-gray-600">Loading field...</span>
+                        </div>
+                    </div>
                 </div>
-            `;
+            </div>
+        `;
 
         document.getElementById('modalContent').innerHTML = content;
         document.getElementById('clubModal').classList.remove('hidden');
-        lucide.createIcons();
+
+        const positions = formations[club.formation].positions;
+        const roles = formationData.roles;
+        const $field = $('#modalFieldContainer');
+        $field.empty();
+
+
+        function getPositionForSlot(slotIdx) {
+            // Now roles array directly maps to slot indices
+            if (slotIdx >= 0 && slotIdx < roles.length) {
+                return roles[slotIdx];
+            }
+            return 'GK';
+        }
+
+        function getPositionColors(position) {
+            const colorMap = {
+                // Goalkeeper - Yellow/Orange
+                'GK': {
+                    bg: 'bg-amber-400',
+                    border: 'border-amber-500',
+                    text: 'text-amber-800',
+                    emptyBg: 'bg-amber-400 bg-opacity-30',
+                    emptyBorder: 'border-amber-400'
+                },
+                // Defenders - Green
+                'CB': {
+                    bg: 'bg-emerald-400',
+                    border: 'border-emerald-500',
+                    text: 'text-emerald-800',
+                    emptyBg: 'bg-emerald-400 bg-opacity-30',
+                    emptyBorder: 'border-emerald-400'
+                },
+                'LB': {
+                    bg: 'bg-emerald-400',
+                    border: 'border-emerald-500',
+                    text: 'text-emerald-800',
+                    emptyBg: 'bg-emerald-400 bg-opacity-30',
+                    emptyBorder: 'border-emerald-400'
+                },
+                'RB': {
+                    bg: 'bg-emerald-400',
+                    border: 'border-emerald-500',
+                    text: 'text-emerald-800',
+                    emptyBg: 'bg-emerald-400 bg-opacity-30',
+                    emptyBorder: 'border-emerald-400'
+                },
+                'LWB': {
+                    bg: 'bg-emerald-400',
+                    border: 'border-emerald-500',
+                    text: 'text-emerald-800',
+                    emptyBg: 'bg-emerald-400 bg-opacity-30',
+                    emptyBorder: 'border-emerald-400'
+                },
+                'RWB': {
+                    bg: 'bg-emerald-400',
+                    border: 'border-emerald-500',
+                    text: 'text-emerald-800',
+                    emptyBg: 'bg-emerald-400 bg-opacity-30',
+                    emptyBorder: 'border-emerald-400'
+                },
+                // Midfielders - Blue
+                'CDM': {
+                    bg: 'bg-blue-400',
+                    border: 'border-blue-500',
+                    text: 'text-blue-800',
+                    emptyBg: 'bg-blue-400 bg-opacity-30',
+                    emptyBorder: 'border-blue-400'
+                },
+                'CM': {
+                    bg: 'bg-blue-400',
+                    border: 'border-blue-500',
+                    text: 'text-blue-800',
+                    emptyBg: 'bg-blue-400 bg-opacity-30',
+                    emptyBorder: 'border-blue-400'
+                },
+                'CAM': {
+                    bg: 'bg-blue-400',
+                    border: 'border-blue-500',
+                    text: 'text-blue-800',
+                    emptyBg: 'bg-blue-400 bg-opacity-30',
+                    emptyBorder: 'border-blue-400'
+                },
+                'LM': {
+                    bg: 'bg-blue-400',
+                    border: 'border-blue-500',
+                    text: 'text-blue-800',
+                    emptyBg: 'bg-blue-400 bg-opacity-30',
+                    emptyBorder: 'border-blue-400'
+                },
+                'RM': {
+                    bg: 'bg-blue-400',
+                    border: 'border-blue-500',
+                    text: 'text-blue-800',
+                    emptyBg: 'bg-blue-400 bg-opacity-30',
+                    emptyBorder: 'border-blue-400'
+                },
+                // Forwards/Strikers - Red
+                'LW': {
+                    bg: 'bg-red-400',
+                    border: 'border-red-500',
+                    text: 'text-red-800',
+                    emptyBg: 'bg-red-400 bg-opacity-30',
+                    emptyBorder: 'border-red-400'
+                },
+                'RW': {
+                    bg: 'bg-red-400',
+                    border: 'border-red-500',
+                    text: 'text-red-800',
+                    emptyBg: 'bg-red-400 bg-opacity-30',
+                    emptyBorder: 'border-red-400'
+                },
+                'ST': {
+                    bg: 'bg-red-400',
+                    border: 'border-red-500',
+                    text: 'text-red-800',
+                    emptyBg: 'bg-red-400 bg-opacity-30',
+                    emptyBorder: 'border-red-400'
+                },
+                'CF': {
+                    bg: 'bg-red-400',
+                    border: 'border-red-500',
+                    text: 'text-red-800',
+                    emptyBg: 'bg-red-400 bg-opacity-30',
+                    emptyBorder: 'border-red-400'
+                }
+            };
+
+            return colorMap[position] || colorMap['GK'];
+        }
+
+        // Load field via AJAX
+        fetch(`field-modal.php?club_id=${clubId}&formation=${encodeURIComponent(club.formation)}`)
+            .then(response => response.text())
+            .then(result => {
+                const { club, formation, players } = JSON.parse(result);
+                console.log(JSON.parse(result))
+
+                let playerIdx = 0;
+                positions.forEach((line, lineIdx) => {
+                    line.forEach(xPos => {
+                        const player = players[playerIdx];
+                        const yPos = 100 - ((lineIdx + 1) * (100 / (positions.length + 1)));
+                        const idx = playerIdx;
+
+                        const requiredPosition = getPositionForSlot(idx);
+                        const colors = getPositionColors(requiredPosition);
+
+                        $field.append(`
+                            <div class="absolute cursor-pointer player-slot transition-all duration-200" 
+                                 style="left: ${xPos}%; top: ${yPos}%; transform: translate(-50%, -50%);" data-idx="${idx}">
+                                <div class="relative">
+                                    <div class="w-12 h-12 bg-white rounded-full flex flex-col items-center justify-center shadow-lg border-2 ${colors.border} transition-all duration-200 player-circle ">
+                                        <i data-lucide="user" class="w-3 h-3 text-gray-600"></i>
+                                        <span class="text-[10px] font-bold text-gray-700">${requiredPosition}</span>
+                                    </div>
+                                    <div class="absolute top-full left-1/2 transform -translate-x-1/2 mt-1 whitespace-nowrap">
+                                        <div class="text-white text-[10px] font-bold bg-black bg-opacity-70 px-1.5 py-0.5 rounded">${player.name}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        `);
+                        playerIdx++;
+                    });
+                });
+
+                lucide.createIcons();
+            })
+            .catch(error => {
+                console.error('Field loading error:', error);
+                document.getElementById('modalFieldContainer').innerHTML =
+                    '<div class="text-center text-red-600 py-8">Failed to load field</div>';
+            });
     }
 
     function compareTeams(clubId) {

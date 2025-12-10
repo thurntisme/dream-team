@@ -507,6 +507,7 @@ startContent();
         const formation = $('#formation').val();
         const positions = formations[formation].positions;
         const $field = $('#field').empty();
+        console.log(positions)
 
         let playerIdx = 0;
         positions.forEach((line, lineIdx) => {
