@@ -1,27 +1,34 @@
 <?php
 session_start();
+
+require_once 'config.php';
+
+// Check if database is available, redirect to install if not
+if (!isDatabaseAvailable()) {
+    header('Location: install.php');
+    exit;
+}
+
 if (!isset($_SESSION['user_id']) || !isset($_SESSION['club_name'])) {
     header('Location: index.php');
     exit;
 }
 
-$db = new SQLite3('dreamteam.db');
-$db->exec('CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    email TEXT UNIQUE NOT NULL,
-    password TEXT NOT NULL,
-    club_name TEXT,
-    formation TEXT,
-    team TEXT
-)');
+try {
+    $db = getDbConnection();
 
-$stmt = $db->prepare('SELECT formation, team FROM users WHERE id = :id');
-$stmt->bindValue(':id', $_SESSION['user_id'], SQLITE3_INTEGER);
-$result = $stmt->execute();
-$user = $result->fetchArray(SQLITE3_ASSOC);
-$saved_formation = $user['formation'] ?? '4-4-2';
-$saved_team = $user['team'] ?? '[]';
+    $stmt = $db->prepare('SELECT formation, team FROM users WHERE id = :id');
+    $stmt->bindValue(':id', $_SESSION['user_id'], SQLITE3_INTEGER);
+    $result = $stmt->execute();
+    $user = $result->fetchArray(SQLITE3_ASSOC);
+    $saved_formation = $user['formation'] ?? '4-4-2';
+    $saved_team = $user['team'] ?? '[]';
+
+    $db->close();
+} catch (Exception $e) {
+    header('Location: install.php');
+    exit;
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -425,7 +432,9 @@ $saved_team = $user['team'] ?? '[]';
                 formation: $('#formation').val(),
                 team: JSON.stringify(selectedPlayers)
             }, function (response) {
-                if (response.success) {
+                if (response.redirect) {
+                    window.location.href = response.redirect;
+                } else if (response.success) {
                     alert('Team saved successfully!');
                 }
             }, 'json');

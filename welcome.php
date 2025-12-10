@@ -1,25 +1,42 @@
 <?php
 session_start();
+
+require_once 'config.php';
+
+// Check if database is available, redirect to install if not
+if (!isDatabaseAvailable()) {
+    header('Location: install.php');
+    exit;
+}
+
 if (!isset($_SESSION['user_id'])) {
     header('Location: index.php');
     exit;
 }
 
-// Get user's club info
-$db = new SQLite3('dreamteam.db');
-$stmt = $db->prepare('SELECT club_name, formation, team FROM users WHERE id = :id');
-$stmt->bindValue(':id', $_SESSION['user_id'], SQLITE3_INTEGER);
-$result = $stmt->execute();
-$user_club = $result->fetchArray(SQLITE3_ASSOC);
-$has_club = !empty($user_club['club_name']);
+try {
+    $db = getDbConnection();
 
-// Get other clubs (exclude current user)
-$stmt = $db->prepare('SELECT club_name, name FROM users WHERE club_name IS NOT NULL AND club_name != "" AND id != :user_id ORDER BY id DESC LIMIT 10');
-$stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
-$result = $stmt->execute();
-$other_clubs = [];
-while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
-    $other_clubs[] = $row;
+    // Get user's club info
+    $stmt = $db->prepare('SELECT club_name, formation, team FROM users WHERE id = :id');
+    $stmt->bindValue(':id', $_SESSION['user_id'], SQLITE3_INTEGER);
+    $result = $stmt->execute();
+    $user_club = $result->fetchArray(SQLITE3_ASSOC);
+    $has_club = !empty($user_club['club_name']);
+
+    // Get other clubs (exclude current user)
+    $stmt = $db->prepare('SELECT club_name, name FROM users WHERE club_name IS NOT NULL AND club_name != "" AND id != :user_id ORDER BY id DESC LIMIT 10');
+    $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+    $result = $stmt->execute();
+    $other_clubs = [];
+    while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+        $other_clubs[] = $row;
+    }
+
+    $db->close();
+} catch (Exception $e) {
+    header('Location: install.php');
+    exit;
 }
 ?>
 <!DOCTYPE html>
@@ -131,7 +148,9 @@ while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
         $('#clubForm').submit(function (e) {
             e.preventDefault();
             $.post('save_club.php', $(this).serialize(), function (response) {
-                if (response.success) {
+                if (response.redirect) {
+                    window.location.href = response.redirect;
+                } else if (response.success) {
                     window.location.href = 'team.php';
                 }
             }, 'json');

@@ -2,8 +2,20 @@
 session_start();
 header('Content-Type: application/json');
 
-$db_file = 'dreamteam.db';
-$db = new SQLite3($db_file);
+require_once 'config.php';
+
+// Check if database is available, redirect to install if not
+if (!isDatabaseAvailable()) {
+    echo json_encode(['success' => false, 'redirect' => 'install.php']);
+    exit;
+}
+
+try {
+    $db = getDbConnection();
+} catch (Exception $e) {
+    echo json_encode(['success' => false, 'redirect' => 'install.php']);
+    exit;
+}
 
 $db->exec('CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

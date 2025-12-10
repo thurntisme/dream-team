@@ -1,5 +1,14 @@
 <?php
 session_start();
+
+require_once 'config.php';
+
+// Check if database is available, redirect to install if not
+if (!isDatabaseAvailable()) {
+    header('Location: install.php');
+    exit;
+}
+
 if (isset($_SESSION['user_id'])) {
     header('Location: welcome.php');
     exit;
@@ -86,7 +95,9 @@ if (isset($_SESSION['user_id'])) {
         $('#loginForm').submit(function (e) {
             e.preventDefault();
             $.post('auth.php', $(this).serialize() + '&action=login', function (response) {
-                if (response.success) {
+                if (response.redirect) {
+                    window.location.href = response.redirect;
+                } else if (response.success) {
                     window.location.href = 'welcome.php';
                 } else {
                     $('#message').html('<span class="text-red-600">' + response.message + '</span>');
@@ -97,7 +108,9 @@ if (isset($_SESSION['user_id'])) {
         $('#registerForm').submit(function (e) {
             e.preventDefault();
             $.post('auth.php', $(this).serialize() + '&action=register', function (response) {
-                if (response.success) {
+                if (response.redirect) {
+                    window.location.href = response.redirect;
+                } else if (response.success) {
                     window.location.href = 'welcome.php';
                 } else {
                     $('#message').html('<span class="text-red-600">' + response.message + '</span>');
