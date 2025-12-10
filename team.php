@@ -42,6 +42,7 @@ try {
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 
 <body class="bg-gray-50 min-h-screen">
@@ -415,27 +416,85 @@ try {
         });
 
         $('#resetTeam').click(function () {
-            if (confirm('Are you sure you want to reset your team? This will reload your last saved team.')) {
-                location.reload();
-            }
+            Swal.fire({
+                icon: 'warning',
+                title: 'Reset Team?',
+                text: 'This will reload your last saved team and discard current changes.',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: 'Reset Team',
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    location.reload();
+                }
+            });
         });
 
         $('#saveTeam').click(function () {
             const filledSlots = selectedPlayers.filter(p => p !== null).length;
-            if (filledSlots !== 11) {
-                alert('Please select 11 players');
+            const totalSlots = selectedPlayers.length;
+
+            if (filledSlots === 0) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'No Players Selected',
+                    text: 'Please select at least 1 player before saving',
+                    confirmButtonColor: '#3b82f6'
+                });
                 return;
             }
-            $.post('save_team.php', {
-                formation: $('#formation').val(),
-                team: JSON.stringify(selectedPlayers)
-            }, function (response) {
-                if (response.redirect) {
-                    window.location.href = response.redirect;
-                } else if (response.success) {
-                    alert('Team saved successfully!');
+
+            let confirmTitle = `Save Team (${filledSlots}/${totalSlots} players)`;
+            let confirmText = filledSlots < totalSlots
+                ? 'Your team is not complete. You can continue adding players later.'
+                : 'Save your complete team?';
+
+            Swal.fire({
+                icon: 'question',
+                title: confirmTitle,
+                text: confirmText,
+                showCancelButton: true,
+                confirmButtonColor: '#3b82f6',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: 'Save Team',
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.post('save_team.php', {
+                        formation: $('#formation').val(),
+                        team: JSON.stringify(selectedPlayers)
+                    }, function (response) {
+                        if (response.redirect) {
+                            window.location.href = response.redirect;
+                        } else if (response.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Team Saved!',
+                                text: filledSlots === totalSlots
+                                    ? 'Your complete team has been saved successfully!'
+                                    : `Team saved successfully! (${filledSlots}/${totalSlots} players selected)`,
+                                confirmButtonColor: '#10b981'
+                            });
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Save Failed',
+                                text: response.message || 'Failed to save team. Please try again.',
+                                confirmButtonColor: '#ef4444'
+                            });
+                        }
+                    }, 'json').fail(function () {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Connection Error',
+                            text: 'Unable to save team. Please check your connection and try again.',
+                            confirmButtonColor: '#ef4444'
+                        });
+                    });
                 }
-            }, 'json');
+            });
         });
 
         $('#logoutBtn').click(function () {

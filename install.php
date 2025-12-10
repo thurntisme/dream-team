@@ -169,6 +169,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reset'])) {
     <title><?php echo htmlspecialchars($app_name); ?> - Installation</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 
 <body class="bg-gray-50 min-h-screen flex items-center justify-center p-4">
@@ -328,9 +329,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reset'])) {
                             </a>
 
                             <form method="POST" class="inline">
-                                <button type="submit" name="reset"
-                                    class="bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700"
-                                    onclick="return confirm('Are you sure? This will delete all data and users!')">
+                                <button type="button" id="resetSystemBtn"
+                                    class="bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700">
                                     Reset System
                                 </button>
                             </form>
@@ -344,28 +344,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reset'])) {
                         <h2 class="text-xl font-semibold mb-4">
                             <?php echo ($db_exists && $table_exists) ? 'Complete Setup' : 'Install Database'; ?>
                         </h2>
-
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                             <div>
                                 <label class="block text-sm font-medium mb-1">Admin Name
-                                    <?php echo !$has_users ? '(Required)' : '(Optional)'; ?></label>
-                                <input type="text" name="admin_name" <?php echo !$has_users ? 'required' : ''; ?>
-                                    class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    placeholder="Admin User">
+                                    <?php echo !$has_users ? '(Required)' : '(Optional)'; ?>
+                                </label>
+                                <input type="text" name="admin_name" <?php echo !$has_users ? 'required' : ''; ?> class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2
+                            focus:ring-blue-500" placeholder="Admin User">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium mb-1">Admin Email
-                                    <?php echo !$has_users ? '(Required)' : '(Optional)'; ?></label>
-                                <input type="email" name="admin_email" <?php echo !$has_users ? 'required' : ''; ?>
-                                    class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    placeholder="admin@example.com">
+                                    <?php echo !$has_users ? '(Required)' : '(Optional)'; ?>
+                                </label>
+                                <input type="email" name="admin_email" <?php echo !$has_users ? 'required' : ''; ?> class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2
+                            focus:ring-blue-500" placeholder="admin@example.com">
                             </div>
                             <div class="md:col-span-2">
                                 <label class="block text-sm font-medium mb-1">Admin Password
-                                    <?php echo !$has_users ? '(Required)' : '(Optional)'; ?></label>
-                                <input type="password" name="admin_password" <?php echo !$has_users ? 'required' : ''; ?>
-                                    class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    placeholder="Password">
+                                    <?php echo !$has_users ? '(Required)' : '(Optional)'; ?>
+                                </label>
+                                <input type="password" name="admin_password" <?php echo !$has_users ? 'required' : ''; ?> class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2
+                            focus:ring-blue-500" placeholder="Password">
                             </div>
                         </div>
 
@@ -373,12 +372,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reset'])) {
                             <button type="submit" name="install"
                                 class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">
                                 <?php echo ($db_exists && $table_exists) ? 'Complete Setup' : 'Install'; ?>
-                            </button>
-
-                            <?php if ($db_exists && $table_exists): ?>
-                                <button type="submit" name="reset"
-                                    class="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700"
-                                    onclick="return confirm('Are you sure? This will delete all data!')">
+                            </button> <?php if ($db_exists && $table_exists): ?>
+                                <button type="button" id="resetDatabaseBtn"
+                                    class="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700">
                                     Reset Database
                                 </button>
                             <?php endif; ?>
@@ -403,6 +399,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reset'])) {
 
     <script>
         lucide.createIcons();
+
+        // SweetAlert for reset system button
+        document.getElementById('resetSystemBtn')?.addEventListener('click', function () {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Reset System?',
+                text: 'This will delete all data and users! This action cannot be undone.',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: 'Yes, Reset System',
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Create a form and submit it
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.innerHTML = '<input type="hidden" name="reset" value="1">';
+                    document.body.appendChild(form);
+                    form.submit();
+                }
+            });
+        });
+
+        // SweetAlert for reset database button
+        document.getElementById('resetDatabaseBtn')?.addEventListener('click', function () {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Reset Database?',
+                text: 'This will delete all data! This action cannot be undone.',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: 'Yes, Reset Database',
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Create a form and submit it
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.innerHTML = '<input type="hidden" name="reset" value="1">';
+                    document.body.appendChild(form);
+                    form.submit();
+                }
+            });
+        });
     </script>
 </body>
 
