@@ -3,6 +3,7 @@ session_start();
 header('Content-Type: application/json');
 
 require_once 'config.php';
+require_once 'constants.php';
 
 // Check if database is available, redirect to install if not
 if (!isDatabaseAvailable()) {
@@ -24,7 +25,8 @@ $db->exec('CREATE TABLE IF NOT EXISTS users (
     password TEXT NOT NULL,
     club_name TEXT,
     formation TEXT,
-    team TEXT
+    team TEXT,
+    budget INTEGER DEFAULT ' . DEFAULT_BUDGET . '
 )');
 
 $action = $_POST['action'] ?? '';

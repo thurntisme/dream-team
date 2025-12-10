@@ -18,12 +18,13 @@ if (!isset($_SESSION['user_id']) || !isset($_SESSION['club_name'])) {
 try {
     $db = getDbConnection();
 
-    $stmt = $db->prepare('SELECT formation, team FROM users WHERE id = :id');
+    $stmt = $db->prepare('SELECT formation, team, budget FROM users WHERE id = :id');
     $stmt->bindValue(':id', $_SESSION['user_id'], SQLITE3_INTEGER);
     $result = $stmt->execute();
     $user = $result->fetchArray(SQLITE3_ASSOC);
     $saved_formation = $user['formation'] ?? '4-4-2';
     $saved_team = $user['team'] ?? '[]';
+    $user_budget = $user['budget'] ?? DEFAULT_BUDGET; // Default budget from constants
 
     $db->close();
 } catch (Exception $e) {
@@ -77,8 +78,18 @@ try {
 
                 <h2 class="text-xl font-bold mt-6 mb-4">Your Players</h2>
                 <div id="teamValueSummary" class="mb-4 p-3 bg-gray-50 rounded-lg border">
-                    <div class="text-sm text-gray-600">Team Value</div>
-                    <div id="totalTeamValue" class="text-lg font-bold text-green-600">€0.0M</div>
+                    <div class="flex justify-between items-center mb-2">
+                        <div class="text-sm text-gray-600">Budget</div>
+                        <div id="remainingBudget" class="text-sm font-bold text-blue-600">€200.0M</div>
+                    </div>
+                    <div class="flex justify-between items-center mb-2">
+                        <div class="text-sm text-gray-600">Team Value</div>
+                        <div id="totalTeamValue" class="text-sm font-bold text-green-600">€0.0M</div>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2 mb-2">
+                        <div id="budgetBar" class="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                            style="width: 0%"></div>
+                    </div>
                     <div id="playerCount" class="text-xs text-gray-500">0/11 players selected</div>
                 </div>
                 <div id="playerList" class="space-y-2 max-h-80 overflow-y-auto"></div>
@@ -183,6 +194,7 @@ try {
     <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
     <script>
         const players = <?php echo json_encode(getDefaultPlayers()); ?>;
+        const maxBudget = <?php echo $user_budget; ?>; // User's maximum budget
 
         let savedTeam = <?php echo $saved_team; ?>;
         let selectedPlayers = Array.isArray(savedTeam) && savedTeam.length > 0 ? savedTeam : [];
@@ -225,12 +237,18 @@ try {
                 if (player) {
                     playerCount++;
                     totalValue += player.value || 0;
-                    
+
+                    const isCustom = player.isCustom || false;
+                    const bgClass = isCustom ? 'bg-purple-50 border-purple-200' : 'bg-blue-50';
+                    const nameClass = isCustom ? 'font-medium text-purple-700' : 'font-medium';
+                    const valueClass = isCustom ? 'text-sm text-purple-600 font-semibold' : 'text-sm text-green-600 font-semibold';
+                    const customBadge = isCustom ? '<span class="text-xs text-purple-600 bg-purple-100 px-1 py-0.5 rounded ml-1">CUSTOM</span>' : '';
+
                     $list.append(`
-                        <div class="flex items-center justify-between p-2 border rounded bg-blue-50">
+                        <div class="flex items-center justify-between p-2 border rounded ${bgClass}">
                             <div class="flex-1">
-                                <div class="font-medium">${player.name}</div>
-                                <div class="text-sm text-green-600 font-semibold">${formatMarketValue(player.value || 0)}</div>
+                                <div class="${nameClass}">${player.name}${customBadge}</div>
+                                <div class="${valueClass}">${formatMarketValue(player.value || 0)}</div>
                             </div>
                             <div class="flex flex-col items-end gap-1">
                                 <span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">${player.position}</span>
@@ -244,9 +262,36 @@ try {
                 }
             });
 
-            // Update team value summary
+            // Update team value and budget summary
+            const remainingBudget = maxBudget - totalValue;
+            const budgetUsedPercentage = (totalValue / maxBudget) * 100;
+
             $('#totalTeamValue').text(formatMarketValue(totalValue));
+            $('#remainingBudget').text(formatMarketValue(remainingBudget));
             $('#playerCount').text(`${playerCount}/${selectedPlayers.length} players selected`);
+
+            // Update budget bar
+            $('#budgetBar').css('width', Math.min(budgetUsedPercentage, 100) + '%');
+
+            // Change budget bar color based on usage
+            const $budgetBar = $('#budgetBar');
+            $budgetBar.removeClass('bg-blue-600 bg-yellow-500 bg-red-600');
+            if (budgetUsedPercentage >= 90) {
+                $budgetBar.addClass('bg-red-600');
+            } else if (budgetUsedPercentage >= 70) {
+                $budgetBar.addClass('bg-yellow-500');
+            } else {
+                $budgetBar.addClass('bg-blue-600');
+            }
+
+            // Change remaining budget color if over budget
+            const $remainingBudget = $('#remainingBudget');
+            $remainingBudget.removeClass('text-blue-600 text-red-600');
+            if (remainingBudget < 0) {
+                $remainingBudget.addClass('text-red-600');
+            } else {
+                $remainingBudget.addClass('text-blue-600');
+            }
 
             if ($list.children().length === 0) {
                 $list.append('<div class="text-center text-gray-500 py-8">No players selected</div>');
@@ -449,7 +494,17 @@ try {
 
         function openPlayerModal() {
             const requiredPosition = getPositionForSlot(currentSlotIdx);
-            $('#modalTitle').text(`Select ${requiredPosition} Player`);
+
+            // Calculate current team value (excluding the slot we're replacing)
+            let currentTeamValue = 0;
+            selectedPlayers.forEach((p, idx) => {
+                if (p && idx !== currentSlotIdx) {
+                    currentTeamValue += p.value || 0;
+                }
+            });
+            const remainingBudget = maxBudget - currentTeamValue;
+
+            $('#modalTitle').html(`Select ${requiredPosition} Player <span class="text-sm font-normal text-blue-600">(Budget: ${formatMarketValue(remainingBudget)})</span>`);
             $('#customPlayerLabel').text(`Custom ${requiredPosition} Player Name`);
             $('#customPlayerName').attr('placeholder', `Enter custom ${requiredPosition} name...`);
             $('#playerModal').removeClass('hidden');
@@ -464,17 +519,33 @@ try {
             const searchLower = search.toLowerCase();
             const requiredPosition = getPositionForSlot(currentSlotIdx);
 
+            // Calculate current team value (excluding the slot we're replacing)
+            let currentTeamValue = 0;
+            selectedPlayers.forEach((p, idx) => {
+                if (p && idx !== currentSlotIdx) {
+                    currentTeamValue += p.value || 0;
+                }
+            });
+
+            // Show system players
             players.forEach((player, idx) => {
                 const isSelected = selectedPlayers.some(p => p && p.name === player.name);
                 const matchesPosition = player.position === requiredPosition;
                 const matchesSearch = player.name.toLowerCase().includes(searchLower);
+                const wouldExceedBudget = (currentTeamValue + (player.value || 0)) > maxBudget;
 
                 if (!isSelected && matchesPosition && matchesSearch) {
+                    const isAffordable = !wouldExceedBudget;
+                    const itemClass = isAffordable ? 'hover:bg-blue-50 cursor-pointer modal-player-item' : 'bg-gray-100 cursor-not-allowed opacity-60';
+                    const priceClass = isAffordable ? 'text-green-600' : 'text-red-600';
+                    const budgetWarning = wouldExceedBudget ? '<div class="text-xs text-red-500 mt-1">Exceeds budget</div>' : '';
+
                     $list.append(`
-                        <div class="flex items-center justify-between p-3 border rounded hover:bg-blue-50 cursor-pointer modal-player-item" data-idx="${idx}">
+                        <div class="flex items-center justify-between p-3 border rounded ${itemClass}" ${isAffordable ? `data-idx="${idx}"` : ''}>
                             <div class="flex-1">
                                 <div class="font-medium">${player.name}</div>
-                                <div class="text-sm text-green-600 font-semibold">${formatMarketValue(player.value || 0)}</div>
+                                <div class="text-sm ${priceClass} font-semibold">${formatMarketValue(player.value || 0)}</div>
+                                ${budgetWarning}
                             </div>
                             <div class="flex flex-col items-end gap-1">
                                 <span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">${player.position}</span>
@@ -488,28 +559,160 @@ try {
                 }
             });
 
+            // Show custom players already in team (for reference/information)
+            const customPlayersInTeam = selectedPlayers.filter(p => p && p.isCustom && p.position === requiredPosition);
+            if (customPlayersInTeam.length > 0 && searchLower === '') {
+                if ($list.children().length > 0) {
+                    $list.append('<div class="border-t my-2"></div>');
+                }
+                $list.append('<div class="text-xs text-purple-600 font-semibold mb-2 px-2">Custom Players in Team:</div>');
+
+                customPlayersInTeam.forEach(player => {
+                    $list.append(`
+                        <div class="flex items-center justify-between p-3 border border-purple-200 rounded bg-purple-50 opacity-60">
+                            <div class="flex-1">
+                                <div class="font-medium text-purple-700">${player.name}
+                                    <span class="text-xs text-purple-600 bg-purple-100 px-1 py-0.5 rounded ml-1">CUSTOM</span>
+                                </div>
+                                <div class="text-sm text-purple-600 font-semibold">${formatMarketValue(player.value || 0)}</div>
+                            </div>
+                            <div class="flex flex-col items-end gap-1">
+                                <span class="text-xs text-purple-500 bg-purple-100 px-2 py-1 rounded">${player.position}</span>
+                                <div class="flex items-center gap-1">
+                                    <span class="text-xs text-yellow-600">★</span>
+                                    <span class="text-xs text-purple-600">${player.rating || 'N/A'}</span>
+                                </div>
+                            </div>
+                            <div class="ml-2 text-xs text-purple-500">Already selected</div>
+                        </div>
+                    `);
+                });
+            }
+
             if ($list.children().length === 0) {
                 $list.append('<div class="text-center text-gray-500 py-4">No players available</div>');
             }
 
             $('.modal-player-item').click(function () {
                 const idx = $(this).data('idx');
-                selectedPlayers[currentSlotIdx] = players[idx];
-                $('#playerModal').addClass('hidden');
-                renderPlayers();
-                renderField();
+                if (idx !== undefined) {
+                    const player = players[idx];
+
+                    // Double-check budget before adding
+                    let currentTeamValue = 0;
+                    selectedPlayers.forEach((p, i) => {
+                        if (p && i !== currentSlotIdx) {
+                            currentTeamValue += p.value || 0;
+                        }
+                    });
+
+                    if ((currentTeamValue + (player.value || 0)) > maxBudget) {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Budget Exceeded',
+                            text: `Adding ${player.name} would exceed your budget of ${formatMarketValue(maxBudget)}`,
+                            confirmButtonColor: '#3b82f6'
+                        });
+                        return;
+                    }
+
+                    selectedPlayers[currentSlotIdx] = player;
+                    $('#playerModal').addClass('hidden');
+                    renderPlayers();
+                    renderField();
+                }
             });
         }
 
         $('#addCustomPlayer').click(function () {
             const customName = $('#customPlayerName').val().trim();
-            if (customName) {
-                const requiredPosition = getPositionForSlot(currentSlotIdx);
-                selectedPlayers[currentSlotIdx] = { name: customName, position: requiredPosition };
-                $('#playerModal').addClass('hidden');
-                renderPlayers();
-                renderField();
+
+            // Basic validation
+            if (!customName) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Invalid Name',
+                    text: 'Please enter a player name',
+                    confirmButtonColor: '#3b82f6'
+                });
+                return;
             }
+
+            // Check minimum length
+            if (customName.length < 2) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Name Too Short',
+                    text: 'Player name must be at least 2 characters long',
+                    confirmButtonColor: '#3b82f6'
+                });
+                return;
+            }
+
+            // Check if player name already exists in system
+            const existingPlayer = players.find(p => p.name.toLowerCase() === customName.toLowerCase());
+            if (existingPlayer) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Player Already Exists',
+                    text: `${customName} is already available in the system. Please select from the player list instead.`,
+                    confirmButtonColor: '#3b82f6'
+                });
+                return;
+            }
+
+            // Check if custom player name is already used in current team
+            const isNameUsed = selectedPlayers.some(p => p && p.name.toLowerCase() === customName.toLowerCase());
+            if (isNameUsed) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Name Already Used',
+                    text: `${customName} is already in your team. Please choose a different name.`,
+                    confirmButtonColor: '#3b82f6'
+                });
+                return;
+            }
+
+            // Check budget for custom player
+            const customPlayerValue = 500000; // €0.5M for custom players
+            let currentTeamValue = 0;
+            selectedPlayers.forEach((p, idx) => {
+                if (p && idx !== currentSlotIdx) {
+                    currentTeamValue += p.value || 0;
+                }
+            });
+
+            if ((currentTeamValue + customPlayerValue) > maxBudget) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Budget Exceeded',
+                    text: `Adding a custom player (${formatMarketValue(customPlayerValue)}) would exceed your budget of ${formatMarketValue(maxBudget)}`,
+                    confirmButtonColor: '#3b82f6'
+                });
+                return;
+            }
+
+            const requiredPosition = getPositionForSlot(currentSlotIdx);
+            selectedPlayers[currentSlotIdx] = {
+                name: customName,
+                position: requiredPosition,
+                value: customPlayerValue,
+                rating: 70, // Default rating for custom players
+                isCustom: true // Flag to identify custom players
+            };
+
+            $('#playerModal').addClass('hidden');
+            renderPlayers();
+            renderField();
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Custom Player Added',
+                text: `${customName} has been added to your team!`,
+                confirmButtonColor: '#10b981',
+                timer: 2000,
+                showConfirmButton: false
+            });
         });
 
         $('#customPlayerName').keypress(function (e) {

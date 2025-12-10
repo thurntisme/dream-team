@@ -1,6 +1,9 @@
 <?php
 // Dream Team Constants - Formations and Player Data
 
+// Budget configuration
+define('DEFAULT_BUDGET', 500000000); // €500M default budget - optimal for competitive lineups
+
 // Formation configurations
 define('FORMATIONS', [
     '4-4-2' => [
