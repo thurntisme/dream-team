@@ -156,87 +156,70 @@ define('PLAYER_POSITIONS', [
     ]
 ]);
 
-// Default player database
-define('DEFAULT_PLAYERS', [
-    // Goalkeepers
-    ['name' => 'Alisson', 'position' => 'GK', 'rating' => 89, 'value' => 65000000],
-    ['name' => 'Ederson', 'position' => 'GK', 'rating' => 88, 'value' => 40000000],
-    ['name' => 'Courtois', 'position' => 'GK', 'rating' => 87, 'value' => 35000000],
-    ['name' => 'Neuer', 'position' => 'GK', 'rating' => 86, 'value' => 15000000],
+// Load player database from JSON file
+// This function reads players.json and converts it to the expected PHP array format
+// Includes caching, error handling, and data validation
+function loadPlayersFromJson()
+{
+    static $cachedPlayers = null;
 
-    // Centre Backs
-    ['name' => 'Van Dijk', 'position' => 'CB', 'rating' => 90, 'value' => 70000000],
-    ['name' => 'Ramos', 'position' => 'CB', 'rating' => 88, 'value' => 25000000],
-    ['name' => 'Dias', 'position' => 'CB', 'rating' => 87, 'value' => 80000000],
-    ['name' => 'Marquinhos', 'position' => 'CB', 'rating' => 86, 'value' => 60000000],
-    ['name' => 'Koulibaly', 'position' => 'CB', 'rating' => 85, 'value' => 40000000],
-    ['name' => 'Varane', 'position' => 'CB', 'rating' => 84, 'value' => 35000000],
-    ['name' => 'Laporte', 'position' => 'CB', 'rating' => 83, 'value' => 50000000],
+    // Return cached data if already loaded
+    if ($cachedPlayers !== null) {
+        return $cachedPlayers;
+    }
 
-    // Full Backs
-    ['name' => 'Robertson', 'position' => 'LB', 'rating' => 85, 'value' => 45000000],
-    ['name' => 'Cancelo', 'position' => 'RB', 'rating' => 84, 'value' => 50000000],
-    ['name' => 'Davies', 'position' => 'LB', 'rating' => 83, 'value' => 70000000],
-    ['name' => 'Walker', 'position' => 'RB', 'rating' => 82, 'value' => 30000000],
-    ['name' => 'Mendy', 'position' => 'LB', 'rating' => 81, 'value' => 35000000],
-    ['name' => 'Hakimi', 'position' => 'RB', 'rating' => 84, 'value' => 60000000],
+    $jsonFile = __DIR__ . '/players.json';
 
-    // Defensive Midfielders
-    ['name' => 'Casemiro', 'position' => 'CDM', 'rating' => 85, 'value' => 40000000],
-    ['name' => 'Kante', 'position' => 'CDM', 'rating' => 87, 'value' => 35000000],
-    ['name' => 'Fabinho', 'position' => 'CDM', 'rating' => 84, 'value' => 45000000],
-    ['name' => 'Rodri', 'position' => 'CDM', 'rating' => 85, 'value' => 80000000],
+    if (!file_exists($jsonFile)) {
+        error_log("Dream Team: players.json file not found at: " . $jsonFile);
+        $cachedPlayers = [];
+        return $cachedPlayers;
+    }
 
-    // Central Midfielders
-    ['name' => 'Modric', 'position' => 'CM', 'rating' => 88, 'value' => 20000000],
-    ['name' => 'Kroos', 'position' => 'CM', 'rating' => 86, 'value' => 15000000],
-    ['name' => 'Pedri', 'position' => 'CM', 'rating' => 84, 'value' => 90000000],
-    ['name' => 'Bellingham', 'position' => 'CM', 'rating' => 85, 'value' => 120000000],
-    ['name' => 'Gavi', 'position' => 'CM', 'rating' => 82, 'value' => 80000000],
-    ['name' => 'Verratti', 'position' => 'CM', 'rating' => 85, 'value' => 55000000],
+    $jsonContent = file_get_contents($jsonFile);
+    if ($jsonContent === false) {
+        error_log("Dream Team: Failed to read players.json file");
+        $cachedPlayers = [];
+        return $cachedPlayers;
+    }
 
-    // Attacking Midfielders
-    ['name' => 'De Bruyne', 'position' => 'CAM', 'rating' => 91, 'value' => 100000000],
-    ['name' => 'Bruno Fernandes', 'position' => 'CAM', 'rating' => 86, 'value' => 75000000],
-    ['name' => 'Muller', 'position' => 'CAM', 'rating' => 85, 'value' => 25000000],
-    ['name' => 'Odegaard', 'position' => 'CAM', 'rating' => 83, 'value' => 70000000],
+    $playersData = json_decode($jsonContent, true);
 
-    // Wingers
-    ['name' => 'Vinicius Jr', 'position' => 'LW', 'rating' => 84, 'value' => 120000000],
-    ['name' => 'Salah', 'position' => 'RW', 'rating' => 87, 'value' => 65000000],
-    ['name' => 'Mane', 'position' => 'LW', 'rating' => 86, 'value' => 40000000],
-    ['name' => 'Mahrez', 'position' => 'RW', 'rating' => 84, 'value' => 30000000],
-    ['name' => 'Neymar', 'position' => 'LW', 'rating' => 85, 'value' => 90000000],
-    ['name' => 'Saka', 'position' => 'RW', 'rating' => 83, 'value' => 90000000],
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        error_log("Dream Team: Invalid JSON in players.json - " . json_last_error_msg());
+        $cachedPlayers = [];
+        return $cachedPlayers;
+    }
 
-    // Strikers
-    ['name' => 'Mbappe', 'position' => 'ST', 'rating' => 92, 'value' => 180000000],
-    ['name' => 'Haaland', 'position' => 'ST', 'rating' => 91, 'value' => 170000000],
-    ['name' => 'Benzema', 'position' => 'ST', 'rating' => 89, 'value' => 35000000],
-    ['name' => 'Lewandowski', 'position' => 'ST', 'rating' => 88, 'value' => 45000000],
-    ['name' => 'Kane', 'position' => 'ST', 'rating' => 87, 'value' => 100000000],
+    if (!is_array($playersData)) {
+        error_log("Dream Team: players.json must contain an array of players");
+        $cachedPlayers = [];
+        return $cachedPlayers;
+    }
 
-    // Centre Forwards
-    ['name' => 'Osimhen', 'position' => 'CF', 'rating' => 85, 'value' => 120000000],
-    ['name' => 'Vlahovic', 'position' => 'CF', 'rating' => 84, 'value' => 70000000],
-    ['name' => 'Nunez', 'position' => 'CF', 'rating' => 83, 'value' => 75000000],
+    // Convert JSON objects to the expected array format
+    $players = [];
+    foreach ($playersData as $index => $player) {
+        // Validate required fields
+        if (!isset($player['name']) || !isset($player['position']) || !isset($player['rating']) || !isset($player['value'])) {
+            error_log("Dream Team: Invalid player data at index $index - missing required fields");
+            continue;
+        }
 
-    // Wing-Backs
-    ['name' => 'Theo Hernandez', 'position' => 'LWB', 'rating' => 84, 'value' => 60000000],
-    ['name' => 'Chilwell', 'position' => 'LWB', 'rating' => 82, 'value' => 45000000],
-    ['name' => 'Gosens', 'position' => 'LWB', 'rating' => 81, 'value' => 25000000],
-    ['name' => 'Reece James', 'position' => 'RWB', 'rating' => 84, 'value' => 65000000],
-    ['name' => 'Dumfries', 'position' => 'RWB', 'rating' => 82, 'value' => 40000000],
-    ['name' => 'Perisic', 'position' => 'LWB', 'rating' => 83, 'value' => 20000000],
+        $players[] = [
+            'name' => (string) $player['name'],
+            'position' => (string) $player['position'],
+            'rating' => (int) $player['rating'],
+            'value' => (int) $player['value']
+        ];
+    }
 
-    // Side Midfielders
-    ['name' => 'Kostic', 'position' => 'LM', 'rating' => 82, 'value' => 25000000],
-    ['name' => 'Cuadrado', 'position' => 'RM', 'rating' => 83, 'value' => 15000000],
-    ['name' => 'Spinazzola', 'position' => 'LM', 'rating' => 81, 'value' => 30000000],
-    ['name' => 'Berardi', 'position' => 'RM', 'rating' => 82, 'value' => 35000000],
-    ['name' => 'Chiesa', 'position' => 'LM', 'rating' => 84, 'value' => 70000000],
-    ['name' => 'Di Maria', 'position' => 'RM', 'rating' => 85, 'value' => 20000000]
-]);
+    $cachedPlayers = $players;
+    return $cachedPlayers;
+}
+
+// Default player database - Loaded from players.json
+define('DEFAULT_PLAYERS', loadPlayersFromJson());
 
 // Helper functions
 function getFormationData($formation)
