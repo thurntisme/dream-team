@@ -66,7 +66,7 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true)
 
                     <!-- Main Navigation -->
                     <?php if ($isLoggedIn && $showAuth): ?>
-                        <div class="hidden md:flex items-center gap-6">
+                        <div class="hidden md:flex items-center gap-1">
                             <a href="welcome.php"
                                 class="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors <?php echo $currentPage === 'welcome' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100'; ?>">
                                 <i data-lucide="home" class="w-4 h-4"></i>
@@ -75,17 +75,17 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true)
                             <a href="team.php"
                                 class="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors <?php echo $currentPage === 'team' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100'; ?>">
                                 <i data-lucide="users" class="w-4 h-4"></i>
-                                <span class="font-medium">My Team</span>
+                                <span class="font-medium">Team</span>
                             </a>
                             <a href="transfer.php"
                                 class="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors <?php echo $currentPage === 'transfer' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100'; ?>">
                                 <i data-lucide="arrow-left-right" class="w-4 h-4"></i>
-                                <span class="font-medium">Transfer Market</span>
+                                <span class="font-medium">Transfers</span>
                             </a>
                             <a href="clubs.php"
                                 class="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors <?php echo $currentPage === 'clubs' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100'; ?>">
                                 <i data-lucide="trophy" class="w-4 h-4"></i>
-                                <span class="font-medium">Other Clubs</span>
+                                <span class="font-medium">Clubs</span>
                             </a>
                             <a href="shop.php"
                                 class="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors <?php echo $currentPage === 'shop' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100'; ?>">
@@ -98,33 +98,84 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true)
                     <!-- User Menu -->
                     <div class="flex items-center gap-3">
                         <?php if ($isLoggedIn && $showAuth): ?>
-                            <!-- User Info -->
-                            <div class="hidden sm:flex items-center gap-2 text-sm text-gray-600">
-                                <i data-lucide="user" class="w-4 h-4"></i>
-                                <span><?php echo htmlspecialchars($userName); ?></span>
+                            <!-- User Dropdown -->
+                            <div class="relative">
+                                <button id="userMenuBtn"
+                                    class="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors">
+                                    <div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+                                        <i data-lucide="user" class="w-4 h-4 text-white"></i>
+                                    </div>
+                                    <div class="hidden sm:block text-left">
+                                        <div class="text-sm font-medium text-gray-900">
+                                            <?php echo htmlspecialchars($userName); ?></div>
+                                        <div class="text-xs text-gray-500"><?php echo htmlspecialchars($clubName); ?></div>
+                                    </div>
+                                    <i data-lucide="chevron-down" class="w-4 h-4"></i>
+                                </button>
+
+                                <!-- Dropdown Menu -->
+                                <div id="userDropdown"
+                                    class="hidden absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+                                    <div class="px-4 py-2 border-b border-gray-100">
+                                        <div class="text-sm font-medium text-gray-900">
+                                            <?php echo htmlspecialchars($userName); ?></div>
+                                        <div class="text-xs text-gray-500"><?php echo htmlspecialchars($clubName); ?></div>
+                                    </div>
+
+                                    <a href="welcome.php"
+                                        class="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                                        <i data-lucide="home" class="w-4 h-4"></i>
+                                        <span>Dashboard</span>
+                                    </a>
+
+                                    <a href="team.php"
+                                        class="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                                        <i data-lucide="users" class="w-4 h-4"></i>
+                                        <span>My Team</span>
+                                    </a>
+
+                                    <div class="border-t border-gray-100 my-1"></div>
+
+                                    <a href="transfer.php"
+                                        class="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                                        <i data-lucide="arrow-left-right" class="w-4 h-4"></i>
+                                        <span>Transfer Market</span>
+                                    </a>
+
+                                    <a href="shop.php"
+                                        class="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                                        <i data-lucide="shopping-bag" class="w-4 h-4"></i>
+                                        <span>Shop</span>
+                                    </a>
+
+                                    <a href="clubs.php"
+                                        class="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                                        <i data-lucide="trophy" class="w-4 h-4"></i>
+                                        <span>Other Clubs</span>
+                                    </a>
+
+                                    <div class="border-t border-gray-100 my-1"></div>
+
+                                    <button id="logoutBtn"
+                                        class="flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 w-full text-left">
+                                        <i data-lucide="log-out" class="w-4 h-4"></i>
+                                        <span>Logout</span>
+                                    </button>
+                                </div>
                             </div>
 
-                            <!-- Logout Button -->
-                            <button id="logoutBtn"
-                                class="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
-                                <i data-lucide="log-out" class="w-4 h-4"></i>
-                                <span class="hidden sm:inline">Logout</span>
-                            </button>
-                        <?php else: ?>
-                            <!-- Login/Register Links -->
-                            <a href="index.php"
-                                class="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
-                                <i data-lucide="log-in" class="w-4 h-4"></i>
-                                <span>Login</span>
-                            </a>
-                        <?php endif; ?>
-
-                        <!-- Mobile Menu Button -->
-                        <?php if ($isLoggedIn && $showAuth): ?>
+                            <!-- Mobile Menu Button -->
                             <button id="mobileMenuBtn"
                                 class="md:hidden p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg">
                                 <i data-lucide="menu" class="w-5 h-5"></i>
                             </button>
+                        <?php else: ?>
+                            <!-- Login/Register Links -->
+                            <a href="index.php"
+                                class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg transition-colors">
+                                <i data-lucide="log-in" class="w-4 h-4"></i>
+                                <span>Login</span>
+                            </a>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -132,38 +183,39 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true)
                 <!-- Mobile Navigation -->
                 <?php if ($isLoggedIn && $showAuth): ?>
                     <div id="mobileMenu" class="hidden md:hidden border-t py-4">
-                        <div class="flex flex-col gap-2">
+                        <div class="flex flex-col gap-1">
                             <a href="welcome.php"
-                                class="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors <?php echo $currentPage === 'welcome' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100'; ?>">
-                                <i data-lucide="home" class="w-4 h-4"></i>
-                                <span>Home</span>
+                                class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors <?php echo $currentPage === 'welcome' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100'; ?>">
+                                <i data-lucide="home" class="w-5 h-5"></i>
+                                <span class="font-medium">Home</span>
                             </a>
                             <a href="team.php"
-                                class="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors <?php echo $currentPage === 'team' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100'; ?>">
-                                <i data-lucide="users" class="w-4 h-4"></i>
-                                <span>My Team</span>
+                                class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors <?php echo $currentPage === 'team' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100'; ?>">
+                                <i data-lucide="users" class="w-5 h-5"></i>
+                                <span class="font-medium">My Team</span>
                             </a>
                             <a href="transfer.php"
-                                class="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors <?php echo $currentPage === 'transfer' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100'; ?>">
-                                <i data-lucide="arrow-left-right" class="w-4 h-4"></i>
-                                <span>Transfer Market</span>
+                                class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors <?php echo $currentPage === 'transfer' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100'; ?>">
+                                <i data-lucide="arrow-left-right" class="w-5 h-5"></i>
+                                <span class="font-medium">Transfer Market</span>
                             </a>
                             <a href="clubs.php"
-                                class="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors <?php echo $currentPage === 'clubs' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100'; ?>">
-                                <i data-lucide="trophy" class="w-4 h-4"></i>
-                                <span>Other Clubs</span>
+                                class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors <?php echo $currentPage === 'clubs' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100'; ?>">
+                                <i data-lucide="trophy" class="w-5 h-5"></i>
+                                <span class="font-medium">Other Clubs</span>
                             </a>
                             <a href="shop.php"
-                                class="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors <?php echo $currentPage === 'shop' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100'; ?>">
-                                <i data-lucide="shopping-bag" class="w-4 h-4"></i>
-                                <span>Shop</span>
+                                class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors <?php echo $currentPage === 'shop' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100'; ?>">
+                                <i data-lucide="shopping-bag" class="w-5 h-5"></i>
+                                <span class="font-medium">Shop</span>
                             </a>
-                            <div class="border-t pt-2 mt-2">
-                                <div class="flex items-center gap-2 px-3 py-2 text-sm text-gray-600">
-                                    <i data-lucide="user" class="w-4 h-4"></i>
-                                    <span><?php echo htmlspecialchars($userName); ?></span>
-                                </div>
-                            </div>
+                            
+                            <div class="border-t border-gray-200 my-2"></div>
+                            
+                            <button id="mobileLogoutBtn" class="flex items-center gap-3 px-4 py-3 text-red-600 hover:bg-red-50 rounded-lg transition-colors w-full text-left">
+                                <i data-lucide="log-out" class="w-5 h-5"></i>
+                                <span class="font-medium">Logout</span>
+                            </button>
                         </div>
                     </div>
                 <?php endif; ?>
@@ -246,13 +298,20 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true)
             // Initialize Lucide icons
             lucide.createIcons();
 
+            // User dropdown toggle
+            $('#userMenuBtn').click(function (e) {
+                e.stopPropagation();
+                $('#userDropdown').toggleClass('hidden');
+            });
+
             // Mobile menu toggle
-            $('#mobileMenuBtn').click(function () {
+            $('#mobileMenuBtn').click(function (e) {
+                e.stopPropagation();
                 $('#mobileMenu').toggleClass('hidden');
             });
 
-            // Logout functionality
-            $('#logoutBtn').click(function () {
+            // Logout functionality (both desktop and mobile)
+            $('#logoutBtn, #mobileLogoutBtn').click(function () {
                 Swal.fire({
                     title: 'Logout?',
                     text: 'Are you sure you want to logout?',
@@ -274,9 +333,23 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true)
                 });
             });
 
-            // Close mobile menu when clicking outside
+            // Close dropdowns when clicking outside
             $(document).click(function (e) {
+                // Close user dropdown
+                if (!$(e.target).closest('#userMenuBtn, #userDropdown').length) {
+                    $('#userDropdown').addClass('hidden');
+                }
+                
+                // Close mobile menu
                 if (!$(e.target).closest('#mobileMenuBtn, #mobileMenu').length) {
+                    $('#mobileMenu').addClass('hidden');
+                }
+            });
+
+            // Close dropdowns when pressing Escape
+            $(document).keydown(function (e) {
+                if (e.key === 'Escape') {
+                    $('#userDropdown').addClass('hidden');
                     $('#mobileMenu').addClass('hidden');
                 }
             });
