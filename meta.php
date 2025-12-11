@@ -43,6 +43,12 @@ function generateMetaTags($page = 'default')
             'keywords' => 'club challenges, football matches, global rankings, competitions, football clubs',
             'image' => $baseUrl . '/assets/club-challenges.jpg'
         ],
+        'transfer' => [
+            'title' => 'Transfer Market - Dream Team',
+            'description' => 'Buy and sell players in the transfer market. Make bids on players from other clubs and manage transfer offers for your own players.',
+            'keywords' => 'transfer market, player transfers, football transfers, buy players, sell players, player bids',
+            'image' => $baseUrl . '/assets/transfer-market.jpg'
+        ],
         'match' => [
             'title' => 'Live Match Simulation - Dream Team',
             'description' => 'Watch your team play in real-time with dynamic match simulation, live events, and tactical decisions that affect the outcome.',

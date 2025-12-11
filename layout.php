@@ -77,6 +77,11 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true)
                                 <i data-lucide="users" class="w-4 h-4"></i>
                                 <span class="font-medium">My Team</span>
                             </a>
+                            <a href="transfer.php"
+                                class="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors <?php echo $currentPage === 'transfer' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100'; ?>">
+                                <i data-lucide="arrow-left-right" class="w-4 h-4"></i>
+                                <span class="font-medium">Transfer Market</span>
+                            </a>
                             <a href="clubs.php"
                                 class="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors <?php echo $currentPage === 'clubs' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100'; ?>">
                                 <i data-lucide="trophy" class="w-4 h-4"></i>
@@ -133,6 +138,11 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true)
                                 <i data-lucide="users" class="w-4 h-4"></i>
                                 <span>My Team</span>
                             </a>
+                            <a href="transfer.php"
+                                class="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors <?php echo $currentPage === 'transfer' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100'; ?>">
+                                <i data-lucide="arrow-left-right" class="w-4 h-4"></i>
+                                <span>Transfer Market</span>
+                            </a>
                             <a href="clubs.php"
                                 class="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors <?php echo $currentPage === 'clubs' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100'; ?>">
                                 <i data-lucide="trophy" class="w-4 h-4"></i>
@@ -183,6 +193,7 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true)
                             <?php if ($isLoggedIn): ?>
                                 <a href="welcome.php" class="block text-gray-600 hover:text-blue-600 transition-colors">Home</a>
                                 <a href="team.php" class="block text-gray-600 hover:text-blue-600 transition-colors">My Team</a>
+                                <a href="transfer.php" class="block text-gray-600 hover:text-blue-600 transition-colors">Transfer Market</a>
                                 <a href="clubs.php" class="block text-gray-600 hover:text-blue-600 transition-colors">Other
                                     Clubs</a>
                             <?php else: ?>
