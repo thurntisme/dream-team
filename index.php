@@ -3,6 +3,8 @@ session_start();
 
 require_once 'config.php';
 require_once 'layout.php';
+require_once 'meta.php';
+require_once 'analytics.php';
 
 // Check if database is available, redirect to install if not
 if (!isDatabaseAvailable()) {
@@ -10,8 +12,18 @@ if (!isDatabaseAvailable()) {
     exit;
 }
 
+// If user is already logged in, redirect to welcome page
 if (isset($_SESSION['user_id'])) {
     header('Location: welcome.php');
+    exit;
+}
+
+// If user came from landing page or has landing_visited cookie, show login/register
+// Otherwise redirect to landing page for better SEO and user experience
+if (!isset($_GET['from_landing']) && !isset($_COOKIE['landing_visited'])) {
+    // Set cookie to remember they've seen the landing page
+    setcookie('landing_visited', '1', time() + (86400 * 30), '/'); // 30 days
+    header('Location: landing.php');
     exit;
 }
 

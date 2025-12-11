@@ -1,0 +1,17 @@
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: /sitemap.xml
+
+# Disallow admin areas (if any)
+Disallow: /admin/
+Disallow: /config/
+Disallow: /*.php$
+
+# Allow specific important pages
+Allow: /landing.php
+Allow: /index.php
+
+# Crawl delay
+Crawl-delay: 1
