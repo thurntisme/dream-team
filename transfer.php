@@ -127,7 +127,7 @@ try {
 startContent();
 ?>
 
-<div class="p-4">
+<div class="container mx-auto p-4 max-w-6xl">
     <div class="bg-white rounded-lg p-6 mb-6">
         <div class="text-center mb-8">
             <h1 class="text-3xl font-bold text-gray-900 mb-2">Transfer Market</h1>
