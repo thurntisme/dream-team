@@ -25,7 +25,7 @@ if (!$opponent_id) {
 
 // Challenge system configuration
 define('CHALLENGE_BASE_COST', 5000000); // €5M base cost
-define('WIN_REWARD_PERCENTAGE', 0.8); // 80% of challenge cost
+define('WIN_REWARD_PERCENTAGE', 1.5); // 150% of challenge cost (50% profit + cost back)
 
 try {
     $db = getDbConnection();
@@ -69,8 +69,17 @@ try {
     // Simulate the match
     $match_result = simulateMatch($user_team, $opponent_team, $user_team_value, $opponent_team_value);
 
-    // Process match result and update budgets
-    $financial_result = processMatchFinancials($db, $_SESSION['user_id'], $match_result, $challenge_cost, $potential_reward);
+    // Process match result and calculate rewards (but don't apply yet)
+    $financial_result = calculateMatchRewards($_SESSION['user_id'], $match_result, $challenge_cost, $potential_reward);
+
+    // Store pending reward in session for approval
+    $_SESSION['pending_reward'] = [
+        'amount' => $financial_result['earnings'],
+        'challenge_cost' => $challenge_cost,
+        'match_result' => $match_result['result'],
+        'opponent_name' => $opponent_data['club_name'],
+        'financial_details' => $financial_result
+    ];
 
     $db->close();
 
@@ -86,8 +95,8 @@ function processChallengeValidation($db, $user_data, $opponent_data)
     $opponent_team = json_decode($opponent_data['team'] ?? '[]', true);
     $opponent_team_value = calculateTeamValue($opponent_team);
 
-    // Base cost + percentage of opponent's team value
-    $challenge_cost = CHALLENGE_BASE_COST + ($opponent_team_value * 0.01); // 1% of opponent's team value
+    // Base cost + percentage of opponent's team value (reduced to 0.5% for more reasonable costs)
+    $challenge_cost = CHALLENGE_BASE_COST + ($opponent_team_value * 0.005); // 0.5% of opponent's team value
     $potential_reward = $challenge_cost * WIN_REWARD_PERCENTAGE;
 
     // Validate user's team
@@ -137,8 +146,10 @@ function processChallengeValidation($db, $user_data, $opponent_data)
     ];
 }
 
-function processMatchFinancials($db, $user_id, $match_result, $challenge_cost, $potential_reward)
+function calculateMatchRewards($user_id, $match_result, $challenge_cost, $potential_reward)
 {
+    global $db;
+
     // Get user data for club level calculation
     $stmt = $db->prepare('SELECT budget, team FROM users WHERE id = :user_id');
     $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
@@ -154,51 +165,40 @@ function processMatchFinancials($db, $user_id, $match_result, $challenge_cost, $
     $result_message = '';
 
     if ($match_result['result'] === 'win') {
-        // User wins - give reward + level bonus
+        // User wins - calculate reward + level bonus (pending approval)
         $earnings = $potential_reward;
         $bonus_earnings = $earnings * $level_bonus;
-        $total_earnings = $earnings + $bonus_earnings;
 
-        $stmt = $db->prepare('UPDATE users SET budget = budget + :reward WHERE id = :user_id');
-        $stmt->bindValue(':reward', $total_earnings, SQLITE3_INTEGER);
-        $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
-        $stmt->execute();
-
-        $result_message = 'Victory! You earned ' . formatMarketValue($earnings) . ' in prize money';
+        $result_message = 'Victory! You can earn ' . formatMarketValue($earnings) . ' in prize money';
         if ($bonus_earnings > 0) {
             $result_message .= ' + ' . formatMarketValue($bonus_earnings) . ' club level bonus (Level ' . $club_level . ')!';
         } else {
             $result_message .= '!';
         }
     } elseif ($match_result['result'] === 'draw') {
-        // Draw - return half the challenge cost + small level bonus
-        $earnings = $challenge_cost * 0.5;
+        // Draw - calculate 80% refund + level bonus (pending approval)
+        $earnings = $challenge_cost * 0.8;
         $bonus_earnings = $earnings * ($level_bonus * 0.5); // Half bonus for draws
-        $total_earnings = $earnings + $bonus_earnings;
 
-        $stmt = $db->prepare('UPDATE users SET budget = budget + :refund WHERE id = :user_id');
-        $stmt->bindValue(':refund', $total_earnings, SQLITE3_INTEGER);
-        $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
-        $stmt->execute();
-
-        $result_message = 'Draw! You received ' . formatMarketValue($earnings) . ' as a partial refund';
+        $result_message = 'Draw! You can receive ' . formatMarketValue($earnings) . ' (80% refund)';
         if ($bonus_earnings > 0) {
             $result_message .= ' + ' . formatMarketValue($bonus_earnings) . ' level bonus.';
         } else {
             $result_message .= '.';
         }
     } else {
-        // Loss - no refund, but small consolation bonus for high-level clubs
-        if ($club_level >= 3) {
-            $bonus_earnings = $challenge_cost * 0.1; // 10% consolation for level 3+ clubs
-            $stmt = $db->prepare('UPDATE users SET budget = budget + :consolation WHERE id = :user_id');
-            $stmt->bindValue(':consolation', $bonus_earnings, SQLITE3_INTEGER);
-            $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
-            $stmt->execute();
+        // Loss - calculate consolation bonus based on club level (pending approval)
+        if ($club_level >= 2) {
+            // Level-based consolation: Level 2: 15%, Level 3: 20%, Level 4: 25%, Level 5: 30%
+            $consolation_rate = 0.1 + ($club_level * 0.05); // 15% to 30% based on level
+            $bonus_earnings = $challenge_cost * $consolation_rate;
 
-            $result_message = 'Defeat! You lost the challenge fee but received ' . formatMarketValue($bonus_earnings) . ' consolation bonus (Level ' . $club_level . ').';
+            $result_message = 'Defeat! You lost the challenge fee but can receive ' . formatMarketValue($bonus_earnings) . ' consolation bonus (' . round($consolation_rate * 100) . '% - Level ' . $club_level . ').';
         } else {
-            $result_message = 'Defeat! You lost the challenge fee of ' . formatMarketValue($challenge_cost) . '.';
+            // Beginner level still gets small consolation
+            $bonus_earnings = $challenge_cost * 0.1; // 10% for beginners
+
+            $result_message = 'Defeat! You lost the challenge fee but can receive ' . formatMarketValue($bonus_earnings) . ' consolation bonus (10% - Level ' . $club_level . ').';
         }
     }
 
@@ -208,7 +208,8 @@ function processMatchFinancials($db, $user_id, $match_result, $challenge_cost, $
         'bonus_earnings' => $bonus_earnings,
         'club_level' => $club_level,
         'challenge_cost' => $challenge_cost,
-        'message' => $result_message
+        'message' => $result_message,
+        'pending' => true
     ];
 }
 
@@ -463,7 +464,7 @@ startContent();
 ?>
 
 <div class="p-4">
-    <div class="bg-white rounded-lg shadow-lg p-6">
+    <div class="bg-white rounded-lg p-6 mb-6">
         <div class="text-center mb-8">
             <h1 class="text-3xl font-bold text-gray-900 mb-2">Challenge Match</h1>
             <p class="text-gray-600">Competitive Match - Stakes: <?php echo formatMarketValue($challenge_cost); ?></p>
@@ -530,7 +531,7 @@ startContent();
                     <div id="matchStatus"
                         class="text-lg font-semibold text-gray-600 flex items-center justify-center gap-2">
                         <i data-lucide="clock" class="w-5 h-5"></i>
-                        Match Ready
+                        <span id="matchStatusText">Pending - Ready to Start</span>
                     </div>
                 </div>
 
@@ -698,20 +699,28 @@ startContent();
         </div>
 
         <!-- Financial Result -->
-        <div class="bg-white rounded-lg p-6 mb-6">
+        <div class="bg-white rounded-lg p-6">
             <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                 <i data-lucide="banknote" class="w-5 h-5"></i>
                 Financial Summary
+                <?php if ($financial_result['pending']): ?>
+                    <span id="financialStatusBadge"
+                        class="ml-2 px-2 py-1 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">
+                        MATCH PENDING
+                    </span>
+                <?php endif; ?>
             </h3>
-            <div class="bg-gradient-to-r <?php
-            echo $match_result['result'] === 'win' ? 'from-green-50 to-green-100 border-green-200' :
-                ($match_result['result'] === 'draw' ? 'from-yellow-50 to-yellow-100 border-yellow-200' : 'from-red-50 to-red-100 border-red-200');
-            ?> border rounded-lg p-6 text-center">
-                <div class="text-2xl font-bold mb-2 <?php
-                echo $match_result['result'] === 'win' ? 'text-green-700' :
-                    ($match_result['result'] === 'draw' ? 'text-yellow-700' : 'text-red-700');
-                ?>">
-                    <?php echo $financial_result['message']; ?>
+            <div id="financialSummaryCard"
+                class="bg-gradient-to-r from-gray-50 to-gray-100 border-gray-200 border rounded-lg p-6 text-center">
+                <div id="financialMessage" class="text-2xl font-bold mb-2 text-gray-700">
+                    Match Not Started - Awaiting Results
+                </div>
+
+                <div class="hidden mt-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                    <div class="text-sm text-orange-700 mb-2">
+                        <i data-lucide="alert-circle" class="w-4 h-4 inline mr-1"></i>
+                        Click "Approve Reward" to receive your earnings and complete the transaction.
+                    </div>
                 </div>
 
                 <!-- Club Level Display -->
@@ -737,25 +746,31 @@ startContent();
                     </div>
                     <div class="bg-white bg-opacity-50 rounded-lg p-3">
                         <div class="text-sm text-gray-600">Base Earnings</div>
-                        <div class="text-lg font-bold text-green-600">
-                            +<?php echo formatMarketValue($financial_result['base_earnings']); ?></div>
+                        <div id="baseEarningsDisplay" class="text-lg font-bold text-gray-500">TBD</div>
                     </div>
                     <div class="bg-white bg-opacity-50 rounded-lg p-3">
                         <div class="text-sm text-gray-600">Level Bonus</div>
-                        <div class="text-lg font-bold text-purple-600">
-                            +<?php echo formatMarketValue($financial_result['bonus_earnings']); ?></div>
+                        <div id="levelBonusDisplay" class="text-lg font-bold text-gray-500">TBD</div>
                     </div>
                     <div class="bg-white bg-opacity-50 rounded-lg p-3">
                         <div class="text-sm text-gray-600">Net Result</div>
-                        <div
-                            class="text-lg font-bold <?php echo ($financial_result['earnings'] - $challenge_cost) >= 0 ? 'text-green-600' : 'text-red-600'; ?>">
-                            <?php
-                            $net = $financial_result['earnings'] - $challenge_cost;
-                            echo ($net >= 0 ? '+' : '') . formatMarketValue($net);
-                            ?>
-                        </div>
+                        <div id="netResultDisplay" class="text-lg font-bold text-gray-500">TBD</div>
                     </div>
                 </div>
+
+                <!-- Approval Button -->
+                <?php if ($financial_result['pending']): ?>
+                    <div id="approvalSection" class="mt-6 pt-4 border-t border-white border-opacity-50 hidden">
+                        <button id="approveRewardBtn"
+                            class="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg transform transition-all duration-200 hover:scale-105 flex items-center gap-2 mx-auto">
+                            <i data-lucide="check-circle" class="w-5 h-5"></i>
+                            Approve Reward
+                        </button>
+                        <div class="text-xs text-gray-600 mt-2 opacity-75">
+                            This will deduct the challenge fee and add your earnings to your budget
+                        </div>
+                    </div>
+                <?php endif; ?>
 
                 <!-- Updated Budget Display -->
                 <?php
@@ -772,63 +787,76 @@ startContent();
                 }
                 ?>
                 <div class="mt-4 pt-4 border-t border-white border-opacity-50">
-                    <div class="text-sm text-gray-600">Current Budget</div>
-                    <div class="text-xl font-bold text-blue-600"><?php echo formatMarketValue($current_budget); ?></div>
+                    <div class="text-sm text-gray-600">
+                        <?php echo $financial_result['pending'] ? 'Current Budget (Before Transaction)' : 'Updated Budget'; ?>
+                    </div>
+                    <div class="text-xl font-bold text-blue-600"><?php echo formatMarketValue($user_data['budget']); ?>
+                    </div>
+                    <?php if ($financial_result['pending']): ?>
+                        <div id="afterApprovalBudget" class="text-xs text-gray-500 mt-1">
+                            After approval: TBD (Awaiting match completion)
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div>
-        </div>
-
-        <!-- Team Performance -->
-        <div class="bg-white rounded-lg p-6 mb-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                <i data-lucide="trending-up" class="w-5 h-5"></i>
-                Team Performance Analysis
-            </h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="text-center">
-                    <h4 class="font-medium text-gray-900 mb-2"><?php echo htmlspecialchars($user_data['club_name']); ?>
-                    </h4>
-                    <div class="w-full bg-gray-200 rounded-full h-4 mb-2">
-                        <div class="bg-blue-600 h-4 rounded-full transition-all duration-1000"
-                            style="width: <?php echo $match_result['userStrength']; ?>%"></div>
-                    </div>
-                    <p class="text-sm text-gray-600">Strength: <?php echo $match_result['userStrength']; ?>%</p>
-                </div>
-                <div class="text-center">
-                    <h4 class="font-medium text-gray-900 mb-2">
-                        <?php echo htmlspecialchars($opponent_data['club_name']); ?>
-                    </h4>
-                    <div class="w-full bg-gray-200 rounded-full h-4 mb-2">
-                        <div class="bg-red-600 h-4 rounded-full transition-all duration-1000"
-                            style="width: <?php echo $match_result['opponentStrength']; ?>%"></div>
-                    </div>
-                    <p class="text-sm text-gray-600">Strength: <?php echo $match_result['opponentStrength']; ?>%</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Actions -->
-        <div class="flex justify-center gap-4">
-            <a href="clubs.php?<?php
-            $_SESSION['match_success'] = $financial_result['message'];
-            echo 'completed=1';
-            ?>"
-                class="inline-flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors">
-                <i data-lucide="arrow-left" class="w-4 h-4"></i>
-                Back to Clubs
-            </a>
-            <a href="team.php"
-                class="inline-flex items-center gap-2 bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700 transition-colors">
-                <i data-lucide="users" class="w-4 h-4"></i>
-                My Team
-            </a>
-            <a href="match-simulator.php?opponent=<?php echo $opponent_id; ?>"
-                class="inline-flex items-center gap-2 bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors">
-                <i data-lucide="refresh-cw" class="w-4 h-4"></i>
-                Play Again
-            </a>
         </div>
     </div>
+
+    <!-- Team Performance -->
+    <div class="bg-white rounded-lg p-6 mb-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <i data-lucide="trending-up" class="w-5 h-5"></i>
+            Team Performance Analysis
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="text-center">
+                <h4 class="font-medium text-gray-900 mb-2">
+                    <?php echo htmlspecialchars($user_data['club_name']); ?>
+                </h4>
+                <div class="w-full bg-gray-200 rounded-full h-4 mb-2">
+                    <div class="bg-blue-600 h-4 rounded-full transition-all duration-1000" style="width:
+                            <?php echo $match_result['userStrength']; ?>%">
+                    </div>
+                </div>
+                <p class="text-sm text-gray-600">Strength:
+                    <?php echo $match_result['userStrength']; ?>%
+                </p>
+            </div>
+            <div class="text-center">
+                <h4 class="font-medium text-gray-900 mb-2">
+                    <?php echo htmlspecialchars($opponent_data['club_name']); ?>
+                </h4>
+                <div class="w-full bg-gray-200 rounded-full h-4 mb-2">
+                    <div class="bg-red-600 h-4 rounded-full transition-all duration-1000"
+                        style="width: <?php echo $match_result['opponentStrength']; ?>%"></div>
+                </div>
+                <p class="text-sm text-gray-600">Strength: <?php echo $match_result['opponentStrength']; ?>%</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions -->
+    <div class=" flex justify-center gap-4">
+        <a href="clubs.php?<?php
+        $_SESSION['match_success'] = $financial_result['message'];
+        echo 'completed=1';
+        ?>"
+            class="inline-flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i>
+            Back to Clubs
+        </a>
+        <a href="team.php"
+            class="inline-flex items-center gap-2 bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700 transition-colors">
+            <i data-lucide="users" class="w-4 h-4"></i>
+            My Team
+        </a>
+        <a href="match-simulator.php?opponent=<?php echo $opponent_id; ?>"
+            class="inline-flex items-center gap-2 bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors">
+            <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+            Play Again
+        </a>
+    </div>
+</div>
 </div>
 
 <script>
@@ -846,6 +874,68 @@ startContent();
     let matchInterval = null;
     let isMatchRunning = false;
     let currentEventIndex = 0;
+    let matchStatus = 'pending'; // pending, processing, end, processed
+
+    // Function to update match status
+    function updateMatchStatus(status) {
+        matchStatus = status;
+        const statusElement = document.getElementById('matchStatusText');
+        const approvalSection = document.getElementById('approvalSection');
+        const financialBadge = document.getElementById('financialStatusBadge');
+        const financialMessage = document.getElementById('financialMessage');
+
+        switch (status) {
+            case 'pending':
+                statusElement.textContent = 'Pending - Ready to Start';
+                statusElement.className = '';
+                if (approvalSection) approvalSection.classList.add('hidden');
+                if (financialBadge) {
+                    financialBadge.textContent = 'MATCH PENDING';
+                    financialBadge.className = 'ml-2 px-2 py-1 bg-gray-100 text-gray-600 text-xs font-medium rounded-full';
+                }
+                if (financialMessage) {
+                    financialMessage.textContent = 'Match Not Started - Awaiting Results';
+                    financialMessage.className = 'text-2xl font-bold mb-2 text-gray-700';
+                }
+                break;
+            case 'processing':
+                statusElement.textContent = 'Processing - Match in Progress';
+                statusElement.className = 'text-blue-600';
+                if (approvalSection) approvalSection.classList.add('hidden');
+                if (financialBadge) {
+                    financialBadge.textContent = 'MATCH IN PROGRESS';
+                    financialBadge.className = 'ml-2 px-2 py-1 bg-blue-100 text-blue-600 text-xs font-medium rounded-full';
+                }
+                if (financialMessage) {
+                    financialMessage.textContent = 'Match in Progress - Final Result Pending';
+                    financialMessage.className = 'text-2xl font-bold mb-2 text-blue-700';
+                }
+                break;
+            case 'end':
+                statusElement.textContent = 'Ended - Processing Results';
+                statusElement.className = 'text-orange-600';
+                if (approvalSection) approvalSection.classList.add('hidden'); // Keep hidden until processing complete
+                if (financialBadge) {
+                    financialBadge.textContent = 'PROCESSING RESULTS';
+                    financialBadge.className = 'ml-2 px-2 py-1 bg-orange-100 text-orange-600 text-xs font-medium rounded-full';
+                }
+                if (financialMessage) {
+                    financialMessage.textContent = 'Match Ended - Processing Results...';
+                    financialMessage.className = 'text-2xl font-bold mb-2 text-orange-700';
+                }
+                break;
+            case 'processed':
+                statusElement.textContent = 'Ended - Results Ready';
+                statusElement.className = 'text-green-600';
+                if (approvalSection) approvalSection.classList.remove('hidden'); // Now show approve button
+                if (financialBadge) {
+                    financialBadge.textContent = 'PENDING APPROVAL';
+                    financialBadge.className = 'ml-2 px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full';
+                }
+                btnApprove.classList.remove('hidden');
+                break;
+        }
+    }
 
     // Initialize icons
     lucide.createIcons();
@@ -939,7 +1029,10 @@ startContent();
 
         $('#startMatch').addClass('hidden');
         $('#pauseMatch').removeClass('hidden');
-        $('#matchStatus').html('<i data-lucide="play" class="w-5 h-5"></i> Match In Progress');
+        $('#matchStatus').html('<i data-lucide="play" class="w-5 h-5"></i> <span id="matchStatusText">Processing - Match in Progress</span>');
+
+        // Update match status
+        updateMatchStatus('processing');
 
         // Reset scores and statistics
         $('#userScore').text('0');
@@ -1045,7 +1138,7 @@ startContent();
 
         $('#startMatch').removeClass('hidden');
         $('#pauseMatch').addClass('hidden');
-        $('#matchStatus').html('<i data-lucide="pause" class="w-5 h-5"></i> Match Paused');
+        $('#matchStatus').html('<i data-lucide="pause" class="w-5 h-5"></i> <span id="matchStatusText">Processing - Match Paused</span>');
 
         lucide.createIcons();
     }
@@ -1074,8 +1167,11 @@ startContent();
             resultClass = 'text-yellow-600';
         }
 
-        $('#matchStatus').html(resultText).removeClass('text-gray-600').addClass(resultClass);
+        $('#matchStatus').html(resultText + ' <span id="matchStatusText">Ended - Match Complete</span>').removeClass('text-gray-600').addClass(resultClass);
         $('#timerDisplay').text("90' FT");
+
+        // Update match status to end
+        updateMatchStatus('end');
 
         // Add final whistle event
         displayEvent({
@@ -1083,6 +1179,15 @@ startContent();
             type: 'whistle',
             description: 'Full Time! Match finished.'
         });
+
+        // Update financial summary and show result popup after match ends
+        <?php if ($financial_result['pending']): ?>
+            setTimeout(() => {
+                if (matchStatus === 'end') {
+                    showProcessingPopup();
+                }
+            }, 1000);
+        <?php endif; ?>
 
         lucide.createIcons();
     }
@@ -1094,8 +1199,459 @@ startContent();
     // Initialize field
     $(document).ready(() => {
         renderFieldPlayers();
+        updateMatchStatus('pending'); // Initialize match status
         lucide.createIcons();
     });
+</script>
+
+<!-- Processing Popup -->
+<div id="processingPopup" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg p-8 w-full max-w-sm mx-4 shadow-2xl">
+        <div class="text-center">
+            <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-blue-100 flex items-center justify-center">
+                <i data-lucide="loader" class="w-8 h-8 text-blue-600 animate-spin"></i>
+            </div>
+            <h2 class="text-xl font-bold mb-2 text-gray-900">Processing Match Result</h2>
+            <p class="text-gray-600 mb-4">Calculating rewards and updating club data...</p>
+            <div class="text-sm text-gray-500">Please wait</div>
+        </div>
+    </div>
+</div>
+
+<!-- Match Result Popup -->
+<div id="matchResultPopup" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg p-8 w-full max-w-md mx-4 shadow-2xl">
+        <div class="text-center">
+            <div id="popupResultIcon" class="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center">
+                <i id="popupResultIconSvg" class="w-8 h-8"></i>
+            </div>
+            <h2 id="popupResultTitle" class="text-2xl font-bold mb-2"></h2>
+            <p id="popupResultMessage" class="text-gray-600 mb-6"></p>
+
+            <div class="bg-gray-50 rounded-lg p-4 mb-6">
+                <div class="text-sm text-gray-600 mb-2">Financial Summary</div>
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <div class="text-gray-500">Challenge Fee</div>
+                        <div id="popupChallengeFee" class="font-bold text-red-600"></div>
+                    </div>
+                    <div>
+                        <div class="text-gray-500">Potential Earnings</div>
+                        <div id="popupEarnings" class="font-bold text-green-600"></div>
+                    </div>
+                </div>
+                <div class="border-t mt-3 pt-3">
+                    <div class="text-gray-500">Net Result</div>
+                    <div id="popupNetResult" class="text-lg font-bold"></div>
+                </div>
+            </div>
+
+            <div class="flex gap-3">
+                <button id="popupApproveBtn"
+                    class="flex-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transform transition-all duration-200 hover:scale-105 flex items-center justify-center gap-2">
+                    <i data-lucide="check-circle" class="w-5 h-5"></i>
+                    Approve Reward
+                </button>
+                <button id="popupCloseBtn"
+                    class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                    Later
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Show processing popup and handle match result processing
+    function showProcessingPopup() {
+        // Show processing popup
+        document.getElementById('processingPopup').classList.remove('hidden');
+        lucide.createIcons();
+
+        // Get live match results
+        const userGoals = parseInt($('#userScore').text());
+        const opponentGoals = parseInt($('#opponentScore').text());
+
+        // Send AJAX request to process match result
+        fetch('update_match_result.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                userGoals: userGoals,
+                opponentGoals: opponentGoals
+            })
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update financial summary with processed results
+                    updateFinancialSummary();
+
+                    // Update status to processed (shows approve button)
+                    updateMatchStatus('processed');
+
+                    // Hide processing popup
+                    document.getElementById('processingPopup').classList.add('hidden');
+
+                    // Show result popup after a brief delay
+                    setTimeout(() => {
+                        showMatchResultPopup();
+                    }, 500);
+                } else {
+                    // Handle error
+                    document.getElementById('processingPopup').classList.add('hidden');
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Processing Error',
+                        text: data.message || 'Failed to process match result',
+                        confirmButtonColor: '#ef4444'
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error processing match result:', error);
+                document.getElementById('processingPopup').classList.add('hidden');
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Connection Error',
+                    text: 'Failed to process match result. Please try again.',
+                    confirmButtonColor: '#ef4444'
+                });
+            });
+    }
+
+    // Show result popup when match ends
+    function showMatchResultPopup() {
+        // Only show popup if match results have been processed
+        if (matchStatus !== 'processed') {
+            return;
+        }
+
+        // Get live match results from the simulation
+        const userGoals = parseInt($('#userScore').text());
+        const opponentGoals = parseInt($('#opponentScore').text());
+
+        // Determine match result from live simulation
+        let matchResult;
+        if (userGoals > opponentGoals) {
+            matchResult = 'win';
+        } else if (userGoals < opponentGoals) {
+            matchResult = 'loss';
+        } else {
+            matchResult = 'draw';
+        }
+
+        const challengeCost = <?php echo $challenge_cost; ?>;
+        const opponentName = '<?php echo htmlspecialchars($opponent_data["club_name"]); ?>';
+
+        // Calculate earnings based on live result
+        const potentialReward = <?php echo $potential_reward; ?>;
+        const clubLevel = <?php echo $financial_result["club_level"]; ?>;
+        const levelBonus = <?php echo calculateLevelBonus($financial_result["club_level"]); ?>;
+
+        let earnings = 0;
+        if (matchResult === 'win') {
+            earnings = potentialReward + (potentialReward * levelBonus);
+        } else if (matchResult === 'draw') {
+            const baseEarnings = challengeCost * 0.8;
+            earnings = baseEarnings + (baseEarnings * (levelBonus * 0.5));
+        } else {
+            // Loss - consolation bonus
+            if (clubLevel >= 2) {
+                const consolationRate = 0.1 + (clubLevel * 0.05);
+                earnings = challengeCost * consolationRate;
+            } else {
+                earnings = challengeCost * 0.1;
+            }
+        }
+
+        const netResult = earnings - challengeCost;
+
+        // Set popup content based on result
+        const popup = document.getElementById('matchResultPopup');
+        const icon = document.getElementById('popupResultIcon');
+        const iconSvg = document.getElementById('popupResultIconSvg');
+        const title = document.getElementById('popupResultTitle');
+        const message = document.getElementById('popupResultMessage');
+
+        if (matchResult === 'win') {
+            icon.className = 'w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center bg-green-100';
+            iconSvg.setAttribute('data-lucide', 'trophy');
+            iconSvg.className = 'w-8 h-8 text-green-600';
+            title.textContent = 'Victory!';
+            title.className = 'text-2xl font-bold mb-2 text-green-700';
+            message.textContent = `Congratulations! You defeated ${opponentName} ${userGoals}-${opponentGoals}!`;
+        } else if (matchResult === 'draw') {
+            icon.className = 'w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center bg-yellow-100';
+            iconSvg.setAttribute('data-lucide', 'equal');
+            iconSvg.className = 'w-8 h-8 text-yellow-600';
+            title.textContent = 'Draw!';
+            title.className = 'text-2xl font-bold mb-2 text-yellow-700';
+            message.textContent = `You drew ${userGoals}-${opponentGoals} against ${opponentName}.`;
+        } else {
+            icon.className = 'w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center bg-red-100';
+            iconSvg.setAttribute('data-lucide', 'x-circle');
+            iconSvg.className = 'w-8 h-8 text-red-600';
+            title.textContent = 'Defeat';
+            title.className = 'text-2xl font-bold mb-2 text-red-700';
+            message.textContent = `You lost ${userGoals}-${opponentGoals} against ${opponentName}.`;
+        }
+
+        // Set financial details
+        document.getElementById('popupChallengeFee').textContent = '-' + formatMarketValue(challengeCost);
+        document.getElementById('popupEarnings').textContent = '+' + formatMarketValue(earnings);
+
+        const netResultElement = document.getElementById('popupNetResult');
+        netResultElement.textContent = (netResult >= 0 ? '+' : '') + formatMarketValue(netResult);
+        netResultElement.className = 'text-lg font-bold ' + (netResult >= 0 ? 'text-green-600' : 'text-red-600');
+
+        // Show popup
+        popup.classList.remove('hidden');
+        lucide.createIcons();
+    }
+
+    // Approve reward function
+    function approveReward() {
+        const approveBtn = document.getElementById('approveRewardBtn');
+        const popupApproveBtn = document.getElementById('popupApproveBtn');
+
+        // Disable buttons
+        if (approveBtn) {
+            approveBtn.disabled = true;
+            approveBtn.innerHTML = '<i data-lucide="loader" class="w-5 h-5 animate-spin"></i> Processing...';
+        }
+        if (popupApproveBtn) {
+            popupApproveBtn.disabled = true;
+            popupApproveBtn.innerHTML = '<i data-lucide="loader" class="w-5 h-5 animate-spin"></i> Processing...';
+        }
+
+        fetch('approve_reward.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Reward Approved!',
+                        html: `
+                            <div class="text-left">
+                                <p class="mb-2"><strong>Transaction completed successfully!</strong></p>
+                                <p class="mb-1">Net Result: <span class="font-bold ${data.net_result.startsWith('+') ? 'text-green-600' : 'text-red-600'}">${data.net_result}</span></p>
+                                <p>New Budget: <span class="font-bold text-blue-600">${data.new_budget}</span></p>
+                            </div>
+                        `,
+                        confirmButtonColor: '#10b981',
+                        confirmButtonText: 'Continue'
+                    }).then(() => {
+                        // Redirect to clubs page
+                        window.location.href = 'clubs.php';
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: data.message,
+                        confirmButtonColor: '#ef4444'
+                    });
+
+                    // Re-enable buttons
+                    if (approveBtn) {
+                        approveBtn.disabled = false;
+                        approveBtn.innerHTML = '<i data-lucide="check-circle" class="w-5 h-5"></i> Approve Reward';
+                    }
+                    if (popupApproveBtn) {
+                        popupApproveBtn.disabled = false;
+                        popupApproveBtn.innerHTML = '<i data-lucide="check-circle" class="w-5 h-5"></i> Approve Reward';
+                    }
+                }
+                lucide.createIcons();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Connection Error',
+                    text: 'Failed to process reward. Please try again.',
+                    confirmButtonColor: '#ef4444'
+                });
+
+                // Re-enable buttons
+                if (approveBtn) {
+                    approveBtn.disabled = false;
+                    approveBtn.innerHTML = '<i data-lucide="check-circle" class="w-5 h-5"></i> Approve Reward';
+                }
+                if (popupApproveBtn) {
+                    popupApproveBtn.disabled = false;
+                    popupApproveBtn.innerHTML = '<i data-lucide="check-circle" class="w-5 h-5"></i> Approve Reward';
+                }
+                lucide.createIcons();
+            });
+    }
+
+    // Event listeners
+    document.addEventListener('DOMContentLoaded', function () {
+        // Approve button event listeners
+        const approveBtn = document.getElementById('approveRewardBtn');
+        const popupApproveBtn = document.getElementById('popupApproveBtn');
+        const popupCloseBtn = document.getElementById('popupCloseBtn');
+
+        if (approveBtn) {
+            approveBtn.addEventListener('click', approveReward);
+        }
+        if (popupApproveBtn) {
+            popupApproveBtn.addEventListener('click', approveReward);
+        }
+        if (popupCloseBtn) {
+            popupCloseBtn.addEventListener('click', function () {
+                document.getElementById('matchResultPopup').classList.add('hidden');
+            });
+        }
+    });
+
+    // Update financial summary with live match results
+    function updateFinancialSummary() {
+        // Get live match results
+        const userGoals = parseInt($('#userScore').text());
+        const opponentGoals = parseInt($('#opponentScore').text());
+
+        // Determine match result
+        let matchResult;
+        if (userGoals > opponentGoals) {
+            matchResult = 'win';
+        } else if (userGoals < opponentGoals) {
+            matchResult = 'loss';
+        } else {
+            matchResult = 'draw';
+        }
+
+        const challengeCost = <?php echo $challenge_cost; ?>;
+        const potentialReward = <?php echo $potential_reward; ?>;
+        const clubLevel = <?php echo $financial_result["club_level"]; ?>;
+        const levelBonus = <?php echo calculateLevelBonus($financial_result["club_level"]); ?>;
+
+        // Calculate earnings based on live result
+        let baseEarnings = 0;
+        let bonusEarnings = 0;
+        let message = '';
+        let cardClass = '';
+        let messageClass = '';
+
+        if (matchResult === 'win') {
+            baseEarnings = potentialReward;
+            bonusEarnings = baseEarnings * levelBonus;
+            message = 'Victory! You can earn ' + formatMarketValue(baseEarnings) + ' in prize money';
+            if (bonusEarnings > 0) {
+                message += ' + ' + formatMarketValue(bonusEarnings) + ' club level bonus!';
+            } else {
+                message += '!';
+            }
+            cardClass = 'from-green-50 to-green-100 border-green-200';
+            messageClass = 'text-green-700';
+        } else if (matchResult === 'draw') {
+            baseEarnings = challengeCost * 0.8;
+            bonusEarnings = baseEarnings * (levelBonus * 0.5);
+            message = 'Draw! You can receive ' + formatMarketValue(baseEarnings) + ' (80% refund)';
+            if (bonusEarnings > 0) {
+                message += ' + ' + formatMarketValue(bonusEarnings) + ' level bonus.';
+            } else {
+                message += '.';
+            }
+            cardClass = 'from-yellow-50 to-yellow-100 border-yellow-200';
+            messageClass = 'text-yellow-700';
+        } else {
+            // Loss - consolation bonus
+            if (clubLevel >= 2) {
+                const consolationRate = 0.1 + (clubLevel * 0.05);
+                baseEarnings = challengeCost * consolationRate;
+                message = 'Defeat! You lost the challenge fee but can receive ' + formatMarketValue(baseEarnings) + ' consolation bonus (' + Math.round(consolationRate * 100) + '% - Level ' + clubLevel + ').';
+            } else {
+                baseEarnings = challengeCost * 0.1;
+                message = 'Defeat! You lost the challenge fee but can receive ' + formatMarketValue(baseEarnings) + ' consolation bonus (10% - Level ' + clubLevel + ').';
+            }
+            cardClass = 'from-red-50 to-red-100 border-red-200';
+            messageClass = 'text-red-700';
+        }
+
+        const totalEarnings = baseEarnings + bonusEarnings;
+        const netResult = totalEarnings - challengeCost;
+
+        // Update the financial summary display
+        const summaryCard = document.getElementById('financialSummaryCard');
+        const messageElement = document.getElementById('financialMessage');
+        const baseEarningsElement = document.getElementById('baseEarningsDisplay');
+        const levelBonusElement = document.getElementById('levelBonusDisplay');
+        const netResultElement = document.getElementById('netResultDisplay');
+
+        // Update card styling
+        summaryCard.className = 'bg-gradient-to-r ' + cardClass + ' border rounded-lg p-6 text-center';
+
+        // Update message
+        messageElement.textContent = message;
+        messageElement.className = 'text-2xl font-bold mb-2 ' + messageClass;
+
+        // Update financial breakdown
+        baseEarningsElement.textContent = '+' + formatMarketValue(baseEarnings);
+        baseEarningsElement.className = 'text-lg font-bold text-green-600';
+
+        levelBonusElement.textContent = '+' + formatMarketValue(bonusEarnings);
+        levelBonusElement.className = 'text-lg font-bold text-purple-600';
+
+        netResultElement.textContent = (netResult >= 0 ? '+' : '') + formatMarketValue(netResult);
+        netResultElement.className = 'text-lg font-bold ' + (netResult >= 0 ? 'text-green-600' : 'text-red-600');
+
+        // Update "After approval" budget
+        const currentBudget = <?php echo $user_data['budget']; ?>;
+        const afterApprovalBudget = currentBudget - challengeCost + totalEarnings;
+        const afterApprovalElement = document.getElementById('afterApprovalBudget');
+        if (afterApprovalElement) {
+            afterApprovalElement.textContent = 'After approval: ' + formatMarketValue(afterApprovalBudget);
+        }
+    }
+
+    // Update session with live match result
+    function updateSessionWithLiveResult() {
+        const userGoals = parseInt($('#userScore').text());
+        const opponentGoals = parseInt($('#opponentScore').text());
+
+        fetch('update_match_result.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                userGoals: userGoals,
+                opponentGoals: opponentGoals
+            })
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    console.log('Session updated with live result:', data.match_result);
+                } else {
+                    console.error('Failed to update session:', data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error updating session:', error);
+            });
+    }
+
+    // Format market value function (JavaScript version)
+    function formatMarketValue(value) {
+        if (value >= 1000000) {
+            return '€' + (value / 1000000).toFixed(1) + 'M';
+        } else if (value >= 1000) {
+            return '€' + Math.round(value / 1000) + 'K';
+        } else {
+            return '€' + value.toLocaleString();
+        }
+    }
 </script>
 
 <?php

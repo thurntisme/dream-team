@@ -778,8 +778,8 @@ startContent();
 
         // Calculate challenge cost
         const baseCost = 5000000; // €5M base cost
-        const challengeCost = baseCost + (teamValue * 0.01); // 1% of opponent's team value
-        const potentialReward = challengeCost * 0.8; // 80% reward for winning
+        const challengeCost = baseCost + (teamValue * 0.005); // 0.5% of opponent's team value
+        const potentialReward = challengeCost * 1.5; // 150% reward for winning (50% profit)
 
         // Get current user data (from PHP session)
         const currentBudget = <?php echo $user_data['budget'] ?? 0; ?>;
