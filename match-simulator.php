@@ -48,16 +48,34 @@ try {
         exit;
     }
 
-    // Validate and process challenge
-    $challenge_result = processChallengeValidation($db, $user_data, $opponent_data);
-    if ($challenge_result['error']) {
-        $_SESSION['challenge_error'] = $challenge_result['message'];
+    // Check if challenge was properly initiated
+    if (!isset($_SESSION['active_challenge']) || $_SESSION['active_challenge']['opponent_id'] != $opponent_id) {
+        $_SESSION['challenge_error'] = 'Invalid challenge session. Please initiate the challenge again.';
         header('Location: clubs.php');
         exit;
     }
 
-    $challenge_cost = $challenge_result['cost'];
-    $potential_reward = $challenge_result['reward'];
+    // Get challenge data from session
+    $challenge_cost = $_SESSION['active_challenge']['challenge_cost'];
+    $potential_reward = $challenge_cost * 1.5; // 150% of challenge cost
+
+    // Validate teams (without deducting budget again)
+    $user_team = json_decode($user_data['team'] ?? '[]', true);
+    $user_player_count = count(array_filter($user_team, fn($p) => $p !== null));
+
+    if ($user_player_count < 11) {
+        $_SESSION['challenge_error'] = 'You need a complete team (11 players) to challenge other clubs!';
+        header('Location: clubs.php');
+        exit;
+    }
+
+    $opponent_team = json_decode($opponent_data['team'] ?? '[]', true);
+    $opponent_player_count = count(array_filter($opponent_team, fn($p) => $p !== null));
+    if ($opponent_player_count < 11) {
+        $_SESSION['challenge_error'] = 'This club doesn\'t have a complete team and cannot be challenged.';
+        header('Location: clubs.php');
+        exit;
+    }
 
     // Calculate team values
     $user_team = json_decode($user_data['team'] ?? '[]', true);
@@ -81,6 +99,9 @@ try {
         'financial_details' => $financial_result
     ];
 
+    // Clear the active challenge session since match is now set up
+    unset($_SESSION['active_challenge']);
+
     $db->close();
 
 } catch (Exception $e) {
@@ -88,63 +109,7 @@ try {
     exit;
 }
 
-// Challenge validation and processing functions
-function processChallengeValidation($db, $user_data, $opponent_data)
-{
-    // Calculate challenge cost based on opponent's team value
-    $opponent_team = json_decode($opponent_data['team'] ?? '[]', true);
-    $opponent_team_value = calculateTeamValue($opponent_team);
-
-    // Base cost + percentage of opponent's team value (reduced to 0.5% for more reasonable costs)
-    $challenge_cost = CHALLENGE_BASE_COST + ($opponent_team_value * 0.005); // 0.5% of opponent's team value
-    $potential_reward = $challenge_cost * WIN_REWARD_PERCENTAGE;
-
-    // Validate user's team
-    $user_team = json_decode($user_data['team'] ?? '[]', true);
-    $user_player_count = count(array_filter($user_team, fn($p) => $p !== null));
-
-    if ($user_player_count < 11) {
-        return [
-            'error' => true,
-            'message' => 'You need a complete team (11 players) to challenge other clubs! You currently have ' . $user_player_count . '/11 players.'
-        ];
-    }
-
-    // Check if user has enough budget
-    if ($user_data['budget'] < $challenge_cost) {
-        return [
-            'error' => true,
-            'message' => 'Insufficient funds! You need ' . formatMarketValue($challenge_cost) . ' to challenge this club. Your current budget: ' . formatMarketValue($user_data['budget'])
-        ];
-    }
-
-    // Validate opponent's team
-    $opponent_player_count = count(array_filter($opponent_team, fn($p) => $p !== null));
-    if ($opponent_player_count < 11) {
-        return [
-            'error' => true,
-            'message' => 'This club doesn\'t have a complete team (11 players) and cannot be challenged. They have ' . $opponent_player_count . '/11 players.'
-        ];
-    }
-
-    // Deduct challenge cost from user's budget
-    $stmt = $db->prepare('UPDATE users SET budget = budget - :cost WHERE id = :user_id');
-    $stmt->bindValue(':cost', $challenge_cost, SQLITE3_INTEGER);
-    $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
-
-    if (!$stmt->execute()) {
-        return [
-            'error' => true,
-            'message' => 'Failed to process challenge payment. Please try again.'
-        ];
-    }
-
-    return [
-        'error' => false,
-        'cost' => $challenge_cost,
-        'reward' => $potential_reward
-    ];
-}
+// Challenge validation functions (budget deduction moved to initiate_challenge.php)
 
 function calculateMatchRewards($user_id, $match_result, $challenge_cost, $potential_reward)
 {
@@ -953,25 +918,30 @@ startContent();
 
     function renderTeamOnField(team, formation, teamType, $field) {
         const formationData = matchData.formations[formation];
-        const positions = formationData.positions;
-        const roles = formationData.roles;
+        let players = team;
+        let positions = formationData.positions;
+        let roles = formationData.roles;
+        console.log(formationData)
 
-        let playerIdx = 0;
         const isOpponent = teamType === 'opponent';
+        let playerIdx = 0;
 
         positions.forEach((line, lineIdx) => {
             line.forEach(xPos => {
-                const player = team[playerIdx];
+                const player = players[playerIdx];
                 let yPos;
 
                 if (isOpponent) {
-                    // Flip opponent team to top half
+                    // Opponent team in top half (GK at top)
+                    xPos = 100 - xPos;
                     yPos = ((lineIdx + 1) * (50 / (positions.length + 1)));
                 } else {
-                    // User team in bottom half
-                    yPos = 50 + ((lineIdx + 1) * (50 / (positions.length + 1)));
+                    // User team in bottom half (GK at bottom)
+                    // yPos = 50 + ((lineIdx + 1) * (50 / (positions.length + 1)));
+                    yPos = 100 - ((lineIdx + 1) * (50 / (positions.length + 1)));
                 }
 
+                // Get the role for this position (now properly aligned)
                 const requiredPosition = roles[playerIdx] || 'GK';
                 const colors = getPositionColors(requiredPosition);
                 const teamColor = isOpponent ? 'bg-red-500' : 'bg-blue-500';
@@ -984,7 +954,7 @@ startContent();
                                 <i data-lucide="user" class="w-4 h-4 text-white"></i>
                                 <span class="text-[8px] font-bold text-white">${requiredPosition}</span>
                             </div>
-                            <div class="absolute top-full left-1/2 transform -translate-x-1/2 mt-1 whitespace-nowrap">
+                            <div class="absolute ${isOpponent ? 'bottom-full mb-1' : 'top-full mt-1'} left-1/2 transform -translate-x-1/2 whitespace-nowrap">
                                 <div class="text-white text-[10px] font-bold bg-black bg-opacity-70 px-1.5 py-0.5 rounded">
                                     ${player.name}
                                 </div>

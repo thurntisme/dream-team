@@ -941,8 +941,51 @@ startContent();
             }
         }).then((result) => {
             if (result.isConfirmed) {
-                // Redirect to match simulator
-                window.location.href = `match-simulator.php?opponent=${clubId}`;
+                // Show loading state
+                Swal.fire({
+                    title: 'Initiating Challenge...',
+                    text: 'Processing payment and setting up match',
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    showConfirmButton: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
+                // Send challenge initiation request
+                fetch('initiate_challenge.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        opponent_id: clubId
+                    })
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Redirect to match simulator
+                            window.location.href = data.redirect_url;
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Challenge Failed',
+                                text: data.message,
+                                confirmButtonColor: '#ef4444'
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error initiating challenge:', error);
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Network Error',
+                            text: 'Failed to initiate challenge. Please try again.',
+                            confirmButtonColor: '#ef4444'
+                        });
+                    });
             }
         });
     }
