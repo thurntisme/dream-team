@@ -221,7 +221,9 @@ startContent();
                 </div>
                 <div
                     class="bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-4 text-center border border-blue-200">
-                    <div class="text-2xl font-bold text-blue-700"><?php echo formatMarketValue($user_budget); ?></div>
+                    <div class="text-2xl font-bold text-blue-700" id="clubBudget">
+                        <?php echo formatMarketValue($user_budget); ?>
+                    </div>
                     <div class="text-sm text-blue-600">Budget</div>
                 </div>
                 <div
@@ -476,7 +478,7 @@ startContent();
 <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
 <script>
     const players = <?php echo json_encode(getDefaultPlayers()); ?>;
-    const maxBudget = <?php echo $user_budget; ?>; // User's maximum budget
+    let maxBudget = <?php echo $user_budget; ?>; // User's maximum budget
     const maxPlayers = <?php echo $max_players; ?>; // Maximum squad size
 
     let selectedPlayerIdx = null; // Track which player is currently selected
@@ -834,14 +836,47 @@ startContent();
                 renderSubstitutes();
                 updateClubStats();
 
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Substitute Removed',
-                    text: `${player.name} has been removed from your substitutes`,
-                    timer: 2000,
-                    showConfirmButton: false,
-                    toast: true,
-                    position: 'top-end'
+                // Auto-save the changes to database
+                $.post('save_team.php', {
+                    formation: $('#formation').val(),
+                    team: JSON.stringify(selectedPlayers),
+                    substitutes: JSON.stringify(substitutePlayers)
+                }, function (response) {
+                    if (response.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Substitute Removed',
+                            text: `${player.name} has been removed from your substitutes`,
+                            timer: 2000,
+                            showConfirmButton: false,
+                            toast: true,
+                            position: 'top-end'
+                        });
+                    } else {
+                        // If save failed, revert the change
+                        substitutePlayers[idx] = player;
+                        renderSubstitutes();
+                        updateClubStats();
+
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Failed to Remove Substitute',
+                            text: response.message || 'Could not save changes. Please try again.',
+                            confirmButtonColor: '#ef4444'
+                        });
+                    }
+                }, 'json').fail(function () {
+                    // If request failed, revert the change
+                    substitutePlayers[idx] = player;
+                    renderSubstitutes();
+                    updateClubStats();
+
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Connection Error',
+                        text: 'Could not save changes. Please check your connection and try again.',
+                        confirmButtonColor: '#ef4444'
+                    });
                 });
             }
         });
@@ -864,14 +899,53 @@ startContent();
             renderSubstitutes();
             updateClubStats();
 
-            Swal.fire({
-                icon: 'success',
-                title: 'Player Promoted!',
-                text: `${substitute.name} has been promoted to the starting XI`,
-                timer: 2000,
-                showConfirmButton: false,
-                toast: true,
-                position: 'top-end'
+            // Auto-save the changes to database
+            $.post('save_team.php', {
+                formation: $('#formation').val(),
+                team: JSON.stringify(selectedPlayers),
+                substitutes: JSON.stringify(substitutePlayers)
+            }, function (response) {
+                if (response.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Player Promoted!',
+                        text: `${substitute.name} has been promoted to the starting XI`,
+                        timer: 2000,
+                        showConfirmButton: false,
+                        toast: true,
+                        position: 'top-end'
+                    });
+                } else {
+                    // If save failed, revert the change
+                    selectedPlayers[emptyStartingSlot] = null;
+                    substitutePlayers[subIdx] = substitute;
+                    renderPlayers();
+                    renderField();
+                    renderSubstitutes();
+                    updateClubStats();
+
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Failed to Promote Player',
+                        text: response.message || 'Could not save changes. Please try again.',
+                        confirmButtonColor: '#ef4444'
+                    });
+                }
+            }, 'json').fail(function () {
+                // If request failed, revert the change
+                selectedPlayers[emptyStartingSlot] = null;
+                substitutePlayers[subIdx] = substitute;
+                renderPlayers();
+                renderField();
+                renderSubstitutes();
+                updateClubStats();
+
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Connection Error',
+                    text: 'Could not save changes. Please check your connection and try again.',
+                    confirmButtonColor: '#ef4444'
+                });
             });
         } else {
             // Ask user which starting player to replace
@@ -948,14 +1022,53 @@ startContent();
 
         Swal.close();
 
-        Swal.fire({
-            icon: 'success',
-            title: 'Players Swapped!',
-            text: `${substitute.name} promoted to starting XI, ${startingPlayer.name} moved to substitutes`,
-            timer: 3000,
-            showConfirmButton: false,
-            toast: true,
-            position: 'top-end'
+        // Auto-save the changes to database
+        $.post('save_team.php', {
+            formation: $('#formation').val(),
+            team: JSON.stringify(selectedPlayers),
+            substitutes: JSON.stringify(substitutePlayers)
+        }, function (response) {
+            if (response.success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Players Swapped!',
+                    text: `${substitute.name} promoted to starting XI, ${startingPlayer.name} moved to substitutes`,
+                    timer: 3000,
+                    showConfirmButton: false,
+                    toast: true,
+                    position: 'top-end'
+                });
+            } else {
+                // If save failed, revert the change
+                selectedPlayers[startingIdx] = startingPlayer;
+                substitutePlayers[subIdx] = substitute;
+                renderPlayers();
+                renderField();
+                renderSubstitutes();
+                updateClubStats();
+
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Failed to Swap Players',
+                    text: response.message || 'Could not save changes. Please try again.',
+                    confirmButtonColor: '#ef4444'
+                });
+            }
+        }, 'json').fail(function () {
+            // If request failed, revert the change
+            selectedPlayers[startingIdx] = startingPlayer;
+            substitutePlayers[subIdx] = substitute;
+            renderPlayers();
+            renderField();
+            renderSubstitutes();
+            updateClubStats();
+
+            Swal.fire({
+                icon: 'error',
+                title: 'Connection Error',
+                text: 'Could not save changes. Please check your connection and try again.',
+                confirmButtonColor: '#ef4444'
+            });
         });
     }
 
@@ -1037,14 +1150,49 @@ startContent();
                 renderField();
                 updateClubStats();
 
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Player Removed',
-                    text: `${player.name} has been removed from your team`,
-                    timer: 2000,
-                    showConfirmButton: false,
-                    toast: true,
-                    position: 'top-end'
+                // Auto-save the changes to database
+                $.post('save_team.php', {
+                    formation: $('#formation').val(),
+                    team: JSON.stringify(selectedPlayers),
+                    substitutes: JSON.stringify(substitutePlayers)
+                }, function (response) {
+                    if (response.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Player Removed',
+                            text: `${player.name} has been removed from your team`,
+                            timer: 2000,
+                            showConfirmButton: false,
+                            toast: true,
+                            position: 'top-end'
+                        });
+                    } else {
+                        // If save failed, revert the change
+                        selectedPlayers[idx] = player;
+                        renderPlayers();
+                        renderField();
+                        updateClubStats();
+
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Failed to Remove Player',
+                            text: response.message || 'Could not save changes. Please try again.',
+                            confirmButtonColor: '#ef4444'
+                        });
+                    }
+                }, 'json').fail(function () {
+                    // If request failed, revert the change
+                    selectedPlayers[idx] = player;
+                    renderPlayers();
+                    renderField();
+                    updateClubStats();
+
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Connection Error',
+                        text: 'Could not save changes. Please check your connection and try again.',
+                        confirmButtonColor: '#ef4444'
+                    });
                 });
             }
         });
@@ -1541,6 +1689,18 @@ startContent();
                     }
                 }).then((result) => {
                     if (result.isConfirmed) {
+                        // Show loading message
+                        Swal.fire({
+                            title: 'Processing Purchase...',
+                            text: 'Please wait while we complete your purchase',
+                            allowOutsideClick: false,
+                            allowEscapeKey: false,
+                            showConfirmButton: false,
+                            didOpen: () => {
+                                Swal.showLoading();
+                            }
+                        });
+
                         // Add player to team or substitutes
                         if (isSelectingSubstitute) {
                             substitutePlayers[currentSlotIdx] = player;
@@ -1548,24 +1708,85 @@ startContent();
                             selectedPlayers[currentSlotIdx] = player;
                         }
 
-                        $('#playerModal').addClass('hidden');
-                        isSelectingSubstitute = false;
+                        // Save team and update budget
+                        $.post('purchase_player.php', {
+                            formation: $('#formation').val(),
+                            team: JSON.stringify(selectedPlayers),
+                            substitutes: JSON.stringify(substitutePlayers),
+                            player_cost: player.value || 0,
+                            player_name: player.name
+                        }, function (response) {
+                            if (response.success) {
+                                // Update local budget variable
+                                maxBudget = response.new_budget;
 
-                        // Update displays
-                        renderPlayers();
-                        renderField();
-                        renderSubstitutes();
-                        updateClubStats();
+                                // Update budget display in club overview
+                                $('#clubBudget').text(formatMarketValue(response.new_budget));
 
-                        // Show success message
-                        Swal.fire({
-                            icon: 'success',
-                            title: isReplacement ? 'Player Replaced!' : 'Player Added!',
-                            text: `${player.name} has been added to your ${isSelectingSubstitute ? 'substitutes' : 'team'}`,
-                            timer: 2000,
-                            showConfirmButton: false,
-                            toast: true,
-                            position: 'top-end'
+                                $('#playerModal').addClass('hidden');
+                                isSelectingSubstitute = false;
+
+                                // Update displays
+                                renderPlayers();
+                                renderField();
+                                renderSubstitutes();
+                                updateClubStats();
+
+                                // Show success message
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: isReplacement ? 'Player Replaced!' : 'Player Purchased!',
+                                    html: `
+                                        <div class="text-center">
+                                            <p class="mb-2">${player.name} has been added to your ${isSelectingSubstitute ? 'substitutes' : 'team'}!</p>
+                                            <p class="text-sm text-gray-600">Cost: ${formatMarketValue(player.value || 0)}</p>
+                                            <p class="text-sm text-blue-600">Remaining Budget: ${formatMarketValue(response.new_budget)}</p>
+                                        </div>
+                                    `,
+                                    timer: 3000,
+                                    showConfirmButton: false,
+                                    toast: true,
+                                    position: 'top-end'
+                                });
+                            } else {
+                                // Revert the change if save failed
+                                if (isSelectingSubstitute) {
+                                    substitutePlayers[currentSlotIdx] = null;
+                                } else {
+                                    selectedPlayers[currentSlotIdx] = currentPlayer;
+                                }
+
+                                renderPlayers();
+                                renderField();
+                                renderSubstitutes();
+                                updateClubStats();
+
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Purchase Failed',
+                                    text: response.message || 'Failed to complete purchase. Please try again.',
+                                    confirmButtonColor: '#ef4444'
+                                });
+                            }
+                        }, 'json').fail(function () {
+                            // Revert the change if request failed
+                            if (isSelectingSubstitute) {
+                                substitutePlayers[currentSlotIdx] = null;
+                            } else {
+                                selectedPlayers[currentSlotIdx] = currentPlayer;
+                            }
+
+                            renderPlayers();
+                            renderField();
+                            renderSubstitutes();
+                            updateClubStats();
+
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Connection Error',
+                                text: 'Unable to complete purchase. Please check your connection and try again.',
+                                confirmButtonColor: '#ef4444'
+                            });
                         });
                     }
                 });
@@ -1742,29 +1963,102 @@ startContent();
                     isCustom: true // Flag to identify custom players
                 };
 
+                // Show loading message
+                Swal.fire({
+                    title: 'Creating Player...',
+                    text: 'Please wait while we create your custom player',
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    showConfirmButton: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
                 if (isSelectingSubstitute) {
                     substitutePlayers[currentSlotIdx] = customPlayer;
                 } else {
                     selectedPlayers[currentSlotIdx] = customPlayer;
                 }
 
-                $('#playerModal').addClass('hidden');
-                isSelectingSubstitute = false;
+                // Save team and update budget
+                $.post('purchase_player.php', {
+                    formation: $('#formation').val(),
+                    team: JSON.stringify(selectedPlayers),
+                    substitutes: JSON.stringify(substitutePlayers),
+                    player_cost: customPlayerValue,
+                    player_name: customName
+                }, function (response) {
+                    if (response.success) {
+                        // Update local budget variable
+                        maxBudget = response.new_budget;
 
-                renderPlayers();
-                renderField();
-                renderSubstitutes();
-                updateClubStats();
+                        // Update budget display in club overview
+                        $('#clubBudget').text(formatMarketValue(response.new_budget));
 
-                // Show success message
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Custom Player Created!',
-                    text: `${customName} has been added to your ${isSelectingSubstitute ? 'substitutes' : 'team'}`,
-                    timer: 2000,
-                    showConfirmButton: false,
-                    toast: true,
-                    position: 'top-end'
+                        $('#playerModal').addClass('hidden');
+                        isSelectingSubstitute = false;
+
+                        renderPlayers();
+                        renderField();
+                        renderSubstitutes();
+                        updateClubStats();
+
+                        // Show success message
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Custom Player Created!',
+                            html: `
+                                <div class="text-center">
+                                    <p class="mb-2">${customName} has been added to your ${isSelectingSubstitute ? 'substitutes' : 'team'}!</p>
+                                    <p class="text-sm text-gray-600">Cost: ${formatMarketValue(customPlayerValue)}</p>
+                                    <p class="text-sm text-blue-600">Remaining Budget: ${formatMarketValue(response.new_budget)}</p>
+                                </div>
+                            `,
+                            timer: 3000,
+                            showConfirmButton: false,
+                            toast: true,
+                            position: 'top-end'
+                        });
+                    } else {
+                        // Revert the change if save failed
+                        if (isSelectingSubstitute) {
+                            substitutePlayers[currentSlotIdx] = null;
+                        } else {
+                            selectedPlayers[currentSlotIdx] = currentPlayer;
+                        }
+
+                        renderPlayers();
+                        renderField();
+                        renderSubstitutes();
+                        updateClubStats();
+
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Creation Failed',
+                            text: response.message || 'Failed to create custom player. Please try again.',
+                            confirmButtonColor: '#ef4444'
+                        });
+                    }
+                }, 'json').fail(function () {
+                    // Revert the change if request failed
+                    if (isSelectingSubstitute) {
+                        substitutePlayers[currentSlotIdx] = null;
+                    } else {
+                        selectedPlayers[currentSlotIdx] = currentPlayer;
+                    }
+
+                    renderPlayers();
+                    renderField();
+                    renderSubstitutes();
+                    updateClubStats();
+
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Connection Error',
+                        text: 'Unable to create custom player. Please check your connection and try again.',
+                        confirmButtonColor: '#ef4444'
+                    });
                 });
             }
         });
@@ -2094,14 +2388,15 @@ startContent();
 
     .player-info-stat-bar {
         transition: width 0.3s ease;
+
     }
 
-    .player-info-flag {
+    .pla yer-info-flag {
         object-fit: cover;
         border-radius: 2px;
     }
 
-    .player-info-header {
+    .pla yer-info-header {
         background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
     }
 </style>
