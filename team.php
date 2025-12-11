@@ -191,9 +191,11 @@ startContent();
                 <div class="text-right">
                     <div class="text-sm text-gray-600">Club Founded</div>
                     <div class="text-lg font-bold text-gray-900">
-                        <?php echo date('M j, Y', strtotime($user['created_at'])); ?></div>
+                        <?php echo date('M j, Y', strtotime($user['created_at'])); ?>
+                    </div>
                     <div class="text-xs text-gray-500 mt-1">
-                        <?php echo floor((time() - strtotime($user['created_at'])) / 86400); ?> days ago</div>
+                        <?php echo floor((time() - strtotime($user['created_at'])) / 86400); ?> days ago
+                    </div>
                 </div>
             </div>
 
@@ -202,7 +204,8 @@ startContent();
                 <div
                     class="bg-gradient-to-r from-green-50 to-green-100 rounded-lg p-4 text-center border border-green-200">
                     <div class="text-2xl font-bold text-green-700" id="clubTeamValue">
-                        <?php echo formatMarketValue($team_value); ?></div>
+                        <?php echo formatMarketValue($team_value); ?>
+                    </div>
                     <div class="text-sm text-green-600">Team Value</div>
                 </div>
                 <div
@@ -213,7 +216,8 @@ startContent();
                 <div
                     class="bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg p-4 text-center border border-purple-200">
                     <div class="text-2xl font-bold text-purple-700" id="clubPlayerCount">
-                        <?php echo count(array_filter($team_data ?: [], fn($p) => $p !== null)); ?>/11</div>
+                        <?php echo count(array_filter($team_data ?: [], fn($p) => $p !== null)); ?>/11
+                    </div>
                     <div class="text-sm text-purple-600">Players</div>
                 </div>
                 <div
@@ -448,13 +452,13 @@ startContent();
 
     renderPlayers();
     renderField();
-    
+
     // Initialize club overview stats on page load
     let initialTotalValue = 0;
     let initialPlayerCount = 0;
     let initialTotalRating = 0;
     let initialRatedPlayers = 0;
-    
+
     selectedPlayers.forEach(player => {
         if (player) {
             initialPlayerCount++;
@@ -465,7 +469,7 @@ startContent();
             }
         }
     });
-    
+
     updateClubOverviewStats(initialTotalValue, initialPlayerCount, initialRatedPlayers > 0 ? initialTotalRating / initialRatedPlayers : 0);
 
     // Format market value for display
@@ -534,7 +538,7 @@ startContent();
 
         $('#totalTeamValue').text(formatMarketValue(totalValue));
         $('#remainingBudget').text(formatMarketValue(remainingBudget));
-        $('#playerCount').text(`${playerCount}/${selectedPlayers.length} players selected`);
+        $('#playerCount').text(`${playerCount}/11 players selected`);
 
         // Update budget bar
         $('#budgetBar').css('width', Math.min(budgetUsedPercentage, 100) + '%');
@@ -698,6 +702,13 @@ startContent();
         }
     }
 
+    // Function to update club statistics after player changes
+    function updateClubStats() {
+        // Since renderPlayers() already handles all the summary box updates,
+        // we just need to call it to refresh everything
+        renderPlayers();
+    }
+
     // Function to select a player (highlight only)
     function selectPlayer(idx) {
         selectedPlayerIdx = selectedPlayerIdx === idx ? null : idx; // Toggle selection
@@ -739,6 +750,7 @@ startContent();
         // Update display
         renderPlayers();
         renderField();
+        updateClubStats();
 
         // Show confirmation
         Swal.fire({
@@ -746,7 +758,9 @@ startContent();
             title: 'Players Switched!',
             text: `${selectedPlayer ? selectedPlayer.name : 'Empty position'} and ${clickedPlayer ? clickedPlayer.name : 'Empty position'} have been switched`,
             timer: 2000,
-            showConfirmButton: false
+            showConfirmButton: false,
+            toast: true,
+            position: 'top-end'
         });
     }
 
@@ -771,13 +785,16 @@ startContent();
                 }
                 renderPlayers();
                 renderField();
+                updateClubStats();
 
                 Swal.fire({
                     icon: 'success',
                     title: 'Player Removed',
                     text: `${player.name} has been removed from your team`,
                     timer: 2000,
-                    showConfirmButton: false
+                    showConfirmButton: false,
+                    toast: true,
+                    position: 'top-end'
                 });
             }
         });
@@ -915,7 +932,6 @@ startContent();
         const formation = $('#formation').val();
         const positions = formations[formation].positions;
         const $field = $('#field').empty();
-        console.log(positions)
 
         let playerIdx = 0;
         positions.forEach((line, lineIdx) => {
@@ -1155,10 +1171,109 @@ startContent();
                     return;
                 }
 
-                selectedPlayers[currentSlotIdx] = player;
-                $('#playerModal').addClass('hidden');
-                renderPlayers();
-                renderField();
+                // Show confirmation alert before buying player
+                const currentPlayer = selectedPlayers[currentSlotIdx];
+                const isReplacement = currentPlayer !== null;
+                const requiredPosition = getPositionForSlot(currentSlotIdx);
+
+                let confirmTitle = isReplacement ? 'Replace Player?' : 'Buy Player?';
+                let confirmText = isReplacement
+                    ? `Replace ${currentPlayer.name} with ${player.name} for ${formatMarketValue(player.value || 0)}?`
+                    : `Buy ${player.name} (${requiredPosition}) for ${formatMarketValue(player.value || 0)}?`;
+
+                Swal.fire({
+                    title: confirmTitle,
+                    html: `
+                        <div class="text-left space-y-3">
+                            <div class="bg-gray-50 p-4 rounded-lg">
+                                <h4 class="font-semibold text-gray-900 mb-2">Player Details:</h4>
+                                <div class="space-y-1 text-sm">
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">Name:</span>
+                                        <span class="font-medium">${player.name}</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">Position:</span>
+                                        <span class="font-medium">${requiredPosition}</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">Rating:</span>
+                                        <span class="font-medium">${player.rating || 'N/A'}</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">Cost:</span>
+                                        <span class="font-medium text-red-600">${formatMarketValue(player.value || 0)}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            ${isReplacement ? `
+                            <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                                <h4 class="font-semibold text-yellow-900 mb-2">Current Player:</h4>
+                                <div class="space-y-1 text-sm">
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">Name:</span>
+                                        <span class="font-medium">${currentPlayer.name}</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">Value:</span>
+                                        <span class="font-medium text-green-600">${formatMarketValue(currentPlayer.value || 0)}</span>
+                                    </div>
+                                </div>
+                                <p class="text-xs text-yellow-700 mt-2">This player will be removed from your team</p>
+                            </div>
+                            ` : ''}
+                            
+                            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                                <h4 class="font-semibold text-blue-900 mb-2">Budget Impact:</h4>
+                                <div class="space-y-1 text-sm">
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">Current Budget:</span>
+                                        <span class="font-medium text-blue-600">${formatMarketValue(maxBudget - currentTeamValue)}</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">After Purchase:</span>
+                                        <span class="font-medium text-green-600">${formatMarketValue(maxBudget - currentTeamValue - (player.value || 0))}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `,
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonColor: '#10b981',
+                    cancelButtonColor: '#6b7280',
+                    confirmButtonText: isReplacement ? '<i data-lucide="refresh-cw" class="w-4 h-4 inline mr-1"></i> Replace Player' : '<i data-lucide="shopping-cart" class="w-4 h-4 inline mr-1"></i> Buy Player',
+                    cancelButtonText: 'Cancel',
+                    customClass: {
+                        popup: 'swal-wide'
+                    },
+                    didOpen: () => {
+                        lucide.createIcons();
+                    }
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        // Add player to team
+                        selectedPlayers[currentSlotIdx] = player;
+                        $('#playerModal').addClass('hidden');
+
+                        // Update displays
+                        renderPlayers();
+                        renderField();
+                        updateClubStats();
+
+                        // Show success message
+                        Swal.fire({
+                            icon: 'success',
+                            title: isReplacement ? 'Player Replaced!' : 'Player Purchased!',
+                            text: `${player.name} has been added to your team`,
+                            timer: 2000,
+                            showConfirmButton: false,
+                            toast: true,
+                            position: 'top-end'
+                        });
+                    }
+                });
             }
         });
     }
@@ -1232,25 +1347,120 @@ startContent();
         }
 
         const requiredPosition = getPositionForSlot(currentSlotIdx);
-        selectedPlayers[currentSlotIdx] = {
-            name: customName,
-            position: requiredPosition,
-            value: customPlayerValue,
-            rating: 70, // Default rating for custom players
-            isCustom: true // Flag to identify custom players
-        };
+        const currentPlayer = selectedPlayers[currentSlotIdx];
+        const isReplacement = currentPlayer !== null;
 
-        $('#playerModal').addClass('hidden');
-        renderPlayers();
-        renderField();
+        // Show confirmation alert before creating custom player
+        let confirmTitle = isReplacement ? 'Replace with Custom Player?' : 'Create Custom Player?';
+        let confirmText = isReplacement
+            ? `Replace ${currentPlayer.name} with custom player ${customName}?`
+            : `Create custom player ${customName} for ${formatMarketValue(customPlayerValue)}?`;
 
         Swal.fire({
-            icon: 'success',
-            title: 'Custom Player Added',
-            text: `${customName} has been added to your team!`,
-            confirmButtonColor: '#10b981',
-            timer: 2000,
-            showConfirmButton: false
+            title: confirmTitle,
+            html: `
+                <div class="text-left space-y-3">
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <h4 class="font-semibold text-gray-900 mb-2">Custom Player Details:</h4>
+                        <div class="space-y-1 text-sm">
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Name:</span>
+                                <span class="font-medium">${customName}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Position:</span>
+                                <span class="font-medium">${requiredPosition}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Rating:</span>
+                                <span class="font-medium">70 (Default)</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Cost:</span>
+         
+    <span class="font-medium text-red-600">${formatMarketValue(customPlayerValue)}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    ${isReplacement ? `
+                    <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                        <h4 class="font-semibold text-yellow-900 mb-2">Current Player:</h4>
+                        <div class="space-y-1 text-sm">
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Name:</span>
+                                <span class="font-medium">${currentPlayer.name}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Value:</span>
+                                <span class="font-medium text-green-600">${formatMarketValue(currentPlayer.value || 0)}</span>
+                            </div>
+                        </div>
+                        <p class="text-xs text-yellow-700 mt-2">This player will be removed from your team</p>
+                    </div>
+                    ` : ''}
+                    
+                    <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                        <h4 class="font-semibold text-blue-900 mb-2">Budget Impact:</h4>
+                        <div class="space-y-1 text-sm">
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Current Budget:</span>
+                                <span class="font-medium text-blue-600">${formatMarketValue(maxBudget - currentTeamValue)}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">After Creation:</span>
+                                <span class="font-medium text-green-600">${formatMarketValue(maxBudget - currentTeamValue - customPlayerValue)}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                        <p class="text-sm text-purple-800">
+                            <i data-lucide="info" class="w-4 h-4 inline mr-1"></i>
+                            Custom players start with a rating of 70 and cost ${formatMarketValue(customPlayerValue)}
+                        </p>
+                    </div>
+                </div>
+            `,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#8b5cf6',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: '<i data-lucide="user-plus" class="w-4 h-4 inline mr-1"></i> Create Player',
+            cancelButtonText: 'Cancel',
+            customClass: {
+                popup: 'swal-wide'
+            },
+            didOpen: () => {
+                lucide.createIcons();
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Create custom player
+                selectedPlayers[currentSlotIdx] = {
+                    name: customName,
+                    position: requiredPosition,
+                    value: customPlayerValue,
+                    rating: 70, // Default rating for custom players
+                    isCustom: true // Flag to identify custom players
+                };
+
+                $('#playerModal').addClass('hidden');
+                renderPlayers();
+                renderField();
+                updateClubStats();
+
+                // Show success message
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Custom Player Created!',
+                    text: `${customName} has been added to your team`,
+                    timer: 2000,
+                    showConfirmButton: false,
+                    toast: true,
+                    position: 'top-end'
+                });
+            }
         });
     });
 
@@ -1392,7 +1602,7 @@ startContent();
                         icon: 'error',
                         title: 'Connection Error',
                         text: 'Unable to save team. Please check your connection and try again.',
-                        confirmButtonColor: '#ef4444'
+                        confirmButtonColor: ' #ef4444 '
                     });
                 });
             }

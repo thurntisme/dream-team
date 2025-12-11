@@ -719,7 +719,6 @@ startContent();
             .then(response => response.text())
             .then(result => {
                 const { club, formation, players } = JSON.parse(result);
-                console.log(JSON.parse(result))
 
                 let playerIdx = 0;
                 positions.forEach((line, lineIdx) => {

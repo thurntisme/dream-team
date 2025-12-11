@@ -921,7 +921,6 @@ startContent();
         let players = team;
         let positions = formationData.positions;
         let roles = formationData.roles;
-        console.log(formationData)
 
         const isOpponent = teamType === 'opponent';
         let playerIdx = 0;
