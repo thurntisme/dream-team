@@ -20,6 +20,12 @@ if (!isset($_SESSION['user_id']) || !isset($_SESSION['club_name'])) {
 try {
     $db = getDbConnection();
 
+    // Get current user's data for budget validation
+    $stmt = $db->prepare('SELECT budget, team FROM users WHERE id = :user_id');
+    $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+    $result = $stmt->execute();
+    $user_data = $result->fetchArray(SQLITE3_ASSOC);
+
     // Get all clubs except current user's club
     $stmt = $db->prepare('SELECT id, name, email, club_name, formation, team, budget, created_at FROM users WHERE id != :current_user_id');
     $stmt->bindValue(':current_user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
@@ -67,14 +73,122 @@ function countPlayers($teamJson)
     return count(array_filter($team, fn($player) => $player !== null));
 }
 
+// Helper function to get club level name
+function getClubLevelNamePHP($level)
+{
+    switch ($level) {
+        case 5:
+            return 'Elite';
+        case 4:
+            return 'Professional';
+        case 3:
+            return 'Semi-Professional';
+        case 2:
+            return 'Amateur';
+        case 1:
+        default:
+            return 'Beginner';
+    }
+}
+
+// Helper function to get level color classes
+function getLevelColorPHP($level)
+{
+    switch ($level) {
+        case 5:
+            return 'bg-purple-100 text-purple-800 border-purple-200';
+        case 4:
+            return 'bg-blue-100 text-blue-800 border-blue-200';
+        case 3:
+            return 'bg-green-100 text-green-800 border-green-200';
+        case 2:
+            return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+        case 1:
+        default:
+            return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+}
+
 // Start content capture
 startContent();
 ?>
 
 <div class="container mx-auto p-4 max-w-6xl">
+    <!-- Challenge Messages -->
+    <?php if (isset($_SESSION['challenge_error'])): ?>
+        <div class="mb-6 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg">
+            <div class="flex items-center gap-2">
+                <i data-lucide="alert-circle" class="w-5 h-5"></i>
+                <span class="font-medium">Challenge Failed:</span>
+                <span><?php echo htmlspecialchars($_SESSION['challenge_error']); ?></span>
+            </div>
+        </div>
+        <?php unset($_SESSION['challenge_error']); ?>
+    <?php endif; ?>
+
+    <?php if (isset($_SESSION['match_success'])): ?>
+        <div class="mb-6 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg">
+            <div class="flex items-center gap-2">
+                <i data-lucide="check-circle" class="w-5 h-5"></i>
+                <span class="font-medium">Match Completed:</span>
+                <span><?php echo htmlspecialchars($_SESSION['match_success']); ?></span>
+            </div>
+        </div>
+        <?php unset($_SESSION['match_success']); ?>
+    <?php endif; ?>
+
     <div class="mb-6">
-        <h1 class="text-3xl font-bold text-gray-900 mb-2">Other Clubs</h1>
-        <p class="text-gray-600">Explore teams created by other managers</p>
+        <div class="flex justify-between items-center mb-4">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900 mb-2">Other Clubs</h1>
+                <p class="text-gray-600">Challenge other managers in competitive matches</p>
+            </div>
+            <div class="flex gap-4">
+                <div class="bg-blue-100 text-blue-800 px-4 py-2 rounded-lg">
+                    <div class="text-sm text-blue-600">Your Budget</div>
+                    <div class="text-lg font-bold"><?php echo formatMarketValue($user_data['budget']); ?></div>
+                </div>
+                <?php
+                // Calculate user's club level
+                $userTeam = json_decode($user_data['team'] ?? '[]', true);
+                $userClubLevel = 1;
+                if (is_array($userTeam)) {
+                    $totalRating = 0;
+                    $totalValue = 0;
+                    $validPlayers = 0;
+
+                    foreach ($userTeam as $player) {
+                        if ($player && isset($player['rating']) && isset($player['value'])) {
+                            $totalRating += $player['rating'];
+                            $totalValue += $player['value'];
+                            $validPlayers++;
+                        }
+                    }
+
+                    if ($validPlayers > 0) {
+                        $avgRating = $totalRating / $validPlayers;
+                        $avgValue = $totalValue / $validPlayers;
+
+                        if ($avgRating >= 85 && $avgValue >= 50000000) {
+                            $userClubLevel = 5;
+                        } elseif ($avgRating >= 80 && $avgValue >= 30000000) {
+                            $userClubLevel = 4;
+                        } elseif ($avgRating >= 75 && $avgValue >= 15000000) {
+                            $userClubLevel = 3;
+                        } elseif ($avgRating >= 70 && $avgValue >= 5000000) {
+                            $userClubLevel = 2;
+                        }
+                    }
+                }
+                ?>
+                <div class="bg-purple-100 text-purple-800 px-4 py-2 rounded-lg">
+                    <div class="text-sm text-purple-600">Your Level</div>
+                    <div class="text-lg font-bold">Level <?php echo $userClubLevel; ?> -
+                        <?php echo function_exists('getClubLevelNamePHP') ? getClubLevelNamePHP($userClubLevel) : 'Beginner'; ?>
+                    </div>
+                </div>
+            </div>
+        </div>
         <?php if (!empty($clubs)): ?>
             <?php
             $topTeamValue = $clubs[0]['team_value'];
@@ -116,6 +230,40 @@ startContent();
                 $teamValue = $club['team_value']; // Use pre-calculated value
                 $playerCount = countPlayers($club['team']);
                 $budgetUsed = $teamValue > 0 ? ($teamValue / $club['budget']) * 100 : 0;
+
+                // Calculate club level
+                $team = json_decode($club['team'], true);
+                $clubLevel = 1;
+                if (is_array($team)) {
+                    $totalRating = 0;
+                    $totalValue = 0;
+                    $validPlayers = 0;
+
+                    foreach ($team as $player) {
+                        if ($player && isset($player['rating']) && isset($player['value'])) {
+                            $totalRating += $player['rating'];
+                            $totalValue += $player['value'];
+                            $validPlayers++;
+                        }
+                    }
+
+                    if ($validPlayers > 0) {
+                        $avgRating = $totalRating / $validPlayers;
+                        $avgValue = $totalValue / $validPlayers;
+
+                        if ($avgRating >= 85 && $avgValue >= 50000000) {
+                            $clubLevel = 5; // Elite
+                        } elseif ($avgRating >= 80 && $avgValue >= 30000000) {
+                            $clubLevel = 4; // Professional
+                        } elseif ($avgRating >= 75 && $avgValue >= 15000000) {
+                            $clubLevel = 3; // Semi-Professional
+                        } elseif ($avgRating >= 70 && $avgValue >= 5000000) {
+                            $clubLevel = 2; // Amateur
+                        }
+                    }
+                }
+
+
                 ?>
                 <div class="bg-white rounded-lg shadow hover:shadow-lg transition-shadow duration-200">
                     <div class="p-6">
@@ -126,10 +274,17 @@ startContent();
                                 <i data-lucide="shield" class="w-6 h-6 text-white"></i>
                             </div>
                             <div class="flex-1">
-                                <div class="flex items-center gap-2">
+                                <div class="flex items-center gap-2 mb-2">
                                     <h3 class="text-lg font-bold text-gray-900">
                                         <?php echo htmlspecialchars($club['club_name']); ?>
                                     </h3>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span
+                                        class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border <?php echo getLevelColorPHP($clubLevel); ?>">
+                                        <i data-lucide="star" class="w-3 h-3"></i>
+                                        Level <?php echo $clubLevel; ?> - <?php echo getClubLevelNamePHP($clubLevel); ?>
+                                    </span>
                                     <?php if ($club['team_value'] > 0): ?>
                                         <?php if ($index === 0): ?>
                                             <span
@@ -190,6 +345,38 @@ startContent();
                         <div class="w-full bg-gray-200 rounded-full h-2 mb-4">
                             <div class="h-2 rounded-full transition-all duration-300 <?php echo $budgetUsed > 90 ? 'bg-red-500' : ($budgetUsed > 70 ? 'bg-yellow-500' : 'bg-blue-500'); ?>"
                                 style="width: <?php echo min($budgetUsed, 100); ?>%"></div>
+                        </div>
+
+                        <!-- Challenge Cost Info -->
+                        <?php
+                        $challengeCost = 5000000 + ($teamValue * 0.01); // Same calculation as JavaScript
+                        $canAfford = $user_data['budget'] >= $challengeCost;
+                        $canChallenge = $playerCount >= 11 && $canAfford;
+                        ?>
+                        <div
+                            class="mb-4 p-2 <?php echo $canChallenge ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'; ?> rounded-lg border">
+                            <div class="flex justify-between items-center text-xs">
+                                <span class="text-gray-600">Challenge Cost:</span>
+                                <span class="font-medium <?php echo $canAfford ? 'text-green-700' : 'text-red-600'; ?>">
+                                    <?php echo formatMarketValue($challengeCost); ?>
+                                </span>
+                            </div>
+                            <?php if ($playerCount < 11): ?>
+                                <div class="text-xs text-red-600 mt-1">
+                                    <i data-lucide="alert-triangle" class="w-3 h-3 inline mr-1"></i>
+                                    Incomplete team (<?php echo $playerCount; ?>/11)
+                                </div>
+                            <?php elseif (!$canAfford): ?>
+                                <div class="text-xs text-red-600 mt-1">
+                                    <i data-lucide="alert-triangle" class="w-3 h-3 inline mr-1"></i>
+                                    Insufficient funds
+                                </div>
+                            <?php else: ?>
+                                <div class="text-xs text-green-600 mt-1">
+                                    <i data-lucide="check-circle" class="w-3 h-3 inline mr-1"></i>
+                                    Ready to challenge
+                                </div>
+                            <?php endif; ?>
                         </div>
 
                         <!-- Actions -->
@@ -589,13 +776,67 @@ startContent();
         const playerCount = team.filter(p => p !== null).length;
         const teamValue = calculateTeamValue(team);
 
-        // Check if opponent has enough players
-        if (playerCount < 1) {
+        // Calculate challenge cost
+        const baseCost = 5000000; // €5M base cost
+        const challengeCost = baseCost + (teamValue * 0.01); // 1% of opponent's team value
+        const potentialReward = challengeCost * 0.8; // 80% reward for winning
+
+        // Get current user data (from PHP session)
+        const currentBudget = <?php echo $user_data['budget'] ?? 0; ?>;
+        const userTeam = <?php echo json_encode(json_decode($user_data['team'] ?? '[]', true)); ?>;
+        const userPlayerCount = userTeam.filter(p => p !== null).length;
+
+        // Check if user has enough players
+        if (userPlayerCount < 11) {
             Swal.fire({
                 icon: 'warning',
                 title: 'Cannot Challenge',
-                text: `${club.club_name} doesn't have any players yet. They need at least 1 player to accept challenges.`,
+                text: `You need a complete team (11 players) to challenge other clubs! You currently have ${userPlayerCount}/11 players. Go to "My Team" to add more players.`,
                 confirmButtonColor: '#3b82f6'
+            });
+            return;
+        }
+
+        // Check if opponent has enough players
+        if (playerCount < 11) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Cannot Challenge',
+                text: `${club.club_name} doesn't have a complete team (11 players). They have ${playerCount}/11 players and cannot be challenged yet.`,
+                confirmButtonColor: '#3b82f6'
+            });
+            return;
+        }
+
+        // Check if user has enough budget
+        if (currentBudget < challengeCost) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Insufficient Funds',
+                html: `
+                    <div class="text-left space-y-3">
+                        <p class="text-gray-700">You don't have enough budget to challenge this club.</p>
+                        <div class="bg-red-50 p-4 rounded-lg">
+                            <div class="space-y-2 text-sm">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">Challenge Cost:</span>
+                                    <span class="font-medium text-red-600">${formatMarketValue(challengeCost)}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">Your Budget:</span>
+                                    <span class="font-medium text-blue-600">${formatMarketValue(currentBudget)}</span>
+                                </div>
+                                <div class="flex justify-between border-t pt-2">
+                                    <span class="text-gray-600">Shortfall:</span>
+                                    <span class="font-medium text-red-600">${formatMarketValue(challengeCost - currentBudget)}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <p class="text-sm text-gray-600">💡 Tip: Sell some players or challenge weaker opponents to earn more budget!</p>
+                    </div>
+                `,
+                confirmButtonColor: '#3b82f6',
+                confirmButtonText: 'Back to Clubs'
             });
             return;
         }
@@ -625,10 +866,63 @@ startContent();
                             </div>
                         </div>
                     </div>
+                    
+                    <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                        <h4 class="font-semibold text-yellow-900 mb-2 flex items-center gap-2">
+                            <i data-lucide="coins" class="w-4 h-4"></i>
+                            Challenge Stakes
+                        </h4>
+                        <div class="space-y-1 text-sm">
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Entry Fee:</span>
+                                <span class="font-medium text-red-600">${formatMarketValue(challengeCost)}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Win Prize:</span>
+                                <span class="font-medium text-green-600">${formatMarketValue(potentialReward)}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Draw Refund:</span>
+                                <span class="font-medium text-yellow-600">${formatMarketValue(challengeCost * 0.5)}</span>
+                            </div>
+                            <div class="flex justify-between border-t pt-1 mt-2">
+                                <span class="text-gray-600">Your Budget:</span>
+                                <span class="font-medium text-blue-600">${formatMarketValue(currentBudget)}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                        <h4 class="font-semibold text-purple-900 mb-2 flex items-center gap-2">
+                            <i data-lucide="star" class="w-4 h-4"></i>
+                            Club Level Bonus
+                        </h4>
+                        <div class="space-y-1 text-sm">
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Your Level:</span>
+                                <span class="font-medium text-purple-600">Level ${calculateClubLevel(userTeam)} - ${getClubLevelName(calculateClubLevel(userTeam))}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Win Bonus:</span>
+                                <span class="font-medium text-purple-600">+${getLevelBonus(calculateClubLevel(userTeam))}%</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Draw Bonus:</span>
+                                <span class="font-medium text-purple-600">+${Math.round(getLevelBonus(calculateClubLevel(userTeam)) / 2)}%</span>
+                            </div>
+                            ${calculateClubLevel(userTeam) >= 3 ? `
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Loss Consolation:</span>
+                                <span class="font-medium text-purple-600">${formatMarketValue(challengeCost * 0.1)}</span>
+                            </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                    
                     <div class="bg-blue-50 p-4 rounded-lg">
                         <p class="text-sm text-blue-800">
                             <i data-lucide="info" class="w-4 h-4 inline mr-1"></i>
-                            Challenge this club to a friendly match! The match will be simulated based on team values and formations.
+                            This is a competitive challenge match with real financial stakes. Higher club levels earn bonus rewards!
                         </p>
                     </div>
                 </div>
@@ -662,9 +956,65 @@ startContent();
         }, 0);
     }
 
+    function calculateClubLevel(team) {
+        if (!Array.isArray(team)) return 1;
+
+        let totalRating = 0;
+        let playerCount = 0;
+        let totalValue = 0;
+
+        team.forEach(player => {
+            if (player && player.rating && player.value) {
+                totalRating += player.rating;
+                totalValue += player.value;
+                playerCount++;
+            }
+        });
+
+        if (playerCount === 0) return 1;
+
+        const avgRating = totalRating / playerCount;
+        const avgValue = totalValue / playerCount;
+
+        // Level calculation based on average rating and value
+        if (avgRating >= 85 && avgValue >= 50000000) { // €50M+ avg, 85+ rating
+            return 5; // Elite
+        } else if (avgRating >= 80 && avgValue >= 30000000) { // €30M+ avg, 80+ rating
+            return 4; // Professional
+        } else if (avgRating >= 75 && avgValue >= 15000000) { // €15M+ avg, 75+ rating
+            return 3; // Semi-Professional
+        } else if (avgRating >= 70 && avgValue >= 5000000) { // €5M+ avg, 70+ rating
+            return 2; // Amateur
+        } else {
+            return 1; // Beginner
+        }
+    }
+
+    function getClubLevelName(level) {
+        switch (level) {
+            case 5: return 'Elite';
+            case 4: return 'Professional';
+            case 3: return 'Semi-Professional';
+            case 2: return 'Amateur';
+            case 1:
+            default: return 'Beginner';
+        }
+    }
+
+    function getLevelBonus(level) {
+        switch (level) {
+            case 5: return 25; // 25% bonus for Elite clubs
+            case 4: return 20; // 20% bonus for Professional clubs
+            case 3: return 15; // 15% bonus for Semi-Professional clubs
+            case 2: return 10; // 10% bonus for Amateur clubs
+            case 1:
+            default: return 0; // No bonus for Beginner clubs
+        }
+    }
+
     function formatMarketValue(value) {
         if (value >= 1000000) {
-            return '€' + (value / 1000000).toFixed(1) + 'M';
+            return '€' + (value / 1000000).toFixed(1) + ' M ';
         } else if (value >= 1000) {
             return '€' + Math.round(value / 1000) + 'K';
         } else {

@@ -23,6 +23,10 @@ if (!$opponent_id) {
     exit;
 }
 
+// Challenge system configuration
+define('CHALLENGE_BASE_COST', 5000000); // €5M base cost
+define('WIN_REWARD_PERCENTAGE', 0.8); // 80% of challenge cost
+
 try {
     $db = getDbConnection();
 
@@ -44,7 +48,16 @@ try {
         exit;
     }
 
-    $db->close();
+    // Validate and process challenge
+    $challenge_result = processChallengeValidation($db, $user_data, $opponent_data);
+    if ($challenge_result['error']) {
+        $_SESSION['challenge_error'] = $challenge_result['message'];
+        header('Location: clubs.php');
+        exit;
+    }
+
+    $challenge_cost = $challenge_result['cost'];
+    $potential_reward = $challenge_result['reward'];
 
     // Calculate team values
     $user_team = json_decode($user_data['team'] ?? '[]', true);
@@ -56,9 +69,221 @@ try {
     // Simulate the match
     $match_result = simulateMatch($user_team, $opponent_team, $user_team_value, $opponent_team_value);
 
+    // Process match result and update budgets
+    $financial_result = processMatchFinancials($db, $_SESSION['user_id'], $match_result, $challenge_cost, $potential_reward);
+
+    $db->close();
+
 } catch (Exception $e) {
     header('Location: clubs.php');
     exit;
+}
+
+// Challenge validation and processing functions
+function processChallengeValidation($db, $user_data, $opponent_data)
+{
+    // Calculate challenge cost based on opponent's team value
+    $opponent_team = json_decode($opponent_data['team'] ?? '[]', true);
+    $opponent_team_value = calculateTeamValue($opponent_team);
+
+    // Base cost + percentage of opponent's team value
+    $challenge_cost = CHALLENGE_BASE_COST + ($opponent_team_value * 0.01); // 1% of opponent's team value
+    $potential_reward = $challenge_cost * WIN_REWARD_PERCENTAGE;
+
+    // Validate user's team
+    $user_team = json_decode($user_data['team'] ?? '[]', true);
+    $user_player_count = count(array_filter($user_team, fn($p) => $p !== null));
+
+    if ($user_player_count < 11) {
+        return [
+            'error' => true,
+            'message' => 'You need a complete team (11 players) to challenge other clubs! You currently have ' . $user_player_count . '/11 players.'
+        ];
+    }
+
+    // Check if user has enough budget
+    if ($user_data['budget'] < $challenge_cost) {
+        return [
+            'error' => true,
+            'message' => 'Insufficient funds! You need ' . formatMarketValue($challenge_cost) . ' to challenge this club. Your current budget: ' . formatMarketValue($user_data['budget'])
+        ];
+    }
+
+    // Validate opponent's team
+    $opponent_player_count = count(array_filter($opponent_team, fn($p) => $p !== null));
+    if ($opponent_player_count < 11) {
+        return [
+            'error' => true,
+            'message' => 'This club doesn\'t have a complete team (11 players) and cannot be challenged. They have ' . $opponent_player_count . '/11 players.'
+        ];
+    }
+
+    // Deduct challenge cost from user's budget
+    $stmt = $db->prepare('UPDATE users SET budget = budget - :cost WHERE id = :user_id');
+    $stmt->bindValue(':cost', $challenge_cost, SQLITE3_INTEGER);
+    $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+
+    if (!$stmt->execute()) {
+        return [
+            'error' => true,
+            'message' => 'Failed to process challenge payment. Please try again.'
+        ];
+    }
+
+    return [
+        'error' => false,
+        'cost' => $challenge_cost,
+        'reward' => $potential_reward
+    ];
+}
+
+function processMatchFinancials($db, $user_id, $match_result, $challenge_cost, $potential_reward)
+{
+    // Get user data for club level calculation
+    $stmt = $db->prepare('SELECT budget, team FROM users WHERE id = :user_id');
+    $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+    $result = $stmt->execute();
+    $user_data = $result->fetchArray(SQLITE3_ASSOC);
+
+    $user_team = json_decode($user_data['team'] ?? '[]', true);
+    $club_level = calculateClubLevel($user_team);
+    $level_bonus = calculateLevelBonus($club_level);
+
+    $earnings = 0;
+    $bonus_earnings = 0;
+    $result_message = '';
+
+    if ($match_result['result'] === 'win') {
+        // User wins - give reward + level bonus
+        $earnings = $potential_reward;
+        $bonus_earnings = $earnings * $level_bonus;
+        $total_earnings = $earnings + $bonus_earnings;
+
+        $stmt = $db->prepare('UPDATE users SET budget = budget + :reward WHERE id = :user_id');
+        $stmt->bindValue(':reward', $total_earnings, SQLITE3_INTEGER);
+        $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+        $stmt->execute();
+
+        $result_message = 'Victory! You earned ' . formatMarketValue($earnings) . ' in prize money';
+        if ($bonus_earnings > 0) {
+            $result_message .= ' + ' . formatMarketValue($bonus_earnings) . ' club level bonus (Level ' . $club_level . ')!';
+        } else {
+            $result_message .= '!';
+        }
+    } elseif ($match_result['result'] === 'draw') {
+        // Draw - return half the challenge cost + small level bonus
+        $earnings = $challenge_cost * 0.5;
+        $bonus_earnings = $earnings * ($level_bonus * 0.5); // Half bonus for draws
+        $total_earnings = $earnings + $bonus_earnings;
+
+        $stmt = $db->prepare('UPDATE users SET budget = budget + :refund WHERE id = :user_id');
+        $stmt->bindValue(':refund', $total_earnings, SQLITE3_INTEGER);
+        $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+        $stmt->execute();
+
+        $result_message = 'Draw! You received ' . formatMarketValue($earnings) . ' as a partial refund';
+        if ($bonus_earnings > 0) {
+            $result_message .= ' + ' . formatMarketValue($bonus_earnings) . ' level bonus.';
+        } else {
+            $result_message .= '.';
+        }
+    } else {
+        // Loss - no refund, but small consolation bonus for high-level clubs
+        if ($club_level >= 3) {
+            $bonus_earnings = $challenge_cost * 0.1; // 10% consolation for level 3+ clubs
+            $stmt = $db->prepare('UPDATE users SET budget = budget + :consolation WHERE id = :user_id');
+            $stmt->bindValue(':consolation', $bonus_earnings, SQLITE3_INTEGER);
+            $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+            $stmt->execute();
+
+            $result_message = 'Defeat! You lost the challenge fee but received ' . formatMarketValue($bonus_earnings) . ' consolation bonus (Level ' . $club_level . ').';
+        } else {
+            $result_message = 'Defeat! You lost the challenge fee of ' . formatMarketValue($challenge_cost) . '.';
+        }
+    }
+
+    return [
+        'earnings' => $earnings + $bonus_earnings,
+        'base_earnings' => $earnings,
+        'bonus_earnings' => $bonus_earnings,
+        'club_level' => $club_level,
+        'challenge_cost' => $challenge_cost,
+        'message' => $result_message
+    ];
+}
+
+// Calculate club level based on team quality
+function calculateClubLevel($team)
+{
+    if (!is_array($team))
+        return 1;
+
+    $total_rating = 0;
+    $player_count = 0;
+    $total_value = 0;
+
+    foreach ($team as $player) {
+        if ($player && isset($player['rating']) && isset($player['value'])) {
+            $total_rating += $player['rating'];
+            $total_value += $player['value'];
+            $player_count++;
+        }
+    }
+
+    if ($player_count === 0)
+        return 1;
+
+    $avg_rating = $total_rating / $player_count;
+    $avg_value = $total_value / $player_count;
+
+    // Level calculation based on average rating and value
+    if ($avg_rating >= 85 && $avg_value >= 50000000) { // €50M+ avg, 85+ rating
+        return 5; // Elite
+    } elseif ($avg_rating >= 80 && $avg_value >= 30000000) { // €30M+ avg, 80+ rating
+        return 4; // Professional
+    } elseif ($avg_rating >= 75 && $avg_value >= 15000000) { // €15M+ avg, 75+ rating
+        return 3; // Semi-Professional
+    } elseif ($avg_rating >= 70 && $avg_value >= 5000000) { // €5M+ avg, 70+ rating
+        return 2; // Amateur
+    } else {
+        return 1; // Beginner
+    }
+}
+
+// Calculate level bonus percentage
+function calculateLevelBonus($level)
+{
+    switch ($level) {
+        case 5:
+            return 0.25; // 25% bonus for Elite clubs
+        case 4:
+            return 0.20; // 20% bonus for Professional clubs
+        case 3:
+            return 0.15; // 15% bonus for Semi-Professional clubs
+        case 2:
+            return 0.10; // 10% bonus for Amateur clubs
+        case 1:
+        default:
+            return 0.0; // No bonus for Beginner clubs
+    }
+}
+
+// Get club level name
+function getClubLevelName($level)
+{
+    switch ($level) {
+        case 5:
+            return 'Elite';
+        case 4:
+            return 'Professional';
+        case 3:
+            return 'Semi-Professional';
+        case 2:
+            return 'Amateur';
+        case 1:
+        default:
+            return 'Beginner';
+    }
 }
 
 // Helper function to calculate team value
@@ -240,8 +465,20 @@ startContent();
 <div class="p-4">
     <div class="bg-white rounded-lg shadow-lg p-6">
         <div class="text-center mb-8">
-            <h1 class="text-3xl font-bold text-gray-900 mb-2">Live Match Simulation</h1>
-            <p class="text-gray-600">Friendly Match - Interactive Experience</p>
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">Challenge Match</h1>
+            <p class="text-gray-600">Competitive Match - Stakes: <?php echo formatMarketValue($challenge_cost); ?></p>
+
+            <!-- Challenge Info -->
+            <div class="mt-4 inline-flex items-center gap-4 bg-blue-100 text-blue-800 px-6 py-3 rounded-full text-sm">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="coins" class="w-4 h-4"></i>
+                    <span>Entry Fee: <?php echo formatMarketValue($challenge_cost); ?></span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <i data-lucide="trophy" class="w-4 h-4"></i>
+                    <span>Win Prize: <?php echo formatMarketValue($potential_reward); ?></span>
+                </div>
+            </div>
 
             <!-- Match Timer -->
             <div class="mt-4 flex justify-center items-center gap-4">
@@ -320,7 +557,7 @@ startContent();
                     Live Field View
                 </h3>
                 <div class="bg-gradient-to-b from-green-500 to-green-600 rounded-lg shadow-lg relative"
-                    style="min-height: 600px;">
+                    style="min-height: 600px; height: 600px;">
                     <!-- Field Lines -->
                     <div class="absolute inset-8 border-2 border-white border-opacity-40 rounded overflow-hidden">
                         <!-- Center Line -->
@@ -460,6 +697,87 @@ startContent();
             </div>
         </div>
 
+        <!-- Financial Result -->
+        <div class="bg-white rounded-lg p-6 mb-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <i data-lucide="banknote" class="w-5 h-5"></i>
+                Financial Summary
+            </h3>
+            <div class="bg-gradient-to-r <?php
+            echo $match_result['result'] === 'win' ? 'from-green-50 to-green-100 border-green-200' :
+                ($match_result['result'] === 'draw' ? 'from-yellow-50 to-yellow-100 border-yellow-200' : 'from-red-50 to-red-100 border-red-200');
+            ?> border rounded-lg p-6 text-center">
+                <div class="text-2xl font-bold mb-2 <?php
+                echo $match_result['result'] === 'win' ? 'text-green-700' :
+                    ($match_result['result'] === 'draw' ? 'text-yellow-700' : 'text-red-700');
+                ?>">
+                    <?php echo $financial_result['message']; ?>
+                </div>
+
+                <!-- Club Level Display -->
+                <div class="mb-4 p-3 bg-white bg-opacity-50 rounded-lg">
+                    <div class="text-sm text-gray-600">Your Club Level</div>
+                    <div class="text-lg font-bold text-purple-600">
+                        Level <?php echo $financial_result['club_level']; ?> -
+                        <?php echo getClubLevelName($financial_result['club_level']); ?>
+                    </div>
+                    <?php if ($financial_result['bonus_earnings'] > 0): ?>
+                        <div class="text-xs text-purple-500 mt-1">
+                            +<?php echo (calculateLevelBonus($financial_result['club_level']) * 100); ?>% level bonus
+                            applied
+                        </div>
+                    <?php endif; ?>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
+                    <div class="bg-white bg-opacity-50 rounded-lg p-3">
+                        <div class="text-sm text-gray-600">Challenge Fee</div>
+                        <div class="text-lg font-bold text-red-600">-<?php echo formatMarketValue($challenge_cost); ?>
+                        </div>
+                    </div>
+                    <div class="bg-white bg-opacity-50 rounded-lg p-3">
+                        <div class="text-sm text-gray-600">Base Earnings</div>
+                        <div class="text-lg font-bold text-green-600">
+                            +<?php echo formatMarketValue($financial_result['base_earnings']); ?></div>
+                    </div>
+                    <div class="bg-white bg-opacity-50 rounded-lg p-3">
+                        <div class="text-sm text-gray-600">Level Bonus</div>
+                        <div class="text-lg font-bold text-purple-600">
+                            +<?php echo formatMarketValue($financial_result['bonus_earnings']); ?></div>
+                    </div>
+                    <div class="bg-white bg-opacity-50 rounded-lg p-3">
+                        <div class="text-sm text-gray-600">Net Result</div>
+                        <div
+                            class="text-lg font-bold <?php echo ($financial_result['earnings'] - $challenge_cost) >= 0 ? 'text-green-600' : 'text-red-600'; ?>">
+                            <?php
+                            $net = $financial_result['earnings'] - $challenge_cost;
+                            echo ($net >= 0 ? '+' : '') . formatMarketValue($net);
+                            ?>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Updated Budget Display -->
+                <?php
+                try {
+                    $db = getDbConnection();
+                    $stmt = $db->prepare('SELECT budget FROM users WHERE id = :id');
+                    $stmt->bindValue(':id', $_SESSION['user_id'], SQLITE3_INTEGER);
+                    $result = $stmt->execute();
+                    $updated_user = $result->fetchArray(SQLITE3_ASSOC);
+                    $db->close();
+                    $current_budget = $updated_user['budget'];
+                } catch (Exception $e) {
+                    $current_budget = $user_data['budget'];
+                }
+                ?>
+                <div class="mt-4 pt-4 border-t border-white border-opacity-50">
+                    <div class="text-sm text-gray-600">Current Budget</div>
+                    <div class="text-xl font-bold text-blue-600"><?php echo formatMarketValue($current_budget); ?></div>
+                </div>
+            </div>
+        </div>
+
         <!-- Team Performance -->
         <div class="bg-white rounded-lg p-6 mb-6">
             <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
@@ -491,7 +809,10 @@ startContent();
 
         <!-- Actions -->
         <div class="flex justify-center gap-4">
-            <a href="clubs.php"
+            <a href="clubs.php?<?php
+            $_SESSION['match_success'] = $financial_result['message'];
+            echo 'completed=1';
+            ?>"
                 class="inline-flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors">
                 <i data-lucide="arrow-left" class="w-4 h-4"></i>
                 Back to Clubs
@@ -570,7 +891,7 @@ startContent();
                     $field.append(`
                         <div class="absolute transition-all duration-200" 
                              style="left: ${xPos}%; top: ${yPos}%; transform: translate(-50%, -50%);">
-                            <div class="w-12 h-12 ${teamColor} rounded-full flex flex-col items-center justify-center shadow-lg border-2 border-white">
+                            <div class="w-11 h-11 ${teamColor} rounded-full flex flex-col items-center justify-center shadow-lg border-2 border-white">
                                 <i data-lucide="user" class="w-4 h-4 text-white"></i>
                                 <span class="text-[8px] font-bold text-white">${requiredPosition}</span>
                             </div>

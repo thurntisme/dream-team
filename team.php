@@ -19,13 +19,63 @@ if (!isset($_SESSION['user_id']) || !isset($_SESSION['club_name'])) {
 try {
     $db = getDbConnection();
 
-    $stmt = $db->prepare('SELECT formation, team, budget FROM users WHERE id = :id');
+    // Get comprehensive user data
+    $stmt = $db->prepare('SELECT name, email, club_name, formation, team, budget, created_at FROM users WHERE id = :id');
     $stmt->bindValue(':id', $_SESSION['user_id'], SQLITE3_INTEGER);
     $result = $stmt->execute();
     $user = $result->fetchArray(SQLITE3_ASSOC);
     $saved_formation = $user['formation'] ?? '4-4-2';
     $saved_team = $user['team'] ?? '[]';
-    $user_budget = $user['budget'] ?? DEFAULT_BUDGET; // Default budget from constants
+    $user_budget = $user['budget'] ?? DEFAULT_BUDGET;
+
+    // Get ranking among all clubs
+    $stmt = $db->prepare('SELECT COUNT(*) as total_clubs FROM users WHERE club_name IS NOT NULL AND club_name != ""');
+    $result = $stmt->execute();
+    $total_clubs = $result->fetchArray(SQLITE3_ASSOC)['total_clubs'];
+
+    // Calculate team value for ranking
+    $team_data = json_decode($saved_team, true);
+    $team_value = 0;
+    if (is_array($team_data)) {
+        foreach ($team_data as $player) {
+            if ($player && isset($player['value'])) {
+                $team_value += $player['value'];
+            }
+        }
+    }
+
+    // Get clubs with higher team value for ranking
+    $stmt = $db->prepare('SELECT COUNT(*) as higher_clubs FROM users WHERE club_name IS NOT NULL AND club_name != "" AND id != :user_id');
+    $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+    $result = $stmt->execute();
+    $all_clubs = $result->fetchArray(SQLITE3_ASSOC)['higher_clubs'];
+
+    // Count clubs with higher team value
+    $higher_clubs = 0;
+    $stmt = $db->prepare('SELECT team FROM users WHERE club_name IS NOT NULL AND club_name != "" AND id != :user_id');
+    $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+    $result = $stmt->execute();
+
+    while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+        $other_team = json_decode($row['team'], true);
+        $other_value = 0;
+        if (is_array($other_team)) {
+            foreach ($other_team as $player) {
+                if ($player && isset($player['value'])) {
+                    $other_value += $player['value'];
+                }
+            }
+        }
+        if ($other_value > $team_value) {
+            $higher_clubs++;
+        }
+    }
+
+    $club_ranking = $higher_clubs + 1;
+
+    // Calculate club level
+    $club_level = calculateClubLevel($team_data);
+    $level_name = getClubLevelName($club_level);
 
     $db->close();
 } catch (Exception $e) {
@@ -33,11 +83,212 @@ try {
     exit;
 }
 
+// Club level calculation functions
+function calculateClubLevel($team)
+{
+    if (!is_array($team))
+        return 1;
+
+    $total_rating = 0;
+    $player_count = 0;
+    $total_value = 0;
+
+    foreach ($team as $player) {
+        if ($player && isset($player['rating']) && isset($player['value'])) {
+            $total_rating += $player['rating'];
+            $total_value += $player['value'];
+            $player_count++;
+        }
+    }
+
+    if ($player_count === 0)
+        return 1;
+
+    $avg_rating = $total_rating / $player_count;
+    $avg_value = $total_value / $player_count;
+
+    // Level calculation based on average rating and value
+    if ($avg_rating >= 85 && $avg_value >= 50000000) {
+        return 5; // Elite
+    } elseif ($avg_rating >= 80 && $avg_value >= 30000000) {
+        return 4; // Professional
+    } elseif ($avg_rating >= 75 && $avg_value >= 15000000) {
+        return 3; // Semi-Professional
+    } elseif ($avg_rating >= 70 && $avg_value >= 5000000) {
+        return 2; // Amateur
+    } else {
+        return 1; // Beginner
+    }
+}
+
+function getClubLevelName($level)
+{
+    switch ($level) {
+        case 5:
+            return 'Elite';
+        case 4:
+            return 'Professional';
+        case 3:
+            return 'Semi-Professional';
+        case 2:
+            return 'Amateur';
+        case 1:
+        default:
+            return 'Beginner';
+    }
+}
+
+function getLevelColor($level)
+{
+    switch ($level) {
+        case 5:
+            return 'bg-purple-100 text-purple-800 border-purple-200';
+        case 4:
+            return 'bg-blue-100 text-blue-800 border-blue-200';
+        case 3:
+            return 'bg-green-100 text-green-800 border-green-200';
+        case 2:
+            return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+        case 1:
+        default:
+            return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+}
+
 // Start content capture
 startContent();
 ?>
 
 <div class="container mx-auto p-4 max-w-6xl">
+    <!-- Club Overview Section -->
+    <div class="mb-6">
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center gap-4">
+                    <div
+                        class="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center shadow-lg">
+                        <i data-lucide="shield" class="w-8 h-8 text-white"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-3xl font-bold text-gray-900"><?php echo htmlspecialchars($user['club_name']); ?>
+                        </h1>
+                        <p class="text-gray-600">Manager: <?php echo htmlspecialchars($user['name']); ?></p>
+                        <div class="flex items-center gap-2 mt-2">
+                            <span
+                                class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium border <?php echo getLevelColor($club_level); ?>">
+                                <i data-lucide="star" class="w-4 h-4"></i>
+                                Level <?php echo $club_level; ?> - <?php echo $level_name; ?>
+                            </span>
+                            <span
+                                class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 border border-blue-200">
+                                <i data-lucide="trophy" class="w-4 h-4"></i>
+                                Rank #
+                                <?php echo $club_ranking; ?> of <?php echo $total_clubs; ?>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <div class="text-sm text-gray-600">Club Founded</div>
+                    <div class="text-lg font-bold text-gray-900">
+                        <?php echo date('M j, Y', strtotime($user['created_at'])); ?></div>
+                    <div class="text-xs text-gray-500 mt-1">
+                        <?php echo floor((time() - strtotime($user['created_at'])) / 86400); ?> days ago</div>
+                </div>
+            </div>
+
+            <!-- Club Statistics Grid -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div
+                    class="bg-gradient-to-r from-green-50 to-green-100 rounded-lg p-4 text-center border border-green-200">
+                    <div class="text-2xl font-bold text-green-700" id="clubTeamValue">
+                        <?php echo formatMarketValue($team_value); ?></div>
+                    <div class="text-sm text-green-600">Team Value</div>
+                </div>
+                <div
+                    class="bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-4 text-center border border-blue-200">
+                    <div class="text-2xl font-bold text-blue-700"><?php echo formatMarketValue($user_budget); ?></div>
+                    <div class="text-sm text-blue-600">Budget</div>
+                </div>
+                <div
+                    class="bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg p-4 text-center border border-purple-200">
+                    <div class="text-2xl font-bold text-purple-700" id="clubPlayerCount">
+                        <?php echo count(array_filter($team_data ?: [], fn($p) => $p !== null)); ?>/11</div>
+                    <div class="text-sm text-purple-600">Players</div>
+                </div>
+                <div
+                    class="bg-gradient-to-r from-yellow-50 to-yellow-100 rounded-lg p-4 text-center border border-yellow-200">
+                    <div class="text-2xl font-bold text-yellow-700" id="clubAvgRating">
+                        <?php
+                        $total_rating = 0;
+                        $rated_players = 0;
+                        if (is_array($team_data)) {
+                            foreach ($team_data as $player) {
+                                if ($player && isset($player['rating']) && $player['rating'] > 0) {
+                                    $total_rating += $player['rating'];
+                                    $rated_players++;
+                                }
+                            }
+                        }
+                        echo $rated_players > 0 ? round($total_rating / $rated_players, 1) : '0';
+                        ?>
+                    </div>
+                    <div class="text-sm text-yellow-600">Avg Rating</div>
+                </div>
+            </div>
+
+            <!-- Formation and Strategy Info -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <h3 class="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                        <i data-lucide="layout" class="w-4 h-4"></i>
+                        Formation
+                    </h3>
+                    <div class="text-lg font-bold text-gray-700"><?php echo htmlspecialchars($saved_formation); ?></div>
+                    <div class="text-sm text-gray-600 mt-1">
+                        <?php echo htmlspecialchars(FORMATIONS[$saved_formation]['description'] ?? 'Classic formation'); ?>
+                    </div>
+                </div>
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <h3 class="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                        <i data-lucide="target" class="w-4 h-4"></i>
+                        Challenge Status
+                    </h3>
+                    <?php
+                    $player_count = count(array_filter($team_data ?: [], fn($p) => $p !== null));
+                    $can_challenge = $player_count >= 11;
+                    ?>
+                    <div class="text-lg font-bold <?php echo $can_challenge ? 'text-green-600' : 'text-red-600'; ?>">
+                        <?php echo $can_challenge ? 'Ready' : 'Not Ready'; ?>
+                    </div>
+                    <div class="text-sm text-gray-600 mt-1">
+                        <?php echo $can_challenge ? 'Can challenge other clubs' : 'Need ' . (11 - $player_count) . ' more players'; ?>
+                    </div>
+                </div>
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <h3 class="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                        <i data-lucide="trending-up" class="w-4 h-4"></i>
+                        Level Progress
+                    </h3>
+                    <?php
+                    $next_level = $club_level < 5 ? $club_level + 1 : 5;
+                    $level_bonus = match ($club_level) {
+                        5 => 25,
+                        4 => 20,
+                        3 => 15,
+                        2 => 10,
+                        default => 0
+                    };
+                    ?>
+                    <div class="text-lg font-bold text-purple-600">+<?php echo $level_bonus; ?>% Bonus</div>
+                    <div class="text-sm text-gray-600 mt-1">
+                        <?php echo $club_level < 5 ? 'Next: Level ' . $next_level : 'Maximum level reached'; ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <!-- Formation Selector -->
         <div class="bg-white rounded-lg shadow p-4">
@@ -197,6 +448,25 @@ startContent();
 
     renderPlayers();
     renderField();
+    
+    // Initialize club overview stats on page load
+    let initialTotalValue = 0;
+    let initialPlayerCount = 0;
+    let initialTotalRating = 0;
+    let initialRatedPlayers = 0;
+    
+    selectedPlayers.forEach(player => {
+        if (player) {
+            initialPlayerCount++;
+            initialTotalValue += player.value || 0;
+            if (player.rating && player.rating > 0) {
+                initialTotalRating += player.rating;
+                initialRatedPlayers++;
+            }
+        }
+    });
+    
+    updateClubOverviewStats(initialTotalValue, initialPlayerCount, initialRatedPlayers > 0 ? initialTotalRating / initialRatedPlayers : 0);
 
     // Format market value for display
     function formatMarketValue(value) {
@@ -213,11 +483,19 @@ startContent();
         const $list = $('#playerList').empty();
         let totalValue = 0;
         let playerCount = 0;
+        let totalRating = 0;
+        let ratedPlayers = 0;
 
         selectedPlayers.forEach((player, idx) => {
             if (player) {
                 playerCount++;
                 totalValue += player.value || 0;
+
+                // Calculate ratings for average
+                if (player.rating && player.rating > 0) {
+                    totalRating += player.rating;
+                    ratedPlayers++;
+                }
 
                 const isCustom = player.isCustom || false;
                 const isSelected = selectedPlayerIdx === idx;
@@ -281,6 +559,9 @@ startContent();
             $remainingBudget.addClass('text-blue-600');
         }
 
+        // Update club overview statistics in real-time
+        updateClubOverviewStats(totalValue, playerCount, ratedPlayers > 0 ? totalRating / ratedPlayers : 0);
+
         if ($list.children().length === 0) {
             $list.append('<div class="text-center text-gray-500 py-8">No players selected<br><small class="text-xs">Click on field positions to add players</small></div>');
         } else if (selectedPlayerIdx === null && playerCount > 0) {
@@ -288,6 +569,133 @@ startContent();
         }
 
         lucide.createIcons();
+    }
+
+    // Function to update club overview statistics in real-time
+    function updateClubOverviewStats(teamValue, playerCount, avgRating) {
+        // Update team value in club overview
+        $('#clubTeamValue').text(formatMarketValue(teamValue));
+
+        // Update player count in club overview
+        $('#clubPlayerCount').text(`${playerCount}/11`);
+
+        // Update average rating in club overview
+        $('#clubAvgRating').text(avgRating > 0 ? avgRating.toFixed(1) : '0');
+
+        // Calculate and update club level
+        const clubLevel = calculateClubLevelJS(selectedPlayers);
+        const levelName = getClubLevelNameJS(clubLevel);
+        const levelColors = getLevelColorJS(clubLevel);
+
+        // Update level badge
+        const $levelBadge = $('.inline-flex.items-center.gap-1.px-3.py-1.rounded-full.text-sm.font-medium.border').first();
+        if ($levelBadge.length) {
+            // Remove old color classes
+            $levelBadge.removeClass('bg-purple-100 text-purple-800 border-purple-200 bg-blue-100 text-blue-800 border-blue-200 bg-green-100 text-green-800 border-green-200 bg-yellow-100 text-yellow-800 border-yellow-200 bg-gray-100 text-gray-800 border-gray-200');
+            // Add new color classes
+            $levelBadge.addClass(levelColors);
+            // Update text
+            $levelBadge.html(`<i data-lucide="star" class="w-4 h-4"></i> Level ${clubLevel} - ${levelName}`);
+        }
+
+        // Update level progress bonus
+        const levelBonus = getLevelBonusJS(clubLevel);
+        const $levelProgressBonus = $('.text-lg.font-bold.text-purple-600');
+        if ($levelProgressBonus.length) {
+            $levelProgressBonus.text(`+${levelBonus}% Bonus`);
+        }
+
+        // Update challenge status
+        const canChallenge = playerCount >= 11;
+        const $challengeStatus = $('.text-lg.font-bold').filter(function () {
+            return $(this).text() === 'Ready' || $(this).text() === 'Not Ready';
+        });
+
+        if ($challengeStatus.length) {
+            $challengeStatus.removeClass('text-green-600 text-red-600');
+            $challengeStatus.addClass(canChallenge ? 'text-green-600' : 'text-red-600');
+            $challengeStatus.text(canChallenge ? 'Ready' : 'Not Ready');
+
+            // Update challenge status description
+            const $challengeDesc = $challengeStatus.siblings('.text-sm.text-gray-600.mt-1');
+            if ($challengeDesc.length) {
+                $challengeDesc.text(canChallenge ? 'Can challenge other clubs' : `Need ${11 - playerCount} more players`);
+            }
+        }
+
+        // Recreate icons after updating content
+        lucide.createIcons();
+    }
+
+    // JavaScript version of club level calculation
+    function calculateClubLevelJS(team) {
+        if (!Array.isArray(team)) return 1;
+
+        let totalRating = 0;
+        let playerCount = 0;
+        let totalValue = 0;
+
+        team.forEach(player => {
+            if (player && player.rating && player.value) {
+                totalRating += player.rating;
+                totalValue += player.value;
+                playerCount++;
+            }
+        });
+
+        if (playerCount === 0) return 1;
+
+        const avgRating = totalRating / playerCount;
+        const avgValue = totalValue / playerCount;
+
+        // Level calculation based on average rating and value
+        if (avgRating >= 85 && avgValue >= 50000000) {
+            return 5; // Elite
+        } else if (avgRating >= 80 && avgValue >= 30000000) {
+            return 4; // Professional
+        } else if (avgRating >= 75 && avgValue >= 15000000) {
+            return 3; // Semi-Professional
+        } else if (avgRating >= 70 && avgValue >= 5000000) {
+            return 2; // Amateur
+        } else {
+            return 1; // Beginner
+        }
+    }
+
+    // JavaScript version of club level name
+    function getClubLevelNameJS(level) {
+        switch (level) {
+            case 5: return 'Elite';
+            case 4: return 'Professional';
+            case 3: return 'Semi-Professional';
+            case 2: return 'Amateur';
+            case 1:
+            default: return 'Beginner';
+        }
+    }
+
+    // JavaScript version of level colors
+    function getLevelColorJS(level) {
+        switch (level) {
+            case 5: return 'bg-purple-100 text-purple-800 border-purple-200';
+            case 4: return 'bg-blue-100 text-blue-800 border-blue-200';
+            case 3: return 'bg-green-100 text-green-800 border-green-200';
+            case 2: return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+            case 1:
+            default: return 'bg-gray-100 text-gray-800 border-gray-200';
+        }
+    }
+
+    // JavaScript version of level bonus calculation
+    function getLevelBonusJS(level) {
+        switch (level) {
+            case 5: return 25;
+            case 4: return 20;
+            case 3: return 15;
+            case 2: return 10;
+            case 1:
+            default: return 0;
+        }
     }
 
     // Function to select a player (highlight only)
