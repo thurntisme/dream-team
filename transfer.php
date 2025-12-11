@@ -211,7 +211,7 @@ startContent();
                                     Player</th>
                                 <th
                                     class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Club</th>
+                                    Salary</th>
                                 <th
                                     class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     Position</th>
@@ -485,6 +485,21 @@ startContent();
     </div>
 </div>
 
+<!-- Player Info Modal -->
+<div id="playerInfoModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div class="flex justify-end mb-6">
+            <button id="closePlayerInfoModal" class="text-gray-500 hover:text-gray-700">
+                <i data-lucide="x" class="w-6 h-6"></i>
+            </button>
+        </div>
+
+        <div id="playerInfoContent">
+            <!-- Player info will be loaded here -->
+        </div>
+    </div>
+</div>
+
 <script>
     // Available players data from PHP
     const availablePlayers = <?php echo json_encode($available_players); ?>;
@@ -595,14 +610,17 @@ startContent();
                             <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center mr-3">
                                 <i data-lucide="user" class="w-5 h-5 text-white"></i>
                             </div>
-                            <div>
+                            <div class="flex-1">
                                 <div class="text-sm font-medium text-gray-900">${player.name}</div>
                             </div>
+                            <button onclick="showPlayerInfo(${JSON.stringify(player).replace(/"/g, '&quot;')})" class="ml-2 p-1 text-blue-600 hover:bg-blue-100 rounded transition-colors" title="Player Info">
+                                <i data-lucide="info" class="w-4 h-4"></i>
+                            </button>
                         </div>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="text-sm text-gray-900">${item.club_name}</div>
-                        <div class="text-sm text-gray-500">${item.owner_name}</div>
+                        <div class="text-sm font-medium text-gray-900">${formatMarketValue(calculateSalary(player))}</div>
+                        <div class="text-sm text-gray-500">per week</div>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
                         <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
@@ -708,6 +726,27 @@ startContent();
         } else {
             return '€' + value;
         }
+    }
+
+    // Calculate weekly salary based on player value and rating
+    function calculateSalary(player) {
+        const baseValue = player.value || 1000000;
+        const rating = player.rating || 70;
+
+        // Calculate weekly salary as a percentage of market value
+        // Higher rated players get higher percentage
+        let salaryPercentage = 0.001; // Base 0.1% of market value per week
+
+        // Bonus based on rating
+        if (rating >= 90) salaryPercentage = 0.002; // 0.2% for 90+ rated
+        else if (rating >= 85) salaryPercentage = 0.0018; // 0.18% for 85+ rated
+        else if (rating >= 80) salaryPercentage = 0.0015; // 0.15% for 80+ rated
+        else if (rating >= 75) salaryPercentage = 0.0012; // 0.12% for 75+ rated
+
+        const weeklySalary = Math.round(baseValue * salaryPercentage);
+
+        // Minimum salary of €10K per week
+        return Math.max(weeklySalary, 10000);
     }
 
     // Make bid function
@@ -1059,6 +1098,155 @@ startContent();
         });
     }
 
+    // Player Info Modal Functions
+    function showPlayerInfo(playerData) {
+        const player = playerData;
+
+        // Calculate contract years (random for demo)
+        const contractYears = Math.floor(Math.random() * 4) + 1;
+
+        // Generate some stats (random for demo)
+        const stats = generatePlayerStats(player.position, player.rating);
+
+        const playerInfoHtml = `
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Player Header -->
+                <div class="lg:col-span-2 bg-gradient-to-r from-blue-600 to-blue-800 text-white rounded-lg p-6">
+                    <div class="flex items-center gap-6">
+                        <div class="w-24 h-24 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                            <i data-lucide="user" class="w-12 h-12"></i>
+                        </div>
+                        <div class="flex-1">
+                            <h2 class="text-3xl font-bold mb-2">${player.name}</h2>
+                            <div class="flex items-center gap-4 text-blue-100">
+                                <span class="bg-blue-500 px-2 py-1 rounded text-sm font-semibold">${player.position}</span>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-3xl font-bold">★${player.rating}</div>
+                            <div class="text-blue-200 text-sm">Overall Rating</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Career Information -->
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                        <i data-lucide="briefcase" class="w-5 h-5 text-green-600"></i>
+                        Career Information
+                    </h3>
+                    <div class="space-y-3">
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Current Club:</span>
+                            <span class="font-medium">${player.club || 'Free Agent'}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Market Value:</span>
+                            <span class="font-medium text-green-600">${formatMarketValue(player.value)}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Primary Position:</span>
+                            <span class="font-medium">${player.position}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Contract:</span>
+                            <span class="font-medium">${contractYears} year${contractYears > 1 ? 's' : ''}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Positions & Skills -->
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                        <i data-lucide="target" class="w-5 h-5 text-purple-600"></i>
+                        Positions & Skills
+                    </h3>
+                    <div class="space-y-4">
+                        <div>
+                            <span class="text-gray-600 text-sm">Playable Positions:</span>
+                            <div class="flex flex-wrap gap-2 mt-2">
+                                ${(player.playablePositions || [player.position]).map(pos =>
+            `<span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm font-medium">${pos}</span>`
+        ).join('')}
+                            </div>
+                        </div>
+                        <div>
+                            <span class="text-gray-600 text-sm">Key Attributes:</span>
+                            <div class="mt-2 space-y-2">
+                                ${Object.entries(stats).map(([stat, value]) => `
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-sm">${stat}</span>
+                                        <div class="flex items-center gap-2">
+                                            <div class="w-16 bg-gray-200 rounded-full h-2">
+                                                <div class="bg-blue-600 h-2 rounded-full" style="width: ${value}%"></div>
+                                            </div>
+                                            <span class="text-sm font-medium w-8">${value}</span>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Description -->
+                <div class="lg:col-span-2 bg-gray-50 rounded-lg p-4">
+                    <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                        <i data-lucide="file-text" class="w-5 h-5 text-orange-600"></i>
+                        Player Description
+                    </h3>
+                    <p class="text-gray-700 leading-relaxed">${player.description || 'Professional football player with great potential and skills.'}</p>
+                </div>
+            </div>
+        `;
+
+        document.getElementById('playerInfoContent').innerHTML = playerInfoHtml;
+        document.getElementById('playerInfoModal').classList.remove('hidden');
+        lucide.createIcons();
+    }
+
+    // Helper function to generate player stats based on position and rating
+    function generatePlayerStats(position, rating) {
+        const baseStats = {
+            'GK': ['Diving', 'Handling', 'Kicking', 'Reflexes', 'Positioning'],
+            'CB': ['Defending', 'Heading', 'Strength', 'Marking', 'Tackling'],
+            'LB': ['Pace', 'Crossing', 'Defending', 'Stamina', 'Dribbling'],
+            'RB': ['Pace', 'Crossing', 'Defending', 'Stamina', 'Dribbling'],
+            'CDM': ['Passing', 'Tackling', 'Positioning', 'Strength', 'Vision'],
+            'CM': ['Passing', 'Dribbling', 'Vision', 'Stamina', 'Shooting'],
+            'CAM': ['Passing', 'Dribbling', 'Vision', 'Shooting', 'Creativity'],
+            'LM': ['Pace', 'Crossing', 'Dribbling', 'Stamina', 'Passing'],
+            'RM': ['Pace', 'Crossing', 'Dribbling', 'Stamina', 'Passing'],
+            'LW': ['Pace', 'Dribbling', 'Crossing', 'Shooting', 'Agility'],
+            'RW': ['Pace', 'Dribbling', 'Crossing', 'Shooting', 'Agility'],
+            'ST': ['Shooting', 'Finishing', 'Positioning', 'Strength', 'Heading'],
+            'CF': ['Shooting', 'Dribbling', 'Passing', 'Positioning', 'Creativity']
+        };
+
+        const positionStats = baseStats[position] || baseStats['CM'];
+        const stats = {};
+
+        positionStats.forEach(stat => {
+            // Generate stats based on overall rating with some variation
+            const variation = Math.floor(Math.random() * 10) - 5; // -5 to +5
+            const statValue = Math.max(30, Math.min(99, rating + variation));
+            stats[stat] = statValue;
+        });
+
+        return stats;
+    }
+
+    // Close player info modal
+    document.getElementById('closePlayerInfoModal').addEventListener('click', function () {
+        document.getElementById('playerInfoModal').classList.add('hidden');
+    });
+
+    document.getElementById('playerInfoModal').addEventListener('click', function (e) {
+        if (e.target === this) {
+            this.classList.add('hidden');
+        }
+    });
+
     // Event listeners for filters
     document.getElementById('playerSearch').addEventListener('input', filterPlayers);
     document.getElementById('positionFilter').addEventListener('change', filterPlayers);
@@ -1075,7 +1263,22 @@ startContent();
     });
 </script>
 
-<?php
-// End content capture and render layout
-endContent('Transfer Market - Dream Team', 'transfer');
-?>
+<style>
+    #playerInfoModal .max-w-2xl {
+        max-width: 48rem;
+    }
+
+    .player-info-stat-bar {
+        transition: width 0.3s ease;
+    }
+
+    .player-info-header {
+              background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
+    }
+
+    </style>
+
+ <?php
+ // End content capture and render layout
+ endContent('Transfer Market - Dream Team', 'transfer');
+ ?>
