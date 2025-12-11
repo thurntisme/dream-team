@@ -6,6 +6,13 @@ require_once 'constants.php';
 
 header('Content-Type: application/json');
 
+// Check if user is logged in
+if (!isset($_SESSION['user_id'])) {
+    http_response_code(401);
+    echo json_encode(['success' => false, 'message' => 'User not logged in']);
+    exit;
+}
+
 // Check if database is available
 if (!isDatabaseAvailable()) {
     http_response_code(500);
@@ -13,222 +20,148 @@ if (!isDatabaseAvailable()) {
     exit;
 }
 
-if (!isset($_SESSION['user_id']) || !isset($_SESSION['club_name'])) {
-    http_response_code(401);
-    echo json_encode(['success' => false, 'message' => 'Not authenticated']);
-    exit;
-}
-
-// Get POST data
+// Get JSON input
 $input = json_decode(file_get_contents('php://input'), true);
 
-$item_id = $input['item_id'] ?? null;
-$item_name = $input['item_name'] ?? null;
-$item_price = $input['item_price'] ?? null;
-
-// Validate input
-if (!$item_id || !$item_name || !$item_price) {
+if (!$input || !isset($input['item_id']) || !isset($input['item_price'])) {
     http_response_code(400);
-    echo json_encode(['success' => false, 'message' => 'Missing required fields']);
+    echo json_encode(['success' => false, 'message' => 'Invalid request data']);
     exit;
 }
 
-// Validate price
-if ($item_price <= 0) {
-    http_response_code(400);
-    echo json_encode(['success' => false, 'message' => 'Invalid item price']);
-    exit;
-}
+$item_id = (int) $input['item_id'];
+$item_price = (int) $input['item_price'];
+$user_id = $_SESSION['user_id'];
 
 try {
     $db = getDbConnection();
 
-    // Get user's current budget
-    $stmt = $db->prepare('SELECT budget FROM users WHERE id = :user_id');
-    $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
-    $result = $stmt->execute();
-    $user = $result->fetchArray(SQLITE3_ASSOC);
+    // Start transaction
+    $db->exec('BEGIN TRANSACTION');
 
-    if (!$user) {
-        http_response_code(404);
-        echo json_encode(['success' => false, 'message' => 'User not found']);
-        exit;
+    // Get user's current budget and max_players
+    $stmt = $db->prepare('SELECT budget, max_players FROM users WHERE id = :user_id');
+    $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+    $result = $stmt->execute();
+    $user_data = $result->fetchArray(SQLITE3_ASSOC);
+
+    if (!$user_data) {
+        throw new Exception('User not found');
     }
+
+    $current_budget = $user_data['budget'];
+    $current_max_players = $user_data['max_players'];
 
     // Check if user has enough budget
-    if ($user['budget'] < $item_price) {
-        http_response_code(400);
-        echo json_encode(['success' => false, 'message' => 'Insufficient budget']);
-        exit;
+    if ($current_budget < $item_price) {
+        throw new Exception('Insufficient budget');
     }
 
-    // Get item details to verify price and get duration
+    // Get item details
     $stmt = $db->prepare('SELECT * FROM shop_items WHERE id = :item_id');
     $stmt->bindValue(':item_id', $item_id, SQLITE3_INTEGER);
     $result = $stmt->execute();
     $item = $result->fetchArray(SQLITE3_ASSOC);
 
     if (!$item) {
-        http_response_code(404);
-        echo json_encode(['success' => false, 'message' => 'Item not found']);
-        exit;
+        throw new Exception('Item not found');
     }
 
     // Verify price matches
     if ($item['price'] != $item_price) {
-        http_response_code(400);
-        echo json_encode(['success' => false, 'message' => 'Price mismatch']);
-        exit;
+        throw new Exception('Price mismatch');
     }
 
-    // Check if user already has this item (for certain types)
-    if (in_array($item['effect_type'], ['permanent_boost', 'formation_unlock'])) {
-        $stmt = $db->prepare('SELECT id FROM user_items WHERE user_id = :user_id AND item_id = :item_id AND is_active = 1');
-        $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
-        $stmt->bindValue(':item_id', $item_id, SQLITE3_INTEGER);
-        $result = $stmt->execute();
+    // Deduct budget
+    $new_budget = $current_budget - $item_price;
+    $stmt = $db->prepare('UPDATE users SET budget = :budget WHERE id = :user_id');
+    $stmt->bindValue(':budget', $new_budget, SQLITE3_INTEGER);
+    $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
 
-        if ($result->fetchArray()) {
-            http_response_code(400);
-            echo json_encode(['success' => false, 'message' => 'You already own this item']);
-            exit;
-        }
+    if (!$stmt->execute()) {
+        throw new Exception('Failed to update budget');
     }
 
-    // Begin transaction
-    $db->exec('BEGIN TRANSACTION');
+    // Calculate expiry date if item has duration
+    $expires_at = null;
+    if ($item['duration'] > 0) {
+        $expires_at = date('Y-m-d H:i:s', strtotime('+' . $item['duration'] . ' days'));
+    }
 
-    try {
-        // Deduct budget from user
-        $new_budget = $user['budget'] - $item_price;
-        $stmt = $db->prepare('UPDATE users SET budget = :budget WHERE id = :user_id');
-        $stmt->bindValue(':budget', $new_budget, SQLITE3_INTEGER);
-        $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+    // Add item to user's inventory
+    $stmt = $db->prepare('INSERT INTO user_items (user_id, item_id, expires_at) VALUES (:user_id, :item_id, :expires_at)');
+    $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+    $stmt->bindValue(':item_id', $item_id, SQLITE3_INTEGER);
+    $stmt->bindValue(':expires_at', $expires_at, SQLITE3_TEXT);
 
-        if (!$stmt->execute()) {
-            throw new Exception('Failed to update user budget');
-        }
+    if (!$stmt->execute()) {
+        throw new Exception('Failed to add item to inventory');
+    }
 
-        // Calculate expiration date if item has duration
-        $expires_at = null;
-        if ($item['duration'] > 0) {
-            $expires_at = date('Y-m-d H:i:s', strtotime('+' . $item['duration'] . ' days'));
-        }
+    // Apply item effects
+    $effect_data = json_decode($item['effect_value'], true);
+    $additional_message = '';
 
-        // Add item to user's inventory
-        $stmt = $db->prepare('INSERT INTO user_items (user_id, item_id, expires_at, is_active) VALUES (:user_id, :item_id, :expires_at, 1)');
-        $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
-        $stmt->bindValue(':item_id', $item_id, SQLITE3_INTEGER);
-        $stmt->bindValue(':expires_at', $expires_at, SQLITE3_TEXT);
+    switch ($item['effect_type']) {
+        case 'squad_expansion':
+            if (isset($effect_data['players'])) {
+                $players_to_add = (int) $effect_data['players'];
+                $new_max_players = $current_max_players + $players_to_add;
 
-        if (!$stmt->execute()) {
-            throw new Exception('Failed to add item to inventory');
-        }
+                $stmt = $db->prepare('UPDATE users SET max_players = :max_players WHERE id = :user_id');
+                $stmt->bindValue(':max_players', $new_max_players, SQLITE3_INTEGER);
+                $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
 
-        // Apply immediate effects based on item type
-        $effect_value = json_decode($item['effect_value'], true);
+                if (!$stmt->execute()) {
+                    throw new Exception('Failed to update max players');
+                }
 
-        switch ($item['effect_type']) {
-            case 'budget_boost':
-                // Add additional budget immediately
-                $bonus_budget = $effect_value['amount'] ?? 0;
-                $final_budget = $new_budget + $bonus_budget;
+                $additional_message = " Your squad size has been increased from {$current_max_players} to {$new_max_players} players!";
+            }
+            break;
+
+        case 'budget_boost':
+            if (isset($effect_data['amount'])) {
+                $budget_boost = (int) $effect_data['amount'];
+                $boosted_budget = $new_budget + $budget_boost;
 
                 $stmt = $db->prepare('UPDATE users SET budget = :budget WHERE id = :user_id');
-                $stmt->bindValue(':budget', $final_budget, SQLITE3_INTEGER);
-                $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
-                $stmt->execute();
-                break;
+                $stmt->bindValue(':budget', $boosted_budget, SQLITE3_INTEGER);
+                $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
 
-            case 'player_boost':
-                // Boost all players (this would be applied when loading team)
-                // For now, we just record the purchase
-                break;
-
-            case 'permanent_boost':
-                // Apply permanent boost to specific position players
-                $position = $effect_value['position'] ?? '';
-                $rating_boost = $effect_value['rating'] ?? 0;
-
-                if ($position && $rating_boost > 0) {
-                    // Get user's team
-                    $stmt = $db->prepare('SELECT team FROM users WHERE id = :user_id');
-                    $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
-                    $result = $stmt->execute();
-                    $user_data = $result->fetchArray(SQLITE3_ASSOC);
-
-                    if ($user_data && $user_data['team']) {
-                        $team = json_decode($user_data['team'], true);
-
-                        // Apply boost to matching position players
-                        foreach ($team as $index => $player) {
-                            if ($player && isset($player['position']) && $player['position'] === $position) {
-                                $team[$index]['rating'] = ($player['rating'] ?? 0) + $rating_boost;
-                                // Recalculate value based on new rating
-                                $team[$index]['value'] = calculatePlayerValue($team[$index]);
-                            }
-                        }
-
-                        // Update team in database
-                        $stmt = $db->prepare('UPDATE users SET team = :team WHERE id = :user_id');
-                        $stmt->bindValue(':team', json_encode($team), SQLITE3_TEXT);
-                        $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
-                        $stmt->execute();
-                    }
+                if (!$stmt->execute()) {
+                    throw new Exception('Failed to apply budget boost');
                 }
-                break;
-        }
 
-        // Commit transaction
-        $db->exec('COMMIT');
+                $additional_message = " You received an additional " . formatMarketValue($budget_boost) . " budget boost!";
+            }
+            break;
 
-        echo json_encode([
-            'success' => true,
-            'message' => 'Item purchased successfully',
-            'new_budget' => $new_budget,
-            'item_name' => $item['name']
-        ]);
-
-    } catch (Exception $e) {
-        // Rollback transaction
-        $db->exec('ROLLBACK');
-        http_response_code(500);
-        echo json_encode(['success' => false, 'message' => 'Purchase failed: ' . $e->getMessage()]);
-        exit;
+        // Add more effect types as needed
+        default:
+            // For other effects, just store in inventory for later processing
+            break;
     }
 
+    // Commit transaction
+    $db->exec('COMMIT');
     $db->close();
 
+    echo json_encode([
+        'success' => true,
+        'message' => 'Item purchased successfully!' . $additional_message,
+        'new_budget' => $new_budget + ($effect_data['amount'] ?? 0),
+        'new_max_players' => $current_max_players + ($effect_data['players'] ?? 0)
+    ]);
+
 } catch (Exception $e) {
-    http_response_code(500);
-    echo json_encode(['success' => false, 'message' => 'Server error occurred']);
-}
+    // Rollback transaction on error
+    if (isset($db)) {
+        $db->exec('ROLLBACK');
+        $db->close();
+    }
 
-// Helper function to calculate player value based on rating
-function calculatePlayerValue($player)
-{
-    $rating = $player['rating'] ?? 50;
-    $position = $player['position'] ?? 'CM';
-
-    // Base value calculation
-    $base_value = $rating * 100000;
-
-    // Position multipliers
-    $position_multipliers = [
-        'GK' => 0.8,
-        'CB' => 0.9,
-        'LB' => 0.95,
-        'RB' => 0.95,
-        'CDM' => 1.0,
-        'CM' => 1.0,
-        'CAM' => 1.1,
-        'LW' => 1.15,
-        'RW' => 1.15,
-        'ST' => 1.2
-    ];
-
-    $multiplier = $position_multipliers[$position] ?? 1.0;
-
-    return (int) ($base_value * $multiplier);
+    http_response_code(400);
+    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }
 ?>

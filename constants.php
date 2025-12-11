@@ -3,6 +3,7 @@
 
 // Budget configuration
 define('DEFAULT_BUDGET', 500000000); // €500M default budget - optimal for competitive lineups
+define('DEFAULT_MAX_PLAYERS', 23); // Default maximum players in squad
 
 // Demo clubs for seeding
 define('DEMO_CLUBS', [

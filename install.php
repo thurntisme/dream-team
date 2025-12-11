@@ -106,7 +106,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install'])) {
             club_name TEXT,
             formation TEXT DEFAULT "4-4-2",
             team TEXT DEFAULT "[]",
+            substitutes TEXT DEFAULT "[]",
             budget INTEGER DEFAULT ' . DEFAULT_BUDGET . ',
+            max_players INTEGER DEFAULT 23,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )';
 

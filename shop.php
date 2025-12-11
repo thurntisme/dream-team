@@ -20,10 +20,19 @@ try {
     $db = getDbConnection();
 
     // Get current user's data
-    $stmt = $db->prepare('SELECT budget, team FROM users WHERE id = :user_id');
+    $stmt = $db->prepare('SELECT budget, team, max_players FROM users WHERE id = :user_id');
     $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
     $result = $stmt->execute();
     $user_data = $result->fetchArray(SQLITE3_ASSOC);
+
+    // Ensure max_players is set for existing users
+    if (!isset($user_data['max_players']) || $user_data['max_players'] === null) {
+        $user_data['max_players'] = DEFAULT_MAX_PLAYERS;
+        $stmt = $db->prepare('UPDATE users SET max_players = :max_players WHERE id = :user_id');
+        $stmt->bindValue(':max_players', DEFAULT_MAX_PLAYERS, SQLITE3_INTEGER);
+        $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+        $stmt->execute();
+    }
 
     // Create shop_items table if it doesn't exist
     $db->exec('CREATE TABLE IF NOT EXISTS shop_items (
@@ -76,7 +85,12 @@ try {
             // Premium Items
             ['Golden Boot', 'Permanently increase striker ratings by +1', 20000000, 'permanent_boost', '{"position": "ST", "rating": 1}', 'premium', 'award', 0],
             ['Tactical Genius', 'Unlock advanced formations for 30 days', 12000000, 'formation_unlock', '{"advanced": true}', 'premium', 'brain', 30],
-            ['Club Legend', 'Attract better players in transfers for 21 days', 18000000, 'player_attraction', '{"quality_boost": 0.3}', 'premium', 'star', 21]
+            ['Club Legend', 'Attract better players in transfers for 21 days', 18000000, 'player_attraction', '{"quality_boost": 0.3}', 'premium', 'star', 21],
+
+            // Squad Expansion Items
+            ['Youth Academy', 'Permanently increase squad size by +2 players', 25000000, 'squad_expansion', '{"players": 2}', 'premium', 'users', 0],
+            ['Training Facilities', 'Permanently increase squad size by +3 players', 35000000, 'squad_expansion', '{"players": 3}', 'premium', 'building-2', 0],
+            ['Elite Academy', 'Permanently increase squad size by +5 players', 50000000, 'squad_expansion', '{"players": 5}', 'premium', 'graduation-cap', 0]
         ];
 
         $stmt = $db->prepare('INSERT INTO shop_items (name, description, price, effect_type, effect_value, category, icon, duration) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
@@ -135,10 +149,18 @@ startContent();
             <h1 class="text-3xl font-bold text-gray-900 mb-2">Club Shop</h1>
             <p class="text-gray-600">Purchase items to boost your club and players</p>
 
-            <!-- User Budget Display -->
-            <div class="mt-4 inline-flex items-center gap-2 bg-green-100 text-green-800 px-6 py-3 rounded-full text-sm">
-                <i data-lucide="wallet" class="w-4 h-4"></i>
-                <span>Your Budget: <?php echo formatMarketValue($user_data['budget']); ?></span>
+            <!-- User Budget and Squad Info Display -->
+            <div class="mt-4 flex flex-wrap justify-center gap-4">
+                <div class="inline-flex items-center gap-2 bg-green-100 text-green-800 px-6 py-3 rounded-full text-sm">
+                    <i data-lucide="wallet" class="w-4 h-4"></i>
+                    <span>Budget: <?php echo formatMarketValue($user_data['budget']); ?></span>
+                </div>
+                <div class="inline-flex items-center gap-2 bg-blue-100 text-blue-800 px-6 py-3 rounded-full text-sm">
+                    <i data-lucide="users" class="w-4 h-4"></i>
+                    <span>Squad Limit:
+                        <?php echo $user_data['max_players']; ?> players
+                    </span>
+                </div>
             </div>
         </div>
 
@@ -165,9 +187,10 @@ startContent();
                     class="px-4 py-2 rounded-md text-sm font-medium transition-colors text-gray-600 hover:text-gray-900">
                     Premium
                 </button>
-                <button id="myItemsTab"
-                    class="px-4 py-2 rounded-md text-sm font-medium transition-colors text-gray-600 hover:text-gray-900">
-                    My Items (<?php echo count($user_items); ?>)
+                <button id="myItemsTab" class=" px-4 py-2 rounded-md text-sm font-medium transition-colors text-gray-600
+                    hover:text-gray-900">
+                    My Items (
+                    <?php echo count($user_items); ?>)
                 </button>
             </div>
         </div>
@@ -186,23 +209,26 @@ startContent();
                     <div class="text-center py-12">
                         <i data-lucide="shopping-cart" class="w-16 h-16 text-gray-400 mx-auto mb-4"></i>
                         <h3 class="text-lg font-medium text-gray-900 mb-2">No Items Purchased</h3>
-                        <p class="text-gray-600">You haven't purchased any items yet. Browse the shop to get started!</p>
+                        <p class="text-gray-600">You haven't purchased any items yet. Browse the shop to get
+                            started!</p>
                     </div>
                 <?php else: ?>
                     <?php foreach ($user_items as $item): ?>
                         <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-200">
                             <div class="flex items-center justify-between">
                                 <div class="flex items-center gap-4">
-                                    <div class="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
+                                    <div class=" w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
                                         <i data-lucide="<?php echo $item['icon']; ?>" class="w-6 h-6 text-white"></i>
                                     </div>
                                     <div>
                                         <h4 class="font-semibold text-gray-900"><?php echo htmlspecialchars($item['name']); ?>
                                         </h4>
-                                        <p class="text-sm text-gray-600"><?php echo htmlspecialchars($item['description']); ?>
+                                        <p class=" text-sm text-gray-600">
+                                            <?php echo htmlspecialchars($item['description']); ?>
                                         </p>
                                         <p class="text-xs text-blue-600 mt-1">
-                                            Purchased: <?php echo date('M j, Y g:i A', strtotime($item['purchased_at'])); ?>
+                                            Purchased:
+                                            <?php echo date('M j, Y g:i A', strtotime($item['purchased_at'])); ?>
                                         </p>
                                     </div>
                                 </div>
@@ -229,6 +255,7 @@ startContent();
     // Shop items data from PHP
     const shopItems = <?php echo json_encode($shop_items); ?>;
     const userBudget = <?php echo $user_data['budget']; ?>;
+    let currentMaxPlayers = <?php echo $user_data['max_players']; ?>;
 
     let currentCategory = 'all';
 
@@ -404,10 +431,24 @@ startContent();
             })
             .then(data => {
                 if (data.success) {
+                    let successMessage = `You have successfully purchased ${itemName}!`;
+
+                    // Update squad limit display if it was a squad expansion item
+                    if (data.new_max_players && data.new_max_players > currentMaxPlayers) {
+                        currentMaxPlayers = data.new_max_players;
+                        successMessage += ` Your squad limit has been increased to ${currentMaxPlayers} players!`;
+
+                        // Update the display immediately
+                        const squadLimitElement = document.querySelector('.bg-blue-100.text-blue-800 span');
+                        if (squadLimitElement) {
+                            squadLimitElement.textContent = `Squad Limit: ${currentMaxPlayers} players`;
+                        }
+                    }
+
                     Swal.fire({
                         icon: 'success',
                         title: 'Purchase Successful!',
-                        text: `You have successfully purchased ${itemName}!`,
+                        text: successMessage,
                         confirmButtonColor: '#10b981'
                     }).then(() => {
                         // Refresh page to update budget and items
@@ -434,9 +475,9 @@ startContent();
     }
 
     // Event listeners for tabs
-    document.getElementById('allItemsTab').addEventListener('click', () => switchTab('allItems'));
-    document.getElementById('trainingTab').addEventListener('click', () => switchTab('training'));
-    document.getElementById('financialTab').addEventListener('click', () => switchTab('financial'));
+    document.getElementById('allItemsTab').addEventListener('click ', () => switchTab('allItems '));
+    document.getElementById('trainingTab').addEventListener('click ', () => switchTab('training '));
+    document.getElementById('financialTab').addEventListener('click ', () => switchTab('financial '));
     document.getElementById('specialTab').addEventListener('click', () => switchTab('special'));
     document.getElementById('premiumTab').addEventListener('click', () => switchTab('premium'));
     document.getElementById('myItemsTab').addEventListener('click', () => switchTab('myItems'));

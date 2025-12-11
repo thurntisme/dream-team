@@ -54,6 +54,25 @@ function isDatabaseAvailable()
         $result = $db->query("SELECT name FROM sqlite_master WHERE type='table' AND name='users'");
         $tableExists = $result->fetchArray() !== false;
 
+        if ($tableExists) {
+            // Check and add missing columns for existing databases
+            $result = $db->query("PRAGMA table_info(users)");
+            $columns = [];
+            while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+                $columns[] = $row['name'];
+            }
+
+            // Add substitutes column if missing
+            if (!in_array('substitutes', $columns)) {
+                $db->exec('ALTER TABLE users ADD COLUMN substitutes TEXT DEFAULT "[]"');
+            }
+
+            // Add max_players column if missing
+            if (!in_array('max_players', $columns)) {
+                $db->exec('ALTER TABLE users ADD COLUMN max_players INTEGER DEFAULT 23');
+            }
+        }
+
         $db->close();
         return $tableExists;
     } catch (Exception $e) {

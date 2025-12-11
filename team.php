@@ -20,13 +20,24 @@ try {
     $db = getDbConnection();
 
     // Get comprehensive user data
-    $stmt = $db->prepare('SELECT name, email, club_name, formation, team, budget, created_at FROM users WHERE id = :id');
+    $stmt = $db->prepare('SELECT name, email, club_name, formation, team, substitutes, budget, max_players, created_at FROM users WHERE id = :id');
     $stmt->bindValue(':id', $_SESSION['user_id'], SQLITE3_INTEGER);
     $result = $stmt->execute();
     $user = $result->fetchArray(SQLITE3_ASSOC);
     $saved_formation = $user['formation'] ?? '4-4-2';
     $saved_team = $user['team'] ?? '[]';
+    $saved_substitutes = $user['substitutes'] ?? '[]';
     $user_budget = $user['budget'] ?? DEFAULT_BUDGET;
+    $max_players = $user['max_players'] ?? DEFAULT_MAX_PLAYERS;
+
+    // Ensure max_players is set for existing users
+    if ($max_players === null) {
+        $max_players = DEFAULT_MAX_PLAYERS;
+        $stmt = $db->prepare('UPDATE users SET max_players = :max_players WHERE id = :user_id');
+        $stmt->bindValue(':max_players', $max_players, SQLITE3_INTEGER);
+        $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+        $stmt->execute();
+    }
 
     // Get ranking among all clubs
     $stmt = $db->prepare('SELECT COUNT(*) as total_clubs FROM users WHERE club_name IS NOT NULL AND club_name != ""');
@@ -216,9 +227,15 @@ startContent();
                 <div
                     class="bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg p-4 text-center border border-purple-200">
                     <div class="text-2xl font-bold text-purple-700" id="clubPlayerCount">
-                        <?php echo count(array_filter($team_data ?: [], fn($p) => $p !== null)); ?>/11
+                        <?php
+                        $starting_players = count(array_filter($team_data ?: [], fn($p) => $p !== null));
+                        $substitute_data = json_decode($saved_substitutes, true) ?: [];
+                        $substitute_players = count(array_filter($substitute_data, fn($p) => $p !== null));
+                        $total_players = $starting_players + $substitute_players;
+                        echo $total_players . '/' . $max_players;
+                        ?>
                     </div>
-                    <div class="text-sm text-purple-600">Players</div>
+                    <div class="text-sm text-purple-600">Squad Size</div>
                 </div>
                 <div
                     class="bg-gradient-to-r from-yellow-50 to-yellow-100 rounded-lg p-4 text-center border border-yellow-200">
@@ -294,40 +311,56 @@ startContent();
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <!-- Formation Selector -->
-        <div class="bg-white rounded-lg shadow p-4">
-            <h2 class="text-xl font-bold mb-4">Formation</h2>
-            <select id="formation"
-                class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <?php foreach (FORMATIONS as $key => $formation): ?>
-                    <option value="<?php echo htmlspecialchars($key); ?>"
-                        title="<?php echo htmlspecialchars($formation['description']); ?>">
-                        <?php echo htmlspecialchars($formation['name']); ?>
-                    </option>
-                <?php endforeach; ?>
-            </select>
+        <div>
+            <!-- Formation Selector -->
+            <div class="bg-white rounded-lg shadow p-4">
+                <h2 class="text-xl font-bold mb-4">Formation</h2>
+                <select id="formation"
+                    class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <?php foreach (FORMATIONS as $key => $formation): ?>
+                        <option value="<?php echo htmlspecialchars($key); ?>"
+                            title="<?php echo htmlspecialchars($formation['description']); ?>">
+                            <?php echo htmlspecialchars($formation['name']); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
 
-            <h2 class="text-xl font-bold mt-6 mb-2">Your Players</h2>
-            <p class="text-xs text-gray-500 mb-4">Click to select • <i data-lucide="user-plus"
-                    class="w-3 h-3 inline"></i> Choose • <i data-lucide="arrow-left-right" class="w-3 h-3 inline"></i>
-                Switch • <i data-lucide="trash-2" class="w-3 h-3 inline"></i> Remove
-            </p>
-            <div id="teamValueSummary" class="mb-4 p-3 bg-gray-50 rounded-lg border">
-                <div class="flex justify-between items-center mb-2">
-                    <div class="text-sm text-gray-600">Budget</div>
-                    <div id="remainingBudget" class="text-sm font-bold text-blue-600">€200.0M</div>
+                <h2 class="text-xl font-bold mt-6 mb-2">Your Players</h2>
+                <p class="text-xs text-gray-500 mb-4">Click to select • <i data-lucide="user-plus"
+                        class="w-3 h-3 inline"></i> Choose • <i data-lucide="arrow-left-right"
+                        class="w-3 h-3 inline"></i>
+                    Switch • <i data-lucide="trash-2" class="w-3 h-3 inline"></i> Remove
+                </p>
+                <div id="teamValueSummary" class="mb-4 p-3 bg-gray-50 rounded-lg border">
+                    <div class="flex justify-between items-center mb-2">
+                        <div class="text-sm text-gray-600">Budget</div>
+                        <div id="remainingBudget" class="text-sm font-bold text-blue-600">€200.0M</div>
+                    </div>
+                    <div class="flex justify-between items-center mb-2">
+                        <div class="text-sm text-gray-600">Team Value</div>
+                        <div id="totalTeamValue" class="text-sm font-bold text-green-600">€0.0M</div>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2 mb-2">
+                        <div id="budgetBar" class="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                            style="width: 0%"></div>
+                    </div>
+                    <div id="playerCount" class="text-xs text-gray-500">0/11 players selected</div>
                 </div>
-                <div class="flex justify-between items-center mb-2">
-                    <div class="text-sm text-gray-600">Team Value</div>
-                    <div id="totalTeamValue" class="text-sm font-bold text-green-600">€0.0M</div>
-                </div>
-                <div class="w-full bg-gray-200 rounded-full h-2 mb-2">
-                    <div id="budgetBar" class="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                        style="width: 0%"></div>
-                </div>
-                <div id="playerCount" class="text-xs text-gray-500">0/11 players selected</div>
+                <div id="playerList" class="space-y-2 max-h-80 overflow-y-auto"></div>
             </div>
-            <div id="playerList" class="space-y-2 max-h-80 overflow-y-auto"></div>
+
+            <!-- Substitutes Section -->
+            <div class="bg-white rounded-lg shadow p-4 mt-4">
+                <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+                    <i data-lucide="users" class="w-5 h-5"></i>
+                    Substitutes
+                </h2>
+                <p class="text-xs text-gray-500 mb-4">Backup players for your squad • Max
+                    <?php echo $max_players - 11; ?>
+                    substitutes
+                </p>
+                <div id="substitutesList" class="space-y-2 max-h-60 overflow-y-auto"></div>
+            </div>
         </div>
 
         <!-- Field -->
@@ -429,12 +462,16 @@ startContent();
 <script>
     const players = <?php echo json_encode(getDefaultPlayers()); ?>;
     const maxBudget = <?php echo $user_budget; ?>; // User's maximum budget
+    const maxPlayers = <?php echo $max_players; ?>; // Maximum squad size
 
     let selectedPlayerIdx = null; // Track which player is currently selected
 
     let savedTeam = <?php echo $saved_team; ?>;
     let selectedPlayers = Array.isArray(savedTeam) && savedTeam.length > 0 ? savedTeam : [];
+    let savedSubstitutes = <?php echo $saved_substitutes; ?>;
+    let substitutePlayers = Array.isArray(savedSubstitutes) && savedSubstitutes.length > 0 ? savedSubstitutes : [];
     let currentSlotIdx = null;
+    let isSelectingSubstitute = false; // Track if we're selecting for substitutes
     const formations = <?php echo json_encode(FORMATIONS); ?>;
 
     lucide.createIcons();
@@ -452,6 +489,7 @@ startContent();
 
     renderPlayers();
     renderField();
+    renderSubstitutes();
 
     // Initialize club overview stats on page load
     let initialTotalValue = 0;
@@ -538,7 +576,8 @@ startContent();
 
         $('#totalTeamValue').text(formatMarketValue(totalValue));
         $('#remainingBudget').text(formatMarketValue(remainingBudget));
-        $('#playerCount').text(`${playerCount}/11 players selected`);
+        const totalSquadSize = playerCount + substitutePlayers.filter(p => p !== null).length;
+        $('#playerCount').text(`${playerCount}/11 starting • ${totalSquadSize}/${maxPlayers} total`);
 
         // Update budget bar
         $('#budgetBar').css('width', Math.min(budgetUsedPercentage, 100) + '%');
@@ -564,7 +603,8 @@ startContent();
         }
 
         // Update club overview statistics in real-time
-        updateClubOverviewStats(totalValue, playerCount, ratedPlayers > 0 ? totalRating / ratedPlayers : 0);
+        const totalSquadPlayers = playerCount + substitutePlayers.filter(p => p !== null).length;
+        updateClubOverviewStats(totalValue, totalSquadPlayers, ratedPlayers > 0 ? totalRating / ratedPlayers : 0);
 
         if ($list.children().length === 0) {
             $list.append('<div class="text-center text-gray-500 py-8">No players selected<br><small class="text-xs">Click on field positions to add players</small></div>');
@@ -575,13 +615,55 @@ startContent();
         lucide.createIcons();
     }
 
+    // Render substitutes list
+    function renderSubstitutes() {
+        const $list = $('#substitutesList').empty();
+        const maxSubstitutes = maxPlayers - 11; // Max substitutes = total squad - starting 11
+
+        substitutePlayers.forEach((player, idx) => {
+            if (player) {
+                const isCustom = player.isCustom || false;
+                const bgClass = isCustom ? 'bg-purple-50 border-purple-200' : 'bg-gray-50';
+                const nameClass = isCustom ? 'font-medium text-purple-700' : 'font-medium';
+                const valueClass = isCustom ? 'text-sm text-purple-600 font-semibold' : 'text-sm text-green-600 font-semibold';
+                const customBadge = isCustom ? '<span class="text-xs text-purple-600 bg-purple-100 px-1 py-0.5 rounded ml-1">CUSTOM</span>' : '';
+
+                $list.append(`
+                    <div class="flex items-center justify-between p-2 border rounded ${bgClass}">
+                        <div class="flex-1">
+                            <div class="${nameClass}">${player.name}${customBadge}</div>
+                            <div class="${valueClass}">${formatMarketValue(player.value || 0)}</div>
+                            <div class="text-xs text-gray-500 mt-1">${player.position} • ★${player.rating || 'N/A'}</div>
+                        </div>
+                        <div class="flex items-center gap-1 ml-2">
+                            <button onclick="promoteSubstitute(${idx})" class="p-1 text-blue-600 hover:bg-blue-100 rounded transition-colors" title="Promote to Starting XI">
+                                <i data-lucide="arrow-up" class="w-4 h-4"></i>
+                            </button>
+                            <button onclick="removeSubstitute(${idx})" class="p-1 text-red-600 hover:bg-red-100 rounded transition-colors" title="Remove Substitute">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+                `);
+            }
+        });
+
+
+
+        if ($list.children().length === 0) {
+            $list.append('<div class="text-center text-gray-500 py-4">No substitutes selected<br><small class="text-xs">Substitutes will appear here when added</small></div>');
+        }
+
+        lucide.createIcons();
+    }
+
     // Function to update club overview statistics in real-time
     function updateClubOverviewStats(teamValue, playerCount, avgRating) {
         // Update team value in club overview
         $('#clubTeamValue').text(formatMarketValue(teamValue));
 
-        // Update player count in club overview
-        $('#clubPlayerCount').text(`${playerCount}/11`);
+        // Update player count in club overview (total squad size)
+        $('#clubPlayerCount').text(`${playerCount}/${maxPlayers}`);
 
         // Update average rating in club overview
         $('#clubAvgRating').text(avgRating > 0 ? avgRating.toFixed(1) : '0');
@@ -707,6 +789,153 @@ startContent();
         // Since renderPlayers() already handles all the summary box updates,
         // we just need to call it to refresh everything
         renderPlayers();
+        renderSubstitutes();
+    }
+
+
+
+    // Remove substitute player
+    function removeSubstitute(idx) {
+        const player = substitutePlayers[idx];
+
+        Swal.fire({
+            title: `Remove ${player.name}?`,
+            text: 'This will remove the substitute from your squad',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Remove Player',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                substitutePlayers[idx] = null;
+                renderSubstitutes();
+                updateClubStats();
+
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Substitute Removed',
+                    text: `${player.name} has been removed from your substitutes`,
+                    timer: 2000,
+                    showConfirmButton: false,
+                    toast: true,
+                    position: 'top-end'
+                });
+            }
+        });
+    }
+
+    // Promote substitute to starting XI
+    function promoteSubstitute(subIdx) {
+        const substitute = substitutePlayers[subIdx];
+
+        // Find empty slot in starting XI or ask user to replace
+        const emptyStartingSlot = selectedPlayers.findIndex(p => p === null);
+
+        if (emptyStartingSlot !== -1) {
+            // Move to empty starting slot
+            selectedPlayers[emptyStartingSlot] = substitute;
+            substitutePlayers[subIdx] = null;
+
+            renderPlayers();
+            renderField();
+            renderSubstitutes();
+            updateClubStats();
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Player Promoted!',
+                text: `${substitute.name} has been promoted to the starting XI`,
+                timer: 2000,
+                showConfirmButton: false,
+                toast: true,
+                position: 'top-end'
+            });
+        } else {
+            // Ask user which starting player to replace
+            Swal.fire({
+                title: 'Replace Starting Player?',
+                text: 'Starting XI is full. Which player would you like to replace?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#3b82f6',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: 'Choose Player to Replace',
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Show starting players for selection
+                    showStartingPlayersForReplacement(subIdx);
+                }
+            });
+        }
+    }
+
+    // Show starting players for replacement
+    function showStartingPlayersForReplacement(subIdx) {
+        const substitute = substitutePlayers[subIdx];
+        let playersHtml = '';
+
+        selectedPlayers.forEach((player, idx) => {
+            if (player) {
+                const position = getPositionForSlot(idx);
+                playersHtml += `
+                    <div class="flex items-center justify-between p-3 border rounded hover:bg-gray-50 cursor-pointer" onclick="replaceStartingPlayer(${idx}, ${subIdx})">
+                        <div>
+                            <div class="font-medium">${player.name}</div>
+                            <div class="text-sm text-gray-600">${position} • ★${player.rating || 'N/A'}</div>
+                        </div>
+                        <div class="text-sm text-green-600 font-semibold">${formatMarketValue(player.value || 0)}</div>
+                    </div>
+                `;
+            }
+        });
+
+        Swal.fire({
+            title: `Promote ${substitute.name}`,
+            html: `
+                <div class="text-left">
+                    <p class="mb-4 text-gray-600">Select a starting player to replace:</p>
+                    <div class="space-y-2 max-h-60 overflow-y-auto">
+                        ${playersHtml}
+                    </div>
+                </div>
+            `,
+            showConfirmButton: false,
+            showCancelButton: true,
+            cancelButtonText: 'Cancel',
+            customClass: {
+                popup: 'swal-wide'
+            }
+        });
+    }
+
+    // Replace starting player with substitute
+    function replaceStartingPlayer(startingIdx, subIdx) {
+        const startingPlayer = selectedPlayers[startingIdx];
+        const substitute = substitutePlayers[subIdx];
+
+        // Swap players
+        selectedPlayers[startingIdx] = substitute;
+        substitutePlayers[subIdx] = startingPlayer;
+
+        renderPlayers();
+        renderField();
+        renderSubstitutes();
+        updateClubStats();
+
+        Swal.close();
+
+        Swal.fire({
+            icon: 'success',
+            title: 'Players Swapped!',
+            text: `${substitute.name} promoted to starting XI, ${startingPlayer.name} moved to substitutes`,
+            timer: 3000,
+            showConfirmButton: false,
+            toast: true,
+            position: 'top-end'
+        });
     }
 
     // Function to select a player (highlight only)
@@ -1048,18 +1277,35 @@ startContent();
     }
 
     function openPlayerModal() {
-        const requiredPosition = getPositionForSlot(currentSlotIdx);
+        let requiredPosition = '';
+        let modalTitle = '';
+
+        if (isSelectingSubstitute) {
+            modalTitle = 'Select Substitute Player';
+            requiredPosition = 'Any Position';
+        } else {
+            requiredPosition = getPositionForSlot(currentSlotIdx);
+            modalTitle = `Select ${requiredPosition} Player`;
+        }
 
         // Calculate current team value (excluding the slot we're replacing)
         let currentTeamValue = 0;
         selectedPlayers.forEach((p, idx) => {
-            if (p && idx !== currentSlotIdx) {
+            if (p && (!isSelectingSubstitute && idx !== currentSlotIdx)) {
                 currentTeamValue += p.value || 0;
             }
         });
+
+        // Add substitute values
+        substitutePlayers.forEach((p, idx) => {
+            if (p && (isSelectingSubstitute && idx !== currentSlotIdx)) {
+                currentTeamValue += p.value || 0;
+            }
+        });
+
         const remainingBudget = maxBudget - currentTeamValue;
 
-        $('#modalTitle').html(`Select ${requiredPosition} Player <span class="text-sm font-normal text-blue-600">(Budget: ${formatMarketValue(remainingBudget)})</span>`);
+        $('#modalTitle').html(`${modalTitle} <span class="text-sm font-normal text-blue-600">(Budget: ${formatMarketValue(remainingBudget)})</span>`);
         $('#customPlayerLabel').text(`Custom ${requiredPosition} Player Name`);
         $('#customPlayerName').attr('placeholder', `Enter custom ${requiredPosition} name...`);
         $('#playerModal').removeClass('hidden');
@@ -1072,20 +1318,36 @@ startContent();
     function renderModalPlayers(search) {
         const $list = $('#modalPlayerList').empty();
         const searchLower = search.toLowerCase();
-        const requiredPosition = getPositionForSlot(currentSlotIdx);
+        let requiredPosition = '';
+
+        if (isSelectingSubstitute) {
+            requiredPosition = ''; // Any position for substitutes
+        } else {
+            requiredPosition = getPositionForSlot(currentSlotIdx);
+        }
 
         // Calculate current team value (excluding the slot we're replacing)
         let currentTeamValue = 0;
         selectedPlayers.forEach((p, idx) => {
-            if (p && idx !== currentSlotIdx) {
+            if (p && (!isSelectingSubstitute && idx !== currentSlotIdx)) {
+                currentTeamValue += p.value || 0;
+            }
+        });
+
+        // Add substitute values
+        substitutePlayers.forEach((p, idx) => {
+            if (p && (isSelectingSubstitute && idx !== currentSlotIdx)) {
                 currentTeamValue += p.value || 0;
             }
         });
 
         // Show system players
         players.forEach((player, idx) => {
-            const isSelected = selectedPlayers.some(p => p && p.name === player.name);
-            const matchesPosition = player.position === requiredPosition;
+            const isSelectedInStarting = selectedPlayers.some(p => p && p.name === player.name);
+            const isSelectedInSubs = substitutePlayers.some(p => p && p.name === player.name);
+            const isSelected = isSelectedInStarting || isSelectedInSubs;
+
+            const matchesPosition = isSelectingSubstitute ? true : (player.position === requiredPosition);
             const matchesSearch = player.name.toLowerCase().includes(searchLower);
             const wouldExceedBudget = (currentTeamValue + (player.value || 0)) > maxBudget;
 
@@ -1253,20 +1515,27 @@ startContent();
                     }
                 }).then((result) => {
                     if (result.isConfirmed) {
-                        // Add player to team
-                        selectedPlayers[currentSlotIdx] = player;
+                        // Add player to team or substitutes
+                        if (isSelectingSubstitute) {
+                            substitutePlayers[currentSlotIdx] = player;
+                        } else {
+                            selectedPlayers[currentSlotIdx] = player;
+                        }
+
                         $('#playerModal').addClass('hidden');
+                        isSelectingSubstitute = false;
 
                         // Update displays
                         renderPlayers();
                         renderField();
+                        renderSubstitutes();
                         updateClubStats();
 
                         // Show success message
                         Swal.fire({
                             icon: 'success',
-                            title: isReplacement ? 'Player Replaced!' : 'Player Purchased!',
-                            text: `${player.name} has been added to your team`,
+                            title: isReplacement ? 'Player Replaced!' : 'Player Added!',
+                            text: `${player.name} has been added to your ${isSelectingSubstitute ? 'substitutes' : 'team'}`,
                             timer: 2000,
                             showConfirmButton: false,
                             toast: true,
@@ -1436,25 +1705,36 @@ startContent();
             }
         }).then((result) => {
             if (result.isConfirmed) {
+                const playerPosition = isSelectingSubstitute ? 'CM' : requiredPosition; // Default position for substitutes
+
                 // Create custom player
-                selectedPlayers[currentSlotIdx] = {
+                const customPlayer = {
                     name: customName,
-                    position: requiredPosition,
+                    position: playerPosition,
                     value: customPlayerValue,
                     rating: 70, // Default rating for custom players
                     isCustom: true // Flag to identify custom players
                 };
 
+                if (isSelectingSubstitute) {
+                    substitutePlayers[currentSlotIdx] = customPlayer;
+                } else {
+                    selectedPlayers[currentSlotIdx] = customPlayer;
+                }
+
                 $('#playerModal').addClass('hidden');
+                isSelectingSubstitute = false;
+
                 renderPlayers();
                 renderField();
+                renderSubstitutes();
                 updateClubStats();
 
                 // Show success message
                 Swal.fire({
                     icon: 'success',
                     title: 'Custom Player Created!',
-                    text: `${customName} has been added to your team`,
+                    text: `${customName} has been added to your ${isSelectingSubstitute ? 'substitutes' : 'team'}`,
                     timer: 2000,
                     showConfirmButton: false,
                     toast: true,
@@ -1476,13 +1756,17 @@ startContent();
 
     $('#closeModal').click(function () {
         $('#playerModal').addClass('hidden');
+        isSelectingSubstitute = false;
     });
 
     $('#playerModal').click(function (e) {
         if (e.target === this) {
             $(this).addClass('hidden');
+            isSelectingSubstitute = false;
         }
     });
+
+
 
     $('#formation').change(function () {
         const formation = $('#formation').val();
@@ -1576,7 +1860,8 @@ startContent();
             if (result.isConfirmed) {
                 $.post('save_team.php', {
                     formation: $('#formation').val(),
-                    team: JSON.stringify(selectedPlayers)
+                    team: JSON.stringify(selectedPlayers),
+                    substitutes: JSON.stringify(substitutePlayers)
                 }, function (response) {
                     if (response.redirect) {
                         window.location.href = response.redirect;
@@ -1602,14 +1887,25 @@ startContent();
                         icon: 'error',
                         title: 'Connection Error',
                         text: 'Unable to save team. Please check your connection and try again.',
-                        confirmButtonColor: ' #ef4444 '
+                        confirmButtonColor: '#ef4444'
                     });
                 });
             }
         });
     });
 
+    // Make substitute functions globally available
+    window.removeSubstitute = removeSubstitute;
+    window.promoteSubstitute = promoteSubstitute;
+    window.replaceStartingPlayer = replaceStartingPlayer;
+
 </script>
+
+<style>
+    .swal - wide {
+        width: 600px !important;
+    }
+</style>
 
 <?php
 // End content capture and render layout
