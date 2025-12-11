@@ -8,6 +8,22 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true)
     $clubName = $_SESSION['club_name'] ?? '';
     $userName = $_SESSION['user_name'] ?? '';
 
+    // Get user budget if logged in
+    $userBudget = 0;
+    if ($isLoggedIn && isDatabaseAvailable()) {
+        try {
+            $db = getDbConnection();
+            $stmt = $db->prepare('SELECT budget FROM users WHERE id = :user_id');
+            $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+            $result = $stmt->execute();
+            $userData = $result->fetchArray(SQLITE3_ASSOC);
+            $userBudget = $userData['budget'] ?? 0;
+            $db->close();
+        } catch (Exception $e) {
+            $userBudget = 0;
+        }
+    }
+
     ob_start();
     ?>
     <!DOCTYPE html>
@@ -107,7 +123,8 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true)
                                     </div>
                                     <div class="hidden sm:block text-left">
                                         <div class="text-sm font-medium text-gray-900">
-                                            <?php echo htmlspecialchars($userName); ?></div>
+                                            <?php echo htmlspecialchars($userName); ?>
+                                        </div>
                                         <div class="text-xs text-gray-500"><?php echo htmlspecialchars($clubName); ?></div>
                                     </div>
                                     <i data-lucide="chevron-down" class="w-4 h-4"></i>
@@ -118,8 +135,20 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true)
                                     class="hidden absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
                                     <div class="px-4 py-2 border-b border-gray-100">
                                         <div class="text-sm font-medium text-gray-900">
-                                            <?php echo htmlspecialchars($userName); ?></div>
+                                            <?php echo htmlspecialchars($userName); ?>
+                                        </div>
                                         <div class="text-xs text-gray-500"><?php echo htmlspecialchars($clubName); ?></div>
+                                        <?php if ($isLoggedIn): ?>
+                                            <div class="flex items-center gap-1 mt-1">
+                                                <i data-lucide="wallet" class="w-3 h-3 text-green-600"></i>
+                                                <span class="text-xs font-medium text-green-600">
+                                                    <?php
+                                                    require_once 'constants.php';
+                                                    echo formatMarketValue($userBudget);
+                                                    ?>
+                                                </span>
+                                            </div>
+                                        <?php endif; ?>
                                     </div>
 
                                     <a href="welcome.php"
@@ -209,10 +238,11 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true)
                                 <i data-lucide="shopping-bag" class="w-5 h-5"></i>
                                 <span class="font-medium">Shop</span>
                             </a>
-                            
+
                             <div class="border-t border-gray-200 my-2"></div>
-                            
-                            <button id="mobileLogoutBtn" class="flex items-center gap-3 px-4 py-3 text-red-600 hover:bg-red-50 rounded-lg transition-colors w-full text-left">
+
+                            <button id="mobileLogoutBtn"
+                                class="flex items-center gap-3 px-4 py-3 text-red-600 hover:bg-red-50 rounded-lg transition-colors w-full text-left">
                                 <i data-lucide="log-out" class="w-5 h-5"></i>
                                 <span class="font-medium">Logout</span>
                             </button>
@@ -229,68 +259,153 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true)
 
         <!-- Footer -->
         <footer class="bg-white border-t mt-auto">
-            <div class="container mx-auto px-4 max-w-6xl py-8">
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
-                    <!-- Brand -->
-                    <div class="md:col-span-2">
-                        <div class="flex items-center gap-2 mb-4">
-                            <i data-lucide="shield" class="w-6 h-6 text-blue-600"></i>
-                            <span class="font-bold text-lg text-gray-900">Dream Team</span>
+            <?php if ($isLoggedIn): ?>
+                <!-- Logged-in User Footer -->
+                <div class="container mx-auto px-4 max-w-6xl py-6">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <!-- Club Status -->
+                        <div class="bg-white rounded-lg p-4 border border-gray-200">
+                            <div class="flex items-center gap-2 mb-2">
+                                <i data-lucide="shield" class="w-5 h-5 text-gray-700"></i>
+                                <h3 class="font-semibold text-gray-900"><?php echo htmlspecialchars($clubName); ?></h3>
+                            </div>
+                            <div class="text-sm text-gray-600">
+                                <div class="flex justify-between items-center">
+                                    <span>Manager:</span>
+                                    <span class="font-medium text-gray-900"><?php echo htmlspecialchars($userName); ?></span>
+                                </div>
+                                <div class="flex justify-between items-center mt-1">
+                                    <span>Budget:</span>
+                                    <span class="font-medium text-gray-900">
+                                        <?php
+                                        require_once 'constants.php';
+                                        echo formatMarketValue($userBudget);
+                                        ?>
+                                    </span>
+                                </div>
+                            </div>
                         </div>
-                        <p class="text-gray-600 text-sm mb-4">
-                            Build your ultimate football team with legendary players and tactical formations.
-                            Compete with other managers and create your dream lineup.
-                        </p>
-                        <div class="flex items-center gap-4 text-sm text-gray-500">
+
+                        <!-- Quick Actions -->
+                        <div class="bg-white rounded-lg p-4 border border-gray-200">
+                            <div class="flex items-center gap-2 mb-2">
+                                <i data-lucide="zap" class="w-5 h-5 text-gray-700"></i>
+                                <h3 class="font-semibold text-gray-900">Quick Actions</h3>
+                            </div>
+                            <div class="space-y-1">
+                                <a href="team.php"
+                                    class="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors">
+                                    <i data-lucide="users" class="w-3 h-3"></i>
+                                    <span>Manage Team</span>
+                                </a>
+                                <a href="transfer.php"
+                                    class="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors">
+                                    <i data-lucide="shopping-cart" class="w-3 h-3"></i>
+                                    <span>Buy Players</span>
+                                </a>
+                                <a href="match-simulator.php"
+                                    class="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors">
+                                    <i data-lucide="play" class="w-3 h-3"></i>
+                                    <span>Challenge Club</span>
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Game Stats -->
+                        <div class="bg-white rounded-lg p-4 border border-gray-200">
+                            <div class="flex items-center gap-2 mb-2">
+                                <i data-lucide="trophy" class="w-5 h-5 text-gray-700"></i>
+                                <h3 class="font-semibold text-gray-900">Game Progress</h3>
+                            </div>
+                            <div class="text-sm text-gray-600">
+                                <div class="flex justify-between items-center">
+                                    <span>Status:</span>
+                                    <span class="font-medium text-gray-900">Active</span>
+                                </div>
+                                <div class="flex justify-between items-center mt-1">
+                                    <span>Playing Since:</span>
+                                    <span class="font-medium text-gray-900">
+                                        <?php echo date('M Y'); ?>
+                                    </span>
+                                </div>
+                                <div class="mt-2">
+                                    <a href="clubs.php" class="text-xs text-gray-600 hover:text-gray-900 underline">
+                                        View Rankings →
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Copyright -->
+                    <div class="border-t border-gray-200 mt-6 pt-4 text-center">
+                        <div class="flex items-center justify-center gap-4 text-sm text-gray-500">
                             <span>© 2024 Dream Team</span>
                             <span>•</span>
                             <span>Football Manager Game</span>
+                            <span>•</span>
+                            <span>Enjoy the Game!</span>
                         </div>
                     </div>
+                </div>
+            <?php else: ?>
+                <!-- Guest User Footer -->
+                <div class="container mx-auto px-4 max-w-6xl py-8">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                        <!-- Brand -->
+                        <div class="md:col-span-2">
+                            <div class="flex items-center gap-2 mb-4">
+                                <i data-lucide="shield" class="w-6 h-6 text-blue-600"></i>
+                                <span class="font-bold text-lg text-gray-900">Dream Team</span>
+                            </div>
+                            <p class="text-gray-600 text-sm mb-4">
+                                Build your ultimate football team with legendary players and tactical formations.
+                                Compete with other managers and create your dream lineup.
+                            </p>
+                            <div class="flex items-center gap-4 text-sm text-gray-500">
+                                <span>© 2024 Dream Team</span>
+                                <span>•</span>
+                                <span>Football Manager Game</span>
 
-                    <!-- Quick Links -->
-                    <div>
-                        <h3 class="font-semibold text-gray-900 mb-3">Quick Links</h3>
-                        <div class="space-y-2 text-sm">
-                            <?php if ($isLoggedIn): ?>
-                                <a href="welcome.php" class="block text-gray-600 hover:text-blue-600 transition-colors">Home</a>
-                                <a href="team.php" class="block text-gray-600 hover:text-blue-600 transition-colors">My Team</a>
-                                <a href="transfer.php"
-                                    class="block text-gray-600 hover:text-blue-600 transition-colors">Transfer Market</a>
-                                <a href="clubs.php" class="block text-gray-600 hover:text-blue-600 transition-colors">Other
-                                    Clubs</a>
-                            <?php else: ?>
+
+                            </div>
+                        </div>
+
+                        <!-- Quick Links -->
+                        <div>
+                            <h3 class="font-semibold text-gray-900 mb-3">Get Started</h3>
+                            <div class="space-y-2 text-sm">
                                 <a href="index.php" class="block text-gray-600 hover:text-blue-600 transition-colors">Login</a>
-                                <a href="install.php"
-                                    class="block text-gray-600 hover:text-blue-600 transition-colors">Setup</a>
-                            <?php endif; ?>
+                                <a href="install.php" class="block text-gray-600 hover:text-blue-600 transition-colors">Setup
+                                    Game</a>
+                            </div>
                         </div>
-                    </div>
 
-                    <!-- Features -->
-                    <div>
-                        <h3 class="font-semibold text-gray-900 mb-3">Features</h3>
-                        <div class="space-y-2 text-sm text-gray-600">
-                            <div class="flex items-center gap-2">
-                                <i data-lucide="users" class="w-3 h-3"></i>
-                                <span>250+ Players</span>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <i data-lucide="layout" class="w-3 h-3"></i>
-                                <span>9 Formations</span>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <i data-lucide="trophy" class="w-3 h-3"></i>
-                                <span>Club Rankings</span>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <i data-lucide="trending-up" class="w-3 h-3"></i>
-                                <span>Market Values</span>
+                        <!-- Features -->
+                        <div>
+                            <h3 class="font-semibold text-gray-900 mb-3">Features</h3>
+                            <div class="space-y-2 text-sm text-gray-600">
+                                <div class="flex items-center gap-2">
+                                    <i data-lucide="users" class="w-3 h-3"></i>
+                                    <span>250+ Players</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <i data-lucide="layout" class="w-3 h-3"></i>
+                                    <span>9 Formations</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <i data-lucide="trophy" class="w-3 h-3"></i>
+                                    <span>Club Rankings</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <i data-lucide="trending-up" class="w-3 h-3"></i>
+                                    <span>Market Values</span>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
+            <?php endif; ?>
         </footer>
 
         <!-- JavaScript -->
@@ -339,7 +454,7 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true)
                 if (!$(e.target).closest('#userMenuBtn, #userDropdown').length) {
                     $('#userDropdown').addClass('hidden');
                 }
-                
+
                 // Close mobile menu
                 if (!$(e.target).closest('#mobileMenuBtn, #mobileMenu').length) {
                     $('#mobileMenu').addClass('hidden');
