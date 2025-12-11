@@ -269,7 +269,13 @@ function loadPlayersFromJson()
             'name' => (string) $player['name'],
             'position' => (string) $player['position'],
             'rating' => (int) $player['rating'],
-            'value' => (int) $player['value']
+            'value' => (int) $player['value'],
+            'height' => $player['height'] ?? 'Unknown',
+            'weight' => $player['weight'] ?? 'Unknown',
+            'foot' => $player['foot'] ?? 'Right',
+            'playablePositions' => $player['playablePositions'] ?? [$player['position']],
+            'club' => $player['club'] ?? 'Free Agent',
+            'description' => $player['description'] ?? 'Professional football player.'
         ];
     }
 
