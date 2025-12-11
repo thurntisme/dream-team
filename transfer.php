@@ -41,79 +41,68 @@ try {
         FOREIGN KEY (owner_id) REFERENCES users (id)
     )');
 
-    // Get all clubs with their players (excluding current user)
-    $stmt = $db->prepare('SELECT id, name, club_name, team FROM users WHERE id != :current_user_id');
-    $stmt->bindValue(':current_user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
-    $result = $stmt->execute();
+    // Create player_inventory table for purchased players
+    $db->exec('CREATE TABLE IF NOT EXISTS player_inventory (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        player_name TEXT NOT NULL,
+        player_data TEXT NOT NULL,
+        purchase_price INTEGER NOT NULL,
+        purchase_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+        status TEXT DEFAULT "available",
+        FOREIGN KEY (user_id) REFERENCES users (id)
+    )');
 
-    $available_players = [];
-    while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
-        $team = json_decode($row['team'] ?? '[]', true);
-        if (is_array($team)) {
-            foreach ($team as $index => $player) {
-                if ($player && isset($player['name'])) {
-                    $available_players[] = [
-                        'owner_id' => $row['id'],
-                        'owner_name' => $row['name'],
-                        'club_name' => $row['club_name'],
-                        'player_index' => $index,
-                        'player' => $player
-                    ];
-                }
-            }
+    // Get all available players from players.json (excluding players already in user's team)
+    $all_players = getDefaultPlayers();
+
+    // Get current user's team to exclude owned players
+    $stmt = $db->prepare('SELECT team, substitutes FROM users WHERE id = :user_id');
+    $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+    $result = $stmt->execute();
+    $user_team_data = $result->fetchArray(SQLITE3_ASSOC);
+
+    $user_team = json_decode($user_team_data['team'] ?? '[]', true) ?: [];
+    $user_substitutes = json_decode($user_team_data['substitutes'] ?? '[]', true) ?: [];
+
+    // Get all player names that user already owns
+    $owned_player_names = [];
+    foreach ($user_team as $player) {
+        if ($player && isset($player['name']) && !($player['isCustom'] ?? false)) {
+            $owned_player_names[] = strtolower($player['name']);
+        }
+    }
+    foreach ($user_substitutes as $player) {
+        if ($player && isset($player['name']) && !($player['isCustom'] ?? false)) {
+            $owned_player_names[] = strtolower($player['name']);
         }
     }
 
-    // Get pending bids made by current user
-    $stmt = $db->prepare('SELECT tb.*, u.club_name as owner_club FROM transfer_bids tb 
-                         JOIN users u ON tb.owner_id = u.id 
-                         WHERE tb.bidder_id = :user_id AND tb.status = "pending"
-                         ORDER BY tb.created_at DESC');
-    $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
-    $result = $stmt->execute();
-
-    $my_bids = [];
-    while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
-        $my_bids[] = $row;
+    // Filter out players that user already owns
+    $available_players = [];
+    foreach ($all_players as $index => $player) {
+        if (!in_array(strtolower($player['name']), $owned_player_names)) {
+            $available_players[] = [
+                'owner_id' => null, // No owner for market players
+                'owner_name' => 'Transfer Market',
+                'club_name' => 'Available',
+                'player_index' => $index,
+                'player' => $player
+            ];
+        }
     }
 
-    // Get bids received for current user's players
-    $stmt = $db->prepare('SELECT tb.*, u.club_name as bidder_club, u.name as bidder_name FROM transfer_bids tb 
-                         JOIN users u ON tb.bidder_id = u.id 
-                         WHERE tb.owner_id = :user_id AND tb.status = "pending"
-                         ORDER BY tb.created_at DESC');
+
+
+    // Get user's player inventory
+    $stmt = $db->prepare('SELECT * FROM player_inventory WHERE user_id = :user_id AND status = "available" ORDER BY purchase_date DESC');
     $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
     $result = $stmt->execute();
 
-    $received_bids = [];
+    $player_inventory = [];
     while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
-        $received_bids[] = $row;
-    }
-
-    // Get completed bids made by current user (accepted, rejected, cancelled)
-    $stmt = $db->prepare('SELECT tb.*, u.club_name as owner_club FROM transfer_bids tb 
-                         JOIN users u ON tb.owner_id = u.id 
-                         WHERE tb.bidder_id = :user_id AND tb.status != "pending"
-                         ORDER BY tb.response_time DESC LIMIT 20');
-    $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
-    $result = $stmt->execute();
-
-    $my_completed_bids = [];
-    while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
-        $my_completed_bids[] = $row;
-    }
-
-    // Get completed bids received for current user's players
-    $stmt = $db->prepare('SELECT tb.*, u.club_name as bidder_club, u.name as bidder_name FROM transfer_bids tb 
-                         JOIN users u ON tb.bidder_id = u.id 
-                         WHERE tb.owner_id = :user_id AND tb.status != "pending"
-                         ORDER BY tb.response_time DESC LIMIT 20');
-    $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
-    $result = $stmt->execute();
-
-    $received_completed_bids = [];
-    while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
-        $received_completed_bids[] = $row;
+        $row['player_data'] = json_decode($row['player_data'], true);
+        $player_inventory[] = $row;
     }
 
     $db->close();
@@ -147,21 +136,9 @@ startContent();
                     class="px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors bg-white text-blue-600 shadow-sm whitespace-nowrap">
                     Available Players
                 </button>
-                <button id="myBidsTab"
+                <button id="myPlayersTab"
                     class="px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors text-gray-600 hover:text-gray-900 whitespace-nowrap">
-                    My Bids (<?php echo count($my_bids); ?>)
-                </button>
-                <button id="receivedBidsTab"
-                    class="px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors text-gray-600 hover:text-gray-900 whitespace-nowrap">
-                    Received (<?php echo count($received_bids); ?>)
-                </button>
-                <button id="myHistoryTab"
-                    class="px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors text-gray-600 hover:text-gray-900 whitespace-nowrap">
-                    My History (<?php echo count($my_completed_bids); ?>)
-                </button>
-                <button id="receivedHistoryTab"
-                    class="px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors text-gray-600 hover:text-gray-900 whitespace-nowrap">
-                    Received History (<?php echo count($received_completed_bids); ?>)
+                    My Players (<?php echo count($player_inventory); ?>)
                 </button>
             </div>
         </div>
@@ -262,20 +239,19 @@ startContent();
             </div>
         </div>
 
-        <!-- My Bids Tab -->
-        <div id="myBidsContent" class="tab-content hidden">
+        <!-- My Players Tab -->
+        <div id="myPlayersContent" class="tab-content hidden">
             <div class="space-y-4">
-                <?php if (empty($my_bids)): ?>
+                <?php if (empty($player_inventory)): ?>
                     <div class="text-center py-12">
-                        <i data-lucide="clipboard-list" class="w-16 h-16 text-gray-400 mx-auto mb-4"></i>
-                        <h3 class="text-lg font-medium text-gray-900 mb-2">No Active Bids</h3>
-                        <p class="text-gray-600">You haven't made any bids yet. Browse available players to start bidding!
-                        </p>
+                        <i data-lucide="users" class="w-16 h-16 text-gray-400 mx-auto mb-4"></i>
+                        <h3 class="text-lg font-medium text-gray-900 mb-2">No Players in Inventory</h3>
+                        <p class="text-gray-600">Purchase players from the transfer market to manage them here.</p>
                     </div>
                 <?php else: ?>
-                    <?php foreach ($my_bids as $bid): ?>
-                        <?php $player = json_decode($bid['player_data'], true); ?>
-                        <div class="bg-gray-50 rounded-lg p-4 border">
+                    <?php foreach ($player_inventory as $inventory_item): ?>
+                        <?php $player = $inventory_item['player_data']; ?>
+                        <div class="bg-blue-50 rounded-lg p-4 border border-blue-200">
                             <div class="flex items-center justify-between">
                                 <div class="flex items-center gap-4">
                                     <div class="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
@@ -285,75 +261,38 @@ startContent();
                                         <h4 class="font-semibold text-gray-900"><?php echo htmlspecialchars($player['name']); ?>
                                         </h4>
                                         <p class="text-sm text-gray-600">
-                                            <?php echo htmlspecialchars($bid['owner_club']); ?> •
+                                            <?php echo htmlspecialchars($player['position']); ?> •
                                             Rating: <?php echo $player['rating'] ?? 'N/A'; ?> •
                                             Value: <?php echo formatMarketValue($player['value'] ?? 0); ?>
                                         </p>
+                                        <p class="text-xs text-gray-500 mt-1">
+                                            Purchased:
+                                            <?php echo date('M j, Y', strtotime($inventory_item['purchase_date'])); ?> •
+                                            Cost: <?php echo formatMarketValue($inventory_item['purchase_price']); ?>
+                                        </p>
                                     </div>
                                 </div>
-                                <div class="text-right">
-                                    <div class="text-lg font-bold text-green-600">
-                                        <?php echo formatMarketValue($bid['bid_amount']); ?>
-                                    </div>
-                                    <div class="text-xs text-gray-500">
-                                        Bid: <?php echo date('M j, Y g:i A', strtotime($bid['created_at'])); ?>
-                                    </div>
-                                    <button onclick="cancelBid(<?php echo $bid['id']; ?>)"
-                                        class="mt-2 text-xs text-red-600 hover:text-red-800 underline">
-                                        Cancel Bid
+                                <div class="flex items-center gap-2">
+                                    <button onclick="showPlayerInfo(<?php echo htmlspecialchars(json_encode($player)); ?>)"
+                                        class="p-2 text-blue-600 hover:bg-blue-100 rounded transition-colors"
+                                        title="Player Info">
+                                        <i data-lucide="info" class="w-4 h-4"></i>
                                     </button>
-                                </div>
-                            </div>
-                        </div>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </div>
-        </div>
-
-        <!-- Received Bids Tab -->
-        <div id="receivedBidsContent" class="tab-content hidden">
-            <div class="space-y-4">
-                <?php if (empty($received_bids)): ?>
-                    <div class="text-center py-12">
-                        <i data-lucide="inbox" class="w-16 h-16 text-gray-400 mx-auto mb-4"></i>
-                        <h3 class="text-lg font-medium text-gray-900 mb-2">No Bids Received</h3>
-                        <p class="text-gray-600">No one has made bids for your players yet.</p>
-                    </div>
-                <?php else: ?>
-                    <?php foreach ($received_bids as $bid): ?>
-                        <?php $player = json_decode($bid['player_data'], true); ?>
-                        <div class="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
-                            <div class="flex items-center justify-between">
-                                <div class="flex items-center gap-4">
-                                    <div class="w-12 h-12 bg-yellow-600 rounded-full flex items-center justify-center">
-                                        <i data-lucide="user" class="w-6 h-6 text-white"></i>
-                                    </div>
-                                    <div>
-                                        <h4 class="font-semibold text-gray-900"><?php echo htmlspecialchars($player['name']); ?>
-                                        </h4>
-                                        <p class="text-sm text-gray-600">
-                                            Bid from <?php echo htmlspecialchars($bid['bidder_club']); ?>
-                                            (<?php echo htmlspecialchars($bid['bidder_name']); ?>) •
-                                            Rating: <?php echo $player['rating'] ?? 'N/A'; ?> •
-                                            Value: <?php echo formatMarketValue($player['value'] ?? 0); ?>
-                                        </p>
-                                    </div>
-                                </div>
-                                <div class="text-right">
-                                    <div class="text-lg font-bold text-green-600">
-                                        <?php echo formatMarketValue($bid['bid_amount']); ?>
-                                    </div>
-                                    <div class="text-xs text-gray-500">
-                                        Bid: <?php echo date('M j, Y g:i A', strtotime($bid['created_at'])); ?>
-                                    </div>
-                                    <div class="mt-2 flex gap-2">
-                                        <button onclick="acceptBid(<?php echo $bid['id']; ?>)"
-                                            class="px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700">
-                                            Accept
+                                    <div class="flex flex-col gap-1">
+                                        <button
+                                            onclick="assignToTeam(<?php echo $inventory_item['id']; ?>, <?php echo htmlspecialchars(json_encode($player)); ?>)"
+                                            class="px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition-colors">
+                                            Assign to Team
                                         </button>
-                                        <button onclick="rejectBid(<?php echo $bid['id']; ?>)"
-                                            class="px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700">
-                                            Reject
+                                        <button
+                                            onclick="sellPlayer(<?php echo $inventory_item['id']; ?>, <?php echo htmlspecialchars(json_encode($player)); ?>)"
+                                            class="px-3 py-1 bg-yellow-600 text-white text-xs rounded hover:bg-yellow-700 transition-colors">
+                                            Sell Player
+                                        </button>
+                                        <button
+                                            onclick="deletePlayer(<?php echo $inventory_item['id']; ?>, '<?php echo htmlspecialchars($player['name']); ?>')"
+                                            class="px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors">
+                                            Release
                                         </button>
                                     </div>
                                 </div>
@@ -364,124 +303,6 @@ startContent();
             </div>
         </div>
 
-        <!-- My Bid History Tab -->
-        <div id="myHistoryContent" class="tab-content hidden">
-            <div class="space-y-4">
-                <?php if (empty($my_completed_bids)): ?>
-                    <div class="text-center py-12">
-                        <i data-lucide="history" class="w-16 h-16 text-gray-400 mx-auto mb-4"></i>
-                        <h3 class="text-lg font-medium text-gray-900 mb-2">No Bid History</h3>
-                        <p class="text-gray-600">You haven't completed any bids yet.</p>
-                    </div>
-                <?php else: ?>
-                    <?php foreach ($my_completed_bids as $bid): ?>
-                        <?php
-                        $player = json_decode($bid['player_data'], true);
-                        $status_colors = [
-                            'accepted' => 'bg-green-100 text-green-800 border-green-200',
-                            'rejected' => 'bg-red-100 text-red-800 border-red-200',
-                            'cancelled' => 'bg-gray-100 text-gray-800 border-gray-200'
-                        ];
-                        $status_color = $status_colors[$bid['status']] ?? 'bg-gray-100 text-gray-800 border-gray-200';
-                        ?>
-                        <div class="<?php echo $status_color; ?> rounded-lg p-4 border">
-                            <div class="flex items-center justify-between">
-                                <div class="flex items-center gap-4">
-                                    <div class="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
-                                        <i data-lucide="user" class="w-6 h-6 text-white"></i>
-                                    </div>
-                                    <div>
-                                        <h4 class="font-semibold text-gray-900"><?php echo htmlspecialchars($player['name']); ?>
-                                        </h4>
-                                        <p class="text-sm text-gray-600">
-                                            <?php echo htmlspecialchars($bid['owner_club']); ?> •
-                                            Rating: <?php echo $player['rating'] ?? 'N/A'; ?> •
-                                            Value: <?php echo formatMarketValue($player['value'] ?? 0); ?>
-                                        </p>
-                                        <p class="text-xs text-gray-500 mt-1">
-                                            Status: <span class="font-medium capitalize"><?php echo $bid['status']; ?></span>
-                                        </p>
-                                    </div>
-                                </div>
-                                <div class="text-right">
-                                    <div class="text-lg font-bold text-green-600">
-                                        <?php echo formatMarketValue($bid['bid_amount']); ?>
-                                    </div>
-                                    <div class="text-xs text-gray-500">
-                                        Bid: <?php echo date('M j, Y g:i A', strtotime($bid['created_at'])); ?>
-                                    </div>
-                                    <?php if ($bid['response_time']): ?>
-                                        <div class="text-xs text-gray-500">
-                                            Response: <?php echo date('M j, Y g:i A', strtotime($bid['response_time'])); ?>
-                                        </div>
-                                    <?php endif; ?>
-                                </div>
-                            </div>
-                        </div>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </div>
-        </div>
-
-        <!-- Received Bid History Tab -->
-        <div id="receivedHistoryContent" class="tab-content hidden">
-            <div class="space-y-4">
-                <?php if (empty($received_completed_bids)): ?>
-                    <div class="text-center py-12">
-                        <i data-lucide="history" class="w-16 h-16 text-gray-400 mx-auto mb-4"></i>
-                        <h3 class="text-lg font-medium text-gray-900 mb-2">No Response History</h3>
-                        <p class="text-gray-600">You haven't responded to any bids yet.</p>
-                    </div>
-                <?php else: ?>
-                    <?php foreach ($received_completed_bids as $bid): ?>
-                        <?php
-                        $player = json_decode($bid['player_data'], true);
-                        $status_colors = [
-                            'accepted' => 'bg-green-100 text-green-800 border-green-200',
-                            'rejected' => 'bg-red-100 text-red-800 border-red-200',
-                            'cancelled' => 'bg-gray-100 text-gray-800 border-gray-200'
-                        ];
-                        $status_color = $status_colors[$bid['status']] ?? 'bg-gray-100 text-gray-800 border-gray-200';
-                        ?>
-                        <div class="<?php echo $status_color; ?> rounded-lg p-4 border">
-                            <div class="flex items-center justify-between">
-                                <div class="flex items-center gap-4">
-                                    <div class="w-12 h-12 bg-yellow-600 rounded-full flex items-center justify-center">
-                                        <i data-lucide="user" class="w-6 h-6 text-white"></i>
-                                    </div>
-                                    <div>
-                                        <h4 class="font-semibold text-gray-900"><?php echo htmlspecialchars($player['name']); ?>
-                                        </h4>
-                                        <p class="text-sm text-gray-600">
-                                            Bid from <?php echo htmlspecialchars($bid['bidder_club']); ?>
-                                            (<?php echo htmlspecialchars($bid['bidder_name']); ?>) •
-                                            Rating: <?php echo $player['rating'] ?? 'N/A'; ?> •
-                                            Value: <?php echo formatMarketValue($player['value'] ?? 0); ?>
-                                        </p>
-                                        <p class="text-xs text-gray-500 mt-1">
-                                            Status: <span class="font-medium capitalize"><?php echo $bid['status']; ?></span>
-                                        </p>
-                                    </div>
-                                </div>
-                                <div class="text-right">
-                                    <div class="text-lg font-bold text-green-600">
-                                        <?php echo formatMarketValue($bid['bid_amount']); ?>
-                                    </div>
-                                    <div class="text-xs text-gray-500">
-                                        Bid: <?php echo date('M j, Y g:i A', strtotime($bid['created_at'])); ?>
-                                    </div>
-                                    <?php if ($bid['response_time']): ?>
-                                        <div class="text-xs text-gray-500">
-                                            Response: <?php echo date('M j, Y g:i A', strtotime($bid['response_time'])); ?>
-                                        </div>
-                                    <?php endif; ?>
-                                </div>
-                            </div>
-                        </div>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </div>
-        </div>
     </div>
 </div>
 
@@ -537,10 +358,7 @@ startContent();
         currentPage = 1;
         renderPlayers();
     });
-    document.getElementById('myBidsTab').addEventListener('click', () => switchTab('myBids'));
-    document.getElementById('receivedBidsTab').addEventListener('click', () => switchTab('receivedBids'));
-    document.getElementById('myHistoryTab').addEventListener('click', () => switchTab('myHistory'));
-    document.getElementById('receivedHistoryTab').addEventListener('click', () => switchTab('receivedHistory'));
+    document.getElementById('myPlayersTab').addEventListener('click', () => switchTab('myPlayers'));
 
     // Filter and search functionality
     function filterPlayers() {
@@ -634,11 +452,11 @@ startContent();
                         ${formatMarketValue(player.value || 0)}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <button onclick="makeBid(${item.owner_id}, ${item.player_index})" 
-                                class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md ${canAfford ? 'text-white bg-blue-600 hover:bg-blue-700' : 'text-gray-500 bg-gray-300 cursor-not-allowed'} transition-colors"
+                        <button onclick="makeBid(null, ${item.player_index})" 
+                                class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md ${canAfford ? 'text-white bg-green-600 hover:bg-green-700' : 'text-gray-500 bg-gray-300 cursor-not-allowed'} transition-colors"
                                 ${!canAfford ? 'disabled' : ''}>
-                            <i data-lucide="hand-coins" class="w-4 h-4 mr-1"></i>
-                            ${canAfford ? 'Bid' : 'Cannot Afford'}
+                            <i data-lucide="shopping-cart" class="w-4 h-4 mr-1"></i>
+                            ${canAfford ? 'Buy' : 'Cannot Afford'}
                         </button>
                     </td>
                 </tr>
@@ -749,11 +567,11 @@ startContent();
         return Math.max(weeklySalary, 10000);
     }
 
-    // Make bid function
+    // Make bid function for market players
     function makeBid(ownerId, playerIndex) {
         // Find the player data from availablePlayers array
         const playerItem = availablePlayers.find(item =>
-            item.owner_id === ownerId && item.player_index === playerIndex
+            item.player_index === playerIndex
         );
 
         if (!playerItem) {
@@ -771,31 +589,35 @@ startContent();
         const playerData = player; // Pass the raw object, not JSON string
         const playerValue = player.value || 0;
 
-        const suggestedBid = Math.round(playerValue * 1.1); // 10% above value
+        const suggestedBid = playerValue; // Direct purchase at market value
 
         Swal.fire({
-            title: `Make Bid for ${playerName}?`,
+            title: `Purchase ${playerName}?`,
             html: `
                 <div class="text-left space-y-4">
                     <div class="bg-gray-50 p-4 rounded-lg">
                         <h4 class="font-semibold text-gray-900 mb-2">Player Details:</h4>
                         <div class="space-y-1 text-sm">
                             <div class="flex justify-between">
-                                <span class="text-gray-600">Current Value:</span>
+                                <span class="text-gray-600">Market Price:</span>
                                 <span class="font-medium text-green-600">${formatMarketValue(playerValue)}</span>
                             </div>
                             <div class="flex justify-between">
                                 <span class="text-gray-600">Your Budget:</span>
                                 <span class="font-medium text-blue-600">${formatMarketValue(userBudget)}</span>
                             </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Remaining Budget:</span>
+                                <span class="font-medium ${userBudget - playerValue >= 0 ? 'text-green-600' : 'text-red-600'}">${formatMarketValue(userBudget - playerValue)}</span>
+                            </div>
                         </div>
                     </div>
                     
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Bid Amount:</label>
-                        <input type="number" id="bidAmount" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                               value="${suggestedBid}" min="${Math.round(playerValue * 0.8)}" max="${userBudget}" step="100000">
-                        <p class="text-xs text-gray-500 mt-1">Minimum: ${formatMarketValue(Math.round(playerValue * 0.8))} (80% of value)</p>
+                    <div class="bg-blue-50 p-4 rounded-lg">
+                        <p class="text-sm text-blue-800">
+                            <i data-lucide="info" class="w-4 h-4 inline mr-1"></i>
+                            This player will be purchased directly from the transfer market at the listed price.
+                        </p>
                     </div>
                 </div>
             `,
@@ -803,42 +625,26 @@ startContent();
             showCancelButton: true,
             confirmButtonColor: '#2563eb',
             cancelButtonColor: '#6b7280',
-            confirmButtonText: '<i data-lucide="send" class="w-4 h-4 inline mr-1"></i> Submit Bid',
+            confirmButtonText: '<i data-lucide="shopping-cart" class="w-4 h-4 inline mr-1"></i> Purchase Player',
             cancelButtonText: 'Cancel',
             customClass: {
                 popup: 'swal-wide'
             },
             didOpen: () => {
                 lucide.createIcons();
-            },
-            preConfirm: () => {
-                const bidAmount = parseInt(document.getElementById('bidAmount').value);
-                const minBid = Math.round(playerValue * 0.8);
-
-                if (!bidAmount || bidAmount < minBid) {
-                    Swal.showValidationMessage(`Bid must be at least ${formatMarketValue(minBid)}`);
-                    return false;
-                }
-
-                if (bidAmount > userBudget) {
-                    Swal.showValidationMessage('Bid exceeds your budget');
-                    return false;
-                }
-
-                return bidAmount;
             }
         }).then((result) => {
             if (result.isConfirmed) {
-                submitBid(ownerId, playerIndex, playerName, playerData, result.value);
+                purchasePlayer(playerIndex, playerName, playerData, playerValue);
             }
         });
     }
 
-    // Submit bid to server
-    function submitBid(ownerId, playerIndex, playerName, playerData, bidAmount) {
+    // Purchase player directly from market
+    function purchasePlayer(playerIndex, playerName, playerData, purchaseAmount) {
         Swal.fire({
-            title: 'Submitting Bid...',
-            text: 'Please wait while we process your bid',
+            title: 'Processing Purchase...',
+            text: 'Please wait while we process your purchase',
             allowOutsideClick: false,
             allowEscapeKey: false,
             showConfirmButton: false,
@@ -848,14 +654,13 @@ startContent();
         });
 
         const requestData = {
-            owner_id: parseInt(ownerId),
             player_index: parseInt(playerIndex),
             player_name: playerName,
             player_data: playerData,
-            bid_amount: parseInt(bidAmount)
+            purchase_amount: parseInt(purchaseAmount)
         };
 
-        fetch('submit_bid.php', {
+        fetch('purchase_player.php', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -877,226 +682,34 @@ startContent();
                 if (data.success) {
                     Swal.fire({
                         icon: 'success',
-                        title: 'Bid Submitted!',
-                        text: `Your bid of ${formatMarketValue(bidAmount)} for ${playerName} has been submitted.`,
+                        title: 'Player Purchased!',
+                        text: `${playerName} has been added to your team for ${formatMarketValue(purchaseAmount)}.`,
                         confirmButtonColor: '#10b981'
                     }).then(() => {
-                        // Refresh page to update bids
+                        // Refresh page to update available players
                         window.location.reload();
                     });
                 } else {
                     Swal.fire({
                         icon: 'error',
-                        title: 'Bid Failed',
+                        title: 'Purchase Failed',
                         text: data.message || 'Unknown error occurred',
                         confirmButtonColor: '#ef4444'
                     });
                 }
             })
             .catch(error => {
-                console.error('Error submitting bid:', error);
+                console.error('Error purchasing player:', error);
                 Swal.fire({
                     icon: 'error',
-                    title: 'Bid Failed',
-                    text: error.message || 'Failed to submit bid. Please try again.',
+                    title: 'Purchase Failed',
+                    text: error.message || 'Failed to purchase player. Please try again.',
                     confirmButtonColor: '#ef4444'
                 });
             });
     }
 
-    // Cancel bid function
-    function cancelBid(bidId) {
-        Swal.fire({
-            title: 'Cancel Bid?',
-            text: 'Are you sure you want to cancel this bid?',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#ef4444',
-            cancelButtonColor: '#6b7280',
-            confirmButtonText: 'Yes, Cancel Bid',
-            cancelButtonText: 'Keep Bid'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                // Submit cancel request
-                fetch('manage_bid.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        action: 'cancel',
-                        bid_id: bidId
-                    })
-                })
-                    .then(response => {
-                        return response.json().then(data => {
-                            if (!response.ok) {
-                                throw new Error(data.message || `HTTP error! status: ${response.status}`);
-                            }
-                            return data;
-                        });
-                    })
-                    .then(data => {
-                        if (data.success) {
-                            Swal.fire({
-                                icon: 'success',
-                                title: 'Bid Cancelled',
-                                text: 'Your bid has been cancelled successfully.',
-                                timer: 2000,
-                                showConfirmButton: false
-                            }).then(() => {
-                                window.location.reload();
-                            });
-                        } else {
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'Error',
-                                text: data.message || 'Failed to cancel bid',
-                                confirmButtonColor: '#ef4444'
-                            });
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error cancelling bid:', error);
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error',
-                            text: error.message || 'Failed to cancel bid. Please try again.',
-                            confirmButtonColor: '#ef4444'
-                        });
-                    });
-            }
-        });
-    }
 
-    // Accept bid function
-    function acceptBid(bidId) {
-        Swal.fire({
-            title: 'Accept Bid?',
-            text: 'This will transfer the player and cannot be undone.',
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonColor: '#10b981',
-            cancelButtonColor: '#6b7280',
-            confirmButtonText: 'Accept Bid',
-            cancelButtonText: 'Decline'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                // Submit accept request
-                fetch('manage_bid.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        action: 'accept',
-                        bid_id: bidId
-                    })
-                })
-                    .then(response => {
-                        return response.json().then(data => {
-                            if (!response.ok) {
-                                throw new Error(data.message || `HTTP error! status: ${response.status}`);
-                            }
-                            return data;
-                        });
-                    })
-                    .then(data => {
-                        if (data.success) {
-                            Swal.fire({
-                                icon: 'success',
-                                title: 'Bid Accepted!',
-                                text: 'The player has been transferred successfully.',
-                                confirmButtonColor: '#10b981'
-                            }).then(() => {
-                                window.location.reload();
-                            });
-                        } else {
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'Error',
-                                text: data.message || 'Failed to accept bid',
-                                confirmButtonColor: '#ef4444'
-                            });
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error accepting bid:', error);
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error',
-                            text: error.message || 'Failed to accept bid. Please try again.',
-                            confirmButtonColor: '#ef4444'
-                        });
-                    });
-            }
-        });
-    }
-
-    // Reject bid function
-    function rejectBid(bidId) {
-        Swal.fire({
-            title: 'Reject Bid?',
-            text: 'Are you sure you want to reject this bid?',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#ef4444',
-            cancelButtonColor: '#6b7280',
-            confirmButtonText: 'Reject Bid',
-            cancelButtonText: 'Keep Bid'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                // Submit reject request
-                fetch('manage_bid.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        action: 'reject',
-                        bid_id: bidId
-                    })
-                })
-                    .then(response => {
-                        return response.json().then(data => {
-                            if (!response.ok) {
-                                throw new Error(data.message || `HTTP error! status: ${response.status}`);
-                            }
-                            return data;
-                        });
-                    })
-                    .then(data => {
-                        if (data.success) {
-                            Swal.fire({
-                                icon: 'success',
-                                title: 'Bid Rejected',
-                                text: 'The bid has been rejected.',
-                                timer: 2000,
-                                showConfirmButton: false
-                            }).then(() => {
-                                window.location.reload();
-                            });
-                        } else {
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'Error',
-                                text: data.message || 'Failed to reject bid',
-                                confirmButtonColor: '#ef4444'
-                            });
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error rejecting bid:', error);
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error',
-                            text: error.message || 'Failed to reject bid. Please try again.',
-                            confirmButtonColor: '#ef4444'
-                        });
-                    });
-            }
-        });
-    }
 
     // Player Info Modal Functions
     function showPlayerInfo(playerData) {
@@ -1236,6 +849,158 @@ startContent();
         return stats;
     }
 
+    // Player Management Functions
+    function assignToTeam(inventoryId, playerData) {
+        Swal.fire({
+            title: `Assign ${playerData.name} to Team?`,
+            text: 'This will move the player from your inventory to your team substitutes.',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#10b981',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Assign to Team',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                manageInventoryPlayer('assign', inventoryId, playerData);
+            }
+        });
+    }
+
+    function sellPlayer(inventoryId, playerData) {
+        const sellPrice = Math.round((playerData.value || 0) * 0.7); // 70% of market value
+
+        Swal.fire({
+            title: `Sell ${playerData.name}?`,
+            html: `
+                <div class="text-left space-y-4">
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <div class="space-y-1 text-sm">
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Market Value:</span>
+                                <span class="font-medium text-green-600">${formatMarketValue(playerData.value || 0)}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Sell Price (70%):</span>
+                                <span class="font-medium text-blue-600">${formatMarketValue(sellPrice)}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="text-sm text-gray-600">The player will be removed from your inventory and you'll receive the sell price.</p>
+                </div>
+            `,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#f59e0b',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Sell Player',
+            cancelButtonText: 'Keep Player'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                manageInventoryPlayer('sell', inventoryId, playerData, sellPrice);
+            }
+        });
+    }
+
+    function deletePlayer(inventoryId, playerName) {
+        Swal.fire({
+            title: `Release ${playerName}?`,
+            text: 'This will permanently remove the player from your inventory without compensation.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Release Player',
+            cancelButtonText: 'Keep Player'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                manageInventoryPlayer('delete', inventoryId, { name: playerName });
+            }
+        });
+    }
+
+    function manageInventoryPlayer(action, inventoryId, playerData, sellPrice = 0) {
+        Swal.fire({
+            title: 'Processing...',
+            text: 'Please wait while we process your request',
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            showConfirmButton: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
+        const requestData = {
+            action: action,
+            inventory_id: inventoryId,
+            player_data: playerData,
+            sell_price: sellPrice
+        };
+
+        fetch('manage_inventory.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestData)
+        })
+            .then(response => {
+                return response.json().then(data => {
+                    if (!response.ok) {
+                        throw new Error(data.message || `HTTP error! status: ${response.status}`);
+                    }
+                    return data;
+                });
+            })
+            .then(data => {
+                if (data.success) {
+                    let title = 'Success!';
+                    let message = '';
+
+                    switch (action) {
+                        case 'assign':
+                            title = 'Player Assigned!';
+                            message = `${playerData.name} has been added to your team substitutes.`;
+                            break;
+                        case 'sell':
+                            title = 'Player Sold!';
+                            message = `${playerData.name} has been sold for ${formatMarketValue(sellPrice)}.`;
+                            break;
+                        case 'delete':
+                            title = 'Player Released!';
+                            message = `${playerData.name} has been released from your inventory.`;
+                            break;
+                    }
+
+                    Swal.fire({
+                        icon: 'success',
+                        title: title,
+                        text: message,
+                        confirmButtonColor: '#10b981'
+                    }).then(() => {
+                        window.location.reload();
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Action Failed',
+                        text: data.message || 'Unknown error occurred',
+                        confirmButtonColor: '#ef4444'
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error managing player:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Action Failed',
+                    text: error.message || 'Failed to process request. Please try again.',
+                    confirmButtonColor: '#ef4444'
+                });
+            });
+    }
+
     // Close player info modal
     document.getElementById('closePlayerInfoModal').addEventListener('click', function () {
         document.getElementById('playerInfoModal').classList.add('hidden');
@@ -1273,12 +1038,10 @@ startContent();
     }
 
     .player-info-header {
-              background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
+        background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
     }
-
-    </style>
-
- <?php
- // End content capture and render layout
- endContent('Transfer Market - Dream Team', 'transfer');
- ?>
+</style>
+<?php
+// End content capture and render layout
+endContent('Transfer Market - Dream Team', 'transfer');
+?>

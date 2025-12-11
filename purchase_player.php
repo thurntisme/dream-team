@@ -20,17 +20,39 @@ if (!isDatabaseAvailable()) {
     exit;
 }
 
-// Get POST data
-$formation = $_POST['formation'] ?? '';
-$team = $_POST['team'] ?? '';
-$substitutes = $_POST['substitutes'] ?? '[]';
-$player_cost = (int) ($_POST['player_cost'] ?? 0);
-$player_name = $_POST['player_name'] ?? '';
+// Get JSON input for market purchases
+$input = file_get_contents('php://input');
+$data = json_decode($input, true);
 
-if (empty($formation) || empty($team)) {
-    http_response_code(400);
-    echo json_encode(['success' => false, 'message' => 'Invalid request data']);
-    exit;
+if (!$data) {
+    // Fallback to POST data for team management purchases
+    $formation = $_POST['formation'] ?? '';
+    $team = $_POST['team'] ?? '';
+    $substitutes = $_POST['substitutes'] ?? '[]';
+    $player_cost = (int) ($_POST['player_cost'] ?? 0);
+    $player_name = $_POST['player_name'] ?? '';
+
+    if (empty($formation) || empty($team)) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'Invalid request data']);
+        exit;
+    }
+
+    $is_market_purchase = false;
+} else {
+    // Handle market purchase
+    $player_index = $data['player_index'] ?? null;
+    $player_name = $data['player_name'] ?? '';
+    $player_data = $data['player_data'] ?? null;
+    $purchase_amount = (int) ($data['purchase_amount'] ?? 0);
+
+    if ($player_index === null || empty($player_name) || !$player_data || $purchase_amount <= 0) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'Invalid market purchase data']);
+        exit;
+    }
+
+    $is_market_purchase = true;
 }
 
 try {
@@ -39,8 +61,8 @@ try {
     // Start transaction
     $db->exec('BEGIN TRANSACTION');
 
-    // Get user's current budget
-    $stmt = $db->prepare('SELECT budget FROM users WHERE id = :user_id');
+    // Get user's current data
+    $stmt = $db->prepare('SELECT budget, team, substitutes, max_players FROM users WHERE id = :user_id');
     $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
     $result = $stmt->execute();
     $user_data = $result->fetchArray(SQLITE3_ASSOC);
@@ -51,24 +73,100 @@ try {
 
     $current_budget = $user_data['budget'];
 
-    // Check if user has enough budget
-    if ($current_budget < $player_cost) {
-        throw new Exception('Insufficient budget to purchase this player');
-    }
+    if ($is_market_purchase) {
+        // Handle market purchase
+        $cost = $purchase_amount;
 
-    // Calculate new budget
-    $new_budget = $current_budget - $player_cost;
+        // Check if user has enough budget
+        if ($current_budget < $cost) {
+            throw new Exception('Insufficient budget to purchase this player');
+        }
 
-    // Update user's team, substitutes, and budget
-    $stmt = $db->prepare('UPDATE users SET formation = :formation, team = :team, substitutes = :substitutes, budget = :budget WHERE id = :user_id');
-    $stmt->bindValue(':formation', $formation, SQLITE3_TEXT);
-    $stmt->bindValue(':team', $team, SQLITE3_TEXT);
-    $stmt->bindValue(':substitutes', $substitutes, SQLITE3_TEXT);
-    $stmt->bindValue(':budget', $new_budget, SQLITE3_INTEGER);
-    $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+        // Check if player already exists in team or substitutes
+        $current_team = json_decode($user_data['team'] ?? '[]', true) ?: [];
+        $current_substitutes = json_decode($user_data['substitutes'] ?? '[]', true) ?: [];
 
-    if (!$stmt->execute()) {
-        throw new Exception('Failed to update team and budget: ' . $db->lastErrorMsg());
+        foreach ($current_team as $existing_player) {
+            if (
+                $existing_player && isset($existing_player['name']) &&
+                strtolower($existing_player['name']) === strtolower($player_name)
+            ) {
+                throw new Exception('You already have this player in your team');
+            }
+        }
+
+        foreach ($current_substitutes as $existing_player) {
+            if (
+                $existing_player && isset($existing_player['name']) &&
+                strtolower($existing_player['name']) === strtolower($player_name)
+            ) {
+                throw new Exception('You already have this player in your substitutes');
+            }
+        }
+
+        // Check if player already exists in inventory
+        $stmt = $db->prepare('SELECT COUNT(*) as count FROM player_inventory WHERE user_id = :user_id AND player_name = :player_name AND status = "available"');
+        $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+        $stmt->bindValue(':player_name', $player_name, SQLITE3_TEXT);
+        $result = $stmt->execute();
+        $inventory_check = $result->fetchArray(SQLITE3_ASSOC);
+
+        if ($inventory_check['count'] > 0) {
+            throw new Exception('You already have this player in your inventory');
+        }
+
+        // Calculate new budget
+        $new_budget = $current_budget - $cost;
+
+        // Add player to inventory instead of directly to team
+        $stmt = $db->prepare('INSERT INTO player_inventory (user_id, player_name, player_data, purchase_price) VALUES (:user_id, :player_name, :player_data, :purchase_price)');
+        $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+        $stmt->bindValue(':player_name', $player_name, SQLITE3_TEXT);
+        $stmt->bindValue(':player_data', json_encode($player_data), SQLITE3_TEXT);
+        $stmt->bindValue(':purchase_price', $cost, SQLITE3_INTEGER);
+
+        if (!$stmt->execute()) {
+            throw new Exception('Failed to add player to inventory: ' . $db->lastErrorMsg());
+        }
+
+        // Update user's budget only
+        $stmt = $db->prepare('UPDATE users SET budget = :budget WHERE id = :user_id');
+        $stmt->bindValue(':budget', $new_budget, SQLITE3_INTEGER);
+        $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+
+        if (!$stmt->execute()) {
+            throw new Exception('Failed to update budget: ' . $db->lastErrorMsg());
+        }
+
+        $response_message = 'Player purchased successfully and added to your inventory!';
+        $response_cost = $cost;
+
+    } else {
+        // Handle team management purchase (existing functionality)
+        $cost = $player_cost;
+
+        // Check if user has enough budget
+        if ($current_budget < $cost) {
+            throw new Exception('Insufficient budget to purchase this player');
+        }
+
+        // Calculate new budget
+        $new_budget = $current_budget - $cost;
+
+        // Update user's team, substitutes, and budget
+        $stmt = $db->prepare('UPDATE users SET formation = :formation, team = :team, substitutes = :substitutes, budget = :budget WHERE id = :user_id');
+        $stmt->bindValue(':formation', $formation, SQLITE3_TEXT);
+        $stmt->bindValue(':team', $team, SQLITE3_TEXT);
+        $stmt->bindValue(':substitutes', $substitutes, SQLITE3_TEXT);
+        $stmt->bindValue(':budget', $new_budget, SQLITE3_INTEGER);
+        $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+
+        if (!$stmt->execute()) {
+            throw new Exception('Failed to update team and budget: ' . $db->lastErrorMsg());
+        }
+
+        $response_message = 'Player purchased successfully!';
+        $response_cost = $cost;
     }
 
     // Commit transaction
@@ -77,10 +175,10 @@ try {
 
     echo json_encode([
         'success' => true,
-        'message' => 'Player purchased successfully!',
+        'message' => $response_message,
         'new_budget' => $new_budget,
         'player_name' => $player_name,
-        'player_cost' => $player_cost
+        'player_cost' => $response_cost
     ]);
 
 } catch (Exception $e) {
