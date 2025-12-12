@@ -850,6 +850,36 @@ function updatePlayerConditions($db, $user_id, $wins, $draws, $losses, $goals_fo
                     $team[$i]['contract_matches_remaining'] = $team[$i]['contract_matches'] ?? rand(15, 50);
                 }
                 $team[$i]['contract_matches_remaining'] = max(0, $team[$i]['contract_matches_remaining'] - 1);
+
+                // Award experience points based on match performance
+                $base_experience = 10; // Base experience for playing
+                $performance_bonus = 0;
+
+                switch ($performance) {
+                    case 'excellent':
+                        $performance_bonus = 15;
+                        break;
+                    case 'good':
+                        $performance_bonus = 10;
+                        break;
+                    case 'average':
+                        $performance_bonus = 5;
+                        break;
+                    case 'poor':
+                        $performance_bonus = 0;
+                        break;
+                }
+
+                // Win/draw bonus
+                $result_bonus = 0;
+                if ($wins > 0) {
+                    $result_bonus = 5; // Win bonus
+                } elseif ($draws > 0) {
+                    $result_bonus = 2; // Draw bonus
+                }
+
+                $total_experience = $base_experience + $performance_bonus + $result_bonus;
+                $team[$i] = addPlayerExperience($team[$i], $total_experience);
                 $team_updated = true;
             }
         }

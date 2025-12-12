@@ -77,6 +77,9 @@ try {
                     $team[$i]['form'] = min(10, $team[$i]['form'] + 0.1);
                 }
 
+                // Award experience for training
+                $team[$i] = addPlayerExperience($team[$i], 5); // 5 XP for training
+
                 $players_trained++;
                 $total_improvement += $improvement;
             }
@@ -93,6 +96,9 @@ try {
                 if (isset($substitutes[$i]['form'])) {
                     $substitutes[$i]['form'] = min(10, $substitutes[$i]['form'] + 0.1);
                 }
+
+                // Award experience for training
+                $substitutes[$i] = addPlayerExperience($substitutes[$i], 5); // 5 XP for training
 
                 $players_trained++;
                 $total_improvement += $improvement;

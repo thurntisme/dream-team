@@ -538,6 +538,12 @@ if (!function_exists('initializePlayerCondition')) {
         if (!isset($player['contract_matches_remaining'])) {
             $player['contract_matches_remaining'] = $player['contract_matches'];
         }
+        if (!isset($player['level'])) {
+            $player['level'] = 1; // Default level for players joining the club
+        }
+        if (!isset($player['experience'])) {
+            $player['experience'] = 0; // Experience points for leveling up
+        }
         return $player;
     }
 }
@@ -654,7 +660,7 @@ if (!function_exists('getFormStatus')) {
 }
 
 /**
- * Calculate effective player rating based on fitness and form
+ * Calculate effective player rating based on fitness, form, and level
  * 
  * @param array $player Player data
  * @return int Effective rating
@@ -665,6 +671,7 @@ if (!function_exists('getEffectiveRating')) {
         $base_rating = $player['rating'] ?? 70;
         $fitness = $player['fitness'] ?? 100;
         $form = $player['form'] ?? 7;
+        $level = $player['level'] ?? 1;
 
         // Fitness affects rating (0.5-1.0 multiplier)
         $fitness_multiplier = 0.5 + ($fitness / 200);
@@ -672,9 +679,187 @@ if (!function_exists('getEffectiveRating')) {
         // Form affects rating (-5 to +5 points)
         $form_bonus = ($form - 7) * 0.7;
 
-        $effective_rating = ($base_rating * $fitness_multiplier) + $form_bonus;
+        // Level affects rating (+0.5 points per level above 1)
+        $level_bonus = ($level - 1) * 0.5;
+
+        $effective_rating = ($base_rating * $fitness_multiplier) + $form_bonus + $level_bonus;
 
         return max(1, min(99, round($effective_rating)));
+    }
+}
+
+/**
+ * Calculate experience required for next level
+ * 
+ * @param int $level Current level
+ * @return int Experience required for next level
+ */
+if (!function_exists('getExperienceForLevel')) {
+    function getExperienceForLevel($level)
+    {
+        // Experience required increases exponentially: level * 100 + (level-1) * 50
+        return $level * 100 + ($level - 1) * 50;
+    }
+}
+
+/**
+ * Calculate total experience required to reach a specific level
+ * 
+ * @param int $target_level Target level
+ * @return int Total experience required
+ */
+if (!function_exists('getTotalExperienceForLevel')) {
+    function getTotalExperienceForLevel($target_level)
+    {
+        $total = 0;
+        for ($i = 1; $i < $target_level; $i++) {
+            $total += getExperienceForLevel($i + 1);
+        }
+        return $total;
+    }
+}
+
+/**
+ * Add experience to player and handle level ups
+ * 
+ * @param array $player Player data
+ * @param int $experience Experience points to add
+ * @return array Updated player data with level up information
+ */
+if (!function_exists('addPlayerExperience')) {
+    function addPlayerExperience($player, $experience)
+    {
+        $current_level = $player['level'] ?? 1;
+        $current_experience = $player['experience'] ?? 0;
+
+        $new_experience = $current_experience + $experience;
+        $new_level = $current_level;
+
+        // Check for level ups
+        while ($new_level < 50) { // Max level 50
+            $required_exp = getExperienceForLevel($new_level + 1);
+            $total_required = getTotalExperienceForLevel($new_level + 1);
+
+            if ($new_experience >= $total_required) {
+                $new_level++;
+            } else {
+                break;
+            }
+        }
+
+        $player['experience'] = $new_experience;
+        $player['level'] = $new_level;
+
+        // Add level up information if leveled up
+        if ($new_level > $current_level) {
+            $player['level_up_info'] = [
+                'previous_level' => $current_level,
+                'new_level' => $new_level,
+                'levels_gained' => $new_level - $current_level
+            ];
+        }
+
+        return $player;
+    }
+}
+
+/**
+ * Get player level status information
+ * 
+ * @param array $player Player data
+ * @return array Level status with progress information
+ */
+if (!function_exists('getPlayerLevelStatus')) {
+    function getPlayerLevelStatus($player)
+    {
+        $level = $player['level'] ?? 1;
+        $experience = $player['experience'] ?? 0;
+
+        if ($level >= 50) {
+            return [
+                'level' => $level,
+                'experience' => $experience,
+                'experience_for_next' => 0,
+                'experience_progress' => 0,
+                'progress_percentage' => 100,
+                'is_max_level' => true
+            ];
+        }
+
+        $total_required_current = getTotalExperienceForLevel($level);
+        $total_required_next = getTotalExperienceForLevel($level + 1);
+        $experience_for_next = $total_required_next - $experience;
+        $experience_in_current_level = $experience - $total_required_current;
+        $experience_needed_for_level = $total_required_next - $total_required_current;
+
+        $progress_percentage = $experience_needed_for_level > 0
+            ? ($experience_in_current_level / $experience_needed_for_level) * 100
+            : 0;
+
+        return [
+            'level' => $level,
+            'experience' => $experience,
+            'experience_for_next' => $experience_for_next,
+            'experience_progress' => $experience_in_current_level,
+            'experience_needed' => $experience_needed_for_level,
+            'progress_percentage' => min(100, max(0, $progress_percentage)),
+            'is_max_level' => false
+        ];
+    }
+}
+
+/**
+ * Get level display information
+ * 
+ * @param int $level Player level
+ * @return array Level display info with colors and text
+ */
+if (!function_exists('getLevelDisplayInfo')) {
+    function getLevelDisplayInfo($level)
+    {
+        if ($level >= 40) {
+            return [
+                'text' => 'Legendary',
+                'color' => 'text-purple-600',
+                'bg' => 'bg-purple-100',
+                'border' => 'border-purple-200'
+            ];
+        } elseif ($level >= 30) {
+            return [
+                'text' => 'Elite',
+                'color' => 'text-yellow-600',
+                'bg' => 'bg-yellow-100',
+                'border' => 'border-yellow-200'
+            ];
+        } elseif ($level >= 20) {
+            return [
+                'text' => 'Expert',
+                'color' => 'text-blue-600',
+                'bg' => 'bg-blue-100',
+                'border' => 'border-blue-200'
+            ];
+        } elseif ($level >= 10) {
+            return [
+                'text' => 'Professional',
+                'color' => 'text-green-600',
+                'bg' => 'bg-green-100',
+                'border' => 'border-green-200'
+            ];
+        } elseif ($level >= 5) {
+            return [
+                'text' => 'Experienced',
+                'color' => 'text-orange-600',
+                'bg' => 'bg-orange-100',
+                'border' => 'border-orange-200'
+            ];
+        } else {
+            return [
+                'text' => 'Rookie',
+                'color' => 'text-gray-600',
+                'bg' => 'bg-gray-100',
+                'border' => 'border-gray-200'
+            ];
+        }
     }
 }
 

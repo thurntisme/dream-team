@@ -798,6 +798,102 @@ startContent();
         }
     }
 
+    // Get player level display information
+    function getLevelDisplayInfo(level) {
+        if (level >= 40) {
+            return {
+                text: 'Legendary',
+                color: 'text-purple-600',
+                bg: 'bg-purple-100',
+                border: 'border-purple-200'
+            };
+        } else if (level >= 30) {
+            return {
+                text: 'Elite',
+                color: 'text-yellow-600',
+                bg: 'bg-yellow-100',
+                border: 'border-yellow-200'
+            };
+        } else if (level >= 20) {
+            return {
+                text: 'Expert',
+                color: 'text-blue-600',
+                bg: 'bg-blue-100',
+                border: 'border-blue-200'
+            };
+        } else if (level >= 10) {
+            return {
+                text: 'Professional',
+                color: 'text-green-600',
+                bg: 'bg-green-100',
+                border: 'border-green-200'
+            };
+        } else if (level >= 5) {
+            return {
+                text: 'Experienced',
+                color: 'text-orange-600',
+                bg: 'bg-orange-100',
+                border: 'border-orange-200'
+            };
+        } else {
+            return {
+                text: 'Rookie',
+                color: 'text-gray-600',
+                bg: 'bg-gray-100',
+                border: 'border-gray-200'
+            };
+        }
+    }
+
+    // Get player level status
+    function getPlayerLevelStatus(player) {
+        const level = player.level || 1;
+        const experience = player.experience || 0;
+
+        if (level >= 50) {
+            return {
+                level: level,
+                experience: experience,
+                experienceForNext: 0,
+                progressPercentage: 100,
+                isMaxLevel: true
+            };
+        }
+
+        // Calculate experience requirements (matching PHP logic)
+        function getExperienceForLevel(lvl) {
+            return lvl * 100 + (lvl - 1) * 50;
+        }
+
+        function getTotalExperienceForLevel(targetLevel) {
+            let total = 0;
+            for (let i = 1; i < targetLevel; i++) {
+                total += getExperienceForLevel(i + 1);
+            }
+            return total;
+        }
+
+        const totalRequiredCurrent = getTotalExperienceForLevel(level);
+        const totalRequiredNext = getTotalExperienceForLevel(level + 1);
+        const experienceForNext = totalRequiredNext - experience;
+        const experienceInCurrentLevel = experience - totalRequiredCurrent;
+        const experienceNeededForLevel = totalRequiredNext - totalRequiredCurrent;
+
+        const progressPercentage = experienceNeededForLevel > 0
+            ? (experienceInCurrentLevel / experienceNeededForLevel) * 100
+            : 0;
+
+        return {
+            level: level,
+            experience: experience,
+            experienceForNext: experienceForNext,
+            experienceProgress: experienceInCurrentLevel,
+            experienceNeeded: experienceNeededForLevel,
+            progressPercentage: Math.min(100, Math.max(0, progressPercentage)),
+            isMaxLevel: false
+        };
+    }
+
     function renderPlayers() {
         const $list = $('#playerList').empty();
         let totalValue = 0;
@@ -835,7 +931,7 @@ startContent();
                             <div class="flex-1" onclick="selectPlayer(${idx})">
                                 <div class="${nameClass}">${player.name}${customBadge}</div>
                                 <div class="${valueClass}">${formatMarketValue(player.value || 0)}</div>
-                                <div class="text-xs text-gray-500 mt-1">${player.position} • ★${getEffectiveRating(player)} • ${(player.contract_matches_remaining || player.contract_matches || 25)} matches left</div>
+                                <div class="text-xs text-gray-500 mt-1">${player.position} • ★${getEffectiveRating(player)} • Lv.${player.level || 1} • ${(player.contract_matches_remaining || player.contract_matches || 25)} matches left</div>
                                 <div class="flex gap-2 mt-1 items-center">
                                     <div class="flex-1">
                                         <div class="text-xs text-gray-500 mb-1">Fitness</div>
@@ -927,7 +1023,7 @@ startContent();
                         <div class="flex-1">
                             <div class="${nameClass}">${player.name}${customBadge}</div>
                             <div class="${valueClass}">${formatMarketValue(player.value || 0)}</div>
-                            <div class="text-xs text-gray-500 mt-1">${player.position} • ★${getEffectiveRating(player)} • ${(player.contract_matches_remaining || player.contract_matches || 25)} matches left</div>
+                            <div class="text-xs text-gray-500 mt-1">${player.position} • ★${getEffectiveRating(player)} • Lv.${player.level || 1} • ${(player.contract_matches_remaining || player.contract_matches || 25)} matches left</div>
                             <div class="flex gap-2 mt-1 items-center">
                                 <div class="flex-1">
                                     <div class="text-xs text-gray-500 mb-1">Fitness</div>
@@ -2249,6 +2345,8 @@ startContent();
                     position: playerPosition,
                     value: customPlayerValue,
                     rating: 70, // Default rating for custom players
+                    level: 1, // Default level for new players
+                    experience: 0, // Starting experience
                     isCustom: true // Flag to identify custom players
                 };
 
@@ -2610,12 +2708,31 @@ startContent();
                             </div>
                             <div class="text-xs text-gray-500 mt-1">${getFormStatusText(player.form || 7)} form level</div>
                         </div>
+                        <div>
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-gray-600">Level:</span>
+                                <span class="px-3 py-1 rounded-full ${getLevelDisplayInfo(player.level || 1).bg} ${getLevelDisplayInfo(player.level || 1).border} flex items-center gap-2 text-sm font-medium ${getLevelDisplayInfo(player.level || 1).color}">
+                                    <i data-lucide="star" class="w-3 h-3"></i>
+                                    ${player.level || 1} - ${getLevelDisplayInfo(player.level || 1).text}
+                                </span>
+                            </div>
+                            ${(player.level || 1) < 50 ? `
+                            <div class="w-full bg-gray-200 rounded-full h-2 mb-1">
+                                <div class="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-300" style="width: ${getPlayerLevelStatus(player).progressPercentage}%"></div>
+                            </div>
+                            <div class="text-xs text-gray-500">
+                                ${getPlayerLevelStatus(player).experienceProgress}/${getPlayerLevelStatus(player).experienceNeeded} XP to next level
+                            </div>
+                            ` : `
+                            <div class="text-xs text-yellow-600 font-semibold">MAX LEVEL REACHED</div>
+                            `}
+                        </div>
                         <div class="pt-2 border-t border-gray-200">
                             <div class="flex justify-between">
                                 <span class="text-gray-600">Effective Rating:</span>
                                 <span class="font-bold text-lg text-blue-600">★${getEffectiveRating(player)}</span>
                             </div>
-                            <div class="text-xs text-gray-500 mt-1">Base: ★${player.rating} (modified by fitness & form)</div>
+                            <div class="text-xs text-gray-500 mt-1">Base: ★${player.rating} (modified by fitness, form & level)</div>
                         </div>
                     </div>
                 </div>
@@ -2902,7 +3019,7 @@ startContent();
 
     // Close player info modal
     $('#closePlayerInfoModal').click(function () {
-        $('#playerInfoModal').addClass('hidden');
+        $('#playerInfoModal ').addClass('hidden ');
     });
 
     $('#playerInfoModal').click(function (e) {
@@ -2928,6 +3045,8 @@ startContent();
         max-width: 48rem;
     }
 
+
+
     .player-info-stat-bar {
         transition: width 0.3s ease;
 
@@ -2941,8 +3060,8 @@ startContent();
     .pla yer-info-header {
         background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
     }
-</style>
-<?php
-// End content capture and render layout
-endContent($_SESSION['club_name'], 'team');
-?>
+
+    </style> <?php
+    // End content capture and render layout
+    endContent($_SESSION['club_name'], 'team');
+    ?>
