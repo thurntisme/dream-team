@@ -3,1506 +3,1757 @@
         "name": "Alisson",
         "position": "GK",
         "rating": 89,
-        "value": 65000000
+        "value": 65000000,
+        "uuid": "3ee11137-3a55-4dcc-a48e-1fb0831e37bb"
     },
     {
         "name": "Ederson",
         "position": "GK",
         "rating": 88,
-        "value": 40000000
+        "value": 40000000,
+        "uuid": "09e88ab6-4dcd-4371-8e32-b20759505dc3"
     },
     {
         "name": "Courtois",
         "position": "GK",
         "rating": 87,
-        "value": 35000000
+        "value": 35000000,
+        "uuid": "68eccc12-769d-478b-a134-c87cb2688377"
     },
     {
         "name": "Neuer",
         "position": "GK",
         "rating": 86,
-        "value": 15000000
+        "value": 15000000,
+        "uuid": "cf8606fe-956a-4184-a997-1b868e6e951f"
     },
     {
         "name": "Oblak",
         "position": "GK",
         "rating": 87,
-        "value": 45000000
+        "value": 45000000,
+        "uuid": "cec8ad69-ff0d-4da7-bead-513b71e05768"
     },
     {
         "name": "Ter Stegen",
         "position": "GK",
         "rating": 85,
-        "value": 30000000
+        "value": 30000000,
+        "uuid": "9afd8da5-4923-4b4d-96ed-99339e089a8c"
     },
     {
         "name": "Donnarumma",
         "position": "GK",
         "rating": 84,
-        "value": 50000000
+        "value": 50000000,
+        "uuid": "5293bd86-d533-46e1-8caf-69174167bb03"
     },
     {
         "name": "Lloris",
         "position": "GK",
         "rating": 83,
-        "value": 12000000
+        "value": 12000000,
+        "uuid": "7109553d-219b-4166-9484-cc03b9846928"
     },
     {
         "name": "Mendy",
         "position": "GK",
         "rating": 82,
-        "value": 25000000
+        "value": 25000000,
+        "uuid": "cb733c7d-efb7-49ea-87cf-2ddd0085d7d1"
     },
     {
         "name": "Handanovic",
         "position": "GK",
         "rating": 81,
-        "value": 8000000
+        "value": 8000000,
+        "uuid": "1116ced0-9f9d-4956-bc1b-01736d61c520"
     },
     {
         "name": "Szczesny",
         "position": "GK",
         "rating": 82,
-        "value": 15000000
+        "value": 15000000,
+        "uuid": "be2c298b-9acb-4216-854a-1424d01b3871"
     },
     {
         "name": "Navas",
         "position": "GK",
         "rating": 83,
-        "value": 10000000
+        "value": 10000000,
+        "uuid": "512d82d3-12c9-421b-8d09-598d169e9d81"
     },
     {
         "name": "Van Dijk",
         "position": "CB",
         "rating": 90,
-        "value": 70000000
+        "value": 70000000,
+        "uuid": "175ee6a1-0b0b-439a-8d2b-fcb0b0e94552"
     },
     {
         "name": "Dias",
         "position": "CB",
         "rating": 87,
-        "value": 80000000
+        "value": 80000000,
+        "uuid": "e1ceb828-0d62-4740-8ced-bfbc3cad4985"
     },
     {
         "name": "Marquinhos",
         "position": "CB",
         "rating": 86,
-        "value": 60000000
+        "value": 60000000,
+        "uuid": "4e8de3a4-1433-4637-96a9-b6b4f4d9ff80"
     },
     {
         "name": "Koulibaly",
         "position": "CB",
         "rating": 85,
-        "value": 40000000
+        "value": 40000000,
+        "uuid": "67aa4fa2-a647-41ec-99df-e3e21845bd75"
     },
     {
         "name": "Varane",
         "position": "CB",
         "rating": 84,
-        "value": 35000000
+        "value": 35000000,
+        "uuid": "8ac9d8aa-2cec-4c66-ab9b-dd60a3ca999d"
     },
     {
         "name": "Laporte",
         "position": "CB",
         "rating": 83,
-        "value": 50000000
+        "value": 50000000,
+        "uuid": "f6e1ce97-9a8d-470e-a27a-3fe598fec8b0"
     },
     {
         "name": "Ramos",
         "position": "CB",
         "rating": 88,
-        "value": 25000000
+        "value": 25000000,
+        "uuid": "37a99526-8675-4db4-bd42-57c9756835ad"
     },
     {
         "name": "Militao",
         "position": "CB",
         "rating": 84,
-        "value": 70000000
+        "value": 70000000,
+        "uuid": "f4bb074e-9edf-48be-9b68-88a0594ac08b"
     },
     {
         "name": "Stones",
         "position": "CB",
         "rating": 83,
-        "value": 45000000
+        "value": 45000000,
+        "uuid": "d06cd335-b5d8-437e-b800-80a61a5cf939"
     },
     {
         "name": "Araujo",
         "position": "CB",
         "rating": 82,
-        "value": 60000000
+        "value": 60000000,
+        "uuid": "4485acb3-d7c4-4291-8d3b-3385ab2245d3"
     },
     {
         "name": "Kounde",
         "position": "CB",
         "rating": 83,
-        "value": 55000000
+        "value": 55000000,
+        "uuid": "45e7a1d2-704f-45ab-94b8-5380c8711d2a"
     },
     {
         "name": "Skriniar",
         "position": "CB",
         "rating": 84,
-        "value": 50000000
+        "value": 50000000,
+        "uuid": "6f9ed7e1-1018-44eb-830f-40fffddfb972"
     },
     {
         "name": "De Ligt",
         "position": "CB",
         "rating": 85,
-        "value": 75000000
+        "value": 75000000,
+        "uuid": "6f34132e-e1e7-4af1-8449-e3b9a806197f"
     },
     {
         "name": "Bastoni",
         "position": "CB",
         "rating": 82,
-        "value": 65000000
+        "value": 65000000,
+        "uuid": "6393745d-d6b6-4955-89b7-3bc5357c6de0"
     },
     {
         "name": "Rudiger",
         "position": "CB",
         "rating": 83,
-        "value": 40000000
+        "value": 40000000,
+        "uuid": "9ea8f562-daa3-4483-b1cb-d879c5bdd5d9"
     },
     {
         "name": "Thiago Silva",
         "position": "CB",
         "rating": 85,
-        "value": 15000000
+        "value": 15000000,
+        "uuid": "5536fa0e-16a9-425b-8a48-438d8e0da865"
     },
     {
         "name": "Bonucci",
         "position": "CB",
         "rating": 84,
-        "value": 12000000
+        "value": 12000000,
+        "uuid": "c9db108b-b804-4424-8f94-3c0ec11865d0"
     },
     {
         "name": "Chiellini",
         "position": "CB",
         "rating": 85,
-        "value": 8000000
+        "value": 8000000,
+        "uuid": "141a1f24-41d3-4fc1-80aa-0078fadb8b07"
     },
     {
         "name": "Robertson",
         "position": "LB",
         "rating": 85,
-        "value": 45000000
+        "value": 45000000,
+        "uuid": "ae57511e-4773-4ed5-a0d7-c60c7853007c"
     },
     {
         "name": "Davies",
         "position": "LB",
         "rating": 83,
-        "value": 70000000
+        "value": 70000000,
+        "uuid": "e17007f1-0662-4b61-8180-758fc28eecae"
     },
     {
         "name": "Mendy",
         "position": "LB",
         "rating": 81,
-        "value": 35000000
+        "value": 35000000,
+        "uuid": "c6b2cca5-439f-4957-87c0-cd59ab37761c"
     },
     {
         "name": "Alba",
         "position": "LB",
         "rating": 84,
-        "value": 25000000
+        "value": 25000000,
+        "uuid": "4e24db6a-d23a-4e97-a8a0-52af0218a5ef"
     },
     {
         "name": "Acuna",
         "position": "LB",
         "rating": 82,
-        "value": 30000000
+        "value": 30000000,
+        "uuid": "a7d1db36-5536-46b9-b57d-9064dcb495f7"
     },
     {
         "name": "Grimaldo",
         "position": "LB",
         "rating": 81,
-        "value": 25000000
+        "value": 25000000,
+        "uuid": "1724ba8a-1c15-48a7-a7c4-e6ff0a090235"
     },
     {
         "name": "Balde",
         "position": "LB",
         "rating": 79,
-        "value": 40000000
+        "value": 40000000,
+        "uuid": "0a80efff-d08b-4277-bc71-a8a4eb22b265"
     },
     {
         "name": "Cucurella",
         "position": "LB",
         "rating": 80,
-        "value": 35000000
+        "value": 35000000,
+        "uuid": "fcfa41ce-80dd-4725-bcfe-e978570f8b4a"
     },
     {
         "name": "Tierney",
         "position": "LB",
         "rating": 80,
-        "value": 25000000
+        "value": 25000000,
+        "uuid": "2f3c2976-2f03-462f-88a9-a944da88a83c"
     },
     {
         "name": "Shaw",
         "position": "LB",
         "rating": 81,
-        "value": 30000000
+        "value": 30000000,
+        "uuid": "c85bbeb4-93a5-4f03-9093-5271945cfa07"
     },
     {
         "name": "Cancelo",
         "position": "RB",
         "rating": 84,
-        "value": 50000000
+        "value": 50000000,
+        "uuid": "3f0b88c8-f797-4875-8235-4e01189b2368"
     },
     {
         "name": "Hakimi",
         "position": "RB",
         "rating": 84,
-        "value": 60000000
+        "value": 60000000,
+        "uuid": "aaf95cbb-fd33-4e61-a017-92f446cc54ef"
     },
     {
         "name": "Walker",
         "position": "RB",
         "rating": 82,
-        "value": 30000000
+        "value": 30000000,
+        "uuid": "14a1c6af-e7d4-4c9f-b334-8d61f7ee9266"
     },
     {
         "name": "Carvajal",
         "position": "RB",
         "rating": 83,
-        "value": 25000000
+        "value": 25000000,
+        "uuid": "c7097992-9d3e-43f3-a340-9287d4b5b5bf"
     },
     {
         "name": "Kimmich",
         "position": "RB",
         "rating": 86,
-        "value": 70000000
+        "value": 70000000,
+        "uuid": "afe51c14-4729-4d94-9082-261d8e4988c9"
     },
     {
         "name": "Trippier",
         "position": "RB",
         "rating": 81,
-        "value": 20000000
+        "value": 20000000,
+        "uuid": "2e2a717a-e83f-4271-b325-8721f9960fe1"
     },
     {
         "name": "Pavard",
         "position": "RB",
         "rating": 82,
-        "value": 35000000
+        "value": 35000000,
+        "uuid": "c023d0ee-c9f3-40d0-9d72-eb4cf53eebed"
     },
     {
         "name": "Dest",
         "position": "RB",
         "rating": 78,
-        "value": 25000000
+        "value": 25000000,
+        "uuid": "792e6d3c-7cf5-4b97-903b-93d8778c9ffd"
     },
     {
         "name": "Azpilicueta",
         "position": "RB",
         "rating": 82,
-        "value": 15000000
+        "value": 15000000,
+        "uuid": "a4f8feec-398a-4aa3-b994-d75d4b9edd4d"
     },
     {
         "name": "Wan-Bissaka",
         "position": "RB",
         "rating": 79,
-        "value": 20000000
+        "value": 20000000,
+        "uuid": "02c54ec7-887c-4a61-9af2-52c2ee0c7665"
     },
     {
         "name": "Rodri",
         "position": "CDM",
         "rating": 85,
-        "value": 80000000
+        "value": 80000000,
+        "uuid": "2490822c-15dc-40ed-bf14-4f5b38880155"
     },
     {
         "name": "Casemiro",
         "position": "CDM",
         "rating": 85,
-        "value": 40000000
+        "value": 40000000,
+        "uuid": "6a0ebba7-ce87-4b0b-a5f6-1e5ac8a57660"
     },
     {
         "name": "Kante",
         "position": "CDM",
         "rating": 87,
-        "value": 35000000
+        "value": 35000000,
+        "uuid": "5f32f2b8-a506-40de-8fe1-e0c9167fe57a"
     },
     {
         "name": "Fabinho",
         "position": "CDM",
         "rating": 84,
-        "value": 45000000
+        "value": 45000000,
+        "uuid": "e6a4a3ad-0c9a-41c4-be62-2780b658f594"
     },
     {
         "name": "Busquets",
         "position": "CDM",
         "rating": 85,
-        "value": 15000000
+        "value": 15000000,
+        "uuid": "83fac8c1-bcce-4bb6-a732-14889387d9c0"
     },
     {
         "name": "Tchouameni",
         "position": "CDM",
         "rating": 82,
-        "value": 80000000
+        "value": 80000000,
+        "uuid": "acbd6d59-a122-49ce-8f1c-183354a68d22"
     },
     {
         "name": "Rice",
         "position": "CDM",
         "rating": 82,
-        "value": 70000000
+        "value": 70000000,
+        "uuid": "683591ba-0950-423f-ac70-e54ca2df2842"
     },
     {
         "name": "Partey",
         "position": "CDM",
         "rating": 83,
-        "value": 45000000
+        "value": 45000000,
+        "uuid": "f256384f-40aa-449a-83e5-929ac7fb0689"
     },
     {
         "name": "Brozovic",
         "position": "CDM",
         "rating": 84,
-        "value": 35000000
+        "value": 35000000,
+        "uuid": "54d5f0fa-151b-468c-9fe0-55d3f5309b23"
     },
     {
         "name": "Jorginho",
         "position": "CDM",
         "rating": 82,
-        "value": 25000000
+        "value": 25000000,
+        "uuid": "5c308fdd-6bea-4d09-adda-5c89d1ee1f94"
     },
     {
         "name": "Kessie",
         "position": "CDM",
         "rating": 81,
-        "value": 30000000
+        "value": 30000000,
+        "uuid": "96e9eb3c-9794-4176-8673-a65d15f24df4"
     },
     {
         "name": "Zakaria",
         "position": "CDM",
         "rating": 80,
-        "value": 25000000
+        "value": 25000000,
+        "uuid": "5f7c9969-a0fc-42d4-bb37-4c8de200bda8"
     },
     {
         "name": "Modric",
         "position": "CM",
         "rating": 88,
-        "value": 20000000
+        "value": 20000000,
+        "uuid": "37403b4f-88be-4538-b727-53a03e71b210"
     },
     {
         "name": "Kroos",
         "position": "CM",
         "rating": 86,
-        "value": 15000000
+        "value": 15000000,
+        "uuid": "b265a705-f6eb-4792-88cb-96e00b7609b7"
     },
     {
         "name": "Bellingham",
         "position": "CM",
         "rating": 85,
-        "value": 120000000
+        "value": 120000000,
+        "uuid": "1142a744-da49-4899-b9d8-c4b3b0441613"
     },
     {
         "name": "Pedri",
         "position": "CM",
         "rating": 84,
-        "value": 90000000
+        "value": 90000000,
+        "uuid": "76685a67-314c-4ef8-8047-0e8d2b1cdcd5"
     },
     {
         "name": "Gavi",
         "position": "CM",
         "rating": 82,
-        "value": 80000000
+        "value": 80000000,
+        "uuid": "22c767a6-cd3d-4d8e-b23e-411bfcb05d4d"
     },
     {
         "name": "Verratti",
         "position": "CM",
         "rating": 85,
-        "value": 55000000
+        "value": 55000000,
+        "uuid": "104657ba-f3a0-4ba9-bc2a-ac44e5aa0ca4"
     },
     {
         "name": "Frenkie de Jong",
         "position": "CM",
         "rating": 85,
-        "value": 70000000
+        "value": 70000000,
+        "uuid": "cb03c738-b03f-40db-ad04-9db253cc216a"
     },
     {
         "name": "Valverde",
         "position": "CM",
         "rating": 84,
-        "value": 80000000
+        "value": 80000000,
+        "uuid": "991a79c2-7acd-4050-b9c8-cbac81a4aa23"
     },
     {
         "name": "Camavinga",
         "position": "CM",
         "rating": 81,
-        "value": 70000000
+        "value": 70000000,
+        "uuid": "133791a5-4079-453e-98a4-e4d2386d42c9"
     },
     {
         "name": "Goretzka",
         "position": "CM",
         "rating": 83,
-        "value": 50000000
+        "value": 50000000,
+        "uuid": "e66de9f2-230e-4b44-81d4-f6be0637d6f8"
     },
     {
         "name": "Kimmich",
         "position": "CM",
         "rating": 86,
-        "value": 70000000
+        "value": 70000000,
+        "uuid": "91d7786c-b5fc-4c8f-b64c-acb904f2857a"
     },
     {
         "name": "Thiago",
         "position": "CM",
         "rating": 84,
-        "value": 25000000
+        "value": 25000000,
+        "uuid": "f5d38ef8-af87-49e2-96e4-7696907315c8"
     },
     {
         "name": "Henderson",
         "position": "CM",
         "rating": 81,
-        "value": 15000000
+        "value": 15000000,
+        "uuid": "0455db2a-a6c8-4a7b-bbda-9c5d64485d80"
     },
     {
         "name": "Pogba",
         "position": "CM",
         "rating": 83,
-        "value": 40000000
+        "value": 40000000,
+        "uuid": "28379585-bb35-4c93-8886-9bb697acce9c"
     },
     {
         "name": "Barella",
         "position": "CM",
         "rating": 84,
-        "value": 60000000
+        "value": 60000000,
+        "uuid": "b8c14297-6575-4f9a-916b-52b92964736b"
     },
     {
         "name": "Milinkovic-Savic",
         "position": "CM",
         "rating": 84,
-        "value": 55000000
+        "value": 55000000,
+        "uuid": "f6101c69-25a3-4370-a09f-56772aa751bb"
     },
     {
         "name": "De Bruyne",
         "position": "CAM",
         "rating": 91,
-        "value": 100000000
+        "value": 100000000,
+        "uuid": "f994485e-4f72-4eef-ad3d-4091a4a49155"
     },
     {
         "name": "Bruno Fernandes",
         "position": "CAM",
         "rating": 86,
-        "value": 75000000
+        "value": 75000000,
+        "uuid": "5de24dc8-a4f0-439a-b335-01fa8c4888fd"
     },
     {
         "name": "Muller",
         "position": "CAM",
         "rating": 85,
-        "value": 25000000
+        "value": 25000000,
+        "uuid": "c68510da-b2b7-4b22-beb6-60da6d51c660"
     },
     {
         "name": "Odegaard",
         "position": "CAM",
         "rating": 83,
-        "value": 70000000
+        "value": 70000000,
+        "uuid": "36aba90c-9b3c-4ee4-a749-64db9b88bfe5"
     },
     {
         "name": "Maddison",
         "position": "CAM",
         "rating": 82,
-        "value": 50000000
+        "value": 50000000,
+        "uuid": "b73c01e8-5b0f-464e-b0d9-04ba04a4e25c"
     },
     {
         "name": "Mount",
         "position": "CAM",
         "rating": 81,
-        "value": 45000000
+        "value": 45000000,
+        "uuid": "405e3538-3264-4d31-b876-aee1b9ee58a2"
     },
     {
         "name": "Wirtz",
         "position": "CAM",
         "rating": 80,
-        "value": 70000000
+        "value": 70000000,
+        "uuid": "2665194d-087f-4e5d-9a8a-2aad59c4bc79"
     },
     {
         "name": "Havertz",
         "position": "CAM",
         "rating": 82,
-        "value": 60000000
+        "value": 60000000,
+        "uuid": "a27acda4-c947-4fa1-b189-ccbafe46b105"
     },
     {
         "name": "Grealish",
         "position": "CAM",
         "rating": 82,
-        "value": 55000000
+        "value": 55000000,
+        "uuid": "c42d744c-0779-4ca8-9dca-4bd978bb8218"
     },
     {
         "name": "Eriksen",
         "position": "CAM",
         "rating": 83,
-        "value": 20000000
+        "value": 20000000,
+        "uuid": "217577e2-9602-46fc-b991-4478232e0929"
     },
     {
         "name": "Vinicius Jr",
         "position": "LW",
         "rating": 84,
-        "value": 120000000
+        "value": 120000000,
+        "uuid": "2405b4aa-cc96-4167-809c-52905009e824"
     },
     {
         "name": "Neymar",
         "position": "LW",
         "rating": 85,
-        "value": 90000000
+        "value": 90000000,
+        "uuid": "b3916c33-97e9-433a-93e6-7dd2828e2cd9"
     },
     {
         "name": "Mane",
         "position": "LW",
         "rating": 86,
-        "value": 40000000
+        "value": 40000000,
+        "uuid": "aeeab0db-2ef3-4a08-acc3-5d7c99a0d8c4"
     },
     {
         "name": "Son",
         "position": "LW",
         "rating": 85,
-        "value": 70000000
+        "value": 70000000,
+        "uuid": "fa604f46-9e1b-4d4c-86a4-d02e98afd49c"
     },
     {
         "name": "Leao",
         "position": "LW",
         "rating": 82,
-        "value": 80000000
+        "value": 80000000,
+        "uuid": "9ebe4d0a-5c28-4d6e-b147-2879e53ef089"
     },
     {
         "name": "Rashford",
         "position": "LW",
         "rating": 81,
-        "value": 60000000
+        "value": 60000000,
+        "uuid": "2bab9207-4d6c-4284-a784-5e26ad45a2a1"
     },
     {
         "name": "Martinelli",
         "position": "LW",
         "rating": 79,
-        "value": 50000000
+        "value": 50000000,
+        "uuid": "db30b9ca-4cc0-46b5-9509-32ac35417f00"
     },
     {
         "name": "Diaz",
         "position": "LW",
         "rating": 80,
-        "value": 55000000
+        "value": 55000000,
+        "uuid": "54c80a74-a61a-4245-bfdf-1101008aa201"
     },
     {
         "name": "Coman",
         "position": "LW",
         "rating": 82,
-        "value": 45000000
+        "value": 45000000,
+        "uuid": "9719cf92-d29f-4d64-b71c-2c301373d63f"
     },
     {
         "name": "Insigne",
         "position": "LW",
         "rating": 83,
-        "value": 25000000
+        "value": 25000000,
+        "uuid": "f689f767-0c1e-4f7a-8859-2627315586ec"
     },
     {
         "name": "Sterling",
         "position": "LW",
         "rating": 84,
-        "value": 50000000
+        "value": 50000000,
+        "uuid": "13b8cee6-f836-426b-a1f7-9527116245cb"
     },
     {
         "name": "Fati",
         "position": "LW",
         "rating": 78,
-        "value": 60000000
+        "value": 60000000,
+        "uuid": "0d5f0035-644a-4dfe-8062-cad428944475"
     },
     {
         "name": "Salah",
         "position": "RW",
         "rating": 87,
-        "value": 65000000
+        "value": 65000000,
+        "uuid": "11e16d67-9ad6-4733-b3c9-ffbef09d6aaf"
     },
     {
         "name": "Saka",
         "position": "RW",
         "rating": 83,
-        "value": 90000000
+        "value": 90000000,
+        "uuid": "e31a2d6f-90b3-435d-8584-976ddfa117c1"
     },
     {
         "name": "Mahrez",
         "position": "RW",
         "rating": 84,
-        "value": 30000000
+        "value": 30000000,
+        "uuid": "d31d7d94-2a5a-46b1-b6ea-523cd390e7fa"
     },
     {
         "name": "Dembele",
         "position": "RW",
         "rating": 82,
-        "value": 50000000
+        "value": 50000000,
+        "uuid": "12bc432d-27cc-40a3-acf8-dd583056fb69"
     },
     {
         "name": "Raphinha",
         "position": "RW",
         "rating": 81,
-        "value": 55000000
+        "value": 55000000,
+        "uuid": "d67bf3d1-5342-4ea4-8dc6-bccd79134fd2"
     },
     {
         "name": "Antony",
         "position": "RW",
         "rating": 79,
-        "value": 70000000
+        "value": 70000000,
+        "uuid": "15a2c9cd-04ed-4d2a-b870-4f6d4f608ad3"
     },
     {
         "name": "Sancho",
         "position": "RW",
         "rating": 81,
-        "value": 60000000
+        "value": 60000000,
+        "uuid": "6bc7de45-9867-482c-8150-cc084797da66"
     },
     {
         "name": "Gnabry",
         "position": "RW",
         "rating": 83,
-        "value": 45000000
+        "value": 45000000,
+        "uuid": "594dd096-84bb-4342-94b2-3f2f926d0424"
     },
     {
         "name": "Kulusevski",
         "position": "RW",
         "rating": 80,
-        "value": 40000000
+        "value": 40000000,
+        "uuid": "ec0cebc6-d397-4771-ba3e-096e1b427c28"
     },
     {
         "name": "Ferran Torres",
         "position": "RW",
         "rating": 80,
-        "value": 35000000
+        "value": 35000000,
+        "uuid": "d900e2b8-b99c-4ee3-aa5e-12ff011dfca4"
     },
     {
         "name": "Pulisic",
         "position": "RW",
         "rating": 79,
-        "value": 30000000
+        "value": 30000000,
+        "uuid": "a06feb53-1d7f-4cf2-85d1-330ab48a64b9"
     },
     {
         "name": "Rodrygo",
         "position": "RW",
         "rating": 81,
-        "value": 60000000
+        "value": 60000000,
+        "uuid": "2acc1150-1f61-4534-b3cf-ace3a42cf8fc"
     },
     {
         "name": "Mbappe",
         "position": "ST",
         "rating": 92,
-        "value": 180000000
+        "value": 180000000,
+        "uuid": "64f83bea-8a53-460a-a7cd-9cd67851e14c"
     },
     {
         "name": "Haaland",
         "position": "ST",
         "rating": 91,
-        "value": 170000000
+        "value": 170000000,
+        "uuid": "06f6742b-dced-4d55-83ee-6308fa8d0cae"
     },
     {
         "name": "Kane",
         "position": "ST",
         "rating": 87,
-        "value": 100000000
+        "value": 100000000,
+        "uuid": "e60b9c5a-d5b9-4b26-b6d1-cf1b61398184"
     },
     {
         "name": "Lewandowski",
         "position": "ST",
         "rating": 88,
-        "value": 45000000
+        "value": 45000000,
+        "uuid": "0550b21e-3813-46ef-84ce-ad30142cee96"
     },
     {
         "name": "Benzema",
         "position": "ST",
         "rating": 89,
-        "value": 35000000
+        "value": 35000000,
+        "uuid": "d9169fd3-1b6b-4409-a4d8-428414d617f0"
     },
     {
         "name": "Lukaku",
         "position": "ST",
         "rating": 85,
-        "value": 60000000
+        "value": 60000000,
+        "uuid": "3cf28dd6-7ee2-4001-bde2-32ca6f9d3843"
     },
     {
         "name": "Immobile",
         "position": "ST",
         "rating": 84,
-        "value": 35000000
+        "value": 35000000,
+        "uuid": "c7b54227-2311-4dc1-9bed-8491ba1ce51e"
     },
     {
         "name": "Suarez",
         "position": "ST",
         "rating": 85,
-        "value": 15000000
+        "value": 15000000,
+        "uuid": "7b613cf2-1dc2-4047-951a-2d50812e4bd9"
     },
     {
         "name": "Cavani",
         "position": "ST",
         "rating": 83,
-        "value": 12000000
+        "value": 12000000,
+        "uuid": "6059e1f0-8f9c-4f6c-9e28-d7b3400363b7"
     },
     {
         "name": "Aubameyang",
         "position": "ST",
         "rating": 82,
-        "value": 20000000
+        "value": 20000000,
+        "uuid": "62614bc2-d1ee-4eeb-8de0-e04a4ad34d03"
     },
     {
         "name": "Giroud",
         "position": "ST",
         "rating": 82,
-        "value": 8000000
+        "value": 8000000,
+        "uuid": "217d0d92-8367-4383-8aa9-1554c4377e02"
     },
     {
         "name": "Jesus",
         "position": "ST",
         "rating": 81,
-        "value": 45000000
+        "value": 45000000,
+        "uuid": "bedff1a2-dc16-4dea-927f-3c6277de615f"
     },
     {
         "name": "Isak",
         "position": "ST",
         "rating": 80,
-        "value": 60000000
+        "value": 60000000,
+        "uuid": "3ce3fac6-9201-49fc-ab41-ecc6ac94ddef"
     },
     {
         "name": "Lautaro",
         "position": "ST",
         "rating": 84,
-        "value": 80000000
+        "value": 80000000,
+        "uuid": "08f1f03a-d669-4018-858c-8486406e9780"
     },
     {
         "name": "Osimhen",
         "position": "CF",
         "rating": 85,
-        "value": 120000000
+        "value": 120000000,
+        "uuid": "dfa4793a-7d08-4482-ab94-a495fedad048"
     },
     {
         "name": "Vlahovic",
         "position": "CF",
         "rating": 84,
-        "value": 70000000
+        "value": 70000000,
+        "uuid": "bb2d4776-d291-467c-bf7c-8193ce45781c"
     },
     {
         "name": "Nunez",
         "position": "CF",
         "rating": 83,
-        "value": 75000000
+        "value": 75000000,
+        "uuid": "b23fcee4-916c-4c1e-930c-6d5a6e8c2f5d"
     },
     {
         "name": "Scamacca",
         "position": "CF",
         "rating": 79,
-        "value": 40000000
+        "value": 40000000,
+        "uuid": "d2832ab3-6a4f-4614-998f-e01bc9ae84b9"
     },
     {
         "name": "Morata",
         "position": "CF",
         "rating": 82,
-        "value": 25000000
+        "value": 25000000,
+        "uuid": "7f759306-fcc6-4688-96d4-c6a4deabdbdd"
     },
     {
         "name": "Dzeko",
         "position": "CF",
         "rating": 83,
-        "value": 15000000
+        "value": 15000000,
+        "uuid": "85c05efe-4f22-4355-9e0a-5ea9640373d3"
     },
     {
         "name": "Firmino",
         "position": "CF",
         "rating": 83,
-        "value": 30000000
+        "value": 30000000,
+        "uuid": "b09fb191-fb19-434e-92e6-71cffcf34a19"
     },
     {
         "name": "Jovic",
         "position": "CF",
         "rating": 79,
-        "value": 25000000
+        "value": 25000000,
+        "uuid": "6aadb2e4-7596-4948-b811-a3fdce9d56ff"
     },
     {
         "name": "Theo Hernandez",
         "position": "LWB",
         "rating": 84,
-        "value": 60000000
+        "value": 60000000,
+        "uuid": "c41a517f-442a-484c-9b97-62d2fbf2a978"
     },
     {
         "name": "Chilwell",
         "position": "LWB",
         "rating": 82,
-        "value": 45000000
+        "value": 45000000,
+        "uuid": "ba81225e-d2f6-432e-a96b-2cef1e0f8854"
     },
     {
         "name": "Gosens",
         "position": "LWB",
         "rating": 81,
-        "value": 25000000
+        "value": 25000000,
+        "uuid": "0ebb6b7c-6113-4262-8035-a2fc09f78071"
     },
     {
         "name": "Perisic",
         "position": "LWB",
         "rating": 83,
-        "value": 20000000
+        "value": 20000000,
+        "uuid": "ba04b158-9698-4ca3-9af1-11ec3a1a5fd4"
     },
     {
         "name": "Alonso",
         "position": "LWB",
         "rating": 81,
-        "value": 15000000
+        "value": 15000000,
+        "uuid": "72900c25-b941-4b6e-942d-f9c54f808d2c"
     },
     {
         "name": "Guerreiro",
         "position": "LWB",
         "rating": 82,
-        "value": 30000000
+        "value": 30000000,
+        "uuid": "268c9296-f8f1-40bc-93bd-6d2cc590acb5"
     },
     {
         "name": "Reece James",
         "position": "RWB",
         "rating": 84,
-        "value": 65000000
+        "value": 65000000,
+        "uuid": "5390d473-e6ae-4c05-b540-0f3c5b392875"
     },
     {
         "name": "Dumfries",
         "position": "RWB",
         "rating": 82,
-        "value": 40000000
+        "value": 40000000,
+        "uuid": "b0f6d84e-ed44-448e-8ecc-ce25abefe45f"
     },
     {
         "name": "Hakimi",
         "position": "RWB",
         "rating": 84,
-        "value": 60000000
+        "value": 60000000,
+        "uuid": "4b0ff8e6-9cde-4668-9fe7-b0615d96a813"
     },
     {
         "name": "Dani Alves",
         "position": "RWB",
         "rating": 82,
-        "value": 8000000
+        "value": 8000000,
+        "uuid": "014413c1-5c65-4d97-add9-7000474e722d"
     },
     {
         "name": "Bellerin",
         "position": "RWB",
         "rating": 79,
-        "value": 15000000
+        "value": 15000000,
+        "uuid": "07142a76-db03-4a60-99e1-aa91ede3fc19"
     },
     {
         "name": "Chiesa",
         "position": "LM",
         "rating": 84,
-        "value": 70000000
+        "value": 70000000,
+        "uuid": "a208d124-983c-4f38-a264-2b7da7b2fbe7"
     },
     {
         "name": "Kostic",
         "position": "LM",
         "rating": 82,
-        "value": 25000000
+        "value": 25000000,
+        "uuid": "31e81b93-a6c1-4854-bb0e-2b2602de89d0"
     },
     {
         "name": "Spinazzola",
         "position": "LM",
         "rating": 81,
-        "value": 30000000
+        "value": 30000000,
+        "uuid": "7b4e87cb-b7f5-424f-98cf-09f0d508fc2d"
     },
     {
         "name": "Carrasco",
         "position": "LM",
         "rating": 82,
-        "value": 35000000
+        "value": 35000000,
+        "uuid": "f47b0a11-7026-4850-a841-a5cee241ec19"
     },
     {
         "name": "Nuno Mendes",
         "position": "LM",
         "rating": 79,
-        "value": 40000000
+        "value": 40000000,
+        "uuid": "7af588bc-bb52-4cbb-95f3-cb222bbcd2e4"
     },
     {
         "name": "Di Maria",
         "position": "RM",
         "rating": 85,
-        "value": 20000000
+        "value": 20000000,
+        "uuid": "cb552cca-af75-40ab-a4d2-2b46d5e625ed"
     },
     {
         "name": "Cuadrado",
         "position": "RM",
         "rating": 83,
-        "value": 15000000
+        "value": 15000000,
+        "uuid": "1b72548b-774a-4cbf-9f93-dca55da846ac"
     },
     {
         "name": "Berardi",
         "position": "RM",
         "rating": 82,
-        "value": 35000000
+        "value": 35000000,
+        "uuid": "99628cd0-6c6a-49df-870c-91bfafbbe349"
     },
     {
         "name": "Lazzari",
         "position": "RM",
         "rating": 80,
-        "value": 20000000
+        "value": 20000000,
+        "uuid": "98179f85-d13f-451e-9766-aa06612f3bfb"
     },
     {
         "name": "Politano",
         "position": "RM",
         "rating": 81,
-        "value": 25000000
+        "value": 25000000,
+        "uuid": "1ffac97b-a538-46b8-9eb1-27f98f11c9fd"
     },
     {
         "name": "Messi",
         "position": "RW",
         "rating": 93,
-        "value": 50000000
+        "value": 50000000,
+        "uuid": "af7b59e6-7c66-4ceb-b242-fc3e8ee6f904"
     },
     {
         "name": "Ronaldo",
         "position": "ST",
         "rating": 90,
-        "value": 15000000
+        "value": 15000000,
+        "uuid": "f74228b1-5ac4-4303-92b2-98752107ebde"
     },
     {
         "name": "Buffon",
         "position": "GK",
         "rating": 83,
-        "value": 5000000
+        "value": 5000000,
+        "uuid": "a427a699-04e3-420f-9e46-4ddecb46afd7"
     },
     {
         "name": "Casillas",
         "position": "GK",
         "rating": 84,
-        "value": 8000000
+        "value": 8000000,
+        "uuid": "ee75e636-50de-4dd6-ba38-45eff5a6d788"
     },
     {
         "name": "Maldini",
         "position": "LB",
         "rating": 94,
-        "value": 15000000
+        "value": 15000000,
+        "uuid": "97ea7a58-179f-4bca-879f-f52dd0a624fc"
     },
     {
         "name": "Cafu",
         "position": "RB",
         "rating": 92,
-        "value": 12000000
+        "value": 12000000,
+        "uuid": "4a084fdb-e70a-4f7f-9762-d239e61d8794"
     },
     {
         "name": "Puyol",
         "position": "CB",
         "rating": 90,
-        "value": 10000000
+        "value": 10000000,
+        "uuid": "ce150d17-1a59-45c9-a6b9-6002c2feb6b7"
     },
     {
         "name": "Nesta",
         "position": "CB",
         "rating": 91,
-        "value": 8000000
+        "value": 8000000,
+        "uuid": "725abc3a-fa88-4289-b19c-cf4f5b97995a"
     },
     {
         "name": "Cannavaro",
         "position": "CB",
         "rating": 89,
-        "value": 7000000
+        "value": 7000000,
+        "uuid": "be889d75-6f9c-4b0a-8034-2c6e7f0e56d7"
     },
     {
         "name": "Roberto Carlos",
         "position": "LB",
         "rating": 91,
-        "value": 10000000
+        "value": 10000000,
+        "uuid": "433386b6-fce8-43a1-b930-3a3a70cf5c9f"
     },
     {
         "name": "Xavi",
         "position": "CM",
         "rating": 93,
-        "value": 8000000
+        "value": 8000000,
+        "uuid": "f6f03cf1-aab8-4c17-9ffe-470617a1c5e8"
     },
     {
         "name": "Iniesta",
         "position": "CAM",
         "rating": 92,
-        "value": 6000000
+        "value": 6000000,
+        "uuid": "71f3fad1-0674-4813-9b4a-da8e72289282"
     },
     {
         "name": "Pirlo",
         "position": "CM",
         "rating": 91,
-        "value": 5000000
+        "value": 5000000,
+        "uuid": "49068a8c-e3f0-439e-834e-5e586b845069"
     },
     {
         "name": "Gerrard",
         "position": "CM",
         "rating": 90,
-        "value": 7000000
+        "value": 7000000,
+        "uuid": "ae1ff947-6c75-403f-a608-712529f01d9b"
     },
     {
         "name": "Lampard",
         "position": "CAM",
         "rating": 89,
-        "value": 6000000
+        "value": 6000000,
+        "uuid": "693bd44d-66ab-4c51-9556-0df1443db470"
     },
     {
         "name": "Scholes",
         "position": "CM",
         "rating": 88,
-        "value": 5000000
+        "value": 5000000,
+        "uuid": "33bb7e90-86a4-484e-ad92-07d6f135c6a8"
     },
     {
         "name": "Kaka",
         "position": "CAM",
         "rating": 91,
-        "value": 8000000
+        "value": 8000000,
+        "uuid": "173d486a-8b75-4689-a3c3-c7b76390af49"
     },
     {
         "name": "Ronaldinho",
         "position": "LW",
         "rating": 94,
-        "value": 12000000
+        "value": 12000000,
+        "uuid": "f066f96d-5e85-4f03-8d2f-919c57484813"
     },
     {
         "name": "Ronaldo Nazario",
         "position": "ST",
         "rating": 94,
-        "value": 15000000
+        "value": 15000000,
+        "uuid": "19903a85-53b6-4761-868f-9d79f746da4b"
     },
     {
         "name": "Zidane",
         "position": "CAM",
         "rating": 94,
-        "value": 10000000
+        "value": 10000000,
+        "uuid": "aa428a71-2de6-4575-83dc-3aae3c50ca1e"
     },
     {
         "name": "Maradona",
         "position": "CAM",
         "rating": 97,
-        "value": 20000000
+        "value": 20000000,
+        "uuid": "4f5c7e1a-4bc3-425a-aeb0-e864b393a224"
     },
     {
         "name": "Pele",
         "position": "ST",
         "rating": 98,
-        "value": 25000000
+        "value": 25000000,
+        "uuid": "b5f98495-8b32-421c-a6ff-7d39b053ea7b"
     },
     {
         "name": "Cruyff",
         "position": "CF",
         "rating": 94,
-        "value": 18000000
+        "value": 18000000,
+        "uuid": "59231982-291b-48ae-8057-8e3415ee8a03"
     },
     {
         "name": "Beckham",
         "position": "RM",
         "rating": 89,
-        "value": 8000000
+        "value": 8000000,
+        "uuid": "31af48e7-460c-4951-93c5-8fba384b7785"
     },
     {
         "name": "Figo",
         "position": "RW",
         "rating": 90,
-        "value": 7000000
+        "value": 7000000,
+        "uuid": "391b5aeb-97c1-4e19-bf8d-9aefb97c0654"
     },
     {
         "name": "Henry",
         "position": "LW",
         "rating": 91,
-        "value": 10000000
+        "value": 10000000,
+        "uuid": "ad36943c-2011-4e2d-bcf4-d34648ea77ac"
     },
     {
         "name": "Raul",
         "position": "ST",
         "rating": 88,
-        "value": 6000000
+        "value": 6000000,
+        "uuid": "a651a0d2-80a0-4aac-985e-c8a397888ebc"
     },
     {
         "name": "Totti",
         "position": "CAM",
         "rating": 90,
-        "value": 7000000
+        "value": 7000000,
+        "uuid": "f1c8ad2a-b7ca-495a-8b49-03808b1d6292"
     },
     {
         "name": "Del Piero",
         "position": "CF",
         "rating": 89,
-        "value": 6000000
+        "value": 6000000,
+        "uuid": "56cc35b2-719c-4312-bb9e-131a909c4d60"
     },
     {
         "name": "Baggio",
         "position": "CAM",
         "rating": 93,
-        "value": 8000000
+        "value": 8000000,
+        "uuid": "31dbc8a3-0de4-44cd-b473-6c3673dd95d4"
     },
     {
         "name": "Rivaldo",
         "position": "LW",
         "rating": 91,
-        "value": 7000000
+        "value": 7000000,
+        "uuid": "e074766f-731c-489a-8f70-43b0005b8c5f"
     },
     {
         "name": "Romario",
         "position": "ST",
         "rating": 91,
-        "value": 8000000
+        "value": 8000000,
+        "uuid": "53afeeea-f07e-4305-80ba-f0088b957734"
     },
     {
         "name": "Matthaus",
         "position": "CDM",
         "rating": 91,
-        "value": 6000000
+        "value": 6000000,
+        "uuid": "4cbd3f85-a00b-43a7-b742-e22ad44a16f8"
     },
     {
         "name": "Gullit",
         "position": "CM",
         "rating": 90,
-        "value": 7000000
+        "value": 7000000,
+        "uuid": "ccdce014-7b22-441a-aa30-95bcb8e0fc25"
     },
     {
         "name": "Van Basten",
         "position": "ST",
         "rating": 92,
-        "value": 9000000
+        "value": 9000000,
+        "uuid": "4c471659-8e6b-444d-84b1-e6f947d46e48"
     },
     {
         "name": "Baresi",
         "position": "CB",
         "rating": 93,
-        "value": 8000000
+        "value": 8000000,
+        "uuid": "bf734119-fc69-4e2c-a85d-483065e1e245"
     },
     {
         "name": "Yashin",
         "position": "GK",
         "rating": 94,
-        "value": 10000000
+        "value": 10000000,
+        "uuid": "06bba326-560d-4457-aeac-3f6cfde843a0"
     },
     {
         "name": "Garrincha",
         "position": "RW",
         "rating": 93,
-        "value": 12000000
+        "value": 12000000,
+        "uuid": "49f35f4d-25cd-4b36-b4fd-744f8625da44"
     },
     {
         "name": "Best",
         "position": "RW",
         "rating": 91,
-        "value": 8000000
+        "value": 8000000,
+        "uuid": "f6d63c15-31c3-4349-93a0-e63844bfb738"
     },
     {
         "name": "Charlton",
         "position": "CAM",
         "rating": 89,
-        "value": 6000000
+        "value": 6000000,
+        "uuid": "06cfcd9a-6e9e-4533-a050-daa31334ceee"
     },
     {
         "name": "Eusebio",
         "position": "ST",
         "rating": 91,
-        "value": 8000000
+        "value": 8000000,
+        "uuid": "5a26d055-e0ad-4af1-b955-4c387d473a73"
     },
     {
         "name": "Puskas",
         "position": "ST",
         "rating": 92,
-        "value": 9000000
+        "value": 9000000,
+        "uuid": "3a5cda6e-1891-4b94-adaf-f1edebafaa02"
     },
     {
         "name": "Di Stefano",
         "position": "CF",
         "rating": 93,
-        "value": 10000000
+        "value": 10000000,
+        "uuid": "85df63c4-78f2-41f0-93ba-7887d23aeae0"
     },
     {
         "name": "Gento",
         "position": "LW",
         "rating": 88,
-        "value": 5000000
+        "value": 5000000,
+        "uuid": "da00ad6a-25e8-4406-91e1-5c5d3f1ecb3f"
     },
     {
         "name": "Platini",
         "position": "CAM",
         "rating": 92,
-        "value": 7000000
+        "value": 7000000,
+        "uuid": "b1ab5ee1-ebc6-4254-9dde-e356ad6271f9"
     },
     {
         "name": "Socrates",
         "position": "CAM",
         "rating": 88,
-        "value": 5000000
+        "value": 5000000,
+        "uuid": "af80c2dd-a49a-4a0e-b425-6dcf07bab9e9"
     },
     {
         "name": "Zico",
         "position": "CAM",
         "rating": 90,
-        "value": 6000000
+        "value": 6000000,
+        "uuid": "eb245984-143b-4467-9fe2-6f608bb373e8"
     },
     {
         "name": "Falcao",
         "position": "ST",
         "rating": 84,
-        "value": 20000000
+        "value": 20000000,
+        "uuid": "968fbd2c-c5df-47c2-a92d-4fa93a8979b1"
     },
     {
         "name": "Cavani",
         "position": "ST",
         "rating": 83,
-        "value": 12000000
+        "value": 12000000,
+        "uuid": "a54bbb1e-81fa-472e-b65c-3343b1da555a"
     },
     {
         "name": "Suarez",
         "position": "ST",
         "rating": 85,
-        "value": 15000000
+        "value": 15000000,
+        "uuid": "7aa986f3-ac99-4325-9c15-240182af749b"
     },
     {
         "name": "Forlan",
         "position": "ST",
         "rating": 86,
-        "value": 8000000
+        "value": 8000000,
+        "uuid": "6cb0668b-7e78-46e0-a131-ea6faa3cee08"
     },
     {
         "name": "Godin",
         "position": "CB",
         "rating": 85,
-        "value": 10000000
+        "value": 10000000,
+        "uuid": "7798cfff-08c4-44a1-8d4e-216a9094f9c5"
     },
     {
         "name": "Gimenez",
         "position": "CB",
         "rating": 83,
-        "value": 45000000
+        "value": 45000000,
+        "uuid": "8fc17270-58d9-4906-bdb2-41958959d433"
     },
     {
         "name": "Muslera",
         "position": "GK",
         "rating": 82,
-        "value": 8000000
+        "value": 8000000,
+        "uuid": "9dbc7341-308a-44fe-8f66-f6263b9cc1b8"
     },
     {
         "name": "Vidal",
         "position": "CM",
         "rating": 84,
-        "value": 15000000
+        "value": 15000000,
+        "uuid": "0d2e20ad-8085-4835-9877-4817b96fcd2f"
     },
     {
         "name": "Alexis Sanchez",
         "position": "RW",
         "rating": 82,
-        "value": 18000000
+        "value": 18000000,
+        "uuid": "3ec46b96-877f-4801-a447-b80b3e6f5610"
     },
     {
         "name": "Bravo",
         "position": "GK",
         "rating": 81,
-        "value": 5000000
+        "value": 5000000,
+        "uuid": "7ec61684-300a-4959-a360-7988757bfa10"
     },
     {
         "name": "Medel",
         "position": "CDM",
         "rating": 80,
-        "value": 8000000
+        "value": 8000000,
+        "uuid": "deb42193-71b8-4659-8abf-a0f389e79d95"
     },
     {
         "name": "Vargas",
         "position": "LW",
         "rating": 79,
-        "value": 12000000
+        "value": 12000000,
+        "uuid": "7b159763-8807-4ab8-b4f5-a4101a5376a3"
     },
     {
         "name": "Aránguiz",
         "position": "CM",
         "rating": 80,
-        "value": 10000000
+        "value": 10000000,
+        "uuid": "e26c48f1-b584-4f58-a7f4-2d35dbba345e"
     },
     {
         "name": "Brereton",
         "position": "ST",
         "rating": 78,
-        "value": 15000000
+        "value": 15000000,
+        "uuid": "04624b5f-f31c-4408-828b-321d11978841"
     },
     {
         "name": "James Rodriguez",
         "position": "CAM",
         "rating": 83,
-        "value": 25000000
+        "value": 25000000,
+        "uuid": "79829c2c-6088-42e3-8eb9-5b04c47a2ba6"
     },
     {
         "name": "Cuadrado",
         "position": "RW",
         "rating": 83,
-        "value": 15000000
+        "value": 15000000,
+        "uuid": "53238365-831c-4431-aee7-7594a1c05839"
     },
     {
         "name": "Ospina",
         "position": "GK",
         "rating": 81,
-        "value": 8000000
+        "value": 8000000,
+        "uuid": "8eb6d2e4-421a-4db8-91fc-1c68a0275f64"
     },
     {
         "name": "Yerry Mina",
         "position": "CB",
         "rating": 80,
-        "value": 20000000
+        "value": 20000000,
+        "uuid": "0f8bad0e-0bbe-4ef7-9fb9-114663ebf242"
     },
     {
         "name": "Zapata",
         "position": "ST",
         "rating": 82,
-        "value": 25000000
+        "value": 25000000,
+        "uuid": "41650981-f78f-486c-b695-133c79776e9a"
     },
     {
         "name": "Muriel",
         "position": "ST",
         "rating": 81,
-        "value": 20000000
+        "value": 20000000,
+        "uuid": "b9e22f55-c6ad-462e-89a0-0dc0a93f1286"
     },
     {
         "name": "Quintero",
         "position": "CAM",
         "rating": 79,
-        "value": 15000000
+        "value": 15000000,
+        "uuid": "0141de2e-b5e3-4e17-8fe4-b6c2fc592eb3"
     },
     {
         "name": "Barrios",
         "position": "CDM",
         "rating": 78,
-        "value": 12000000
+        "value": 12000000,
+        "uuid": "5ae47e4a-1898-4793-8bf1-3707845ae296"
     },
     {
         "name": "Lozano",
         "position": "RW",
         "rating": 80,
-        "value": 30000000
+        "value": 30000000,
+        "uuid": "67022286-1dd7-4fd5-aa8d-2b9dae092501"
     },
     {
         "name": "Jimenez",
         "position": "ST",
         "rating": 81,
-        "value": 35000000
+        "value": 35000000,
+        "uuid": "2f2e2ad1-46d6-4e2c-b396-b4f7ea37b94c"
     },
     {
         "name": "Ochoa",
         "position": "GK",
         "rating": 81,
-        "value": 8000000
+        "value": 8000000,
+        "uuid": "66a161a3-6053-46c5-aa1e-bd5079cf6b2d"
     },
     {
         "name": "Herrera",
         "position": "CDM",
         "rating": 80,
-        "value": 15000000
+        "value": 15000000,
+        "uuid": "0c7b2d21-e3cf-4fa4-8dae-29e5efee1ee1"
     },
     {
         "name": "Corona",
         "position": "RW",
         "rating": 79,
-        "value": 20000000
+        "value": 20000000,
+        "uuid": "fc98e481-4f4b-48e7-a381-758fb75ad070"
     },
     {
         "name": "Guardado",
         "position": "CM",
         "rating": 79,
-        "value": 8000000
+        "value": 8000000,
+        "uuid": "35aef2ec-44b7-4c1f-a319-a87a2c49ab99"
     },
     {
         "name": "Moreno",
         "position": "LB",
         "rating": 78,
-        "value": 12000000
+        "value": 12000000,
+        "uuid": "f840839f-0cf6-4d87-8d71-0c73a0d0b688"
     },
     {
         "name": "Araujo",
         "position": "CB",
         "rating": 79,
-        "value": 18000000
+        "value": 18000000,
+        "uuid": "d45266d5-d4c4-42d0-8f9f-a907a846e045"
     },
     {
         "name": "Vega",
         "position": "LW",
         "rating": 77,
-        "value": 15000000
+        "value": 15000000,
+        "uuid": "e4962e9f-dbb2-4322-8d39-7d1966f77e44"
     },
     {
         "name": "Alaba",
         "position": "CB",
         "rating": 84,
-        "value": 40000000
+        "value": 40000000,
+        "uuid": "cc96bfac-ad03-40fb-a577-2aba13e29783"
     },
     {
         "name": "Sabitzer",
         "position": "CM",
         "rating": 82,
-        "value": 25000000
+        "value": 25000000,
+        "uuid": "cab8f58b-f256-423f-8372-6f2209491a05"
     },
     {
         "name": "Arnautovic",
         "position": "ST",
         "rating": 81,
-        "value": 15000000
+        "value": 15000000,
+        "uuid": "bce3a4b8-5e0d-4516-903e-44650e65359c"
     },
     {
         "name": "Laimer",
         "position": "CDM",
         "rating": 81,
-        "value": 30000000
+        "value": 30000000,
+        "uuid": "6cc43737-721a-45b2-8879-b0839d2e07e5"
     },
     {
         "name": "Baumgartner",
         "position": "CAM",
         "rating": 79,
-        "value": 20000000
+        "value": 20000000,
+        "uuid": "d58469c7-ad87-4881-9c9e-5cc7fc368142"
     },
     {
         "name": "Schlager",
         "position": "CDM",
         "rating": 78,
-        "value": 15000000
+        "value": 15000000,
+        "uuid": "980cd831-8914-4039-a46f-d79652f5b411"
     },
     {
         "name": "Kalajdzic",
         "position": "ST",
         "rating": 78,
-        "value": 25000000
+        "value": 25000000,
+        "uuid": "baf20bda-e898-4068-9d4f-2879312809f7"
     },
     {
         "name": "Lindner",
         "position": "GK",
         "rating": 77,
-        "value": 8000000
+        "value": 8000000,
+        "uuid": "21f86dfb-4f38-43b5-8f96-f9df41e27b7b"
     },
     {
         "name": "Lewandowski",
         "position": "ST",
         "rating": 88,
-        "value": 45000000
+        "value": 45000000,
+        "uuid": "5bcf7f2d-975f-4ff5-b661-95efef2ab634"
     },
     {
         "name": "Szczesny",
         "position": "GK",
         "rating": 82,
-        "value": 15000000
+        "value": 15000000,
+        "uuid": "ed91ffd2-1da3-47f4-9476-69a62a060eba"
     },
     {
         "name": "Zielinski",
         "position": "CM",
         "rating": 83,
-        "value": 35000000
+        "value": 35000000,
+        "uuid": "6d5da43b-bc97-401b-a9a3-2380012fdd63"
     },
     {
         "name": "Milik",
         "position": "ST",
         "rating": 81,
-        "value": 25000000
+        "value": 25000000,
+        "uuid": "2e320822-6702-4f00-bdeb-e645bf0b5e87"
     },
     {
         "name": "Klich",
         "position": "CM",
         "rating": 79,
-        "value": 15000000
+        "value": 15000000,
+        "uuid": "3485c003-b495-4346-9225-38a925314cef"
     },
     {
         "name": "Glik",
         "position": "CB",
         "rating": 80,
-        "value": 8000000
+        "value": 8000000,
+        "uuid": "f57140c2-1dcc-4d09-b4ff-5bb4b25ec485"
     },
     {
         "name": "Rybus",
         "position": "LB",
         "rating": 78,
-        "value": 10000000
+        "value": 10000000,
+        "uuid": "081430f5-93c2-4f36-a4e6-940bd61536b3"
     },
     {
         "name": "Bereszynski",
         "position": "RB",
         "rating": 78,
-        "value": 12000000
+        "value": 12000000,
+        "uuid": "109ea911-bacc-4201-ae96-7cb5e2f1ed69"
     },
     {
         "name": "Krychowiak",
         "position": "CDM",
         "rating": 79,
-        "value": 10000000
+        "value": 10000000,
+        "uuid": "a3fd7207-2d55-41c8-8f50-d5a0187e90b0"
     },
     {
         "name": "Frankowski",
         "position": "RM",
         "rating": 77,
-        "value": 15000000
+        "value": 15000000,
+        "uuid": "f0ffdf7b-ea93-4320-b447-c12bf3c4a7c0"
     }
 ]

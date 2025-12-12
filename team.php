@@ -615,6 +615,14 @@ startContent();
 
     lucide.createIcons();
 
+    // UUID generation function
+    function generateUUID() {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+            var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
+    }
+
     $('#formation').val('<?php echo $saved_formation; ?>');
 
     // Initialize selectedPlayers array if empty
@@ -746,7 +754,7 @@ startContent();
     // Get contract status information
     function getContractStatus(player) {
         const remaining = player.contract_matches_remaining || player.contract_matches || 25;
-        
+
         if (remaining <= 0) {
             return {
                 text: 'Expired',
@@ -2236,6 +2244,7 @@ startContent();
 
                 // Create custom player
                 const customPlayer = {
+                    uuid: generateUUID(),
                     name: customName,
                     position: playerPosition,
                     value: customPlayerValue,
@@ -2662,10 +2671,10 @@ startContent();
     }
 
     // Contract renewal functionality
-    window.renewContract = function(playerName, currentRemaining) {
+    window.renewContract = function (playerName, currentRemaining) {
         const renewalCost = Math.floor(Math.random() * 5000000) + 2000000; // €2M - €7M
         const newMatches = Math.floor(Math.random() * 21) + 20; // 20-40 new matches
-        
+
         Swal.fire({
             title: `Renew Contract for ${playerName}?`,
             html: `
@@ -2714,30 +2723,30 @@ startContent();
                     player_name: playerName,
                     renewal_cost: renewalCost,
                     new_matches: newMatches
-                }, function(response) {
+                }, function (response) {
                     if (response.success) {
                         // Update local budget
                         maxBudget = response.new_budget;
                         $('#clubBudget').text(formatMarketValue(response.new_budget));
-                        
+
                         // Update player data
                         selectedPlayers.forEach((player, idx) => {
                             if (player && player.name === playerName) {
                                 selectedPlayers[idx].contract_matches_remaining = (selectedPlayers[idx].contract_matches_remaining || 0) + newMatches;
                             }
                         });
-                        
+
                         substitutePlayers.forEach((player, idx) => {
                             if (player && player.name === playerName) {
                                 substitutePlayers[idx].contract_matches_remaining = (substitutePlayers[idx].contract_matches_remaining || 0) + newMatches;
                             }
                         });
-                        
+
                         // Close modal and refresh displays
                         $('#playerInfoModal').addClass('hidden');
                         renderPlayers();
                         renderSubstitutes();
-                        
+
                         Swal.fire({
                             icon: 'success',
                             title: 'Contract Renewed!',
@@ -2755,7 +2764,7 @@ startContent();
                             confirmButtonColor: '#ef4444'
                         });
                     }
-                }, 'json').fail(function() {
+                }, 'json').fail(function () {
                     Swal.fire({
                         icon: 'error',
                         title: 'Connection Error',
@@ -2932,8 +2941,8 @@ startContent();
     .pla yer-info-header {
         background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
     }
-
-    </style> <?php
-    // End content capture and render layout
-    endContent($_SESSION['club_name'], 'team');
-    ?>
+</style>
+<?php
+// End content capture and render layout
+endContent($_SESSION['club_name'], 'team');
+?>

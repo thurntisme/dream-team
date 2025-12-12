@@ -112,9 +112,9 @@ try {
         }
 
         // Check if player already exists in inventory
-        $stmt = $db->prepare('SELECT COUNT(*) as count FROM player_inventory WHERE user_id = :user_id AND player_name = :player_name AND status = "available"');
+        $stmt = $db->prepare('SELECT COUNT(*) as count FROM player_inventory WHERE user_id = :user_id AND player_uuid = :player_uuid AND status = "available"');
         $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
-        $stmt->bindValue(':player_name', $player_name, SQLITE3_TEXT);
+        $stmt->bindValue(':player_uuid', $player_data['uuid'] ?? '', SQLITE3_TEXT);
         $result = $stmt->execute();
         $inventory_check = $result->fetchArray(SQLITE3_ASSOC);
 
@@ -129,9 +129,9 @@ try {
         $player_data = initializePlayerCondition($player_data);
 
         // Add player to inventory instead of directly to team
-        $stmt = $db->prepare('INSERT INTO player_inventory (user_id, player_name, player_data, purchase_price) VALUES (:user_id, :player_name, :player_data, :purchase_price)');
+        $stmt = $db->prepare('INSERT INTO player_inventory (user_id, player_uuid, player_data, purchase_price) VALUES (:user_id, :player_uuid, :player_data, :purchase_price)');
         $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
-        $stmt->bindValue(':player_name', $player_name, SQLITE3_TEXT);
+        $stmt->bindValue(':player_uuid', $player_data['uuid'] ?? '', SQLITE3_TEXT);
         $stmt->bindValue(':player_data', json_encode($player_data), SQLITE3_TEXT);
         $stmt->bindValue(':purchase_price', $cost, SQLITE3_INTEGER);
 

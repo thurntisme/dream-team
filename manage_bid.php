@@ -139,7 +139,7 @@ try {
 
         // Verify player data matches
         $current_player = $owner_team[$player_index];
-        if ($current_player['name'] !== $bid['player_name']) {
+        if (($current_player['uuid'] ?? '') !== ($bid['player_uuid'] ?? '')) {
             http_response_code(400);
             echo json_encode(['success' => false, 'message' => 'Player data has changed']);
             exit;
@@ -201,9 +201,9 @@ try {
             }
 
             // Reject all other pending bids for this player with response time
-            $stmt = $db->prepare('UPDATE transfer_bids SET status = "rejected", response_time = CURRENT_TIMESTAMP WHERE owner_id = :owner_id AND player_name = :player_name AND status = "pending" AND id != :bid_id');
+            $stmt = $db->prepare('UPDATE transfer_bids SET status = "rejected", response_time = CURRENT_TIMESTAMP WHERE owner_id = :owner_id AND player_uuid = :player_uuid AND status = "pending" AND id != :bid_id');
             $stmt->bindValue(':owner_id', $bid['owner_id'], SQLITE3_INTEGER);
-            $stmt->bindValue(':player_name', $bid['player_name'], SQLITE3_TEXT);
+            $stmt->bindValue(':player_uuid', $bid['player_uuid'] ?? '', SQLITE3_TEXT);
             $stmt->bindValue(':bid_id', $bid_id, SQLITE3_INTEGER);
             $stmt->execute(); // Don't fail if this doesn't work
 
@@ -214,7 +214,7 @@ try {
                 'success' => true,
                 'message' => 'Player transferred successfully',
                 'transfer_details' => [
-                    'player_name' => $bid['player_name'],
+                    'player_name' => $bid_player_data['name'] ?? 'Unknown Player',
                     'amount' => $bid['bid_amount'],
                     'new_owner_budget' => $new_owner_budget,
                     'new_bidder_budget' => $new_bidder_budget

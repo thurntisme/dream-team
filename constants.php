@@ -276,12 +276,13 @@ function loadPlayersFromJson()
     $players = [];
     foreach ($playersData as $index => $player) {
         // Validate required fields
-        if (!isset($player['name']) || !isset($player['position']) || !isset($player['rating']) || !isset($player['value'])) {
-            error_log("Dream Team: Invalid player data at index $index - missing required fields");
+        if (!isset($player['name']) || !isset($player['position']) || !isset($player['rating']) || !isset($player['value']) || !isset($player['uuid'])) {
+            error_log("Dream Team: Invalid player data at index $index - missing required fields (name, position, rating, value, uuid)");
             continue;
         }
 
         $players[] = [
+            'uuid' => $player['uuid'] ?? null,
             'name' => (string) $player['name'],
             'position' => (string) $player['position'],
             'rating' => (int) $player['rating'],

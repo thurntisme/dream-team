@@ -123,7 +123,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install'])) {
                 bidder_id INTEGER NOT NULL,
                 owner_id INTEGER NOT NULL,
                 player_index INTEGER NOT NULL,
-                player_name TEXT NOT NULL,
+                player_uuid TEXT NOT NULL,
                 bid_amount INTEGER NOT NULL,
                 status TEXT DEFAULT "pending",
                 bid_time DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -135,11 +135,79 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install'])) {
             $db->exec('CREATE TABLE IF NOT EXISTS player_inventory (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL,
+                player_uuid TEXT NOT NULL,
                 player_data TEXT NOT NULL,
+                purchase_price INTEGER NOT NULL,
                 purchase_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-                status TEXT DEFAULT "pending",
+                status TEXT DEFAULT "available",
                 FOREIGN KEY (user_id) REFERENCES users(id)
             )');
+
+            // Migration: Handle column changes and add missing columns
+            try {
+                // Check existing columns in player_inventory
+                $result = $db->query("PRAGMA table_info(player_inventory)");
+                $columns = [];
+                while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+                    $columns[] = $row['name'];
+                }
+
+                // Add player_uuid column if it doesn't exist
+                if (!in_array('player_uuid', $columns)) {
+                    $db->exec('ALTER TABLE player_inventory ADD COLUMN player_uuid TEXT DEFAULT ""');
+                }
+
+                // Add purchase_price column if it doesn't exist
+                if (!in_array('purchase_price', $columns)) {
+                    $db->exec('ALTER TABLE player_inventory ADD COLUMN purchase_price INTEGER DEFAULT 0');
+                }
+
+                // Migrate data from player_name to player_uuid if needed
+                if (in_array('player_name', $columns) && in_array('player_uuid', $columns)) {
+                    $stmt = $db->prepare('SELECT id, player_name, player_data FROM player_inventory WHERE player_uuid = "" AND player_name != ""');
+                    $result = $stmt->execute();
+
+                    while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+                        $player_data = json_decode($row['player_data'], true);
+                        if ($player_data && isset($player_data['uuid'])) {
+                            $update_stmt = $db->prepare('UPDATE player_inventory SET player_uuid = :uuid WHERE id = :id');
+                            $update_stmt->bindValue(':uuid', $player_data['uuid'], SQLITE3_TEXT);
+                            $update_stmt->bindValue(':id', $row['id'], SQLITE3_INTEGER);
+                            $update_stmt->execute();
+                        }
+                    }
+                }
+
+                // Check transfer_bids table
+                $result = $db->query("PRAGMA table_info(transfer_bids)");
+                $bid_columns = [];
+                while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+                    $bid_columns[] = $row['name'];
+                }
+
+                // Add player_uuid column to transfer_bids if it doesn't exist
+                if (!in_array('player_uuid', $bid_columns)) {
+                    $db->exec('ALTER TABLE transfer_bids ADD COLUMN player_uuid TEXT DEFAULT ""');
+                }
+
+                // Migrate transfer_bids data from player_name to player_uuid if needed
+                if (in_array('player_name', $bid_columns) && in_array('player_uuid', $bid_columns)) {
+                    $stmt = $db->prepare('SELECT id, player_name, player_data FROM transfer_bids WHERE player_uuid = "" AND player_name != ""');
+                    $result = $stmt->execute();
+
+                    while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+                        $player_data = json_decode($row['player_data'], true);
+                        if ($player_data && isset($player_data['uuid'])) {
+                            $update_stmt = $db->prepare('UPDATE transfer_bids SET player_uuid = :uuid WHERE id = :id');
+                            $update_stmt->bindValue(':uuid', $player_data['uuid'], SQLITE3_TEXT);
+                            $update_stmt->bindValue(':id', $row['id'], SQLITE3_INTEGER);
+                            $update_stmt->execute();
+                        }
+                    }
+                }
+            } catch (Exception $e) {
+                // Migration failed, but continue - table might be new
+            }
 
             // Shop system tables
             $db->exec('CREATE TABLE IF NOT EXISTS user_inventory (

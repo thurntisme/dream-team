@@ -105,10 +105,10 @@ try {
     }
 
     // Check if there's already a pending bid from this user for this player
-    $stmt = $db->prepare('SELECT id FROM transfer_bids WHERE bidder_id = :bidder_id AND owner_id = :owner_id AND player_name = :player_name AND status = "pending"');
+    $stmt = $db->prepare('SELECT id FROM transfer_bids WHERE bidder_id = :bidder_id AND owner_id = :owner_id AND player_uuid = :player_uuid AND status = "pending"');
     $stmt->bindValue(':bidder_id', $_SESSION['user_id'], SQLITE3_INTEGER);
     $stmt->bindValue(':owner_id', $owner_id, SQLITE3_INTEGER);
-    $stmt->bindValue(':player_name', $player_name, SQLITE3_TEXT);
+    $stmt->bindValue(':player_uuid', $actual_player['uuid'] ?? '', SQLITE3_TEXT);
     $result = $stmt->execute();
 
     if ($result->fetchArray()) {
@@ -132,7 +132,7 @@ try {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         bidder_id INTEGER NOT NULL,
         owner_id INTEGER NOT NULL,
-        player_name TEXT NOT NULL,
+        player_uuid TEXT NOT NULL,
         player_data TEXT NOT NULL,
         player_index INTEGER NOT NULL,
         bid_amount INTEGER NOT NULL,
@@ -144,11 +144,11 @@ try {
     )');
 
     // Insert the bid
-    $stmt = $db->prepare('INSERT INTO transfer_bids (bidder_id, owner_id, player_name, player_data, player_index, bid_amount, status) 
-                         VALUES (:bidder_id, :owner_id, :player_name, :player_data, :player_index, :bid_amount, "pending")');
+    $stmt = $db->prepare('INSERT INTO transfer_bids (bidder_id, owner_id, player_uuid, player_data, player_index, bid_amount, status) 
+                         VALUES (:bidder_id, :owner_id, :player_uuid, :player_data, :player_index, :bid_amount, "pending")');
     $stmt->bindValue(':bidder_id', $_SESSION['user_id'], SQLITE3_INTEGER);
     $stmt->bindValue(':owner_id', $owner_id, SQLITE3_INTEGER);
-    $stmt->bindValue(':player_name', $player_name, SQLITE3_TEXT);
+    $stmt->bindValue(':player_uuid', $actual_player['uuid'] ?? '', SQLITE3_TEXT);
     $stmt->bindValue(':player_data', json_encode($actual_player), SQLITE3_TEXT);
     $stmt->bindValue(':player_index', $player_index, SQLITE3_INTEGER);
     $stmt->bindValue(':bid_amount', $bid_amount, SQLITE3_INTEGER);
