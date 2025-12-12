@@ -111,6 +111,11 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true)
                                 <i data-lucide="shopping-bag" class="w-4 h-4"></i>
                                 <span class="font-medium">Shop</span>
                             </a>
+                            <a href="league.php"
+                                class="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors <?php echo $currentPage === 'league' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100'; ?>">
+                                <i data-lucide="trophy" class="w-4 h-4"></i>
+                                <span class="font-medium">League</span>
+                            </a>
                         </div>
                     <?php endif; ?>
 
@@ -177,9 +182,15 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true)
                                         <span>Shop</span>
                                     </a>
 
-                                    <a href="clubs.php"
+                                    <a href="league.php"
                                         class="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
                                         <i data-lucide="trophy" class="w-4 h-4"></i>
+                                        <span>League</span>
+                                    </a>
+
+                                    <a href="clubs.php"
+                                        class="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                                        <i data-lucide="users" class="w-4 h-4"></i>
                                         <span>Other Clubs</span>
                                     </a>
 

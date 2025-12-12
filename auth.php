@@ -31,19 +31,6 @@ $db->exec('CREATE TABLE IF NOT EXISTS users (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 )');
 
-// Add last_login column if it doesn't exist (for existing databases)
-try {
-    $db->exec('ALTER TABLE users ADD COLUMN last_login DATETIME');
-} catch (Exception $e) {
-    // Column already exists, ignore error
-}
-
-try {
-    $db->exec('ALTER TABLE users ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP');
-} catch (Exception $e) {
-    // Column already exists, ignore error
-}
-
 $action = $_POST['action'] ?? '';
 
 if ($action === 'register') {

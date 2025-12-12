@@ -115,6 +115,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install'])) {
         if ($db->exec($sql)) {
             $success[] = 'Database and users table created successfully';
 
+            // Create additional tables
+
+            // Transfer system tables
+            $db->exec('CREATE TABLE IF NOT EXISTS transfer_bids (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                bidder_id INTEGER NOT NULL,
+                owner_id INTEGER NOT NULL,
+                player_index INTEGER NOT NULL,
+                player_name TEXT NOT NULL,
+                bid_amount INTEGER NOT NULL,
+                status TEXT DEFAULT "pending",
+                bid_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+                response_time DATETIME,
+                FOREIGN KEY (bidder_id) REFERENCES users(id),
+                FOREIGN KEY (owner_id) REFERENCES users(id)
+            )');
+
+            $db->exec('CREATE TABLE IF NOT EXISTS player_inventory (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                player_data TEXT NOT NULL,
+                purchase_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+                status TEXT DEFAULT "pending",
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            )');
+
+            // Shop system tables
+            $db->exec('CREATE TABLE IF NOT EXISTS user_inventory (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                item_id TEXT NOT NULL,
+                quantity INTEGER DEFAULT 1,
+                purchase_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            )');
+
+            // League tables
+            require_once 'league_functions.php';
+            createLeagueTables($db);
+
+            $success[] = 'All database tables created successfully';
+
             // Create admin user if requested
             if (!empty($_POST['admin_name']) && !empty($_POST['admin_email']) && !empty($_POST['admin_password'])) {
                 $stmt = $db->prepare('INSERT INTO users (name, email, password) VALUES (:name, :email, :password)');

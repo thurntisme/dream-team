@@ -275,6 +275,31 @@ if (!function_exists('validateSession')) {
 }
 
 /**
+ * Require authentication - redirect to login if not authenticated
+ * This should be called on pages that require user authentication
+ * 
+ * @param string $current_page Current page identifier to avoid redirect loops
+ */
+if (!function_exists('requireAuth')) {
+    function requireAuth($current_page = '')
+    {
+        // Validate session first
+        validateSession($current_page);
+
+        // Don't redirect if we're already on login/install pages
+        if ($current_page === 'index' || $current_page === 'install') {
+            return;
+        }
+
+        // Check if user is logged in
+        if (!isset($_SESSION['user_id'])) {
+            header('Location: index.php');
+            exit;
+        }
+    }
+}
+
+/**
  * Require club name - redirect to welcome page if club name is empty
  * This should be called on pages that require a club name to function properly
  * 
@@ -283,18 +308,12 @@ if (!function_exists('validateSession')) {
 if (!function_exists('requireClubName')) {
     function requireClubName($current_page = '')
     {
-        // First validate the session
-        validateSession($current_page);
+        // First require authentication
+        requireAuth($current_page);
 
         // Don't redirect if we're already on welcome page or login pages
         if ($current_page === 'welcome' || $current_page === 'index' || $current_page === 'install') {
             return;
-        }
-
-        // Check if user is logged in (should be true after validateSession)
-        if (!isset($_SESSION['user_id'])) {
-            header('Location: index.php');
-            exit;
         }
 
         // Check if club name is empty or not set
