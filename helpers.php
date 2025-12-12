@@ -532,6 +532,12 @@ if (!function_exists('initializePlayerCondition')) {
         if (!isset($player['last_match_date'])) {
             $player['last_match_date'] = null;
         }
+        if (!isset($player['contract_matches'])) {
+            $player['contract_matches'] = rand(15, 50); // Contract for 15-50 matches
+        }
+        if (!isset($player['contract_matches_remaining'])) {
+            $player['contract_matches_remaining'] = $player['contract_matches'];
+        }
         return $player;
     }
 }
@@ -669,5 +675,60 @@ if (!function_exists('getEffectiveRating')) {
         $effective_rating = ($base_rating * $fitness_multiplier) + $form_bonus;
 
         return max(1, min(99, round($effective_rating)));
+    }
+}
+
+/**
+ * Get contract status information
+ * 
+ * @param array $player Player data
+ * @return array Contract status with text, color, and urgency level
+ */
+if (!function_exists('getContractStatus')) {
+    function getContractStatus($player)
+    {
+        $remaining = $player['contract_matches_remaining'] ?? ($player['contract_matches'] ?? 25);
+
+        if ($remaining <= 0) {
+            return [
+                'text' => 'Expired',
+                'color' => 'text-red-600',
+                'bg' => 'bg-red-100',
+                'border' => 'border-red-200',
+                'urgency' => 'critical'
+            ];
+        } elseif ($remaining <= 3) {
+            return [
+                'text' => 'Expiring Soon',
+                'color' => 'text-red-600',
+                'bg' => 'bg-red-100',
+                'border' => 'border-red-200',
+                'urgency' => 'high'
+            ];
+        } elseif ($remaining <= 8) {
+            return [
+                'text' => 'Renewal Needed',
+                'color' => 'text-orange-600',
+                'bg' => 'bg-orange-100',
+                'border' => 'border-orange-200',
+                'urgency' => 'medium'
+            ];
+        } elseif ($remaining <= 15) {
+            return [
+                'text' => 'Active',
+                'color' => 'text-yellow-600',
+                'bg' => 'bg-yellow-100',
+                'border' => 'border-yellow-200',
+                'urgency' => 'low'
+            ];
+        } else {
+            return [
+                'text' => 'Secure',
+                'color' => 'text-green-600',
+                'bg' => 'bg-green-100',
+                'border' => 'border-green-200',
+                'urgency' => 'none'
+            ];
+        }
     }
 }

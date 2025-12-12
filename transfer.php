@@ -713,8 +713,9 @@ startContent();
     function showPlayerInfo(playerData) {
         const player = playerData;
 
-        // Calculate contract years (random for demo)
-        const contractYears = Math.floor(Math.random() * 4) + 1;
+        // Get contract matches (initialize if not set)
+        const contractMatches = player.contract_matches || Math.floor(Math.random() * 36) + 15; // 15-50 matches
+        const contractRemaining = player.contract_matches_remaining || contractMatches;
 
         // Generate some stats (random for demo)
         const stats = generatePlayerStats(player.position, player.rating);
@@ -761,8 +762,25 @@ startContent();
                         </div>
                         <div class="flex justify-between">
                             <span class="text-gray-600">Contract:</span>
-                            <span class="font-medium">${contractYears} year${contractYears > 1 ? 's' : ''}</span>
+                            <span class="font-medium">${contractRemaining} match${contractRemaining !== 1 ? 'es' : ''} remaining</span>
                         </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Matches Played:</span>
+                            <span class="font-medium">${player.matches_played || 0}</span>
+                        </div>
+                        ${contractRemaining <= 8 ? `
+                        <div class="mt-3 p-3 rounded-lg border bg-orange-50 border-orange-200">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <div class="text-sm font-medium text-orange-600">
+                                        <i data-lucide="alert-triangle" class="w-4 h-4 inline mr-1"></i>
+                                        Contract ${contractRemaining <= 3 ? 'Expiring Soon' : 'Renewal Needed'}
+                                    </div>
+                                    <div class="text-xs text-gray-600 mt-1">Contract renewal recommended</div>
+                                </div>
+                            </div>
+                        </div>
+                        ` : ''}
                     </div>
                 </div>
 
@@ -1035,11 +1053,11 @@ startContent();
         transition: width 0.3s ease;
     }
 
-    .player-info-header {
+    .player-in fo-header {
         background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
-    }
-</style>
-<?php
-// End content capture and render layout
-endContent('Transfer Market - Dream Team', 'transfer');
-?>
+        }
+
+    </style> <?php
+    // End content capture and render layout
+    endContent('Transfer Market - Dream Team', 'transfer');
+    ?>

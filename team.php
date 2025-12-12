@@ -741,8 +741,53 @@ startContent();
         if (form >= 5.5) return '<i data-lucide="minus" class="w-3 h-3"></i>';
         if (form >= 4) return '<i data-lucide="arrow-down" class="w-3 h-3"></i>';
         return '<i data-lucide="trending-down" class="w-3 h-3"></i>';
+    }
 
-
+    // Get contract status information
+    function getContractStatus(player) {
+        const remaining = player.contract_matches_remaining || player.contract_matches || 25;
+        
+        if (remaining <= 0) {
+            return {
+                text: 'Expired',
+                color: 'text-red-600',
+                bg: 'bg-red-100',
+                border: 'border-red-200',
+                urgency: 'critical'
+            };
+        } else if (remaining <= 3) {
+            return {
+                text: 'Expiring Soon',
+                color: 'text-red-600',
+                bg: 'bg-red-100',
+                border: 'border-red-200',
+                urgency: 'high'
+            };
+        } else if (remaining <= 8) {
+            return {
+                text: 'Renewal Needed',
+                color: 'text-orange-600',
+                bg: 'bg-orange-100',
+                border: 'border-orange-200',
+                urgency: 'medium'
+            };
+        } else if (remaining <= 15) {
+            return {
+                text: 'Active',
+                color: 'text-yellow-600',
+                bg: 'bg-yellow-100',
+                border: 'border-yellow-200',
+                urgency: 'low'
+            };
+        } else {
+            return {
+                text: 'Secure',
+                color: 'text-green-600',
+                bg: 'bg-green-100',
+                border: 'border-green-200',
+                urgency: 'none'
+            };
+        }
     }
 
     function renderPlayers() {
@@ -782,7 +827,7 @@ startContent();
                             <div class="flex-1" onclick="selectPlayer(${idx})">
                                 <div class="${nameClass}">${player.name}${customBadge}</div>
                                 <div class="${valueClass}">${formatMarketValue(player.value || 0)}</div>
-                                <div class="text-xs text-gray-500 mt-1">${player.position} • ★${getEffectiveRating(player)}</div>
+                                <div class="text-xs text-gray-500 mt-1">${player.position} • ★${getEffectiveRating(player)} • ${(player.contract_matches_remaining || player.contract_matches || 25)} matches left</div>
                                 <div class="flex gap-2 mt-1 items-center">
                                     <div class="flex-1">
                                         <div class="text-xs text-gray-500 mb-1">Fitness</div>
@@ -874,7 +919,7 @@ startContent();
                         <div class="flex-1">
                             <div class="${nameClass}">${player.name}${customBadge}</div>
                             <div class="${valueClass}">${formatMarketValue(player.value || 0)}</div>
-                            <div class="text-xs text-gray-500 mt-1">${player.position} • ★${getEffectiveRating(player)}</div>
+                            <div class="text-xs text-gray-500 mt-1">${player.position} • ★${getEffectiveRating(player)} • ${(player.contract_matches_remaining || player.contract_matches || 25)} matches left</div>
                             <div class="flex gap-2 mt-1 items-center">
                                 <div class="flex-1">
                                     <div class="text-xs text-gray-500 mb-1">Fitness</div>
@@ -2455,8 +2500,9 @@ startContent();
 
 
 
-        // Calculate contract years (random for demo)
-        const contractYears = Math.floor(Math.random() * 4) + 1;
+        // Get contract matches (initialize if not set)
+        const contractMatches = player.contract_matches || Math.floor(Math.random() * 36) + 15; // 15-50 matches
+        const contractRemaining = player.contract_matches_remaining || contractMatches;
 
         // Generate some stats (random for demo)
         const stats = generatePlayerStats(player.position, player.rating);
@@ -2503,8 +2549,28 @@ startContent();
                         </div>
                         <div class="flex justify-between">
                             <span class="text-gray-600">Contract:</span>
-                            <span class="font-medium">${contractYears} year${contractYears > 1 ? 's' : ''}</span>
+                            <span class="font-medium">${contractRemaining} match${contractRemaining !== 1 ? 'es' : ''} remaining</span>
                         </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Matches Played:</span>
+                            <span class="font-medium">${player.matches_played || 0}</span>
+                        </div>
+                        ${contractRemaining <= 8 ? `
+                        <div class="mt-3 p-3 rounded-lg border ${getContractStatus(player).bg} ${getContractStatus(player).border}">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <div class="text-sm font-medium ${getContractStatus(player).color}">
+                                        <i data-lucide="alert-triangle" class="w-4 h-4 inline mr-1"></i>
+                                        ${getContractStatus(player).text}
+                                    </div>
+                                    <div class="text-xs text-gray-600 mt-1">Contract renewal recommended</div>
+                                </div>
+                                <button onclick="renewContract('${player.name}', ${contractRemaining})" class="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">
+                                    Renew
+                                </button>
+                            </div>
+                        </div>
+                        ` : ''}
                     </div>
                 </div>
 
@@ -2594,6 +2660,112 @@ startContent();
         $('#playerInfoModal').removeClass('hidden');
         lucide.createIcons();
     }
+
+    // Contract renewal functionality
+    window.renewContract = function(playerName, currentRemaining) {
+        const renewalCost = Math.floor(Math.random() * 5000000) + 2000000; // €2M - €7M
+        const newMatches = Math.floor(Math.random() * 21) + 20; // 20-40 new matches
+        
+        Swal.fire({
+            title: `Renew Contract for ${playerName}?`,
+            html: `
+                <div class="text-left space-y-3">
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <h4 class="font-semibold text-gray-900 mb-2">Contract Details:</h4>
+                        <div class="space-y-1 text-sm">
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Current Remaining:</span>
+                                <span class="font-medium">${currentRemaining} matches</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">New Contract:</span>
+                                <span class="font-medium text-green-600">+${newMatches} matches</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Total After Renewal:</span>
+                                <span class="font-medium text-blue-600">${currentRemaining + newMatches} matches</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+                        <h4 class="font-semibold text-red-900 mb-2">Renewal Cost:</h4>
+                        <div class="text-lg font-bold text-red-600">${formatMarketValue(renewalCost)}</div>
+                        <div class="text-xs text-red-700 mt-1">This amount will be deducted from your budget</div>
+                    </div>
+                </div>
+            `,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#10b981',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: '<i data-lucide="file-signature" class="w-4 h-4 inline mr-1"></i> Renew Contract',
+            cancelButtonText: 'Cancel',
+            customClass: {
+                popup: 'swal-wide'
+            },
+            didOpen: () => {
+                lucide.createIcons();
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Process contract renewal
+                $.post('renew_contract.php', {
+                    player_name: playerName,
+                    renewal_cost: renewalCost,
+                    new_matches: newMatches
+                }, function(response) {
+                    if (response.success) {
+                        // Update local budget
+                        maxBudget = response.new_budget;
+                        $('#clubBudget').text(formatMarketValue(response.new_budget));
+                        
+                        // Update player data
+                        selectedPlayers.forEach((player, idx) => {
+                            if (player && player.name === playerName) {
+                                selectedPlayers[idx].contract_matches_remaining = (selectedPlayers[idx].contract_matches_remaining || 0) + newMatches;
+                            }
+                        });
+                        
+                        substitutePlayers.forEach((player, idx) => {
+                            if (player && player.name === playerName) {
+                                substitutePlayers[idx].contract_matches_remaining = (substitutePlayers[idx].contract_matches_remaining || 0) + newMatches;
+                            }
+                        });
+                        
+                        // Close modal and refresh displays
+                        $('#playerInfoModal').addClass('hidden');
+                        renderPlayers();
+                        renderSubstitutes();
+                        
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Contract Renewed!',
+                            text: `${playerName}'s contract has been extended by ${newMatches} matches for ${formatMarketValue(renewalCost)}.`,
+                            timer: 3000,
+                            showConfirmButton: false,
+                            toast: true,
+                            position: 'top-end'
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Renewal Failed',
+                            text: response.message || 'Could not renew contract. Please try again.',
+                            confirmButtonColor: '#ef4444'
+                        });
+                    }
+                }, 'json').fail(function() {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Connection Error',
+                        text: 'Could not process contract renewal. Please check your connection and try again.',
+                        confirmButtonColor: '#ef4444'
+                    });
+                });
+            }
+        });
+    };
 
     // Training functionality
     $('#trainAllBtn').click(function () {
@@ -2760,8 +2932,8 @@ startContent();
     .pla yer-info-header {
         background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
     }
-</style>
-<?php
-// End content capture and render layout
-endContent($_SESSION['club_name'], 'team');
-?>
+
+    </style> <?php
+    // End content capture and render layout
+    endContent($_SESSION['club_name'], 'team');
+    ?>

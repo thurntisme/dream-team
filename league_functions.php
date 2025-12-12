@@ -844,6 +844,12 @@ function updatePlayerConditions($db, $user_id, $wins, $draws, $losses, $goals_fo
                 $team[$i] = updatePlayerForm($team[$i], $performance);
                 $team[$i]['matches_played'] = ($team[$i]['matches_played'] ?? 0) + 1;
                 $team[$i]['last_match_date'] = date('Y-m-d');
+
+                // Decrease contract matches remaining
+                if (!isset($team[$i]['contract_matches_remaining'])) {
+                    $team[$i]['contract_matches_remaining'] = $team[$i]['contract_matches'] ?? rand(15, 50);
+                }
+                $team[$i]['contract_matches_remaining'] = max(0, $team[$i]['contract_matches_remaining'] - 1);
                 $team_updated = true;
             }
         }
