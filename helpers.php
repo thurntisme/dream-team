@@ -510,3 +510,164 @@ if (!function_exists('getLevelColor')) {
         return 'text-gray-600';
     }
 }
+
+/**
+ * Initialize player fitness and form if not set
+ * 
+ * @param array $player Player data
+ * @return array Player data with fitness and form
+ */
+if (!function_exists('initializePlayerCondition')) {
+    function initializePlayerCondition($player)
+    {
+        if (!isset($player['fitness'])) {
+            $player['fitness'] = rand(75, 100); // Start with good fitness
+        }
+        if (!isset($player['form'])) {
+            $player['form'] = rand(6, 8); // Start with decent form (1-10 scale)
+        }
+        if (!isset($player['matches_played'])) {
+            $player['matches_played'] = 0;
+        }
+        if (!isset($player['last_match_date'])) {
+            $player['last_match_date'] = null;
+        }
+        return $player;
+    }
+}
+
+/**
+ * Update player fitness based on activity
+ * 
+ * @param array $player Player data
+ * @param bool $played_match Whether player played a match
+ * @param int $days_since_last_match Days since last match
+ * @return array Updated player data
+ */
+if (!function_exists('updatePlayerFitness')) {
+    function updatePlayerFitness($player, $played_match = false, $days_since_last_match = 0)
+    {
+        $fitness = $player['fitness'] ?? 100;
+
+        if ($played_match) {
+            // Fitness decreases after playing
+            $fitness -= rand(5, 15);
+        } else {
+            // Fitness recovers when resting
+            $recovery = min(3 + ($days_since_last_match * 2), 10);
+            $fitness += $recovery;
+        }
+
+        // Keep fitness between 0 and 100
+        $player['fitness'] = max(0, min(100, $fitness));
+
+        return $player;
+    }
+}
+
+/**
+ * Update player form based on performance
+ * 
+ * @param array $player Player data
+ * @param string $performance Performance rating (excellent, good, average, poor)
+ * @return array Updated player data
+ */
+if (!function_exists('updatePlayerForm')) {
+    function updatePlayerForm($player, $performance = 'average')
+    {
+        $form = $player['form'] ?? 7;
+
+        switch ($performance) {
+            case 'excellent':
+                $form += rand(1, 2);
+                break;
+            case 'good':
+                $form += rand(0, 1);
+                break;
+            case 'average':
+                $form += rand(-1, 1) * 0.5;
+                break;
+            case 'poor':
+                $form -= rand(1, 2);
+                break;
+        }
+
+        // Keep form between 1 and 10
+        $player['form'] = max(1, min(10, $form));
+
+        return $player;
+    }
+}
+
+/**
+ * Get fitness status text and color
+ * 
+ * @param int $fitness Fitness level (0-100)
+ * @return array Status info with text and color
+ */
+if (!function_exists('getFitnessStatus')) {
+    function getFitnessStatus($fitness)
+    {
+        if ($fitness >= 90) {
+            return ['text' => 'Excellent', 'color' => 'text-green-600', 'bg' => 'bg-green-100'];
+        } elseif ($fitness >= 75) {
+            return ['text' => 'Good', 'color' => 'text-blue-600', 'bg' => 'bg-blue-100'];
+        } elseif ($fitness >= 60) {
+            return ['text' => 'Average', 'color' => 'text-yellow-600', 'bg' => 'bg-yellow-100'];
+        } elseif ($fitness >= 40) {
+            return ['text' => 'Poor', 'color' => 'text-orange-600', 'bg' => 'bg-orange-100'];
+        } else {
+            return ['text' => 'Injured', 'color' => 'text-red-600', 'bg' => 'bg-red-100'];
+        }
+    }
+}
+
+/**
+ * Get form status text and color
+ * 
+ * @param float $form Form level (1-10)
+ * @return array Status info with text and color
+ */
+if (!function_exists('getFormStatus')) {
+    function getFormStatus($form)
+    {
+        if ($form >= 8.5) {
+            return ['text' => 'Superb', 'color' => 'text-purple-600', 'bg' => 'bg-purple-100'];
+        } elseif ($form >= 7.5) {
+            return ['text' => 'Excellent', 'color' => 'text-green-600', 'bg' => 'bg-green-100'];
+        } elseif ($form >= 6.5) {
+            return ['text' => 'Good', 'color' => 'text-blue-600', 'bg' => 'bg-blue-100'];
+        } elseif ($form >= 5.5) {
+            return ['text' => 'Average', 'color' => 'text-yellow-600', 'bg' => 'bg-yellow-100'];
+        } elseif ($form >= 4) {
+            return ['text' => 'Poor', 'color' => 'text-orange-600', 'bg' => 'bg-orange-100'];
+        } else {
+            return ['text' => 'Terrible', 'color' => 'text-red-600', 'bg' => 'bg-red-100'];
+        }
+    }
+}
+
+/**
+ * Calculate effective player rating based on fitness and form
+ * 
+ * @param array $player Player data
+ * @return int Effective rating
+ */
+if (!function_exists('getEffectiveRating')) {
+    function getEffectiveRating($player)
+    {
+        $base_rating = $player['rating'] ?? 70;
+        $fitness = $player['fitness'] ?? 100;
+        $form = $player['form'] ?? 7;
+
+        // Fitness affects rating (0.5-1.0 multiplier)
+        $fitness_multiplier = 0.5 + ($fitness / 200);
+
+        // Form affects rating (-5 to +5 points)
+        $form_bonus = ($form - 7) * 0.7;
+
+        $effective_rating = ($base_rating * $fitness_multiplier) + $form_bonus;
+
+        return max(1, min(99, round($effective_rating)));
+    }
+}

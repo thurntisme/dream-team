@@ -3,6 +3,7 @@ session_start();
 
 require_once 'config.php';
 require_once 'constants.php';
+require_once 'helpers.php';
 
 header('Content-Type: application/json');
 
@@ -123,6 +124,9 @@ try {
 
         // Calculate new budget
         $new_budget = $current_budget - $cost;
+
+        // Initialize player condition (fitness and form)
+        $player_data = initializePlayerCondition($player_data);
 
         // Add player to inventory instead of directly to team
         $stmt = $db->prepare('INSERT INTO player_inventory (user_id, player_name, player_data, purchase_price) VALUES (:user_id, :player_name, :player_data, :purchase_price)');

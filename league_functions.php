@@ -802,6 +802,78 @@ function updateTeamStats($db, $team_id, $goals_for, $goals_against, $is_home)
         $stmt->bindValue(':reward', $total_reward, SQLITE3_INTEGER);
         $stmt->bindValue(':user_id', $user_team['user_id'], SQLITE3_INTEGER);
         $stmt->execute();
+
+        // Update player conditions (fitness and form) after match
+        updatePlayerConditions($db, $user_team['user_id'], $wins, $draws, $losses, $goals_for, $goals_against);
+    }
+}
+
+function updatePlayerConditions($db, $user_id, $wins, $draws, $losses, $goals_for, $goals_against)
+{
+    // Get user's team and substitutes
+    $stmt = $db->prepare('SELECT team, substitutes FROM users WHERE id = :user_id');
+    $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+    $result = $stmt->execute();
+    $user_data = $result->fetchArray(SQLITE3_ASSOC);
+
+    if (!$user_data)
+        return;
+
+    $team = json_decode($user_data['team'], true);
+    $substitutes = json_decode($user_data['substitutes'], true);
+
+    // Determine match performance
+    $performance = 'average';
+    if ($wins && $goals_for >= 3) {
+        $performance = 'excellent';
+    } elseif ($wins) {
+        $performance = 'good';
+    } elseif ($losses && $goals_against >= 3) {
+        $performance = 'poor';
+    }
+
+    $team_updated = false;
+    $subs_updated = false;
+
+    // Update main team players (they played the match)
+    if (is_array($team)) {
+        for ($i = 0; $i < count($team); $i++) {
+            if ($team[$i]) {
+                // Players who played lose fitness but can gain/lose form
+                $team[$i] = updatePlayerFitness($team[$i], true, 0);
+                $team[$i] = updatePlayerForm($team[$i], $performance);
+                $team[$i]['matches_played'] = ($team[$i]['matches_played'] ?? 0) + 1;
+                $team[$i]['last_match_date'] = date('Y-m-d');
+                $team_updated = true;
+            }
+        }
+    }
+
+    // Update substitute players (they rested, so fitness improves)
+    if (is_array($substitutes)) {
+        for ($i = 0; $i < count($substitutes); $i++) {
+            if ($substitutes[$i]) {
+                // Calculate days since last match for recovery
+                $last_match = $substitutes[$i]['last_match_date'] ?? null;
+                $days_since = $last_match ? (strtotime(date('Y-m-d')) - strtotime($last_match)) / 86400 : 7;
+
+                $substitutes[$i] = updatePlayerFitness($substitutes[$i], false, $days_since);
+                // Form slowly declines when not playing
+                if (rand(1, 3) === 1) { // 33% chance
+                    $substitutes[$i]['form'] = max(1, ($substitutes[$i]['form'] ?? 7) - 0.1);
+                }
+                $subs_updated = true;
+            }
+        }
+    }
+
+    // Update database if players were modified
+    if ($team_updated || $subs_updated) {
+        $stmt = $db->prepare('UPDATE users SET team = :team, substitutes = :substitutes WHERE id = :user_id');
+        $stmt->bindValue(':team', json_encode($team), SQLITE3_TEXT);
+        $stmt->bindValue(':substitutes', json_encode($substitutes), SQLITE3_TEXT);
+        $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+        $stmt->execute();
     }
 }
 ?>

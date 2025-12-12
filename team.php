@@ -42,8 +42,52 @@ try {
     $result = $stmt->execute();
     $total_clubs = $result->fetchArray(SQLITE3_ASSOC)['total_clubs'];
 
-    // Calculate team value for ranking
+    // Initialize and update player conditions (fitness and form)
     $team_data = json_decode($saved_team, true);
+    $substitutes_data = json_decode($saved_substitutes, true);
+    $team_updated = false;
+    $subs_updated = false;
+
+    // Initialize fitness and form for main team
+    if (is_array($team_data)) {
+        for ($i = 0; $i < count($team_data); $i++) {
+            if ($team_data[$i]) {
+                $original_player = $team_data[$i];
+                $team_data[$i] = initializePlayerCondition($team_data[$i]);
+                if ($team_data[$i] !== $original_player) {
+                    $team_updated = true;
+                }
+            }
+        }
+    }
+
+    // Initialize fitness and form for substitutes
+    if (is_array($substitutes_data)) {
+        for ($i = 0; $i < count($substitutes_data); $i++) {
+            if ($substitutes_data[$i]) {
+                $original_player = $substitutes_data[$i];
+                $substitutes_data[$i] = initializePlayerCondition($substitutes_data[$i]);
+                if ($substitutes_data[$i] !== $original_player) {
+                    $subs_updated = true;
+                }
+            }
+        }
+    }
+
+    // Update database if players were modified
+    if ($team_updated || $subs_updated) {
+        $stmt = $db->prepare('UPDATE users SET team = :team, substitutes = :substitutes WHERE id = :user_id');
+        $stmt->bindValue(':team', json_encode($team_data), SQLITE3_TEXT);
+        $stmt->bindValue(':substitutes', json_encode($substitutes_data), SQLITE3_TEXT);
+        $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+        $stmt->execute();
+
+        // Update saved data
+        $saved_team = json_encode($team_data);
+        $saved_substitutes = json_encode($substitutes_data);
+    }
+
+    // Calculate team value for ranking
     $team_value = 0;
     if (is_array($team_data)) {
         foreach ($team_data as $player) {
@@ -348,6 +392,48 @@ startContent();
         </div>
     </div>
 
+    <!-- Training Center Section -->
+    <div class="mb-6">
+        <div class="bg-white rounded-lg p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-xl font-bold text-gray-900 flex items-center gap-2">
+                    <i data-lucide="dumbbell" class="w-6 h-6 text-green-600"></i>
+                    Training Center
+                </h2>
+                <button id="trainAllBtn"
+                    class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center gap-2">
+                    <i data-lucide="play" class="w-4 h-4"></i>
+                    Train All Players
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div class="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+                    <div class="text-2xl font-bold text-green-700">€2M</div>
+                    <div class="text-sm text-green-600">Training Cost</div>
+                </div>
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
+                    <div class="text-2xl font-bold text-blue-700">+5-15</div>
+                    <div class="text-sm text-blue-600">Fitness Boost</div>
+                </div>
+                <div class="bg-purple-50 border border-purple-200 rounded-lg p-4 text-center">
+                    <div class="text-2xl font-bold text-purple-700">24h</div>
+                    <div class="text-sm text-purple-600">Cooldown</div>
+                </div>
+            </div>
+
+            <div class="bg-gray-50 rounded-lg p-4">
+                <h3 class="font-semibold text-gray-900 mb-2">Training Benefits:</h3>
+                <ul class="text-sm text-gray-600 space-y-1">
+                    <li>• Improves player fitness by 5-15 points</li>
+                    <li>• Helps maintain player form</li>
+                    <li>• Reduces injury risk for low-fitness players</li>
+                    <li>• Can only be used once per day</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div>
             <!-- Formation Selector -->
@@ -574,6 +660,91 @@ startContent();
         }
     }
 
+    // Get effective player rating based on fitness and form
+    function getEffectiveRating(player) {
+        const baseRating = player.rating || 70;
+        const fitness = player.fitness || 100;
+        const form = player.form || 7;
+
+        // Fitness affects rating (0.5-1.0 multiplier)
+        const fitnessMultiplier = 0.5 + (fitness / 200);
+
+        // Form affects rating (-5 to +5 points)
+        const formBonus = (form - 7) * 0.7;
+
+        const effectiveRating = (baseRating * fitnessMultiplier) + formBonus;
+
+        return Math.max(1, Math.min(99, Math.round(effectiveRating)));
+    }
+
+    // Get fitness status text
+    function getFitnessStatusText(fitness) {
+        if (fitness >= 90) return 'Excellent';
+        if (fitness >= 75) return 'Good';
+        if (fitness >= 60) return 'Average';
+        if (fitness >= 40) return 'Poor';
+        return 'Injured';
+    }
+
+    // Get fitness status color
+    function getFitnessStatusColor(fitness) {
+        if (fitness >= 90) return 'bg-green-100 text-green-800';
+        if (fitness >= 75) return 'bg-blue-100 text-blue-800';
+        if (fitness >= 60) return 'bg-yellow-100 text-yellow-800';
+        if (fitness >= 40) return 'bg-orange-100 text-orange-800';
+        return 'bg-red-100 text-red-800';
+    }
+
+    // Get form status text
+    function getFormStatusText(form) {
+        if (form >= 8.5) return 'Superb';
+        if (form >= 7.5) return 'Excellent';
+        if (form >= 6.5) return 'Good';
+        if (form >= 5.5) return 'Average';
+        if (form >= 4) return 'Poor';
+        return 'Terrible';
+    }
+
+    // Get form status color
+    function getFormStatusColor(form) {
+        if (form >= 8.5) return 'bg-purple-100 text-purple-800';
+        if (form >= 7.5) return 'bg-green-100 text-green-800';
+        if (form >= 6.5) return 'bg-blue-100 text-blue-800';
+        if (form >= 5.5) return 'bg-yellow-100 text-yellow-800';
+        if (form >= 4) return 'bg-orange-100 text-orange-800';
+        return 'bg-red-100 text-red-800';
+    }
+
+    // Get fitness progress bar color
+    function getFitnessProgressColor(fitness) {
+        if (fitness >= 90) return 'bg-green-500';
+        if (fitness >= 75) return 'bg-blue-500';
+        if (fitness >= 60) return 'bg-yellow-500';
+        if (fitness >= 40) return 'bg-orange-500';
+        return 'bg-red-500';
+    }
+
+    // Get form badge color
+    function getFormBadgeColor(form) {
+        if (form >= 8.5) return 'bg-purple-100 text-purple-800 border border-purple-200';
+        if (form >= 7.5) return 'bg-green-100 text-green-800 border border-green-200';
+        if (form >= 6.5) return 'bg-blue-100 text-blue-800 border border-blue-200';
+        if (form >= 5.5) return 'bg-yellow-100 text-yellow-800 border border-yellow-200';
+        if (form >= 4) return 'bg-orange-100 text-orange-800 border border-orange-200';
+        return 'bg-red-100 text-red-800 border border-red-200';
+    }
+
+    // Get form arrow icon based on form level
+    function getFormArrowIcon(form) {
+        if (form >= 8) return '<i data-lucide="trending-up" class="w-3 h-3"></i>';
+        if (form >= 6.5) return '<i data-lucide="arrow-up" class="w-3 h-3"></i>';
+        if (form >= 5.5) return '<i data-lucide="minus" class="w-3 h-3"></i>';
+        if (form >= 4) return '<i data-lucide="arrow-down" class="w-3 h-3"></i>';
+        return '<i data-lucide="trending-down" class="w-3 h-3"></i>';
+
+
+    }
+
     function renderPlayers() {
         const $list = $('#playerList').empty();
         let totalValue = 0;
@@ -611,7 +782,21 @@ startContent();
                             <div class="flex-1" onclick="selectPlayer(${idx})">
                                 <div class="${nameClass}">${player.name}${customBadge}</div>
                                 <div class="${valueClass}">${formatMarketValue(player.value || 0)}</div>
-                                <div class="text-xs text-gray-500 mt-1">${player.position} • ★${player.rating || 'N/A'}</div>
+                                <div class="text-xs text-gray-500 mt-1">${player.position} • ★${getEffectiveRating(player)}</div>
+                                <div class="flex gap-2 mt-1 items-center">
+                                    <div class="flex-1">
+                                        <div class="text-xs text-gray-500 mb-1">Fitness</div>
+                                        <div class="w-full bg-gray-200 rounded-full h-2">
+                                            <div class="h-2 rounded-full transition-all duration-300 ${getFitnessProgressColor(player.fitness || 100)}" style="width: ${player.fitness || 100}%"></div>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-1">
+                                        <span class="text-xs px-2 py-1 rounded-full ${getFormBadgeColor(player.form || 7)} flex items-center gap-1">
+                                            ${getFormArrowIcon(player.form || 7)}
+                                            ${(player.form || 7).toFixed(1)}
+                                        </span>
+                                    </div>
+                                </div>
                             </div>
                             <div class="flex items-center gap-1 ml-2">
                                 ${!isCustom ? `<button onclick="showPlayerInfo(${JSON.stringify(player).replace(/"/g, '&quot;')})" class="p-1 text-blue-600 hover:bg-blue-100 rounded transition-colors" title="Player Info">
@@ -689,7 +874,21 @@ startContent();
                         <div class="flex-1">
                             <div class="${nameClass}">${player.name}${customBadge}</div>
                             <div class="${valueClass}">${formatMarketValue(player.value || 0)}</div>
-                            <div class="text-xs text-gray-500 mt-1">${player.position} • ★${player.rating || 'N/A'}</div>
+                            <div class="text-xs text-gray-500 mt-1">${player.position} • ★${getEffectiveRating(player)}</div>
+                            <div class="flex gap-2 mt-1 items-center">
+                                <div class="flex-1">
+                                    <div class="text-xs text-gray-500 mb-1">Fitness</div>
+                                    <div class="w-full bg-gray-200 rounded-full h-2">
+                                        <div class="h-2 rounded-full transition-all duration-300 ${getFitnessProgressColor(player.fitness || 100)}" style="width: ${player.fitness || 100}%"></div>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-1">
+                                    <span class="text-xs px-2 py-1 rounded-full ${getFormBadgeColor(player.form || 7)} flex items-center gap-1">
+                                        ${getFormArrowIcon(player.form || 7)}
+                                        ${(player.form || 7).toFixed(1)}
+                                    </span>
+                                </div>
+                            </div>
                         </div>
                         <div class="flex items-center gap-1 ml-2">
                             ${!isCustom ? `<button onclick="showPlayerInfo(${JSON.stringify(player).replace(/"/g, '&quot;')})" class="p-1 text-gray-600 hover:bg-gray-100 rounded transition-colors" title="Player Info">
@@ -2309,6 +2508,43 @@ startContent();
                     </div>
                 </div>
 
+                <!-- Player Condition -->
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                        <i data-lucide="activity" class="w-5 h-5 text-blue-600"></i>
+                        Player Condition
+                    </h3>
+                    <div class="space-y-4">
+                        <div>
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-gray-600">Fitness:</span>
+                                <span class="font-medium text-gray-700">${getFitnessStatusText(player.fitness || 100)}</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="${getFitnessProgressColor(player.fitness || 100)} h-2 rounded-full transition-all duration-300" style="width: ${player.fitness || 100}%"></div>
+                            </div>
+                            <div class="text-xs text-gray-500 mt-1">${player.fitness || 100}/100</div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-gray-600">Form:</span>
+                                <span class="px-3 py-1 rounded-full ${getFormBadgeColor(player.form || 7)} flex items-center gap-2 text-sm font-medium">
+                                    ${getFormArrowIcon(player.form || 7)}
+                                    ${(player.form || 7).toFixed(1)}/10.0
+                                </span>
+                            </div>
+                            <div class="text-xs text-gray-500 mt-1">${getFormStatusText(player.form || 7)} form level</div>
+                        </div>
+                        <div class="pt-2 border-t border-gray-200">
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Effective Rating:</span>
+                                <span class="font-bold text-lg text-blue-600">★${getEffectiveRating(player)}</span>
+                            </div>
+                            <div class="text-xs text-gray-500 mt-1">Base: ★${player.rating} (modified by fitness & form)</div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Positions & Skills -->
                 <div class="bg-gray-50 rounded-lg p-4">
                     <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
@@ -2358,6 +2594,95 @@ startContent();
         $('#playerInfoModal').removeClass('hidden');
         lucide.createIcons();
     }
+
+    // Training functionality
+    $('#trainAllBtn').click(function () {
+        Swal.fire({
+            icon: 'question',
+            title: 'Train All Players?',
+            html: `
+                <div class="text-left">
+                    <p class="mb-3">This will improve fitness for all players in your squad.</p>
+                    <div class="bg-gray-50 p-3 rounded">
+                        <div class="flex justify-between mb-2">
+                            <span>Training Cost:</span>
+                            <span class="font-bold text-red-600">€2,000,000</span>
+                        </div>
+                        <div class="flex justify-between mb-2">
+                            <span>Fitness Improvement:</span>
+                            <span class="font-bold text-green-600">+5 to +15 per player</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Cooldown:</span>
+                            <span class="font-bold text-blue-600">24 hours</span>
+                        </div>
+                    </div>
+                </div>
+            `,
+            showCancelButton: true,
+            confirmButtonColor: '#16a34a',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Start Training',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Show loading
+                Swal.fire({
+                    title: 'Training in Progress...',
+                    html: 'Improving player fitness',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
+                // Send training request
+                $.post('train_players.php', {
+                    action: 'train_all'
+                })
+                    .done(function (response) {
+                        if (response.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Training Complete!',
+                                html: `
+                                <div class="text-left">
+                                    <p class="mb-3">All players have completed training successfully!</p>
+                                    <div class="bg-green-50 p-3 rounded">
+                                        <div class="text-sm text-green-800">
+                                            <strong>Results:</strong><br>
+                                            • ${response.players_trained} players trained<br>
+                                            • Average fitness improvement: +${response.avg_improvement}<br>
+                                            • Cost: €${response.cost.toLocaleString()}
+                                        </div>
+                                    </div>
+                                </div>
+                            `,
+                                confirmButtonColor: '#16a34a'
+                            }).then(() => {
+                                // Reload page to show updated player conditions
+                                window.location.reload();
+                            });
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Training Failed',
+                                text: response.message || 'Unable to complete training session',
+                                confirmButtonColor: '#ef4444'
+                            });
+                        }
+                    })
+                    .fail(function () {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Training Failed',
+                            text: 'Network error occurred during training',
+                            confirmButtonColor: '#ef4444'
+                        });
+                    });
+            }
+        });
+    });
 
 
 

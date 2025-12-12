@@ -3,6 +3,7 @@ session_start();
 
 require_once 'config.php';
 require_once 'constants.php';
+require_once 'helpers.php';
 
 header('Content-Type: application/json');
 
@@ -99,7 +100,8 @@ try {
                 }
             }
 
-            // Add player to substitutes
+            // Initialize player condition and add to substitutes
+            $player_data = initializePlayerCondition($player_data);
             $current_substitutes[] = $player_data;
 
             // Update user's substitutes
