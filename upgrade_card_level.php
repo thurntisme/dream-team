@@ -107,17 +107,35 @@ try {
         exit;
     }
 
-    // Upgrade the player's card level
-    $new_card_level = $current_card_level + 1;
-    $current_player['card_level'] = $new_card_level;
+    // Calculate success rate based on card level (higher levels have lower success rates)
+    $base_success_rate = 85; // 85% base success rate
+    $level_penalty = ($current_card_level - 1) * 10; // -10% per level above 1
+    $success_rate = max(30, $base_success_rate - $level_penalty); // Minimum 30% success rate
+
+    // Generate random number to determine success
+    $luck_roll = rand(1, 100);
+    $upgrade_successful = $luck_roll <= $success_rate;
+
+    // Always deduct the cost (upgrade attempt fee)
+    $new_budget = $current_budget - $upgrade_cost;
+
+    if ($upgrade_successful) {
+        // Successful upgrade
+        $new_card_level = $current_card_level + 1;
+        $current_player['card_level'] = $new_card_level;
+        $upgrade_result = 'success';
+        $result_message = 'Card level upgraded successfully';
+    } else {
+        // Failed upgrade - no level increase but cost is still deducted
+        $new_card_level = $current_card_level;
+        $upgrade_result = 'failed';
+        $result_message = 'Upgrade attempt failed, but you can try again';
+    }
 
     // Update base salary if not set
     if (!isset($current_player['base_salary'])) {
         $current_player['base_salary'] = max(1000, $player_value * 0.001);
     }
-
-    // Calculate new budget
-    $new_budget = $current_budget - $upgrade_cost;
 
     // Update the player in the appropriate array
     if ($player_type === 'team') {
@@ -140,12 +158,15 @@ try {
 
         echo json_encode([
             'success' => true,
-            'message' => 'Card level upgraded successfully',
+            'upgrade_result' => $upgrade_result,
+            'message' => $result_message,
             'new_budget' => $new_budget,
             'player_name' => $current_player['name'],
             'old_card_level' => $current_card_level,
             'new_card_level' => $new_card_level,
             'upgrade_cost' => $upgrade_cost,
+            'success_rate' => $success_rate,
+            'luck_roll' => $luck_roll,
             'card_info' => $card_info,
             'benefits' => $benefits,
             'new_salary' => $new_salary,
@@ -160,4 +181,3 @@ try {
 } catch (Exception $e) {
     echo json_encode(['success' => false, 'message' => 'Server error: ' . $e->getMessage()]);
 }
-?>

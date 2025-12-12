@@ -976,6 +976,13 @@ startContent();
         };
     }
 
+    // Calculate card level upgrade success rate
+    function getCardLevelUpgradeSuccessRate(currentLevel) {
+        const baseSuccessRate = 85;
+        const levelPenalty = (currentLevel - 1) * 10;
+        return Math.max(30, baseSuccessRate - levelPenalty);
+    }
+
     function renderPlayers() {
         const $list = $('#playerList').empty();
         let totalValue = 0;
@@ -3034,6 +3041,11 @@ startContent();
         const newCardLevel = currentCardLevel + 1;
         const cardInfo = getCardLevelDisplayInfo(newCardLevel);
         const benefits = getCardLevelBenefits(newCardLevel);
+        
+        // Calculate success rate
+        const baseSuccessRate = 85;
+        const levelPenalty = (currentCardLevel - 1) * 10;
+        const successRate = Math.max(30, baseSuccessRate - levelPenalty);
 
         Swal.fire({
             title: `Upgrade ${playerName}'s Card Level?`,
@@ -3047,8 +3059,12 @@ startContent();
                                 <span class="font-medium">${currentCardLevel} - ${getCardLevelDisplayInfo(currentCardLevel).text}</span>
                             </div>
                             <div class="flex justify-between">
-                                <span class="text-gray-600">New Level:</span>
+                                <span class="text-gray-600">Target Level:</span>
                                 <span class="font-medium text-green-600">${newCardLevel} - ${cardInfo.text}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Success Rate:</span>
+                                <span class="font-medium ${successRate >= 70 ? 'text-green-600' : successRate >= 50 ? 'text-yellow-600' : 'text-red-600'}">${successRate}%</span>
                             </div>
                             <div class="flex justify-between">
                                 <span class="text-gray-600">Upgrade Cost:</span>
@@ -3057,8 +3073,17 @@ startContent();
                         </div>
                     </div>
                     
+                    <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                        <h4 class="font-semibold text-yellow-900 mb-2">⚠️ Important Notice:</h4>
+                        <div class="space-y-1 text-sm text-yellow-800">
+                            <div>• Upgrade cost is paid regardless of success or failure</div>
+                            <div>• Higher card levels have lower success rates</div>
+                            <div>• You can retry failed upgrades (additional cost applies)</div>
+                        </div>
+                    </div>
+                    
                     <div class="bg-green-50 p-4 rounded-lg border border-green-200">
-                        <h4 class="font-semibold text-green-900 mb-2">Benefits:</h4>
+                        <h4 class="font-semibold text-green-900 mb-2">Success Benefits:</h4>
                         <div class="space-y-1 text-sm text-green-800">
                             <div>• Rating Bonus: +${benefits.ratingBonus} points</div>
                             <div>• Max Fitness: ${benefits.maxFitness}/100</div>
@@ -3070,7 +3095,7 @@ startContent();
                         <h4 class="font-semibold text-red-900 mb-2">Consequences:</h4>
                         <div class="space-y-1 text-sm text-red-800">
                             <div>• Salary Increase: +${benefits.salaryIncreasePercent}% weekly cost</div>
-                            <div>• Upgrade Cost: ${formatMarketValue(upgradeCost)} (one-time)</div>
+                            <div>• Upgrade Cost: ${formatMarketValue(upgradeCost)} (paid now)</div>
                         </div>
                     </div>
                     
@@ -3082,8 +3107,8 @@ startContent();
                                 <span class="font-medium text-blue-600">${formatMarketValue(maxBudget)}</span>
                             </div>
                             <div class="flex justify-between">
-                                <span class="text-gray-600">After Upgrade:</span>
-                                <span class="font-medium text-green-600">${formatMarketValue(maxBudget - upgradeCost)}</span>
+                                <span class="text-gray-600">After Payment:</span>
+                                <span class="font-medium text-orange-600">${formatMarketValue(maxBudget - upgradeCost)}</span>
                             </div>
                         </div>
                     </div>
@@ -3093,7 +3118,7 @@ startContent();
             showCancelButton: true,
             confirmButtonColor: '#10b981',
             cancelButtonColor: '#6b7280',
-            confirmButtonText: '<i data-lucide="arrow-up" class="w-4 h-4 inline mr-1"></i> Upgrade Card Level',
+            confirmButtonText: '<i data-lucide="dice-6" class="w-4 h-4 inline mr-1"></i> Try Upgrade',
             cancelButtonText: 'Cancel',
             customClass: {
                 popup: 'swal-wide'
@@ -3103,103 +3128,272 @@ startContent();
             }
         }).then((result) => {
             if (result.isConfirmed) {
-                // Show loading message
-                Swal.fire({
-                    title: 'Upgrading Card Level...',
-                    text: 'Please wait while we upgrade the player card',
-                    allowOutsideClick: false,
-                    allowEscapeKey: false,
-                    showConfirmButton: false,
-                    didOpen: () => {
-                        Swal.showLoading();
-                    }
-                });
+                // Show processing popup with progress bar
+                showUpgradeProcessing(playerUuid, playerName, currentCardLevel, successRate);
+            }
+        });
+    };
 
-                // Determine player type (team or substitute)
-                let playerType = 'team';
-                let playerFound = false;
+    // Show upgrade processing with progress bar and luck animation
+    function showUpgradeProcessing(playerUuid, playerName, currentCardLevel, successRate) {
+        let progress = 0;
+        let currentStep = 0;
+        let progressInterval = null;
+        
+        const steps = [
+            'Preparing upgrade materials...',
+            'Analyzing player potential...',
+            'Calculating enhancement factors...',
+            'Processing upgrade...',
+            'Finalizing results...'
+        ];
 
-                // Check main team
-                selectedPlayers.forEach((player, idx) => {
-                    if (player && player.uuid === playerUuid) {
-                        playerFound = true;
-                        playerType = 'team';
-                    }
-                });
+        // Function to clean up all intervals and timeouts
+        const cleanupIntervals = () => {
+            if (progressInterval) {
+                clearInterval(progressInterval);
+                progressInterval = null;
+            }
+        };
 
-                // Check substitutes if not found in main team
-                if (!playerFound) {
+        Swal.fire({
+            title: `Upgrading ${playerName}`,
+            html: `
+                <div class="text-center space-y-4">
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <div class="text-lg font-semibold text-gray-900 mb-2">Card Level ${currentCardLevel} → ${currentCardLevel + 1}</div>
+                        <div class="text-sm text-gray-600">Success Rate: <span class="font-medium ${successRate >= 70 ? 'text-green-600' : successRate >= 50 ? 'text-yellow-600' : 'text-red-600'}">${successRate}%</span></div>
+                    </div>
+                    
+                    <div class="space-y-2">
+                        <div id="upgradeStep" class="text-sm text-gray-600">${steps[0]}</div>
+                        <div class="w-full bg-gray-200 rounded-full h-3">
+                            <div id="upgradeProgress" class="bg-gradient-to-r from-blue-500 to-purple-600 h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
+                        </div>
+                        <div id="upgradePercentage" class="text-xs text-gray-500">0%</div>
+                    </div>
+                </div>
+            `,
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            showConfirmButton: false,
+            customClass: {
+                popup: 'swal-wide'
+            },
+            willClose: () => {
+                // Ensure intervals are cleaned up when modal closes
+                cleanupIntervals();
+            }
+        });
+
+        // Add timeout as safety mechanism (max 10 seconds)
+        const timeoutId = setTimeout(() => {
+            cleanupIntervals();
+            processUpgrade(playerUuid, playerName, currentCardLevel);
+        }, 10000);
+
+        // Animate progress
+        progressInterval = setInterval(() => {
+            progress += Math.random() * 15 + 5; // Random progress between 5-20%
+            
+            if (progress >= 100) {
+                progress = 100;
+                clearTimeout(timeoutId); // Clear timeout since we're completing normally
+                cleanupIntervals();
+                
+                // Process the actual upgrade
+                processUpgrade(playerUuid, playerName, currentCardLevel);
+                return;
+            }
+
+            // Update progress bar (check if elements exist to prevent errors)
+            const progressBar = document.getElementById('upgradeProgress');
+            const progressText = document.getElementById('upgradePercentage');
+            const stepText = document.getElementById('upgradeStep');
+            
+            if (progressBar) progressBar.style.width = progress + '%';
+            if (progressText) progressText.textContent = Math.floor(progress) + '%';
+            
+            // Update step text
+            const stepIndex = Math.min(Math.floor(progress / 20), steps.length - 1);
+            if (stepIndex !== currentStep) {
+                currentStep = stepIndex;
+                if (stepText) stepText.textContent = steps[stepIndex];
+            }
+        }, 200);
+    }
+
+    // Process the actual upgrade
+    function processUpgrade(playerUuid, playerName, currentCardLevel) {
+        // Determine player type (team or substitute)
+        let playerType = 'team';
+        let playerFound = false;
+
+        // Check main team
+        selectedPlayers.forEach((player, idx) => {
+            if (player && player.uuid === playerUuid) {
+                playerFound = true;
+                playerType = 'team';
+            }
+        });
+
+        // Check substitutes if not found in main team
+        if (!playerFound) {
+            substitutePlayers.forEach((player, idx) => {
+                if (player && player.uuid === playerUuid) {
+                    playerFound = true;
+                    playerType = 'substitute';
+                }
+            });
+        }
+
+        // If player not found, show error and return
+        if (!playerFound) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Player Not Found',
+                text: 'Could not find the player in your squad. Please refresh and try again.',
+                confirmButtonColor: '#ef4444'
+            });
+            return;
+        }
+
+        // Process upgrade
+        $.post('upgrade_card_level.php', {
+            player_uuid: playerUuid,
+            player_type: playerType
+        }, function (response) {
+            if (response.success) {
+                // Update local budget
+                maxBudget = response.new_budget;
+                $('#clubBudget').text(formatMarketValue(response.new_budget));
+
+                // Update player data in local arrays
+                if (playerType === 'team') {
+                    selectedPlayers.forEach((player, idx) => {
+                        if (player && player.uuid === playerUuid) {
+                            selectedPlayers[idx] = response.updated_player;
+                        }
+                    });
+                } else {
                     substitutePlayers.forEach((player, idx) => {
                         if (player && player.uuid === playerUuid) {
-                            playerFound = true;
-                            playerType = 'substitute';
+                            substitutePlayers[idx] = response.updated_player;
                         }
                     });
                 }
 
-                // Process upgrade
-                $.post('upgrade_card_level.php', {
-                    player_uuid: playerUuid,
-                    player_type: playerType
-                }, function (response) {
-                    if (response.success) {
-                        // Update local budget
-                        maxBudget = response.new_budget;
-                        $('#clubBudget').text(formatMarketValue(response.new_budget));
+                // Close modal and refresh displays
+                $('#playerInfoModal').addClass('hidden');
+                renderPlayers();
+                renderSubstitutes();
 
-                        // Update player data in local arrays
-                        if (playerType === 'team') {
-                            selectedPlayers.forEach((player, idx) => {
-                                if (player && player.uuid === playerUuid) {
-                                    selectedPlayers[idx] = response.updated_player;
-                                }
-                            });
-                        } else {
-                            substitutePlayers.forEach((player, idx) => {
-                                if (player && player.uuid === playerUuid) {
-                                    substitutePlayers[idx] = response.updated_player;
-                                }
-                            });
-                        }
-
-                        // Close modal and refresh displays
-                        $('#playerInfoModal').addClass('hidden');
-                        renderPlayers();
-                        renderSubstitutes();
-
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Card Level Upgraded!',
-                            html: `
-                                <div class="text-center">
-                                    <p class="mb-2">${response.player_name} upgraded to Card Level ${response.new_card_level}!</p>
-                                    <p class="text-sm text-gray-600">Cost: ${formatMarketValue(response.upgrade_cost)}</p>
-                                    <p class="text-sm text-green-600">New Rating Bonus: +${response.benefits.ratingBonus}</p>
-                                    <p class="text-sm text-red-600">New Weekly Salary: ${formatMarketValue(response.new_salary)}</p>
+                // Show result based on upgrade success/failure
+                if (response.upgrade_result === 'success') {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '🎉 Upgrade Successful!',
+                        html: `
+                            <div class="text-center space-y-3">
+                                <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                                    <div class="text-lg font-bold text-green-900">${response.player_name}</div>
+                                    <div class="text-sm text-green-700">Card Level ${response.old_card_level} → ${response.new_card_level}</div>
                                 </div>
-                            `,
-                            timer: 4000,
-                            showConfirmButton: true
-                        });
-                    } else {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Upgrade Failed',
-                            text: response.message || 'Could not upgrade card level. Please try again.',
-                            confirmButtonColor: '#ef4444'
-                        });
-                    }
-                }, 'json').fail(function () {
+                                
+                                <div class="bg-gray-50 p-3 rounded-lg">
+                                    <div class="text-sm space-y-1">
+                                        <div class="flex justify-between">
+                                            <span class="text-gray-600">Success Rate:</span>
+                                            <span class="font-medium text-green-600">${response.success_rate}%</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span class="text-gray-600">Your Roll:</span>
+                                            <span class="font-medium text-blue-600">${response.luck_roll}</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span class="text-gray-600">Cost Paid:</span>
+                                            <span class="font-medium text-red-600">${formatMarketValue(response.upgrade_cost)}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                                    <div class="text-sm text-blue-800">
+                                        <div>✨ New Rating Bonus: +${response.benefits.ratingBonus}</div>
+                                        <div>💪 Max Fitness: ${response.benefits.maxFitness}/100</div>
+                                        <div>💰 Weekly Salary: ${formatMarketValue(response.new_salary)}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        `,
+                        confirmButtonText: 'Awesome!',
+                        confirmButtonColor: '#10b981'
+                    });
+                } else {
                     Swal.fire({
                         icon: 'error',
-                        title: 'Connection Error',
-                        text: 'Could not process card level upgrade. Please check your connection and try again.',
-                        confirmButtonColor: '#ef4444'
+                        title: '💔 Upgrade Failed',
+                        html: `
+                            <div class="text-center space-y-3">
+                                <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+                                    <div class="text-lg font-bold text-red-900">${response.player_name}</div>
+                                    <div class="text-sm text-red-700">Upgrade attempt failed</div>
+                                </div>
+                                
+                                <div class="bg-gray-50 p-3 rounded-lg">
+                                    <div class="text-sm space-y-1">
+                                        <div class="flex justify-between">
+                                            <span class="text-gray-600">Success Rate:</span>
+                                            <span class="font-medium text-orange-600">${response.success_rate}%</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span class="text-gray-600">Your Roll:</span>
+                                            <span class="font-medium text-red-600">${response.luck_roll}</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span class="text-gray-600">Cost Paid:</span>
+                                            <span class="font-medium text-red-600">${formatMarketValue(response.upgrade_cost)}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="bg-yellow-50 p-3 rounded-lg border border-yellow-200">
+                                    <div class="text-sm text-yellow-800">
+                                        <div>🔄 You can try again (additional cost applies)</div>
+                                        <div>💡 Higher card levels have lower success rates</div>
+                                    </div>
+                                </div>
+                            </div>
+                        `,
+                        confirmButtonText: 'Try Again',
+                        showCancelButton: true,
+                        cancelButtonText: 'Maybe Later',
+                        confirmButtonColor: '#f59e0b',
+                        cancelButtonColor: '#6b7280'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            // Retry the upgrade
+                            upgradeCardLevel(playerUuid, playerName, currentCardLevel, response.updated_player.value);
+                        }
                     });
+                }
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Upgrade Failed',
+                    text: response.message || 'Could not upgrade card level. Please try again.',
+                    confirmButtonColor: '#ef4444'
                 });
             }
+        }, 'json').fail(function () {
+            Swal.fire({
+                icon: 'error',
+                title: 'Connection Error',
+                text: 'Could not process card level upgrade. Please check your connection and try again.',
+                confirmButtonColor: '#ef4444'
+            });
         });
-    };
+    }
 
     // Training functionality
     $('#trainAllBtn').click(function () {

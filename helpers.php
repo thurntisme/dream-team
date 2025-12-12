@@ -997,6 +997,21 @@ if (!function_exists('getCardLevelBenefits')) {
 }
 
 /**
+ * Calculate card level upgrade success rate
+ * 
+ * @param int $current_level Current card level
+ * @return int Success rate percentage (30-85%)
+ */
+if (!function_exists('getCardLevelUpgradeSuccessRate')) {
+    function getCardLevelUpgradeSuccessRate($current_level)
+    {
+        $base_success_rate = 85; // 85% base success rate
+        $level_penalty = ($current_level - 1) * 10; // -10% per level above 1
+        return max(30, $base_success_rate - $level_penalty); // Minimum 30% success rate
+    }
+}
+
+/**
  * Update player fitness with card level bonus
  * 
  * @param array $player Player data
