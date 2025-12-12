@@ -23,17 +23,17 @@ try {
 }
 
 // Validate input
-if (!isset($_POST['player_name']) || !isset($_POST['renewal_cost']) || !isset($_POST['new_matches'])) {
+if (!isset($_POST['player_uuid']) || !isset($_POST['renewal_cost']) || !isset($_POST['new_matches'])) {
     echo json_encode(['success' => false, 'message' => 'Missing required parameters']);
     exit;
 }
 
-$player_name = sanitizeInput($_POST['player_name'], 'string');
+$player_uuid = sanitizeInput($_POST['player_uuid'], 'string');
 $renewal_cost = (int) $_POST['renewal_cost'];
 $new_matches = (int) $_POST['new_matches'];
 
 // Validate values
-if (empty($player_name) || $renewal_cost <= 0 || $new_matches <= 0) {
+if (empty($player_uuid) || $renewal_cost <= 0 || $new_matches <= 0) {
     echo json_encode(['success' => false, 'message' => 'Invalid parameters']);
     exit;
 }
@@ -72,9 +72,10 @@ try {
 
     // Check main team
     for ($i = 0; $i < count($team_data); $i++) {
-        if ($team_data[$i] && $team_data[$i]['name'] === $player_name) {
+        if ($team_data[$i] && ($team_data[$i]['uuid'] ?? '') === $player_uuid) {
             $team_data[$i]['contract_matches_remaining'] = ($team_data[$i]['contract_matches_remaining'] ?? 0) + $new_matches;
             $player_found = true;
+            $player_name = $team_data[$i]['name'] ?? 'Unknown Player';
             break;
         }
     }
@@ -82,9 +83,10 @@ try {
     // Check substitutes if not found in main team
     if (!$player_found) {
         for ($i = 0; $i < count($substitutes_data); $i++) {
-            if ($substitutes_data[$i] && $substitutes_data[$i]['name'] === $player_name) {
+            if ($substitutes_data[$i] && ($substitutes_data[$i]['uuid'] ?? '') === $player_uuid) {
                 $substitutes_data[$i]['contract_matches_remaining'] = ($substitutes_data[$i]['contract_matches_remaining'] ?? 0) + $new_matches;
                 $player_found = true;
+                $player_name = $substitutes_data[$i]['name'] ?? 'Unknown Player';
                 break;
             }
         }

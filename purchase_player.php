@@ -37,7 +37,7 @@ if (!$data) {
     $team = $_POST['team'] ?? '';
     $substitutes = $_POST['substitutes'] ?? '[]';
     $player_cost = (int) ($_POST['player_cost'] ?? 0);
-    $player_name = $_POST['player_name'] ?? '';
+    $player_uuid = $_POST['player_uuid'] ?? '';
 
     if (empty($formation) || empty($team)) {
         http_response_code(400);
@@ -49,11 +49,11 @@ if (!$data) {
 } else {
     // Handle market purchase
     $player_index = $data['player_index'] ?? null;
-    $player_name = $data['player_name'] ?? '';
+    $player_uuid = $data['player_uuid'] ?? '';
     $player_data = $data['player_data'] ?? null;
     $purchase_amount = (int) ($data['purchase_amount'] ?? 0);
 
-    if ($player_index === null || empty($player_name) || !$player_data || $purchase_amount <= 0) {
+    if ($player_index === null || empty($player_uuid) || !$player_data || $purchase_amount <= 0) {
         http_response_code(400);
         echo json_encode(['success' => false, 'message' => 'Invalid market purchase data']);
         exit;
@@ -95,8 +95,8 @@ try {
 
         foreach ($current_team as $existing_player) {
             if (
-                $existing_player && isset($existing_player['name']) &&
-                strtolower($existing_player['name']) === strtolower($player_name)
+                $existing_player && isset($existing_player['uuid']) &&
+                $existing_player['uuid'] === $player_uuid
             ) {
                 throw new Exception('You already have this player in your team');
             }
@@ -104,8 +104,8 @@ try {
 
         foreach ($current_substitutes as $existing_player) {
             if (
-                $existing_player && isset($existing_player['name']) &&
-                strtolower($existing_player['name']) === strtolower($player_name)
+                $existing_player && isset($existing_player['uuid']) &&
+                $existing_player['uuid'] === $player_uuid
             ) {
                 throw new Exception('You already have this player in your substitutes');
             }
@@ -187,7 +187,7 @@ try {
         'success' => true,
         'message' => $response_message,
         'new_budget' => $new_budget,
-        'player_name' => $player_name,
+        'player_name' => $player_data['name'] ?? 'Unknown Player',
         'player_cost' => $response_cost
     ]);
 

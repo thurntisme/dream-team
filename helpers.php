@@ -544,6 +544,13 @@ if (!function_exists('initializePlayerCondition')) {
         if (!isset($player['experience'])) {
             $player['experience'] = 0; // Experience points for leveling up
         }
+        if (!isset($player['card_level'])) {
+            $player['card_level'] = 1; // Default card level for players joining the club
+        }
+        if (!isset($player['base_salary'])) {
+            // Calculate base salary from player value (weekly salary = 0.1% of value)
+            $player['base_salary'] = max(1000, ($player['value'] ?? 1000000) * 0.001);
+        }
         return $player;
     }
 }
@@ -660,7 +667,7 @@ if (!function_exists('getFormStatus')) {
 }
 
 /**
- * Calculate effective player rating based on fitness, form, and level
+ * Calculate effective player rating based on fitness, form, level, and card level
  * 
  * @param array $player Player data
  * @return int Effective rating
@@ -672,6 +679,7 @@ if (!function_exists('getEffectiveRating')) {
         $fitness = $player['fitness'] ?? 100;
         $form = $player['form'] ?? 7;
         $level = $player['level'] ?? 1;
+        $card_level = $player['card_level'] ?? 1;
 
         // Fitness affects rating (0.5-1.0 multiplier)
         $fitness_multiplier = 0.5 + ($fitness / 200);
@@ -682,7 +690,10 @@ if (!function_exists('getEffectiveRating')) {
         // Level affects rating (+0.5 points per level above 1)
         $level_bonus = ($level - 1) * 0.5;
 
-        $effective_rating = ($base_rating * $fitness_multiplier) + $form_bonus + $level_bonus;
+        // Card level affects rating (+1 point per card level above 1)
+        $card_level_bonus = ($card_level - 1) * 1.0;
+
+        $effective_rating = ($base_rating * $fitness_multiplier) + $form_bonus + $level_bonus + $card_level_bonus;
 
         return max(1, min(99, round($effective_rating)));
     }
@@ -860,6 +871,160 @@ if (!function_exists('getLevelDisplayInfo')) {
                 'border' => 'border-gray-200'
             ];
         }
+    }
+}
+
+/**
+ * Calculate card level upgrade cost
+ * 
+ * @param int $current_level Current card level
+ * @param int $player_value Player's market value
+ * @return int Upgrade cost
+ */
+if (!function_exists('getCardLevelUpgradeCost')) {
+    function getCardLevelUpgradeCost($current_level, $player_value)
+    {
+        // Base cost increases exponentially with level
+        $base_cost = $current_level * 500000; // €0.5M per level
+
+        // Player value multiplier (higher value players cost more to upgrade)
+        $value_multiplier = 1 + ($player_value / 50000000); // +1 for every €50M value
+
+        return (int) ($base_cost * $value_multiplier);
+    }
+}
+
+/**
+ * Get card level display information
+ * 
+ * @param int $card_level Player card level
+ * @return array Card level display info with colors and text
+ */
+if (!function_exists('getCardLevelDisplayInfo')) {
+    function getCardLevelDisplayInfo($card_level)
+    {
+        if ($card_level >= 10) {
+            return [
+                'text' => 'Diamond',
+                'color' => 'text-cyan-600',
+                'bg' => 'bg-cyan-100',
+                'border' => 'border-cyan-200',
+                'icon' => 'diamond'
+            ];
+        } elseif ($card_level >= 8) {
+            return [
+                'text' => 'Platinum',
+                'color' => 'text-purple-600',
+                'bg' => 'bg-purple-100',
+                'border' => 'border-purple-200',
+                'icon' => 'star'
+            ];
+        } elseif ($card_level >= 6) {
+            return [
+                'text' => 'Gold',
+                'color' => 'text-yellow-600',
+                'bg' => 'bg-yellow-100',
+                'border' => 'border-yellow-200',
+                'icon' => 'award'
+            ];
+        } elseif ($card_level >= 4) {
+            return [
+                'text' => 'Silver',
+                'color' => 'text-gray-600',
+                'bg' => 'bg-gray-100',
+                'border' => 'border-gray-200',
+                'icon' => 'medal'
+            ];
+        } elseif ($card_level >= 2) {
+            return [
+                'text' => 'Bronze',
+                'color' => 'text-orange-600',
+                'bg' => 'bg-orange-100',
+                'border' => 'border-orange-200',
+                'icon' => 'shield'
+            ];
+        } else {
+            return [
+                'text' => 'Basic',
+                'color' => 'text-green-600',
+                'bg' => 'bg-green-100',
+                'border' => 'border-green-200',
+                'icon' => 'user'
+            ];
+        }
+    }
+}
+
+/**
+ * Calculate player weekly salary based on card level
+ * 
+ * @param array $player Player data
+ * @return int Weekly salary
+ */
+if (!function_exists('calculatePlayerSalary')) {
+    function calculatePlayerSalary($player)
+    {
+        $base_salary = $player['base_salary'] ?? max(1000, ($player['value'] ?? 1000000) * 0.001);
+        $card_level = $player['card_level'] ?? 1;
+
+        // Salary increases by 20% per card level above 1
+        $salary_multiplier = 1 + (($card_level - 1) * 0.2);
+
+        return (int) ($base_salary * $salary_multiplier);
+    }
+}
+
+/**
+ * Get card level benefits
+ * 
+ * @param int $card_level Player card level
+ * @return array Benefits information
+ */
+if (!function_exists('getCardLevelBenefits')) {
+    function getCardLevelBenefits($card_level)
+    {
+        $rating_bonus = ($card_level - 1) * 1.0;
+        $fitness_bonus = ($card_level - 1) * 2; // +2 max fitness per level
+        $salary_increase = ($card_level - 1) * 20; // +20% salary per level
+
+        return [
+            'rating_bonus' => $rating_bonus,
+            'fitness_bonus' => $fitness_bonus,
+            'salary_increase_percent' => $salary_increase,
+            'max_fitness' => min(100, 100 + $fitness_bonus)
+        ];
+    }
+}
+
+/**
+ * Update player fitness with card level bonus
+ * 
+ * @param array $player Player data
+ * @param bool $played_match Whether player played a match
+ * @param int $days_since_last_match Days since last match
+ * @return array Updated player data
+ */
+if (!function_exists('updatePlayerFitnessWithCardLevel')) {
+    function updatePlayerFitnessWithCardLevel($player, $played_match = false, $days_since_last_match = 0)
+    {
+        $fitness = $player['fitness'] ?? 100;
+        $card_level = $player['card_level'] ?? 1;
+        $benefits = getCardLevelBenefits($card_level);
+        $max_fitness = $benefits['max_fitness'];
+
+        if ($played_match) {
+            // Fitness decreases after playing
+            $fitness -= rand(5, 15);
+        } else {
+            // Fitness recovers when resting
+            $recovery = min(3 + ($days_since_last_match * 2), 10);
+            $fitness += $recovery;
+        }
+
+        // Keep fitness between 0 and max fitness (based on card level)
+        $player['fitness'] = max(0, min($max_fitness, $fitness));
+
+        return $player;
     }
 }
 

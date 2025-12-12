@@ -721,7 +721,7 @@ startContent();
 
         const requestData = {
             player_index: parseInt(playerIndex),
-            player_name: playerName,
+            player_uuid: playerData.uuid,
             player_data: playerData,
             purchase_amount: parseInt(purchaseAmount)
         };

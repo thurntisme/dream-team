@@ -894,6 +894,88 @@ startContent();
         };
     }
 
+    // Get card level display information
+    function getCardLevelDisplayInfo(cardLevel) {
+        if (cardLevel >= 10) {
+            return {
+                text: 'Diamond',
+                color: 'text-cyan-600',
+                bg: 'bg-cyan-100',
+                border: 'border-cyan-200',
+                icon: 'diamond'
+            };
+        } else if (cardLevel >= 8) {
+            return {
+                text: 'Platinum',
+                color: 'text-purple-600',
+                bg: 'bg-purple-100',
+                border: 'border-purple-200',
+                icon: 'star'
+            };
+        } else if (cardLevel >= 6) {
+            return {
+                text: 'Gold',
+                color: 'text-yellow-600',
+                bg: 'bg-yellow-100',
+                border: 'border-yellow-200',
+                icon: 'award'
+            };
+        } else if (cardLevel >= 4) {
+            return {
+                text: 'Silver',
+                color: 'text-gray-600',
+                bg: 'bg-gray-100',
+                border: 'border-gray-200',
+                icon: 'medal'
+            };
+        } else if (cardLevel >= 2) {
+            return {
+                text: 'Bronze',
+                color: 'text-orange-600',
+                bg: 'bg-orange-100',
+                border: 'border-orange-200',
+                icon: 'shield'
+            };
+        } else {
+            return {
+                text: 'Basic',
+                color: 'text-green-600',
+                bg: 'bg-green-100',
+                border: 'border-green-200',
+                icon: 'user'
+            };
+        }
+    }
+
+    // Calculate card level upgrade cost
+    function getCardLevelUpgradeCost(currentLevel, playerValue) {
+        const baseCost = currentLevel * 500000; // €0.5M per level
+        const valueMultiplier = 1 + (playerValue / 50000000); // +1 for every €50M value
+        return Math.floor(baseCost * valueMultiplier);
+    }
+
+    // Calculate player salary
+    function calculatePlayerSalary(player) {
+        const baseSalary = player.base_salary || Math.max(1000, (player.value || 1000000) * 0.001);
+        const cardLevel = player.card_level || 1;
+        const salaryMultiplier = 1 + ((cardLevel - 1) * 0.2);
+        return Math.floor(baseSalary * salaryMultiplier);
+    }
+
+    // Get card level benefits
+    function getCardLevelBenefits(cardLevel) {
+        const ratingBonus = (cardLevel - 1) * 1.0;
+        const fitnessBonus = (cardLevel - 1) * 2;
+        const salaryIncrease = (cardLevel - 1) * 20;
+
+        return {
+            ratingBonus: ratingBonus,
+            fitnessBonus: fitnessBonus,
+            salaryIncreasePercent: salaryIncrease,
+            maxFitness: Math.min(100, 100 + fitnessBonus)
+        };
+    }
+
     function renderPlayers() {
         const $list = $('#playerList').empty();
         let totalValue = 0;
@@ -931,7 +1013,7 @@ startContent();
                             <div class="flex-1" onclick="selectPlayer(${idx})">
                                 <div class="${nameClass}">${player.name}${customBadge}</div>
                                 <div class="${valueClass}">${formatMarketValue(player.value || 0)}</div>
-                                <div class="text-xs text-gray-500 mt-1">${player.position} • ★${getEffectiveRating(player)} • Lv.${player.level || 1} • ${(player.contract_matches_remaining || player.contract_matches || 25)} matches left</div>
+                                <div class="text-xs text-gray-500 mt-1">${player.position} • ★${getEffectiveRating(player)} • Lv.${player.level || 1} • Card Lv.${player.card_level || 1} • ${(player.contract_matches_remaining || player.contract_matches || 25)} matches left</div>
                                 <div class="flex gap-2 mt-1 items-center">
                                     <div class="flex-1">
                                         <div class="text-xs text-gray-500 mb-1">Fitness</div>
@@ -1023,7 +1105,7 @@ startContent();
                         <div class="flex-1">
                             <div class="${nameClass}">${player.name}${customBadge}</div>
                             <div class="${valueClass}">${formatMarketValue(player.value || 0)}</div>
-                            <div class="text-xs text-gray-500 mt-1">${player.position} • ★${getEffectiveRating(player)} • Lv.${player.level || 1} • ${(player.contract_matches_remaining || player.contract_matches || 25)} matches left</div>
+                            <div class="text-xs text-gray-500 mt-1">${player.position} • ★${getEffectiveRating(player)} • Lv.${player.level || 1} • Card Lv.${player.card_level || 1} • ${(player.contract_matches_remaining || player.contract_matches || 25)} matches left</div>
                             <div class="flex gap-2 mt-1 items-center">
                                 <div class="flex-1">
                                     <div class="text-xs text-gray-500 mb-1">Fitness</div>
@@ -2098,7 +2180,7 @@ startContent();
                             team: JSON.stringify(selectedPlayers),
                             substitutes: JSON.stringify(substitutePlayers),
                             player_cost: player.value || 0,
-                            player_name: player.name
+                            player_uuid: player.uuid
                         }, function (response) {
                             if (response.success) {
                                 // Update local budget variable
@@ -2374,7 +2456,7 @@ startContent();
                     team: JSON.stringify(selectedPlayers),
                     substitutes: JSON.stringify(substitutePlayers),
                     player_cost: customPlayerValue,
-                    player_name: customName
+                    player_uuid: customPlayer.uuid
                 }, function (response) {
                     if (response.success) {
                         // Update local budget variable
@@ -2672,7 +2754,7 @@ startContent();
                                     </div>
                                     <div class="text-xs text-gray-600 mt-1">Contract renewal recommended</div>
                                 </div>
-                                <button onclick="renewContract('${player.name}', ${contractRemaining})" class="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">
+                                <button onclick="renewContract('${player.uuid}', '${player.name}', ${contractRemaining})" class="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">
                                     Renew
                                 </button>
                             </div>
@@ -2732,8 +2814,61 @@ startContent();
                                 <span class="text-gray-600">Effective Rating:</span>
                                 <span class="font-bold text-lg text-blue-600">★${getEffectiveRating(player)}</span>
                             </div>
-                            <div class="text-xs text-gray-500 mt-1">Base: ★${player.rating} (modified by fitness, form & level)</div>
+                            <div class="text-xs text-gray-500 mt-1">Base: ★${player.rating} (modified by fitness, form, level & card level)</div>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Card Level & Upgrades -->
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                        <i data-lucide="credit-card" class="w-5 h-5 text-indigo-600"></i>
+                        Card Level & Salary
+                    </h3>
+                    <div class="space-y-4">
+                        <div>
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-gray-600">Card Level:</span>
+                                <span class="px-3 py-1 rounded-full ${getCardLevelDisplayInfo(player.card_level || 1).bg} ${getCardLevelDisplayInfo(player.card_level || 1).border} flex items-center gap-2 text-sm font-medium ${getCardLevelDisplayInfo(player.card_level || 1).color}">
+                                    <i data-lucide="${getCardLevelDisplayInfo(player.card_level || 1).icon}" class="w-3 h-3"></i>
+                                    ${player.card_level || 1} - ${getCardLevelDisplayInfo(player.card_level || 1).text}
+                                </span>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-gray-600">Weekly Salary:</span>
+                                <span class="font-medium text-red-600">${formatMarketValue(calculatePlayerSalary(player))}</span>
+                            </div>
+                            <div class="text-xs text-gray-500">Base: ${formatMarketValue(player.base_salary || Math.max(1000, (player.value || 1000000) * 0.001))} (+${getCardLevelBenefits(player.card_level || 1).salaryIncreasePercent}% from card level)</div>
+                        </div>
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                            <h4 class="font-semibold text-blue-900 mb-2">Card Level Benefits:</h4>
+                            <div class="space-y-1 text-sm text-blue-800">
+                                <div>• Rating Bonus: +${getCardLevelBenefits(player.card_level || 1).ratingBonus} points</div>
+                                <div>• Max Fitness: ${getCardLevelBenefits(player.card_level || 1).maxFitness}/100</div>
+                                <div>• Salary Increase: +${getCardLevelBenefits(player.card_level || 1).salaryIncreasePercent}%</div>
+                            </div>
+                        </div>
+                        ${(player.card_level || 1) < 10 ? `
+                        <div class="bg-green-50 border border-green-200 rounded-lg p-3">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <div class="font-semibold text-green-900">Upgrade Available</div>
+                                    <div class="text-sm text-green-700">Level ${(player.card_level || 1) + 1} - ${getCardLevelDisplayInfo((player.card_level || 1) + 1).text}</div>
+                                    <div class="text-xs text-green-600 mt-1">Cost: ${formatMarketValue(getCardLevelUpgradeCost(player.card_level || 1, player.value || 1000000))}</div>
+                                </div>
+                                <button onclick="upgradeCardLevel('${player.uuid}', '${player.name}', ${player.card_level || 1}, ${player.value || 1000000})" class="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700">
+                                    Upgrade
+                                </button>
+                            </div>
+                        </div>
+                        ` : `
+                        <div class="bg-cyan-50 border border-cyan-200 rounded-lg p-3 text-center">
+                            <div class="text-cyan-800 font-semibold">Maximum Card Level Reached!</div>
+                            <div class="text-xs text-cyan-600 mt-1">This player has reached the highest card level</div>
+                        </div>
+                        `}
                     </div>
                 </div>
 
@@ -2788,7 +2923,7 @@ startContent();
     }
 
     // Contract renewal functionality
-    window.renewContract = function (playerName, currentRemaining) {
+    window.renewContract = function (playerUuid, playerName, currentRemaining) {
         const renewalCost = Math.floor(Math.random() * 5000000) + 2000000; // €2M - €7M
         const newMatches = Math.floor(Math.random() * 21) + 20; // 20-40 new matches
 
@@ -2837,7 +2972,7 @@ startContent();
             if (result.isConfirmed) {
                 // Process contract renewal
                 $.post('renew_contract.php', {
-                    player_name: playerName,
+                    player_uuid: playerUuid,
                     renewal_cost: renewalCost,
                     new_matches: newMatches
                 }, function (response) {
@@ -2848,13 +2983,13 @@ startContent();
 
                         // Update player data
                         selectedPlayers.forEach((player, idx) => {
-                            if (player && player.name === playerName) {
+                            if (player && player.uuid === playerUuid) {
                                 selectedPlayers[idx].contract_matches_remaining = (selectedPlayers[idx].contract_matches_remaining || 0) + newMatches;
                             }
                         });
 
                         substitutePlayers.forEach((player, idx) => {
-                            if (player && player.name === playerName) {
+                            if (player && player.uuid === playerUuid) {
                                 substitutePlayers[idx].contract_matches_remaining = (substitutePlayers[idx].contract_matches_remaining || 0) + newMatches;
                             }
                         });
@@ -2886,6 +3021,179 @@ startContent();
                         icon: 'error',
                         title: 'Connection Error',
                         text: 'Could not process contract renewal. Please check your connection and try again.',
+                        confirmButtonColor: '#ef4444'
+                    });
+                });
+            }
+        });
+    };
+
+    // Card level upgrade functionality
+    window.upgradeCardLevel = function (playerUuid, playerName, currentCardLevel, playerValue) {
+        const upgradeCost = getCardLevelUpgradeCost(currentCardLevel, playerValue);
+        const newCardLevel = currentCardLevel + 1;
+        const cardInfo = getCardLevelDisplayInfo(newCardLevel);
+        const benefits = getCardLevelBenefits(newCardLevel);
+
+        Swal.fire({
+            title: `Upgrade ${playerName}'s Card Level?`,
+            html: `
+                <div class="text-left space-y-3">
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <h4 class="font-semibold text-gray-900 mb-2">Upgrade Details:</h4>
+                        <div class="space-y-1 text-sm">
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Current Level:</span>
+                                <span class="font-medium">${currentCardLevel} - ${getCardLevelDisplayInfo(currentCardLevel).text}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">New Level:</span>
+                                <span class="font-medium text-green-600">${newCardLevel} - ${cardInfo.text}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Upgrade Cost:</span>
+                                <span class="font-medium text-red-600">${formatMarketValue(upgradeCost)}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                        <h4 class="font-semibold text-green-900 mb-2">Benefits:</h4>
+                        <div class="space-y-1 text-sm text-green-800">
+                            <div>• Rating Bonus: +${benefits.ratingBonus} points</div>
+                            <div>• Max Fitness: ${benefits.maxFitness}/100</div>
+                            <div>• Fitness Recovery: Improved</div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+                        <h4 class="font-semibold text-red-900 mb-2">Consequences:</h4>
+                        <div class="space-y-1 text-sm text-red-800">
+                            <div>• Salary Increase: +${benefits.salaryIncreasePercent}% weekly cost</div>
+                            <div>• Upgrade Cost: ${formatMarketValue(upgradeCost)} (one-time)</div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                        <h4 class="font-semibold text-blue-900 mb-2">Budget Impact:</h4>
+                        <div class="space-y-1 text-sm">
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Current Budget:</span>
+                                <span class="font-medium text-blue-600">${formatMarketValue(maxBudget)}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">After Upgrade:</span>
+                                <span class="font-medium text-green-600">${formatMarketValue(maxBudget - upgradeCost)}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#10b981',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: '<i data-lucide="arrow-up" class="w-4 h-4 inline mr-1"></i> Upgrade Card Level',
+            cancelButtonText: 'Cancel',
+            customClass: {
+                popup: 'swal-wide'
+            },
+            didOpen: () => {
+                lucide.createIcons();
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Show loading message
+                Swal.fire({
+                    title: 'Upgrading Card Level...',
+                    text: 'Please wait while we upgrade the player card',
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    showConfirmButton: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
+                // Determine player type (team or substitute)
+                let playerType = 'team';
+                let playerFound = false;
+
+                // Check main team
+                selectedPlayers.forEach((player, idx) => {
+                    if (player && player.uuid === playerUuid) {
+                        playerFound = true;
+                        playerType = 'team';
+                    }
+                });
+
+                // Check substitutes if not found in main team
+                if (!playerFound) {
+                    substitutePlayers.forEach((player, idx) => {
+                        if (player && player.uuid === playerUuid) {
+                            playerFound = true;
+                            playerType = 'substitute';
+                        }
+                    });
+                }
+
+                // Process upgrade
+                $.post('upgrade_card_level.php', {
+                    player_uuid: playerUuid,
+                    player_type: playerType
+                }, function (response) {
+                    if (response.success) {
+                        // Update local budget
+                        maxBudget = response.new_budget;
+                        $('#clubBudget').text(formatMarketValue(response.new_budget));
+
+                        // Update player data in local arrays
+                        if (playerType === 'team') {
+                            selectedPlayers.forEach((player, idx) => {
+                                if (player && player.uuid === playerUuid) {
+                                    selectedPlayers[idx] = response.updated_player;
+                                }
+                            });
+                        } else {
+                            substitutePlayers.forEach((player, idx) => {
+                                if (player && player.uuid === playerUuid) {
+                                    substitutePlayers[idx] = response.updated_player;
+                                }
+                            });
+                        }
+
+                        // Close modal and refresh displays
+                        $('#playerInfoModal').addClass('hidden');
+                        renderPlayers();
+                        renderSubstitutes();
+
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Card Level Upgraded!',
+                            html: `
+                                <div class="text-center">
+                                    <p class="mb-2">${response.player_name} upgraded to Card Level ${response.new_card_level}!</p>
+                                    <p class="text-sm text-gray-600">Cost: ${formatMarketValue(response.upgrade_cost)}</p>
+                                    <p class="text-sm text-green-600">New Rating Bonus: +${response.benefits.ratingBonus}</p>
+                                    <p class="text-sm text-red-600">New Weekly Salary: ${formatMarketValue(response.new_salary)}</p>
+                                </div>
+                            `,
+                            timer: 4000,
+                            showConfirmButton: true
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Upgrade Failed',
+                            text: response.message || 'Could not upgrade card level. Please try again.',
+                            confirmButtonColor: '#ef4444'
+                        });
+                    }
+                }, 'json').fail(function () {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Connection Error',
+                        text: 'Could not process card level upgrade. Please check your connection and try again.',
                         confirmButtonColor: '#ef4444'
                     });
                 });
@@ -2963,22 +3271,22 @@ startContent();
                             });
                         } else {
                             Swal.fire({
-                                icon: 'error',
-                                title: 'Training Failed',
-                                text: response.message || 'Unable to complete training session',
-                                confirmButtonColor: '#ef4444'
+         icon: 'error ',
+                                title: 'Training Failed ',
+                                text: response.message || ' Unable to complete training session ',
+                                    confirmButtonColor: '#ef4444'
                             });
-                        }
-                    })
-                    .fail(function () {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Training Failed',
-                            text: 'Network error occurred during training',
-                            confirmButtonColor: '#ef4444'
-                        });
-                    });
             }
+        })
+            .fail(function () {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Training Failed',
+                    text: 'Network error occurred during training',
+                    confirmButtonColor: '#ef4444'
+                });
+            });
+    }
         });
     });
 
@@ -3045,11 +3353,8 @@ startContent();
         max-width: 48rem;
     }
 
-
-
     .player-info-stat-bar {
         transition: width 0.3s ease;
-
     }
 
     .pla yer-info-flag {
@@ -3060,8 +3365,8 @@ startContent();
     .pla yer-info-header {
         background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
     }
-
-    </style> <?php
-    // End content capture and render layout
-    endContent($_SESSION['club_name'], 'team');
-    ?>
+</style>
+<?php
+// End content capture and render layout
+endContent($_SESSION['club_name'], 'team');
+?>

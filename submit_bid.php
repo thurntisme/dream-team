@@ -30,12 +30,12 @@ $input = json_decode(file_get_contents('php://input'), true);
 
 $owner_id = $input['owner_id'] ?? null;
 $player_index = $input['player_index'] ?? null;
-$player_name = $input['player_name'] ?? null;
+$player_uuid = $input['player_uuid'] ?? null;
 $player_data = $input['player_data'] ?? null;
 $bid_amount = $input['bid_amount'] ?? null;
 
 // Validate input
-if (!$owner_id || $player_index === null || !$player_name || !$player_data || !$bid_amount) {
+if (!$owner_id || $player_index === null || !$player_uuid || !$player_data || !$bid_amount) {
     http_response_code(400);
     echo json_encode(['success' => false, 'message' => 'Missing required fields']);
     exit;
@@ -98,7 +98,7 @@ try {
 
     // Verify player data matches
     $actual_player = $team[$player_index];
-    if ($actual_player['name'] !== $player_name) {
+    if (($actual_player['uuid'] ?? '') !== $player_uuid) {
         http_response_code(400);
         echo json_encode(['success' => false, 'message' => 'Player data mismatch']);
         exit;
