@@ -617,6 +617,92 @@ function hasUserMatchInGameweek($db, $user_id, $season, $gameweek)
     return $row['count'] > 0;
 }
 
+function validateClubForLeague($user)
+{
+    $validation_errors = [];
+
+    // Check if user has a club name
+    if (empty($user['club_name'])) {
+        $validation_errors[] = 'Club name is required to participate in the league';
+    }
+
+    // Check minimum budget requirement (€10M)
+    $min_budget = 10000000;
+    if ($user['budget'] < $min_budget) {
+        $validation_errors[] = 'Minimum budget of ' . formatMarketValue($min_budget) . ' required to continue in the league';
+    }
+
+    // Check team composition
+    $team = json_decode($user['team'], true);
+    if (!is_array($team)) {
+        $validation_errors[] = 'Invalid team data';
+    } else {
+        // Count players by position
+        $position_counts = [];
+        $total_players = 0;
+
+        foreach ($team as $player) {
+            if ($player && isset($player['position'])) {
+                $position = $player['position'];
+                $position_counts[$position] = ($position_counts[$position] ?? 0) + 1;
+                $total_players++;
+            }
+        }
+
+        // Check minimum players (at least 11)
+        if ($total_players < 11) {
+            $validation_errors[] = 'Minimum 11 players required in your squad (currently have ' . $total_players . ')';
+        }
+
+        // Check required positions
+        $required_positions = [
+            'GK' => ['min' => 1, 'name' => 'Goalkeeper'],
+            'CB' => ['min' => 2, 'name' => 'Centre Back'],
+            'LB' => ['min' => 1, 'name' => 'Left Back'],
+            'RB' => ['min' => 1, 'name' => 'Right Back']
+        ];
+
+        foreach ($required_positions as $pos => $req) {
+            $count = $position_counts[$pos] ?? 0;
+            if ($count < $req['min']) {
+                $validation_errors[] = 'Minimum ' . $req['min'] . ' ' . $req['name'] . '(s) required (currently have ' . $count . ')';
+            }
+        }
+
+        // Check for at least 4 midfielders (any type)
+        $midfielder_positions = ['CDM', 'CM', 'CAM', 'LM', 'RM'];
+        $midfielder_count = 0;
+        foreach ($midfielder_positions as $pos) {
+            $midfielder_count += $position_counts[$pos] ?? 0;
+        }
+        if ($midfielder_count < 4) {
+            $validation_errors[] = 'Minimum 4 midfielders required (currently have ' . $midfielder_count . ')';
+        }
+
+        // Check for at least 2 forwards
+        $forward_positions = ['ST', 'CF', 'LW', 'RW'];
+        $forward_count = 0;
+        foreach ($forward_positions as $pos) {
+            $forward_count += $position_counts[$pos] ?? 0;
+        }
+        if ($forward_count < 2) {
+            $validation_errors[] = 'Minimum 2 forwards required (currently have ' . $forward_count . ')';
+        }
+    }
+
+    // Check formation validity
+    $formation = $user['formation'] ?? '4-4-2';
+    $valid_formations = getFormationsList();
+    if (!in_array($formation, $valid_formations)) {
+        $validation_errors[] = 'Invalid formation selected: ' . $formation;
+    }
+
+    return [
+        'is_valid' => empty($validation_errors),
+        'errors' => $validation_errors
+    ];
+}
+
 function calculateTeamStrength($team, $is_home = false)
 {
     // Base strength calculation

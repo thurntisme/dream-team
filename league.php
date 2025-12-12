@@ -30,6 +30,15 @@ try {
         exit;
     }
 
+    // Validate club eligibility for league
+    $club_validation = validateClubForLeague($user);
+    if (!$club_validation['is_valid']) {
+        // Store validation errors in session for display
+        $_SESSION['league_validation_errors'] = $club_validation['errors'];
+        header('Location: team.php?league_validation_failed=1');
+        exit;
+    }
+
     // Initialize league if not exists
     initializeLeague($db, $user_id);
 
@@ -38,6 +47,14 @@ try {
 
     // Handle match simulation - simulate entire gameweek
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['simulate_match'])) {
+        // Re-validate club before match simulation
+        $club_validation = validateClubForLeague($user);
+        if (!$club_validation['is_valid']) {
+            $_SESSION['league_validation_errors'] = $club_validation['errors'];
+            header('Location: team.php?league_validation_failed=1');
+            exit;
+        }
+
         $match_id = (int) $_POST['match_id'];
         $gameweek_results = simulateGameweek($db, $match_id, $user_id);
 
@@ -63,6 +80,9 @@ try {
     // Check if user has a match in current gameweek
     $user_has_match = hasUserMatchInGameweek($db, $user_id, $current_season, $current_gameweek);
 
+    // Get current validation status for display
+    $current_validation = validateClubForLeague($user);
+
     $db->close();
 } catch (Exception $e) {
     error_log("League page error: " . $e->getMessage());
@@ -86,7 +106,13 @@ startContent();
             </div>
         </div>
         <div class="flex gap-2">
-            <?php if ($user_has_match): ?>
+            <!-- Club Validation Status -->
+            <?php if (!$current_validation['is_valid']): ?>
+                <div class="bg-red-100 text-red-800 px-4 py-2 rounded-lg flex items-center gap-2">
+                    <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+                    <span class="font-medium">Club Not Eligible</span>
+                </div>
+            <?php elseif ($user_has_match): ?>
                 <div class="bg-green-100 text-green-800 px-4 py-2 rounded-lg flex items-center gap-2">
                     <i data-lucide="play" class="w-4 h-4"></i>
                     <span class="font-medium">You have a match this gameweek!</span>
@@ -100,6 +126,31 @@ startContent();
             <?php endif; ?>
         </div>
     </div>
+
+    <!-- Club Validation Warning -->
+    <?php if (!$current_validation['is_valid']): ?>
+        <div class="mb-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <div class="flex items-start gap-3">
+                <i data-lucide="alert-triangle" class="w-5 h-5 text-yellow-600 mt-0.5"></i>
+                <div class="flex-1">
+                    <h3 class="font-semibold text-yellow-800 mb-2">League Participation Requirements</h3>
+                    <p class="text-yellow-700 text-sm mb-3">
+                        Your club doesn't meet the minimum requirements to participate in league matches. 
+                        Please address these issues:
+                    </p>
+                    <ul class="list-disc list-inside space-y-1 text-yellow-700 text-sm mb-3">
+                        <?php foreach ($current_validation['errors'] as $error): ?>
+                            <li><?php echo htmlspecialchars($error); ?></li>
+                        <?php endforeach; ?>
+                    </ul>
+                    <a href="team.php" class="inline-flex items-center gap-2 bg-yellow-600 text-white px-3 py-2 rounded text-sm hover:bg-yellow-700">
+                        <i data-lucide="settings" class="w-4 h-4"></i>
+                        Fix Team Setup
+                    </a>
+                </div>
+            </div>
+        </div>
+    <?php endif; ?>
 
     <!-- Gameweek Results -->
     <?php if (isset($_GET['gameweek_completed']) && isset($_SESSION['gameweek_results'])): ?>
@@ -390,15 +441,27 @@ startContent();
                             </div>
 
                             <?php if ($match['status'] === 'scheduled' && ($match['home_team_id'] == $user_id || $match['away_team_id'] == $user_id)): ?>
-                                <form method="POST" class="inline">
-                                    <input type="hidden" name="match_id" value="<?php echo $match['id']; ?>">
-                                    <button type="submit" name="simulate_match"
-                                        class="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700"
-                                        title="This will simulate all matches in gameweek <?php echo $match['gameweek']; ?>">
-                                        Play Gameweek <?php echo $match['gameweek']; ?>
-                                    </button>
-                                </form>
-                            <?php elseif ($match['status'] === 'completed'): ?>
+                                <?php if ($current_validation['is_valid']): ?>
+                                    <form method="POST" class="inline">
+                                        <input type="hidden" name="match_id" value="<?php echo $match['id']; ?>">
+                                        <button type="submit" name="simulate_match"
+                                            class="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700"
+                                            title="This will simulate all matches in gameweek <?php echo $match['gameweek']; ?>">
+                                            Play Gameweek <?php echo $match['gameweek']; ?>
+                                        </button>
+                                    </form>
+                                <?php else: ?>
+                                    <div class="flex items-center gap-2">
+                                        <button disabled class="bg-gray-400 text-white px-3 py-1 rounded text-sm cursor-not-allowed"
+                                            title="Club not eligible - check team requirements">
+                                            Club Not Eligible
+                                        </button>
+                                        <a href="team.php" class="text-blue-600 hover:text-blue-800 text-sm">
+                                            Fix Issues
+                                        </a>
+                                    </div>
+                                <?php endif; ?>
+                                           <?php elseif ($match['status'] === 'completed'): ?>
                                 <div class="text-sm font-medium">
                                     <?php echo $match['home_score']; ?> - <?php echo $match['away_score']; ?>
                                 </div>
