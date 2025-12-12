@@ -11,19 +11,22 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true)
     $clubName = $_SESSION['club_name'] ?? '';
     $userName = $_SESSION['user_name'] ?? '';
 
-    // Get user budget if logged in
+    // Get user budget and fans if logged in
     $userBudget = 0;
+    $userFans = 0;
     if ($isLoggedIn && isDatabaseAvailable()) {
         try {
             $db = getDbConnection();
-            $stmt = $db->prepare('SELECT budget FROM users WHERE id = :user_id');
+            $stmt = $db->prepare('SELECT budget, fans FROM users WHERE id = :user_id');
             $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
             $result = $stmt->execute();
             $userData = $result->fetchArray(SQLITE3_ASSOC);
             $userBudget = $userData['budget'] ?? 0;
+            $userFans = $userData['fans'] ?? 5000;
             $db->close();
         } catch (Exception $e) {
             $userBudget = 0;
+            $userFans = 5000;
         }
     }
 
@@ -116,6 +119,11 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true)
                                 <i data-lucide="trophy" class="w-4 h-4"></i>
                                 <span class="font-medium">League</span>
                             </a>
+                            <a href="stadium.php"
+                                class="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors <?php echo $currentPage === 'stadium' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100'; ?>">
+                                <i data-lucide="building" class="w-4 h-4"></i>
+                                <span class="font-medium">Stadium</span>
+                            </a>
                         </div>
                     <?php endif; ?>
 
@@ -151,6 +159,12 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true)
                                                 <i data-lucide="wallet" class="w-3 h-3 text-green-600"></i>
                                                 <span class="text-xs font-medium text-green-600">
                                                     <?php echo formatMarketValue($userBudget); ?>
+                                                </span>
+                                            </div>
+                                            <div class="flex items-center gap-1">
+                                                <i data-lucide="users" class="w-3 h-3 text-blue-600"></i>
+                                                <span class="text-xs font-medium text-blue-600">
+                                                    <?php echo number_format($userFans); ?> fans
                                                 </span>
                                             </div>
                                         <?php endif; ?>
@@ -192,6 +206,12 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true)
                                         class="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
                                         <i data-lucide="users" class="w-4 h-4"></i>
                                         <span>Other Clubs</span>
+                                    </a>
+
+                                    <a href="stadium.php"
+                                        class="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                                        <i data-lucide="building" class="w-4 h-4"></i>
+                                        <span>Stadium</span>
                                     </a>
 
                                     <div class="border-t border-gray-100 my-1"></div>
@@ -249,6 +269,11 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true)
                                 <i data-lucide="shopping-bag" class="w-5 h-5"></i>
                                 <span class="font-medium">Shop</span>
                             </a>
+                            <a href="stadium.php"
+                                class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors <?php echo $currentPage === 'stadium' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100'; ?>">
+                                <i data-lucide="building" class="w-5 h-5"></i>
+                                <span class="font-medium">Stadium</span>
+                            </a>
 
                             <div class="border-t border-gray-200 my-2"></div>
 
@@ -278,17 +303,26 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true)
                         <div class="bg-white rounded-lg p-4 border border-gray-200">
                             <div class="flex items-center gap-2 mb-2">
                                 <i data-lucide="shield" class="w-5 h-5 text-gray-700"></i>
-                                <h3 class="font-semibold text-gray-900"><?php echo htmlspecialchars($clubName); ?></h3>
+                                <h3 class="font-semibold text-gray-900">
+                                    <?php echo htmlspecialchars($clubName); ?>
+                                </h3>
                             </div>
                             <div class="text-sm text-gray-600">
                                 <div class="flex justify-between items-center">
                                     <span>Manager:</span>
-                                    <span class="font-medium text-gray-900"><?php echo htmlspecialchars($userName); ?></span>
+                                    <span class=" font-medium text-gray-900">
+                                        <?php echo htmlspecialchars($userName); ?></span>
                                 </div>
                                 <div class="flex justify-between items-center mt-1">
                                     <span>Budget:</span>
                                     <span class="font-medium text-gray-900">
                                         <?php echo formatMarketValue($userBudget); ?>
+                                    </span>
+                                </div>
+                                <div class="flex justify-between items-center mt-1">
+                                    <span>Fans:</span>
+                                    <span class="font-medium text-gray-900">
+                                        <?php echo number_format($userFans); ?>
                                     </span>
                                 </div>
                             </div>

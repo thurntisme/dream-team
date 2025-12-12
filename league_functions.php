@@ -379,6 +379,65 @@ function simulateMatch($db, $match_id, $user_id)
     return true;
 }
 
+function updateFansAfterMatch($db, $user_id, $user_score, $opponent_score, $is_home)
+{
+    // Get user's current fans and stadium info
+    $stmt = $db->prepare('SELECT u.fans, s.capacity, s.level FROM users u LEFT JOIN stadiums s ON u.id = s.user_id WHERE u.id = :user_id');
+    $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+    $result = $stmt->execute();
+    $user_data = $result->fetchArray(SQLITE3_ASSOC);
+
+    $current_fans = $user_data['fans'] ?? 5000;
+    $stadium_capacity = $user_data['capacity'] ?? 10000;
+    $stadium_level = $user_data['level'] ?? 1;
+
+    // Calculate additional revenue for home matches
+    $additional_revenue = 0;
+    if ($is_home) {
+        // Stadium revenue multipliers
+        $stadium_multipliers = [1 => 1.0, 2 => 1.2, 3 => 1.5, 4 => 1.8, 5 => 2.2];
+        $stadium_multiplier = $stadium_multipliers[$stadium_level] ?? 1.0;
+
+        // Calculate fan attendance and revenue
+        $attendance = min($current_fans, $stadium_capacity);
+        $fan_revenue = $attendance * 10; // €10 per fan
+        $stadium_revenue = 50000 * $stadium_multiplier; // Base stadium revenue with multiplier
+
+        $additional_revenue = $fan_revenue + $stadium_revenue;
+    }
+
+    // Update fan count based on match result (randomly influenced)
+    $fan_change = 0;
+    if ($user_score > $opponent_score) {
+        // Win: gain 50-200 fans
+        $fan_change = rand(50, 200);
+    } elseif ($user_score == $opponent_score) {
+        // Draw: gain/lose 0-50 fans
+        $fan_change = rand(-25, 50);
+    } else {
+        // Loss: lose 25-100 fans
+        $fan_change = rand(-100, -25);
+    }
+
+    // Goal difference affects fan change
+    $goal_diff = $user_score - $opponent_score;
+    $fan_change += $goal_diff * 10; // +/- 10 fans per goal difference
+
+    // Update fan count (minimum 1000 fans)
+    $new_fans = max(1000, $current_fans + $fan_change);
+
+    $stmt = $db->prepare('UPDATE users SET fans = :fans WHERE id = :user_id');
+    $stmt->bindValue(':fans', $new_fans, SQLITE3_INTEGER);
+    $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+    $stmt->execute();
+
+    return [
+        'fan_change' => $fan_change,
+        'new_fans' => $new_fans,
+        'additional_revenue' => $additional_revenue
+    ];
+}
+
 function simulateGameweek($db, $match_id, $user_id)
 {
     // Get the gameweek of the user's match
@@ -477,6 +536,10 @@ function simulateGameweek($db, $match_id, $user_id)
         if ($user_match_result['is_home']) {
             $budget_earned += 1000000; // €1M home bonus
         }
+
+        // Update fans and calculate additional revenue
+        $fan_result = updateFansAfterMatch($db, $user_id, $user_score, $opponent_score, $user_match_result['is_home']);
+        $budget_earned += $fan_result['additional_revenue'];
     }
 
     return [
@@ -577,6 +640,10 @@ function simulateCurrentGameweek($db, $user_id, $season, $gameweek)
         if ($user_match_result['is_home']) {
             $budget_earned += 1000000; // €1M home bonus
         }
+
+        // Update fans and calculate additional revenue
+        $fan_result = updateFansAfterMatch($db, $user_id, $user_score, $opponent_score, $user_match_result['is_home']);
+        $budget_earned += $fan_result['additional_revenue'];
     }
 
     return [

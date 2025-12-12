@@ -109,6 +109,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install'])) {
             substitutes TEXT DEFAULT "[]",
             budget INTEGER DEFAULT ' . DEFAULT_BUDGET . ',
             max_players INTEGER DEFAULT 23,
+            fans INTEGER DEFAULT 5000,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )';
 
