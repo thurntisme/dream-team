@@ -11,22 +11,91 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true)
     $clubName = $_SESSION['club_name'] ?? '';
     $userName = $_SESSION['user_name'] ?? '';
 
-    // Get user budget and fans if logged in
+    // Function to calculate team level based on various factors
+    function calculateTeamLevel($budget, $fans, $team)
+    {
+        $level = 1;
+
+        // Budget factor (0-3 levels)
+        if ($budget >= 500000000) { // 500M+
+            $level += 3;
+        } elseif ($budget >= 200000000) { // 200M+
+            $level += 2;
+        } elseif ($budget >= 50000000) { // 50M+
+            $level += 1;
+        }
+
+        // Fan factor (0-2 levels)
+        if ($fans >= 100000) { // 100K+ fans
+            $level += 2;
+        } elseif ($fans >= 50000) { // 50K+ fans
+            $level += 1;
+        }
+
+        // Team size factor (0-2 levels)
+        $teamSize = count($team);
+        if ($teamSize >= 20) {
+            $level += 2;
+        } elseif ($teamSize >= 15) {
+            $level += 1;
+        }
+
+        // Load players data to calculate team quality
+        if (file_exists('players.json') && !empty($team)) {
+            $players_json = file_get_contents('players.json');
+            $players_data = json_decode($players_json, true) ?? [];
+
+            $totalRating = 0;
+            $playerCount = 0;
+
+            foreach ($team as $playerId) {
+                if (isset($players_data[$playerId])) {
+                    $totalRating += $players_data[$playerId]['rating'];
+                    $playerCount++;
+                }
+            }
+
+            if ($playerCount > 0) {
+                $avgRating = $totalRating / $playerCount;
+
+                // Team quality factor (0-3 levels)
+                if ($avgRating >= 85) { // World class team
+                    $level += 3;
+                } elseif ($avgRating >= 80) { // Elite team
+                    $level += 2;
+                } elseif ($avgRating >= 75) { // Good team
+                    $level += 1;
+                }
+            }
+        }
+
+        // Cap the level at 10
+        return min($level, 10);
+    }
+
+    // Get user budget, fans, and calculate team level if logged in
     $userBudget = 0;
     $userFans = 0;
+    $teamLevel = 1;
     if ($isLoggedIn && isDatabaseAvailable()) {
         try {
             $db = getDbConnection();
-            $stmt = $db->prepare('SELECT budget, fans FROM users WHERE id = :user_id');
+            $stmt = $db->prepare('SELECT budget, fans, team FROM users WHERE id = :user_id');
             $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
             $result = $stmt->execute();
             $userData = $result->fetchArray(SQLITE3_ASSOC);
             $userBudget = $userData['budget'] ?? 0;
             $userFans = $userData['fans'] ?? 5000;
+            $userTeam = json_decode($userData['team'] ?? '[]', true);
+
+            // Calculate team level based on multiple factors
+            $teamLevel = calculateTeamLevel($userBudget, $userFans, $userTeam);
+
             $db->close();
         } catch (Exception $e) {
             $userBudget = 0;
             $userFans = 5000;
+            $teamLevel = 1;
         }
     }
 
@@ -94,35 +163,80 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true)
                                 <i data-lucide="home" class="w-4 h-4"></i>
                                 <span class="font-medium">Home</span>
                             </a>
-                            <a href="team.php"
-                                class="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors <?php echo $currentPage === 'team' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100'; ?>">
-                                <i data-lucide="users" class="w-4 h-4"></i>
-                                <span class="font-medium">Team</span>
-                            </a>
-                            <a href="transfer.php"
-                                class="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors <?php echo $currentPage === 'transfer' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100'; ?>">
-                                <i data-lucide="arrow-left-right" class="w-4 h-4"></i>
-                                <span class="font-medium">Transfers</span>
-                            </a>
-                            <a href="clubs.php"
-                                class="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors <?php echo $currentPage === 'clubs' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100'; ?>">
-                                <i data-lucide="trophy" class="w-4 h-4"></i>
-                                <span class="font-medium">Clubs</span>
-                            </a>
+
+                            <!-- Team Management Dropdown -->
+                            <div class="relative">
+                                <button
+                                    class="nav-dropdown-btn flex items-center gap-2 px-3 py-2 rounded-lg transition-colors <?php echo in_array($currentPage, ['team', 'stadium']) ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100'; ?>">
+                                    <i data-lucide="users" class="w-4 h-4"></i>
+                                    <span class="font-medium">Team</span>
+                                    <i data-lucide="chevron-down" class="w-3 h-3"></i>
+                                </button>
+                                <div
+                                    class="nav-dropdown hidden absolute top-full left-0 mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+                                    <a href="team.php"
+                                        class="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                                        <i data-lucide="users" class="w-4 h-4"></i>
+                                        <span>My Team</span>
+                                    </a>
+                                    <a href="stadium.php"
+                                        class="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                                        <i data-lucide="building" class="w-4 h-4"></i>
+                                        <span>Stadium</span>
+                                    </a>
+                                </div>
+                            </div>
+
+                            <!-- Players Dropdown -->
+                            <div class="relative">
+                                <button
+                                    class="nav-dropdown-btn flex items-center gap-2 px-3 py-2 rounded-lg transition-colors <?php echo in_array($currentPage, ['transfer', 'scouting']) ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100'; ?>">
+                                    <i data-lucide="arrow-left-right" class="w-4 h-4"></i>
+                                    <span class="font-medium">Players</span>
+                                    <i data-lucide="chevron-down" class="w-3 h-3"></i>
+                                </button>
+                                <div
+                                    class="nav-dropdown hidden absolute top-full left-0 mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+                                    <a href="transfer.php"
+                                        class="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                                        <i data-lucide="arrow-left-right" class="w-4 h-4"></i>
+                                        <span>Transfer Market</span>
+                                    </a>
+                                    <a href="scouting.php"
+                                        class="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                                        <i data-lucide="search" class="w-4 h-4"></i>
+                                        <span>Scouting</span>
+                                    </a>
+                                </div>
+                            </div>
+
+                            <!-- Competition Dropdown -->
+                            <div class="relative">
+                                <button
+                                    class="nav-dropdown-btn flex items-center gap-2 px-3 py-2 rounded-lg transition-colors <?php echo in_array($currentPage, ['league', 'clubs']) ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100'; ?>">
+                                    <i data-lucide="trophy" class="w-4 h-4"></i>
+                                    <span class="font-medium">Competition</span>
+                                    <i data-lucide="chevron-down" class="w-3 h-3"></i>
+                                </button>
+                                <div
+                                    class="nav-dropdown hidden absolute top-full left-0 mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+                                    <a href="league.php"
+                                        class="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                                        <i data-lucide="trophy" class="w-4 h-4"></i>
+                                        <span>League</span>
+                                    </a>
+                                    <a href="clubs.php"
+                                        class="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                                        <i data-lucide="users" class="w-4 h-4"></i>
+                                        <span>Other Clubs</span>
+                                    </a>
+                                </div>
+                            </div>
+
                             <a href="shop.php"
                                 class="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors <?php echo $currentPage === 'shop' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100'; ?>">
                                 <i data-lucide="shopping-bag" class="w-4 h-4"></i>
                                 <span class="font-medium">Shop</span>
-                            </a>
-                            <a href="league.php"
-                                class="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors <?php echo $currentPage === 'league' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100'; ?>">
-                                <i data-lucide="trophy" class="w-4 h-4"></i>
-                                <span class="font-medium">League</span>
-                            </a>
-                            <a href="stadium.php"
-                                class="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors <?php echo $currentPage === 'stadium' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100'; ?>">
-                                <i data-lucide="building" class="w-4 h-4"></i>
-                                <span class="font-medium">Stadium</span>
                             </a>
                         </div>
                     <?php endif; ?>
@@ -167,6 +281,13 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true)
                                                     <?php echo number_format($userFans); ?> fans
                                                 </span>
                                             </div>
+                                            <div class="flex items-center gap-1">
+                                                <i data-lucide="star" class="w-3 h-3 text-yellow-600"></i>
+                                                <span class="text-xs font-medium text-yellow-600">
+                                                    Team Level
+                                                    <?php echo $teamLevel; ?>
+                                                </span>
+                                            </div>
                                         <?php endif; ?>
                                     </div>
 
@@ -188,6 +309,12 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true)
                                         class="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
                                         <i data-lucide="arrow-left-right" class="w-4 h-4"></i>
                                         <span>Transfer Market</span>
+                                    </a>
+
+                                    <a href="scouting.php"
+                                        class="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                                        <i data-lucide="search" class="w-4 h-4"></i>
+                                        <span>Scouting</span>
                                     </a>
 
                                     <a href="shop.php"
@@ -225,8 +352,8 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true)
                             </div>
 
                             <!-- Mobile Menu Button -->
-                            <button id="mobileMenuBtn"
-                                class="md:hidden p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg">
+                            <button id="mobileMenuBtn" class="md:hidden p-2 text-gray-600 hover:text-gray-900
+                        hover:bg-gray-100 rounded-lg">
                                 <i data-lucide="menu" class="w-5 h-5"></i>
                             </button>
                         <?php else: ?>
@@ -258,6 +385,11 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true)
                                 class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors <?php echo $currentPage === 'transfer' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100'; ?>">
                                 <i data-lucide="arrow-left-right" class="w-5 h-5"></i>
                                 <span class="font-medium">Transfer Market</span>
+                            </a>
+                            <a href="scouting.php"
+                                class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors <?php echo $currentPage === 'scouting' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100'; ?>">
+                                <i data-lucide="search" class="w-5 h-5"></i>
+                                <span class="font-medium">Scouting</span>
                             </a>
                             <a href="clubs.php"
                                 class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors <?php echo $currentPage === 'clubs' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100'; ?>">
@@ -311,7 +443,8 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true)
                                 <div class="flex justify-between items-center">
                                     <span>Manager:</span>
                                     <span class=" font-medium text-gray-900">
-                                        <?php echo htmlspecialchars($userName); ?></span>
+                                        <?php echo htmlspecialchars($userName); ?>
+                                    </span>
                                 </div>
                                 <div class="flex justify-between items-center mt-1">
                                     <span>Budget:</span>
@@ -323,6 +456,12 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true)
                                     <span>Fans:</span>
                                     <span class="font-medium text-gray-900">
                                         <?php echo number_format($userFans); ?>
+                                    </span>
+                                </div>
+                                <div class="flex justify-between items-center mt-1">
+                                    <span>Team Level:</span>
+                                    <span class="font-medium text-gray-900">
+                                        <?php echo $teamLevel; ?>
                                     </span>
                                 </div>
                             </div>
@@ -344,6 +483,11 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true)
                                     class="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors">
                                     <i data-lucide="shopping-cart" class="w-3 h-3"></i>
                                     <span>Buy Players</span>
+                                </a>
+                                <a href="scouting.php"
+                                    class="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors">
+                                    <i data-lucide="search" class="w-3 h-3"></i>
+                                    <span>Scout Players</span>
                                 </a>
                                 <a href="match-simulator.php"
                                     class="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors">
@@ -387,6 +531,7 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true)
                             <span>Football Manager Game</span>
                             <span>•</span>
                             <span>Enjoy the Game!</span>
+
                         </div>
                     </div>
                 </div>
@@ -444,6 +589,7 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true)
                                     <span>Market Values</span>
                                 </div>
                             </div>
+
                         </div>
                     </div>
                 </div>
@@ -505,14 +651,29 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true)
                             confirmButtonText: 'Login'
                         }).then(() => {
                             window.location.href = 'index.php';
+
                         });
                     }
                 }, 60000); // Check every minute
             <?php endif; ?>
 
+            // Navigation dropdown functionality
+            $('.nav-dropdown-btn').click(function (e) {
+                e.stopPropagation();
+                const dropdown = $(this).siblings('.nav-dropdown');
+
+                // Close all other dropdowns
+                $('.nav-dropdown').not(dropdown).addClass('hidden');
+
+                // Toggle current dropdown
+                dropdown.toggleClass('hidden');
+            });
+
             // User dropdown toggle
             $('#userMenuBtn').click(function (e) {
                 e.stopPropagation();
+                // Close nav dropdowns
+                $('.nav-dropdown').addClass('hidden');
                 $('#userDropdown').toggleClass('hidden');
             });
 
@@ -547,6 +708,11 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true)
 
             // Close dropdowns when clicking outside
             $(document).click(function (e) {
+                // Close navigation dropdowns
+                if (!$(e.target).closest('.nav-dropdown-btn, .nav-dropdown').length) {
+                    $('.nav-dropdown').addClass('hidden');
+                }
+
                 // Close user dropdown
                 if (!$(e.target).closest('#userMenuBtn, #userDropdown').length) {
                     $('#userDropdown').addClass('hidden');
@@ -561,6 +727,7 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true)
             // Close dropdowns when pressing Escape
             $(document).keydown(function (e) {
                 if (e.key === 'Escape') {
+                    $('.nav-dropdown').addClass('hidden');
                     $('#userDropdown').addClass('hidden');
                     $('#mobileMenu').addClass('hidden');
                 }

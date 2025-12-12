@@ -144,6 +144,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install'])) {
                 FOREIGN KEY (user_id) REFERENCES users(id)
             )');
 
+            // Scouting system table
+            $db->exec('CREATE TABLE IF NOT EXISTS scouting_reports (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                player_id TEXT NOT NULL,
+                scouted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                report_quality INTEGER DEFAULT 1,
+                FOREIGN KEY (user_id) REFERENCES users (id)
+            )');
+
             // Migration: Handle column changes and add missing columns
             try {
                 // Check existing columns in player_inventory
