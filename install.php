@@ -481,13 +481,12 @@ startContent();
                         title: 'Demo Clubs Created!',
                         html: `
                             <div class="text-left">
-                                <p class="mb-3">4 demo clubs have been created successfully!</p>
+                                <p class="mb-3"><?php echo count(DEMO_CLUBS); ?> demo clubs have been created successfully!</p>
                                 <div class="bg-gray-50 p-3 rounded text-sm">
                                     <strong>Login Credentials:</strong><br>
-                                    • alex@manchester-legends.com / legends123<br>
-                                    • pep@barca-dreams.com / dreams123<br>
-                                    • zidane@real-elite.com / elite123<br>
-                                    • jurgen@liverpool-warriors.com / warriors123
+                                    <?php foreach (DEMO_CREDENTIALS as $email => $password): ?>
+                                    • <?php echo htmlspecialchars($email); ?> / <?php echo htmlspecialchars($password); ?><br>
+                                    <?php endforeach; ?>
                                 </div>
                             </div>
                         `,

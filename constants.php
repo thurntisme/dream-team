@@ -69,6 +69,16 @@ define('DEMO_CLUBS', [
     ]
 ]);
 
+// Demo club login credentials for easy reference
+define('DEMO_CREDENTIALS', [
+    'marcus.thompson@thunderbay.com' => 'thunder123',
+    'sofia.rodriguez@goldeneagles.com' => 'eagles123',
+    'david.chen@crystalwolves.com' => 'wolves123',
+    'emma.johnson@phoenixrising.com' => 'phoenix123',
+    'alessandro.rossi@midnightstrikers.com' => 'midnight123',
+    'priya.patel@velocityfc.com' => 'velocity123'
+]);
+
 // Formation configurations
 define('FORMATIONS', [
     '4-4-2' => [
