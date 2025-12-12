@@ -445,15 +445,37 @@ function simulateGameweek($db, $match_id, $user_id)
         }
     }
 
-    // Get user's current position in the league
+    // Get user's current position in the league and budget info
     $user_position = null;
-    if ($user_team_id) {
+    $budget_earned = 0;
+    if ($user_team_id && $user_match_result) {
         $standings = getLeagueStandings($db, $season);
         foreach ($standings as $index => $team) {
             if ($team['user_id'] == $user_id) {
                 $user_position = $index + 1;
                 break;
             }
+        }
+
+        // Calculate budget earned from the match
+        $user_score = $user_match_result['is_home'] ? $user_match_result['home_score'] : $user_match_result['away_score'];
+        $opponent_score = $user_match_result['is_home'] ? $user_match_result['away_score'] : $user_match_result['home_score'];
+
+        // Base reward
+        if ($user_score > $opponent_score) {
+            $budget_earned += 5000000; // €5M for win
+        } elseif ($user_score == $opponent_score) {
+            $budget_earned += 2000000; // €2M for draw
+        } else {
+            $budget_earned += 1000000; // €1M for participation
+        }
+
+        // Goal bonus
+        $budget_earned += $user_score * 500000; // €500K per goal
+
+        // Home bonus
+        if ($user_match_result['is_home']) {
+            $budget_earned += 1000000; // €1M home bonus
         }
     }
 
@@ -462,7 +484,8 @@ function simulateGameweek($db, $match_id, $user_id)
         'gameweek' => $gameweek,
         'user_match' => $user_match_result,
         'all_results' => $all_results,
-        'user_position' => $user_position
+        'user_position' => $user_position,
+        'budget_earned' => $budget_earned
     ];
 }
 
@@ -531,12 +554,38 @@ function simulateCurrentGameweek($db, $user_id, $season, $gameweek)
         }
     }
 
+    // Calculate budget earned if user had a match
+    $budget_earned = 0;
+    if ($user_team_id && $user_match_result) {
+        // Calculate budget earned from the match
+        $user_score = $user_match_result['is_home'] ? $user_match_result['home_score'] : $user_match_result['away_score'];
+        $opponent_score = $user_match_result['is_home'] ? $user_match_result['away_score'] : $user_match_result['home_score'];
+
+        // Base reward
+        if ($user_score > $opponent_score) {
+            $budget_earned += 5000000; // €5M for win
+        } elseif ($user_score == $opponent_score) {
+            $budget_earned += 2000000; // €2M for draw
+        } else {
+            $budget_earned += 1000000; // €1M for participation
+        }
+
+        // Goal bonus
+        $budget_earned += $user_score * 500000; // €500K per goal
+
+        // Home bonus
+        if ($user_match_result['is_home']) {
+            $budget_earned += 1000000; // €1M home bonus
+        }
+    }
+
     return [
         'matches_simulated' => $matches_simulated,
         'gameweek' => $gameweek,
         'user_match' => $user_match_result,
         'all_results' => $all_results,
-        'user_position' => $user_position
+        'user_position' => $user_position,
+        'budget_earned' => $budget_earned
     ];
 }
 
@@ -636,5 +685,37 @@ function updateTeamStats($db, $team_id, $goals_for, $goals_against, $is_home)
     $stmt->bindValue(':points', $points, SQLITE3_INTEGER);
     $stmt->bindValue(':id', $team_id, SQLITE3_INTEGER);
     $stmt->execute();
+
+    // Update user budget if this is a user team
+    $stmt = $db->prepare('SELECT user_id FROM league_teams WHERE id = :id AND user_id IS NOT NULL');
+    $stmt->bindValue(':id', $team_id, SQLITE3_INTEGER);
+    $result = $stmt->execute();
+    $user_team = $result->fetchArray(SQLITE3_ASSOC);
+
+    if ($user_team) {
+        // Calculate budget reward based on match result
+        $budget_reward = 0;
+        if ($wins) {
+            $budget_reward = 5000000; // €5M for win
+        } elseif ($draws) {
+            $budget_reward = 2000000; // €2M for draw
+        } else {
+            $budget_reward = 1000000; // €1M for participation (loss)
+        }
+
+        // Add bonus for goals scored
+        $goal_bonus = $goals_for * 500000; // €500K per goal
+
+        // Add home advantage bonus
+        $home_bonus = $is_home ? 1000000 : 0; // €1M home bonus
+
+        $total_reward = $budget_reward + $goal_bonus + $home_bonus;
+
+        // Update user budget
+        $stmt = $db->prepare('UPDATE users SET budget = budget + :reward WHERE id = :user_id');
+        $stmt->bindValue(':reward', $total_reward, SQLITE3_INTEGER);
+        $stmt->bindValue(':user_id', $user_team['user_id'], SQLITE3_INTEGER);
+        $stmt->execute();
+    }
 }
 ?>

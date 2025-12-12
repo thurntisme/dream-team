@@ -105,17 +105,22 @@ startContent();
     <?php if (isset($_GET['gameweek_completed']) && isset($_SESSION['gameweek_results'])): ?>
         <?php
         $results = $_SESSION['gameweek_results'];
-        unset($_SESSION['gameweek_results']); // Clear after displaying
+        // Don't clear session data yet - we'll clear it when user closes or changes tabs
         ?>
-        <div class="mb-6 bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
+        <div id="gameweekResults" class="mb-6 bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
             <!-- Header -->
             <div class="bg-gradient-to-r from-green-500 to-green-600 text-white p-4">
-                <div class="flex items-center gap-3">
-                    <i data-lucide="trophy" class="w-6 h-6"></i>
-                    <div>
-                        <h3 class="text-lg font-bold">Gameweek <?php echo $results['gameweek']; ?> Results</h3>
-                        <p class="text-green-100">All matches completed</p>
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <i data-lucide="trophy" class="w-6 h-6"></i>
+                        <div>
+                            <h3 class="text-lg font-bold">Gameweek <?php echo $results['gameweek']; ?> Results</h3>
+                            <p class="text-green-100">All matches completed</p>
+                        </div>
                     </div>
+                    <button id="closeGameweekResults" class="text-white hover:text-green-200 transition-colors">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
                 </div>
             </div>
 
@@ -160,27 +165,46 @@ startContent();
                     </div>
                 <?php endif; ?>
 
-                <!-- League Position -->
-                <?php if ($results['user_position']): ?>
-                    <div class="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                        <div class="flex items-center justify-between">
-                            <span class="font-medium text-gray-700">Current League Position:</span>
-                            <div class="flex items-center gap-2">
-                                <span class="text-2xl font-bold <?php
-                                if ($results['user_position'] <= 4)
-                                    echo 'text-green-600'; // Champions League
-                                elseif ($results['user_position'] <= 6)
-                                    echo 'text-blue-600'; // Europa League  
-                                elseif ($results['user_position'] >= 18)
-                                    echo 'text-red-600'; // Relegation
-                                else
-                                    echo 'text-gray-900';
-                                ?>"><?php echo $results['user_position']; ?></span>
-                                <span class="text-gray-500">/ 20</span>
+                <!-- League Position & Budget Info -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <?php if ($results['user_position']): ?>
+                        <div class="p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                            <div class="flex items-center justify-between">
+                                <span class="font-medium text-gray-700">League Position:</span>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-2xl font-bold <?php
+                                    if ($results['user_position'] <= 4)
+                                        echo 'text-green-600'; // Champions League
+                                    elseif ($results['user_position'] <= 6)
+                                        echo 'text-blue-600'; // Europa League  
+                                    elseif ($results['user_position'] >= 18)
+                                        echo 'text-red-600'; // Relegation
+                                    else
+                                        echo 'text-gray-900';
+                                    ?>"><?php echo $results['user_position']; ?></span>
+                                    <span class="text-gray-500">/ 20</span>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                <?php endif; ?>
+                    <?php endif; ?>
+
+                    <?php if ($results['budget_earned'] > 0): ?>
+                        <div class="p-3 bg-green-50 border border-green-200 rounded-lg">
+                            <div class="flex items-center justify-between">
+                                <span class="font-medium text-green-700 flex items-center gap-2">
+                                    <i data-lucide="coins" class="w-4 h-4"></i>
+                                    Budget Earned:
+                                </span>
+                                <span class="text-2xl font-bold text-green-600">
+                                    +<?php echo formatMarketValue($results['budget_earned']); ?>
+                                </span>
+                            </div>
+                            <div class="text-xs text-green-600 mt-1">
+                                Added to your club budget
+                            </div>
+                        </div>
+                    <?php endif; ?>
+                </div>
 
                 <!-- All Match Results -->
                 <div class="space-y-2">
@@ -513,6 +537,12 @@ startContent();
         const activeTab = urlParams.get('tab') || 'standings';
 
         function showTab(tabName) {
+            // Hide gameweek results when changing tabs (except to standings)
+            const gameweekResults = document.getElementById('gameweekResults');
+            if (gameweekResults && tabName !== 'standings') {
+                hideGameweekResults();
+            }
+
             // Update buttons
             tabBtns.forEach(btn => {
                 if (btn.dataset.tab === tabName) {
@@ -539,6 +569,15 @@ startContent();
             window.history.replaceState({}, '', url);
         }
 
+        function hideGameweekResults() {
+            const gameweekResults = document.getElementById('gameweekResults');
+            if (gameweekResults) {
+                gameweekResults.style.display = 'none';
+                // Clear session data
+                fetch('clear_gameweek_results.php', { method: 'POST' });
+            }
+        }
+
         // Initialize active tab
         showTab(activeTab);
 
@@ -549,6 +588,11 @@ startContent();
             });
         });
 
+        // Close gameweek results handler
+        document.getElementById('closeGameweekResults')?.addEventListener('click', function () {
+            hideGameweekResults();
+        });
+
         // Simulate gameweek
         document.getElementById('simulateAllBtn')?.addEventListener('click', function () {
             Swal.fire({
@@ -556,8 +600,8 @@ startContent();
                 title: 'Simulate Gameweek?',
                 text: 'This will simulate all matches in the current gameweek.',
                 showCancelButton: true,
-                confirmButtonColor: '#3b82f6',
-                cancelButtonColor: '#6b7280',
+                confirmButtonColor: '#3b82f6 ',
+                cancelButtonColor: '#6b7280 ',
                 confirmButtonText: 'Simulate Gameweek',
                 cancelButtonText: 'Cancel'
             }).then((result) => {
