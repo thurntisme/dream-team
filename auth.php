@@ -26,8 +26,23 @@ $db->exec('CREATE TABLE IF NOT EXISTS users (
     club_name TEXT,
     formation TEXT,
     team TEXT,
-    budget INTEGER DEFAULT ' . DEFAULT_BUDGET . '
+    budget INTEGER DEFAULT ' . DEFAULT_BUDGET . ',
+    last_login DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 )');
+
+// Add last_login column if it doesn't exist (for existing databases)
+try {
+    $db->exec('ALTER TABLE users ADD COLUMN last_login DATETIME');
+} catch (Exception $e) {
+    // Column already exists, ignore error
+}
+
+try {
+    $db->exec('ALTER TABLE users ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP');
+} catch (Exception $e) {
+    // Column already exists, ignore error
+}
 
 $action = $_POST['action'] ?? '';
 
@@ -42,9 +57,28 @@ if ($action === 'register') {
     $stmt->bindValue(':password', $password, SQLITE3_TEXT);
 
     if ($stmt->execute()) {
+        // Clear any existing session data
+        session_unset();
+
+        // Regenerate session ID for security
+        session_regenerate_id(true);
+
+        // Set session expiration time (24 hours from now)
+        $session_expire_time = time() + (24 * 60 * 60);
+
+        // Store user session data
         $_SESSION['user_id'] = $db->lastInsertRowID();
         $_SESSION['user_name'] = $name;
-        echo json_encode(['success' => true]);
+        $_SESSION['club_name'] = null; // New users don't have club names yet
+        $_SESSION['login_time'] = time();
+        $_SESSION['expire_time'] = $session_expire_time;
+        $_SESSION['last_activity'] = time();
+
+        echo json_encode([
+            'success' => true,
+            'session_expires' => $session_expire_time,
+            'expires_in' => 24 * 60 * 60
+        ]);
     } else {
         echo json_encode(['success' => false, 'message' => 'Email already exists']);
     }
@@ -58,14 +92,60 @@ if ($action === 'register') {
     $user = $result->fetchArray(SQLITE3_ASSOC);
 
     if ($user && password_verify($password, $user['password'])) {
+        // Clear all existing session data before setting new session
+        session_unset();
+        session_destroy();
+
+        // Start a new session
+        session_start();
+
+        // Regenerate session ID for security
+        session_regenerate_id(true);
+
+        // Set session expiration time (24 hours from now)
+        $session_expire_time = time() + (24 * 60 * 60); // 24 hours
+
+        // Store user session data
         $_SESSION['user_id'] = $user['id'];
         $_SESSION['user_name'] = $user['name'];
         $_SESSION['club_name'] = $user['club_name'];
-        echo json_encode(['success' => true]);
+        $_SESSION['login_time'] = time();
+        $_SESSION['expire_time'] = $session_expire_time;
+        $_SESSION['last_activity'] = time();
+
+        // Update user's last login time in database
+        $stmt = $db->prepare('UPDATE users SET last_login = datetime("now") WHERE id = :id');
+        $stmt->bindValue(':id', $user['id'], SQLITE3_INTEGER);
+        $stmt->execute();
+
+        echo json_encode([
+            'success' => true,
+            'session_expires' => $session_expire_time,
+            'expires_in' => 24 * 60 * 60 // seconds
+        ]);
     } else {
         echo json_encode(['success' => false, 'message' => 'Invalid credentials']);
     }
+} elseif ($action === 'extend_session') {
+    // Check if user is logged in
+    if (!isset($_SESSION['user_id'])) {
+        echo json_encode(['success' => false, 'message' => 'Not logged in']);
+        exit;
+    }
+
+    // Extend session by 24 hours from now
+    $new_expire_time = time() + (24 * 60 * 60);
+    $_SESSION['expire_time'] = $new_expire_time;
+    $_SESSION['last_activity'] = time();
+
+    echo json_encode([
+        'success' => true,
+        'new_expire_time' => $new_expire_time,
+        'message' => 'Session extended successfully'
+    ]);
 } elseif ($action === 'logout') {
+    // Clear all session data
+    session_unset();
     session_destroy();
     echo json_encode(['success' => true]);
 }

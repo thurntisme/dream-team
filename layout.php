@@ -410,6 +410,61 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true)
             // Initialize Lucide icons
             lucide.createIcons();
 
+            // Session management
+            <?php if ($isLoggedIn && isset($_SESSION['expire_time'])): ?>
+                const sessionExpireTime = <?php echo $_SESSION['expire_time']; ?>;
+                const currentTime = Math.floor(Date.now() / 1000);
+                const timeUntilExpiry = sessionExpireTime - currentTime;
+
+                // Check session expiration every minute
+                setInterval(function () {
+                    const now = Math.floor(Date.now() / 1000);
+                    const timeLeft = sessionExpireTime - now;
+
+                    // Show warning 5 minutes before expiration
+                    if (timeLeft <= 300 && timeLeft > 0) {
+                        const minutes = Math.floor(timeLeft / 60);
+                        const seconds = timeLeft % 60;
+
+                        Swal.fire({
+                            title: 'Session Expiring Soon',
+                            text: `Your session will expire in ${minutes}:${seconds.toString().padStart(2, '0')}. Do you want to extend it?`,
+                            icon: 'warning',
+                            showCancelButton: true,
+                            confirmButtonColor: '#3085d6',
+                            cancelButtonColor: '#d33',
+                            confirmButtonText: 'Extend Session',
+                            cancelButtonText: 'Logout'
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                // Extend session by making a simple request
+                                $.post('auth.php', { action: 'extend_session' }, function (response) {
+                                    if (response.success) {
+                                        location.reload();
+                                    }
+                                }, 'json');
+                            } else {
+                                // Logout
+                                $.post('auth.php', { action: 'logout' }, function () {
+                                    window.location.href = 'index.php';
+                                }, 'json');
+                            }
+                        });
+                    } else if (timeLeft <= 0) {
+                        // Session expired
+                        Swal.fire({
+                            title: 'Session Expired',
+                            text: 'Your session has expired. Please login again.',
+                            icon: 'error',
+                            confirmButtonColor: '#3085d6',
+                            confirmButtonText: 'Login'
+                        }).then(() => {
+                            window.location.href = 'index.php';
+                        });
+                    }
+                }, 60000); // Check every minute
+            <?php endif; ?>
+
             // User dropdown toggle
             $('#userMenuBtn').click(function (e) {
                 e.stopPropagation();
