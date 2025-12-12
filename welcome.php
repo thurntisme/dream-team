@@ -2,6 +2,7 @@
 session_start();
 
 require_once 'config.php';
+require_once 'constants.php';
 require_once 'layout.php';
 
 // Check if database is available, redirect to install if not
@@ -79,17 +80,7 @@ try {
     exit;
 }
 
-// Helper function to format market value
-function formatMarketValue($value)
-{
-    if ($value >= 1000000) {
-        return '€' . number_format($value / 1000000, 1) . 'M';
-    } else if ($value >= 1000) {
-        return '€' . number_format($value / 1000, 0) . 'K';
-    } else {
-        return '€' . number_format($value);
-    }
-}
+
 
 // Start content capture
 startContent();

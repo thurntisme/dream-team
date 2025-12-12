@@ -11,10 +11,8 @@ if (!isDatabaseAvailable()) {
     exit;
 }
 
-if (!isset($_SESSION['user_id']) || !isset($_SESSION['club_name'])) {
-    header('Location: index.php');
-    exit;
-}
+// Require user to be logged in and have a club name
+requireClubName('shop');
 
 try {
     $db = getDbConnection();

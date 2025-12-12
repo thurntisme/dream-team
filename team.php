@@ -11,10 +11,8 @@ if (!isDatabaseAvailable()) {
     exit;
 }
 
-if (!isset($_SESSION['user_id']) || !isset($_SESSION['club_name'])) {
-    header('Location: index.php');
-    exit;
-}
+// Require user to be logged in and have a club name
+requireClubName('team');
 
 try {
     $db = getDbConnection();
@@ -320,10 +318,10 @@ startContent();
                 <select id="formation"
                     class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                     <?php foreach (FORMATIONS as $key => $formation): ?>
-                        <option value="<?php echo htmlspecialchars($key); ?>"
-                            title="<?php echo htmlspecialchars($formation['description']); ?>">
-                            <?php echo htmlspecialchars($formation['name']); ?>
-                        </option>
+                            <option value="<?php echo htmlspecialchars($key); ?>"
+                                title="<?php echo htmlspecialchars($formation['description']); ?>">
+                                <?php echo htmlspecialchars($formation['name']); ?>
+                            </option>
                     <?php endforeach; ?>
                 </select>
 

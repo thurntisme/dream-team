@@ -13,9 +13,15 @@ if (!isDatabaseAvailable()) {
     exit;
 }
 
-if (!isset($_SESSION['user_id']) || !isset($_SESSION['club_name'])) {
+if (!isset($_SESSION['user_id'])) {
     http_response_code(401);
     echo json_encode(['success' => false, 'message' => 'Not authenticated']);
+    exit;
+}
+
+if (!hasClubName()) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'message' => 'Club name required. Please complete your profile.']);
     exit;
 }
 

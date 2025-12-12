@@ -262,11 +262,6 @@ startContent();
                                 placeholder="dreamteam.db">
                         </div>
                     </div>
-
-                    <button type="submit" name="save_config"
-                        class="bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700">
-                        Save Configuration
-                    </button>
                 </div>
             </form>
         <?php endif; ?>

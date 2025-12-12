@@ -1,6 +1,12 @@
 <?php
 // Dream Team Constants - Formations and Player Data
 
+// Define app constant to prevent direct access to helpers
+define('DREAM_TEAM_APP', true);
+
+// Include helper functions
+require_once __DIR__ . '/helpers.php';
+
 // Budget configuration
 define('DEFAULT_BUDGET', 500000000); // €500M default budget - optimal for competitive lineups
 define('DEFAULT_MAX_PLAYERS', 23); // Default maximum players in squad
@@ -317,14 +323,3 @@ function getDemoClubs()
     return DEMO_CLUBS;
 }
 
-// Format market value for display
-function formatMarketValue($value)
-{
-    if ($value >= 1000000) {
-        return '€' . number_format($value / 1000000, 1) . 'M';
-    } elseif ($value >= 1000) {
-        return '€' . number_format($value / 1000, 0) . 'K';
-    } else {
-        return '€' . number_format($value, 0);
-    }
-}

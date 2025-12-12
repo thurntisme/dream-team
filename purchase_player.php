@@ -13,6 +13,12 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
+if (!hasClubName()) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'message' => 'Club name required. Please complete your profile.']);
+    exit;
+}
+
 // Check if database is available
 if (!isDatabaseAvailable()) {
     http_response_code(500);

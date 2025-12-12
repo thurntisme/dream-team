@@ -4,6 +4,9 @@
 
 function renderLayout($title, $content, $currentPage = '', $showAuth = true)
 {
+    // Ensure constants and helpers are available
+    require_once __DIR__ . '/constants.php';
+
     $isLoggedIn = isset($_SESSION['user_id']);
     $clubName = $_SESSION['club_name'] ?? '';
     $userName = $_SESSION['user_name'] ?? '';
@@ -142,10 +145,7 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true)
                                             <div class="flex items-center gap-1 mt-1">
                                                 <i data-lucide="wallet" class="w-3 h-3 text-green-600"></i>
                                                 <span class="text-xs font-medium text-green-600">
-                                                    <?php
-                                                    require_once 'constants.php';
-                                                    echo formatMarketValue($userBudget);
-                                                    ?>
+                                                    <?php echo formatMarketValue($userBudget); ?>
                                                 </span>
                                             </div>
                                         <?php endif; ?>
@@ -277,10 +277,7 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true)
                                 <div class="flex justify-between items-center mt-1">
                                     <span>Budget:</span>
                                     <span class="font-medium text-gray-900">
-                                        <?php
-                                        require_once 'constants.php';
-                                        echo formatMarketValue($userBudget);
-                                        ?>
+                                        <?php echo formatMarketValue($userBudget); ?>
                                     </span>
                                 </div>
                             </div>
