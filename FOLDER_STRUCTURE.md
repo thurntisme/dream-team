@@ -8,10 +8,25 @@ This document outlines the optimized folder structure implemented to improve cod
 ```
 /
 ├── api/                     # API endpoints
+│   ├── approve_reward_api.php    # Match reward approval API
+│   ├── clear_gameweek_results_api.php # Clear gameweek results API
 │   ├── field_modal.php      # Field modal API endpoint
+│   ├── manage_bid_api.php   # Transfer bid management API
+│   ├── manage_inventory_api.php # Player inventory management API
 │   ├── payment_api.php      # Payment processing API
 │   ├── plan_api.php         # User plan management API
+│   ├── purchase_item_api.php # Shop item purchase API
+│   ├── purchase_player_api.php # Player purchase API
+│   ├── renew_contract_api.php # Player contract renewal API
+│   ├── save_club_api.php    # Club creation/update API
+│   ├── save_team_api.php    # Team formation save API
+│   ├── scout_player_api.php # Player scouting API
 │   ├── settings_api.php     # User settings API
+│   ├── submit_bid_api.php   # Transfer bid submission API
+│   ├── train_players_api.php # Player training API
+│   ├── update_match_result_api.php # Match result update API
+│   ├── upgrade_card_level_api.php # Player card upgrade API
+│   ├── upgrade_stadium_api.php # Stadium upgrade API
 │   └── young_player_api.php # Young player management API
 │
 ├── assets/                  # Static assets
@@ -174,6 +189,7 @@ require_once 'includes/helpers.php';
 - ✅ **NEW**: Centralized routing system with `routes.php`
 - ✅ **NEW**: Clean URLs for all pages and parameter routes
 - ✅ **NEW**: Routing helper functions for URL generation
+- ✅ **NEW**: All API files moved to api/ directory (15 files moved)
 
 ### Database Path
 Database path updated in configuration:

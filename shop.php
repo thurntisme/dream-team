@@ -413,7 +413,7 @@ startContent();
             }
         });
 
-        fetch('purchase_item.php', {
+        fetch('api/purchase_item_api.php', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

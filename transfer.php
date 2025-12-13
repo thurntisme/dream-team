@@ -726,7 +726,7 @@ startContent();
             purchase_amount: parseInt(purchaseAmount)
         };
 
-        fetch('purchase_player.php', {
+        fetch('api/purchase_player_api.php', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -1022,7 +1022,7 @@ startContent();
             sell_price: sellPrice
         };
 
-        fetch('manage_inventory.php', {
+        fetch('api/manage_inventory_api.php', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

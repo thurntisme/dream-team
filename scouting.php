@@ -689,7 +689,7 @@ startContent();
             }
         });
 
-        fetch('scout_player.php', {
+        fetch('api/scout_player_api.php', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

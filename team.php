@@ -1375,7 +1375,7 @@ startContent();
                 updateClubStats();
 
                 // Auto-save the changes to database
-                $.post('save_team.php', {
+                $.post('api/save_team_api.php', {
                     formation: $('#formation').val(),
                     team: JSON.stringify(selectedPlayers),
                     substitutes: JSON.stringify(substitutePlayers)
@@ -1438,7 +1438,7 @@ startContent();
             updateClubStats();
 
             // Auto-save the changes to database
-            $.post('save_team.php', {
+            $.post('api/save_team_api.php', {
                 formation: $('#formation').val(),
                 team: JSON.stringify(selectedPlayers),
                 substitutes: JSON.stringify(substitutePlayers)
@@ -1561,7 +1561,7 @@ startContent();
         Swal.close();
 
         // Auto-save the changes to database
-        $.post('save_team.php', {
+        $.post('api/save_team_api.php', {
             formation: $('#formation').val(),
             team: JSON.stringify(selectedPlayers),
             substitutes: JSON.stringify(substitutePlayers)
@@ -1689,7 +1689,7 @@ startContent();
                 updateClubStats();
 
                 // Auto-save the changes to database
-                $.post('save_team.php', {
+                $.post('api/save_team_api.php', {
                     formation: $('#formation').val(),
                     team: JSON.stringify(selectedPlayers),
                     substitutes: JSON.stringify(substitutePlayers)
@@ -2247,7 +2247,7 @@ startContent();
                         }
 
                         // Save team and update budget
-                        $.post('purchase_player.php', {
+                        $.post('api/purchase_player_api.php', {
                             formation: $('#formation').val(),
                             team: JSON.stringify(selectedPlayers),
                             substitutes: JSON.stringify(substitutePlayers),
@@ -2523,7 +2523,7 @@ startContent();
                 }
 
                 // Save team and update budget
-                $.post('purchase_player.php', {
+                $.post('api/purchase_player_api.php', {
                     formation: $('#formation').val(),
                     team: JSON.stringify(selectedPlayers),
                     substitutes: JSON.stringify(substitutePlayers),
@@ -2719,7 +2719,7 @@ startContent();
             cancelButtonText: 'Cancel'
         }).then((result) => {
             if (result.isConfirmed) {
-                $.post('save_team.php', {
+                $.post('api/save_team_api.php', {
                     formation: $('#formation').val(),
                     team: JSON.stringify(selectedPlayers),
                     substitutes: JSON.stringify(substitutePlayers)
@@ -3043,7 +3043,7 @@ startContent();
         }).then((result) => {
             if (result.isConfirmed) {
                 // Process contract renewal
-                $.post('renew_contract.php', {
+                $.post('api/renew_contract_api.php', {
                     player_uuid: playerUuid,
                     renewal_cost: renewalCost,
                     new_matches: newMatches
@@ -3324,7 +3324,7 @@ startContent();
         }
 
         // Process upgrade
-        $.post('upgrade_card_level.php', {
+        $.post('api/upgrade_card_level_api.php', {
             player_uuid: playerUuid,
             player_type: playerType
         }, function (response) {
@@ -3502,7 +3502,7 @@ startContent();
                 });
 
                 // Send training request
-                $.post('train_players.php', {
+                $.post('api/train_players_api.php', {
                     action: 'train_all'
                 })
                     .done(function (response) {

@@ -1239,7 +1239,7 @@ startContent();
         const opponentGoals = parseInt($('#opponentScore').text());
 
         // Send AJAX request to process match result
-        fetch('update_match_result.php', {
+        fetch('api/update_match_result_api.php', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -1393,7 +1393,7 @@ startContent();
             popupApproveBtn.innerHTML = '<i data-lucide="loader" class="w-5 h-5 animate-spin"></i> Processing...';
         }
 
-        fetch('approve_reward.php', {
+        fetch('api/approve_reward_api.php', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -1585,7 +1585,7 @@ startContent();
         const userGoals = parseInt($('#userScore').text());
         const opponentGoals = parseInt($('#opponentScore').text());
 
-        fetch('update_match_result.php', {
+        fetch('api/update_match_result_api.php', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

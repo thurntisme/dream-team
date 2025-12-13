@@ -1,9 +1,9 @@
 <?php
 session_start();
 
-require_once 'config/config.php';
-require_once 'config/constants.php';
-require_once 'includes/helpers.php';
+require_once '../config/config.php';
+require_once '../config/constants.php';
+require_once '../includes/helpers.php';
 
 // Set JSON response header
 header('Content-Type: application/json');

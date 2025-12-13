@@ -276,7 +276,7 @@ startContent();
 <script>
     $('#clubForm').submit(function (e) {
         e.preventDefault();
-        $.post('save_club.php', $(this).serialize(), function (response) {
+        $.post('api/save_club_api.php', $(this).serialize(), function (response) {
             if (response.redirect) {
                 window.location.href = response.redirect;
             } else if (response.success) {

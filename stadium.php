@@ -631,7 +631,7 @@ startContent();
             }
         });
 
-        fetch('upgrade_stadium.php', {
+        fetch('api/upgrade_stadium_api.php', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -675,7 +675,7 @@ startContent();
 
     // Rename stadium function
     function renameStadium(newName) {
-        fetch('upgrade_stadium.php', {
+        fetch('api/upgrade_stadium_api.php', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
