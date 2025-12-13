@@ -18,7 +18,8 @@ This document outlines the optimized folder structure implemented to improve cod
 │   ├── css/                 # Stylesheets (future)
 │   ├── js/                  # JavaScript files (future)
 │   ├── images/              # Image assets (future)
-│   ├── players.json         # Player data
+│   ├── json/                # JSON data files
+│   │   └── players.json     # Player data
 │   ├── robots.txt           # SEO robots file
 │   └── sitemap.xml          # SEO sitemap
 │

@@ -43,8 +43,8 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true)
         }
 
         // Load players data to calculate team quality
-        if (file_exists('assets/players.json') && !empty($team)) {
-            $players_json = file_get_contents('assets/players.json');
+        if (file_exists('assets/json/players.json') && !empty($team)) {
+            $players_json = file_get_contents('assets/json/players.json');
             $players_data = json_decode($players_json, true) ?? [];
 
             $totalRating = 0;

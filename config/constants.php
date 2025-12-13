@@ -292,7 +292,7 @@ define('PLAYER_POSITIONS', [
 ]);
 
 // Load player database from JSON file
-// This function reads players.json and converts it to the expected PHP array format
+// This function reads assets/json/players.json and converts it to the expected PHP array format
 // Includes caching, error handling, and data validation
 function loadPlayersFromJson()
 {
@@ -303,7 +303,7 @@ function loadPlayersFromJson()
         return $cachedPlayers;
     }
 
-    $jsonFile = __DIR__ . '/players.json';
+    $jsonFile = __DIR__ . '/../assets/json/players.json';
 
     if (!file_exists($jsonFile)) {
         error_log("Dream Team: players.json file not found at: " . $jsonFile);
@@ -360,7 +360,7 @@ function loadPlayersFromJson()
     return $cachedPlayers;
 }
 
-// Default player database - Loaded from players.json
+// Default player database - Loaded from assets/json/players.json
 define('DEFAULT_PLAYERS', loadPlayersFromJson());
 
 // Helper functions

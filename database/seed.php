@@ -26,7 +26,7 @@ function seedFakeClubs()
         $players = getDefaultPlayers();
 
         if (empty($players)) {
-            echo "No players available for seeding. Please check players.json.\n";
+            echo "No players available for seeding. Please check assets/json/players.json.\n";
             return false;
         }
 

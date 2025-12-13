@@ -57,8 +57,8 @@ try {
 
 // Load players data
 $players_data = [];
-if (file_exists('assets/players.json')) {
-    $players_json = file_get_contents('assets/players.json');
+if (file_exists('assets/json/players.json')) {
+    $players_json = file_get_contents('assets/json/players.json');
     $players_data = json_decode($players_json, true) ?? [];
 }
 
