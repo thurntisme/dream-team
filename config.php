@@ -71,6 +71,23 @@ function isDatabaseAvailable()
             if (!in_array('max_players', $columns)) {
                 $db->exec('ALTER TABLE users ADD COLUMN max_players INTEGER DEFAULT 23');
             }
+
+            // Create user_settings table if it doesn't exist
+            $result = $db->query("SELECT name FROM sqlite_master WHERE type='table' AND name='user_settings'");
+            $settingsTableExists = $result->fetchArray() !== false;
+
+            if (!$settingsTableExists) {
+                $db->exec('CREATE TABLE user_settings (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    setting_key TEXT NOT NULL,
+                    setting_value TEXT,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+                    UNIQUE(user_id, setting_key)
+                )');
+            }
         }
 
         $db->close();

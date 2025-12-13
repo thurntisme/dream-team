@@ -1115,3 +1115,110 @@ if (!function_exists('getContractStatus')) {
         }
     }
 }
+
+/**
+ * Get user setting value
+ * 
+ * @param int $user_id User ID
+ * @param string $key Setting key
+ * @param string $default Default value if setting doesn't exist
+ * @return string Setting value
+ */
+if (!function_exists('getUserSetting')) {
+    function getUserSetting($user_id, $key, $default = '')
+    {
+        try {
+            $db = getDbConnection();
+            $stmt = $db->prepare('SELECT setting_value FROM user_settings WHERE user_id = :user_id AND setting_key = :key');
+            $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+            $stmt->bindValue(':key', $key, SQLITE3_TEXT);
+            $result = $stmt->execute();
+            $row = $result->fetchArray(SQLITE3_ASSOC);
+            $db->close();
+
+            return $row ? $row['setting_value'] : $default;
+        } catch (Exception $e) {
+            return $default;
+        }
+    }
+}
+
+/**
+ * Set user setting value
+ * 
+ * @param int $user_id User ID
+ * @param string $key Setting key
+ * @param string $value Setting value
+ * @return bool Success status
+ */
+if (!function_exists('setUserSetting')) {
+    function setUserSetting($user_id, $key, $value)
+    {
+        try {
+            $db = getDbConnection();
+            $stmt = $db->prepare('INSERT OR REPLACE INTO user_settings (user_id, setting_key, setting_value, updated_at) VALUES (:user_id, :key, :value, datetime("now"))');
+            $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+            $stmt->bindValue(':key', $key, SQLITE3_TEXT);
+            $stmt->bindValue(':value', $value, SQLITE3_TEXT);
+            $result = $stmt->execute();
+            $db->close();
+
+            return $result !== false;
+        } catch (Exception $e) {
+            return false;
+        }
+    }
+}
+
+/**
+ * Get all user settings as associative array
+ * 
+ * @param int $user_id User ID
+ * @return array All user settings
+ */
+if (!function_exists('getAllUserSettings')) {
+    function getAllUserSettings($user_id)
+    {
+        try {
+            $db = getDbConnection();
+            $stmt = $db->prepare('SELECT setting_key, setting_value FROM user_settings WHERE user_id = :user_id');
+            $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+            $result = $stmt->execute();
+
+            $settings = [];
+            while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+                $settings[$row['setting_key']] = $row['setting_value'];
+            }
+
+            $db->close();
+            return $settings;
+        } catch (Exception $e) {
+            return [];
+        }
+    }
+}
+
+/**
+ * Delete user setting
+ * 
+ * @param int $user_id User ID
+ * @param string $key Setting key
+ * @return bool Success status
+ */
+if (!function_exists('deleteUserSetting')) {
+    function deleteUserSetting($user_id, $key)
+    {
+        try {
+            $db = getDbConnection();
+            $stmt = $db->prepare('DELETE FROM user_settings WHERE user_id = :user_id AND setting_key = :key');
+            $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+            $stmt->bindValue(':key', $key, SQLITE3_TEXT);
+            $result = $stmt->execute();
+            $db->close();
+
+            return $result !== false;
+        } catch (Exception $e) {
+            return false;
+        }
+    }
+}
