@@ -32,81 +32,12 @@ try {
         $stmt->execute();
     }
 
-    // Create shop_items table if it doesn't exist
-    $db->exec('CREATE TABLE IF NOT EXISTS shop_items (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        description TEXT NOT NULL,
-        price INTEGER NOT NULL,
-        effect_type TEXT NOT NULL,
-        effect_value TEXT NOT NULL,
-        category TEXT NOT NULL,
-        icon TEXT DEFAULT "package",
-        duration INTEGER DEFAULT 0,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )');
-
-    // Create user_inventory table to track purchased items
-    $db->exec('CREATE TABLE IF NOT EXISTS user_inventory (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        item_id INTEGER NOT NULL,
-        purchased_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        expires_at DATETIME NULL,
-        quantity INTEGER DEFAULT 1,
-        FOREIGN KEY (user_id) REFERENCES users (id),
-        FOREIGN KEY (item_id) REFERENCES shop_items (id)
-    )');
-
-    // Insert default shop items if table is empty
-    $stmt = $db->prepare('SELECT COUNT(*) as count FROM shop_items');
-    $result = $stmt->execute();
-    $count = $result->fetchArray(SQLITE3_ASSOC)['count'];
-
-    if ($count == 0) {
-        $default_items = [
-            // Training Items
-            ['Training Camp', 'Boost all players rating by +2 for 7 days', 5000000, 'player_boost', '{"rating": 2}', 'training', 'dumbbell', 7],
-            ['Fitness Coach', 'Reduce injury risk by 50% for 14 days', 3000000, 'injury_protection', '{"reduction": 0.5}', 'training', 'heart-pulse', 14],
-            ['Skill Academy', 'Boost specific position players by +3 rating for 5 days', 4000000, 'position_boost', '{"rating": 3}', 'training', 'graduation-cap', 5],
-
-            // Financial Items
-            ['Sponsorship Deal', 'Increase budget by €10M instantly', 8000000, 'budget_boost', '{"amount": 10000000}', 'financial', 'handshake', 0],
-            ['Stadium Upgrade', 'Generate €500K daily for 30 days', 15000000, 'daily_income', '{"amount": 500000}', 'financial', 'building', 30],
-            ['Merchandise Boost', 'Increase transfer sale prices by 20% for 14 days', 6000000, 'sale_boost', '{"multiplier": 1.2}', 'financial', 'shopping-bag', 14],
-
-            // Special Items
-            ['Lucky Charm', 'Increase chance of successful transfers by 25%', 2500000, 'transfer_luck', '{"boost": 0.25}', 'special', 'clover', 10],
-            ['Scout Network', 'Reveal hidden player stats for 7 days', 3500000, 'player_insight', '{"enabled": true}', 'special', 'search', 7],
-            ['Energy Drink', 'Boost team performance by 15% for next 3 matches', 1500000, 'match_boost', '{"performance": 0.15, "matches": 3}', 'special', 'zap', 0],
-
-            // Premium Items
-            ['Golden Boot', 'Permanently increase striker ratings by +1', 20000000, 'permanent_boost', '{"position": "ST", "rating": 1}', 'premium', 'award', 0],
-            ['Tactical Genius', 'Unlock advanced formations for 30 days', 12000000, 'formation_unlock', '{"advanced": true}', 'premium', 'brain', 30],
-            ['Club Legend', 'Attract better players in transfers for 21 days', 18000000, 'player_attraction', '{"quality_boost": 0.3}', 'premium', 'star', 21],
-
-            // Squad Expansion Items
-            ['Youth Academy', 'Permanently increase squad size by +2 players', 25000000, 'squad_expansion', '{"players": 2}', 'premium', 'users', 0],
-            ['Training Facilities', 'Permanently increase squad size by +3 players', 35000000, 'squad_expansion', '{"players": 3}', 'premium', 'building-2', 0],
-            ['Elite Academy', 'Permanently increase squad size by +5 players', 50000000, 'squad_expansion', '{"players": 5}', 'premium', 'graduation-cap', 0],
-
-            // Stadium Items
-            ['Stadium Name Change', 'Allows you to change your stadium name', 2000000, 'stadium_rename', '{"enabled": true}', 'special', 'edit-3', 0]
-        ];
-
-        $stmt = $db->prepare('INSERT INTO shop_items (name, description, price, effect_type, effect_value, category, icon, duration) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
-
-        foreach ($default_items as $item) {
-            $stmt->bindValue(1, $item[0], SQLITE3_TEXT);
-            $stmt->bindValue(2, $item[1], SQLITE3_TEXT);
-            $stmt->bindValue(3, $item[2], SQLITE3_INTEGER);
-            $stmt->bindValue(4, $item[3], SQLITE3_TEXT);
-            $stmt->bindValue(5, $item[4], SQLITE3_TEXT);
-            $stmt->bindValue(6, $item[5], SQLITE3_TEXT);
-            $stmt->bindValue(7, $item[6], SQLITE3_TEXT);
-            $stmt->bindValue(8, $item[7], SQLITE3_INTEGER);
-            $stmt->execute();
-        }
+    // Check if shop_items table exists (should be created by install.php)
+    $result = $db->query("SELECT name FROM sqlite_master WHERE type='table' AND name='shop_items'");
+    if (!$result->fetchArray()) {
+        // Redirect to install if shop tables don't exist
+        header('Location: install.php');
+        exit;
     }
 
     // Get all shop items

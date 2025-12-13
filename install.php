@@ -307,6 +307,75 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install'])) {
                 FOREIGN KEY (user_id) REFERENCES users(id)
             )');
 
+            // Shop system tables
+            $db->exec('CREATE TABLE IF NOT EXISTS shop_items (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                description TEXT NOT NULL,
+                price INTEGER NOT NULL,
+                effect_type TEXT NOT NULL,
+                effect_value TEXT NOT NULL,
+                category TEXT NOT NULL,
+                icon TEXT DEFAULT "package",
+                duration INTEGER DEFAULT 0,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )');
+
+            // Seed shop items if table is empty
+            $stmt = $db->prepare('SELECT COUNT(*) as count FROM shop_items');
+            $result = $stmt->execute();
+            $count = $result->fetchArray(SQLITE3_ASSOC)['count'];
+
+            if ($count == 0) {
+                $default_items = [
+                    // Training Items
+                    ['Training Camp', 'Boost all players rating by +2 for 7 days', 5000000, 'player_boost', '{"rating": 2}', 'training', 'dumbbell', 7],
+                    ['Fitness Coach', 'Reduce injury risk by 50% for 14 days', 3000000, 'injury_protection', '{"reduction": 0.5}', 'training', 'heart-pulse', 14],
+                    ['Skill Academy', 'Boost specific position players by +3 rating for 5 days', 4000000, 'position_boost', '{"rating": 3}', 'training', 'graduation-cap', 5],
+
+                    // Financial Items
+                    ['Sponsorship Deal', 'Increase budget by €10M instantly', 8000000, 'budget_boost', '{"amount": 10000000}', 'financial', 'handshake', 0],
+                    ['Stadium Upgrade', 'Generate €500K daily for 30 days', 15000000, 'daily_income', '{"amount": 500000}', 'financial', 'building', 30],
+                    ['Merchandise Boost', 'Increase transfer sale prices by 20% for 14 days', 6000000, 'sale_boost', '{"multiplier": 1.2}', 'financial', 'shopping-bag', 14],
+
+                    // Special Items
+                    ['Lucky Charm', 'Increase chance of successful transfers by 25%', 2500000, 'transfer_luck', '{"boost": 0.25}', 'special', 'clover', 10],
+                    ['Scout Network', 'Reveal hidden player stats for 7 days', 3500000, 'player_insight', '{"enabled": true}', 'special', 'search', 7],
+                    ['Energy Drink', 'Boost team performance by 15% for next 3 matches', 1500000, 'match_boost', '{"performance": 0.15, "matches": 3}', 'special', 'zap', 0],
+
+                    // Premium Items
+                    ['Golden Boot', 'Permanently increase striker ratings by +1', 20000000, 'permanent_boost', '{"position": "ST", "rating": 1}', 'premium', 'award', 0],
+                    ['Tactical Genius', 'Unlock advanced formations for 30 days', 12000000, 'formation_unlock', '{"advanced": true}', 'premium', 'brain', 30],
+                    ['Club Legend', 'Attract better players in transfers for 21 days', 18000000, 'player_attraction', '{"quality_boost": 0.3}', 'premium', 'star', 21],
+
+                    // Squad Expansion Items
+                    ['Youth Academy', 'Permanently increase squad size by +2 players', 25000000, 'squad_expansion', '{"players": 2}', 'premium', 'users', 0],
+                    ['Training Facilities', 'Permanently increase squad size by +3 players', 35000000, 'squad_expansion', '{"players": 3}', 'premium', 'building-2', 0],
+                    ['Elite Academy', 'Permanently increase squad size by +5 players', 50000000, 'squad_expansion', '{"players": 5}', 'premium', 'graduation-cap', 0],
+
+                    // Stadium Items
+                    ['Stadium Name Change', 'Allows you to change your stadium name', 2000000, 'stadium_rename', '{"enabled": true}', 'special', 'edit-3', 0]
+                ];
+
+                $stmt = $db->prepare('INSERT INTO shop_items (name, description, price, effect_type, effect_value, category, icon, duration) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+
+                foreach ($default_items as $item) {
+                    $stmt->bindValue(1, $item[0], SQLITE3_TEXT);
+                    $stmt->bindValue(2, $item[1], SQLITE3_TEXT);
+                    $stmt->bindValue(3, $item[2], SQLITE3_INTEGER);
+                    $stmt->bindValue(4, $item[3], SQLITE3_TEXT);
+                    $stmt->bindValue(5, $item[4], SQLITE3_TEXT);
+                    $stmt->bindValue(6, $item[5], SQLITE3_TEXT);
+                    $stmt->bindValue(7, $item[6], SQLITE3_TEXT);
+                    $stmt->bindValue(8, $item[7], SQLITE3_INTEGER);
+                    $stmt->execute();
+                }
+
+                $success[] = 'Shop items seeded successfully (' . count($default_items) . ' items)';
+            } else {
+                $success[] = 'Shop items already exist (' . $count . ' items)';
+            }
+
             // League tables
             require_once 'includes/league_functions.php';
             createLeagueTables($db);
@@ -582,10 +651,22 @@ startContent();
                                 Go to <?php echo htmlspecialchars($app_name); ?>
                             </a>
 
+                            <button type="button" id="seedAllBtn"
+                                class="inline-flex items-center gap-2 bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 font-semibold">
+                                <i data-lucide="database" class="w-5 h-5"></i>
+                                Seed Demo Data
+                            </button>
+
                             <button type="button" id="seedClubsBtn"
-                                class="inline-flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 font-semibold">
-                                <i data-lucide="users" class="w-5 h-5"></i>
-                                Seed Demo Clubs
+                                class="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm">
+                                <i data-lucide="users" class="w-4 h-4"></i>
+                                Clubs Only
+                            </button>
+
+                            <button type="button" id="seedShopBtn"
+                                class="inline-flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 text-sm">
+                                <i data-lucide="shopping-bag" class="w-4 h-4"></i>
+                                Shop Only
                             </button>
 
                             <form method="POST" class="inline">
@@ -593,6 +674,7 @@ startContent();
                                     class="bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700">
                                     Reset System
                                 </button>
+
                             </form>
                         </div>
                     </div>
@@ -609,22 +691,23 @@ startContent();
                                 <label class="block text-sm font-medium mb-1">Admin Name
                                     <?php echo !$has_users ? '(Required)' : '(Optional)'; ?>
                                 </label>
-                                <input type="text" name="admin_name" <?php echo !$has_users ? 'required' : ''; ?> class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2
-                            focus:ring-blue-500" placeholder="Admin User">
+                                <input type="text" name="admin_name" <?php echo !$has_users ? 'required' : ''; ?> class="w-full
+                        px-3 py-2 border rounded-lg focus:outline-none focus:ring-2
+                        focus:ring-blue-500" placeholder="Admin User">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium mb-1">Admin Email
                                     <?php echo !$has_users ? '(Required)' : '(Optional)'; ?>
                                 </label>
                                 <input type="email" name="admin_email" <?php echo !$has_users ? 'required' : ''; ?> class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2
-                            focus:ring-blue-500" placeholder="admin@example.com">
+                        focus:ring-blue-500" placeholder="admin@example.com">
                             </div>
                             <div class="md:col-span-2">
                                 <label class="block text-sm font-medium mb-1">Admin Password
                                     <?php echo !$has_users ? '(Required)' : '(Optional)'; ?>
                                 </label>
                                 <input type="password" name="admin_password" <?php echo !$has_users ? 'required' : ''; ?> class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2
-                            focus:ring-blue-500" placeholder="Password">
+                        focus:ring-blue-500" placeholder="Password">
                             </div>
                         </div>
 
@@ -634,18 +717,20 @@ startContent();
                                 <?php echo ($db_exists && $table_exists) ? 'Complete Setup' : 'Install'; ?>
                             </button>
 
-                            <button type="submit" name="repair"
-                                class="bg-yellow-600 text-white px-6 py-2 rounded-lg hover:bg-yellow-700">
+                            <button type="submit" name="repair" class="bg-yellow-600 text-white px-6 py-2 rounded-lg
+                        hover:bg-yellow-700">
                                 Repair Database
                             </button>
 
                             <?php if ($db_exists && $table_exists): ?>
-                                <button type="button" id="resetDatabaseBtn"
-                                    class="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700">
+                                <button type="button" id="resetDatabaseBtn" class="bg-red-600 text-white px-6 py-2 rounded-lg
+                        hover:bg-red-700">
                                     Reset Database
                                 </button>
 
+
                             <?php endif; ?>
+
                         </div>
                     </div>
                 </form>
@@ -722,6 +807,97 @@ startContent();
             });
         });
 
+        // SweetAlert for seed all data button (combined)
+        document.getElementById('seedAllBtn')?.addEventListener('click', function () {
+            Swal.fire({
+                icon: 'question',
+                title: 'Seed Complete Demo Data?',
+                html: `
+                    <div class="text-left">
+                        <p class="mb-3">This will create a complete demo environment with:</p>
+                        
+                        <div class="bg-blue-50 p-3 rounded mb-3">
+                            <h4 class="font-semibold text-blue-800 mb-2">🏆 Demo Clubs (<?php echo count(DEMO_CLUBS); ?>)</h4>
+                            <ul class="text-sm text-blue-700 space-y-1">
+                                <?php foreach (array_slice(DEMO_CLUBS, 0, 3) as $club): ?>
+                                <li>• <?php echo htmlspecialchars($club['name']); ?> (<?php echo htmlspecialchars($club['formation']); ?>)</li>
+                                <?php endforeach; ?>
+                                <?php if (count(DEMO_CLUBS) > 3): ?>
+                                <li>• ... and <?php echo count(DEMO_CLUBS) - 3; ?> more clubs</li>
+                                <?php endif; ?>
+                            </ul>
+                        </div>
+
+                        <div class="bg-purple-50 p-3 rounded mb-3">
+                            <h4 class="font-semibold text-purple-800 mb-2">🛍️ Shop Items (16)</h4>
+                            <ul class="text-sm text-purple-700 space-y-1">
+                                <li>• Training Items (3) - Boost player performance</li>
+                                <li>• Financial Items (3) - Increase budget & income</li>
+                                <li>• Special Items (3) - Unique game advantages</li>
+                                <li>• Premium Items (3) - Permanent upgrades</li>
+                                <li>• Squad Expansion (3) - Increase team size</li>
+                                <li>• Stadium Items (1) - Customize your stadium</li>
+                            </ul>
+                        </div>
+
+                        <p class="text-sm text-gray-600">Perfect for testing and exploring all game features!</p>
+                    </div>
+                `,
+                showCancelButton: true,
+                confirmButtonColor: '#16a34a',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: 'Create Everything',
+                cancelButtonText: 'Cancel',
+                showLoaderOnConfirm: true,
+                preConfirm: () => {
+                    return fetch('database/seed.php?seed=all')
+                        .then(response => response.text())
+                        .then(data => {
+                            return data;
+                        })
+                        .catch(error => {
+                            Swal.showValidationMessage(`Request failed: ${error}`);
+                        });
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '🎉 Demo Data Created!',
+                        html: `
+                            <div class="text-left">
+                                <p class="mb-4">Complete demo environment has been set up successfully!</p>
+                                
+                                <div class="bg-green-50 p-3 rounded mb-3">
+                                    <h4 class="font-semibold text-green-800 mb-2">✅ What's Ready:</h4>
+                                    <ul class="text-sm text-green-700 space-y-1">
+                                        <li>• <?php echo count(DEMO_CLUBS); ?> demo clubs with complete teams</li>
+                                        <li>• 16 shop items across all categories</li>
+                                        <li>• Young players for academy system</li>
+                                        <li>• Login credentials for testing</li>
+                                    </ul>
+                                </div>
+
+                                <div class="bg-gray-50 p-3 rounded text-sm">
+                                    <strong>🔑 Login Credentials:</strong><br>
+                                    <?php foreach (array_slice(DEMO_CREDENTIALS, 0, 3, true) as $email => $password): ?>
+                                    • <?php echo htmlspecialchars($email); ?> / <?php echo htmlspecialchars($password); ?><br>
+                                    <?php endforeach; ?>
+                                    <?php if (count(DEMO_CREDENTIALS) > 3): ?>
+                                    • ... and <?php echo count(DEMO_CREDENTIALS) - 3; ?> more accounts<br>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        `,
+                        confirmButtonColor: '#16a34a',
+                        confirmButtonText: 'Start Playing!'
+                    }).then(() => {
+                        window.location.href = 'index.php';
+                    });
+                }
+            });
+        });
+
         // SweetAlert for seed clubs button
         document.getElementById('seedClubsBtn')?.addEventListener('click', function () {
             Swal.fire({
@@ -776,11 +952,71 @@ startContent();
                 }
             });
         });
+
+        // SweetAlert for seed shop items button
+        document.getElementById('seedShopBtn')?.addEventListener('click', function () {
+            Swal.fire({
+                icon: 'question',
+                title: 'Seed Shop Items?',
+                html: `
+                    <p>This will create 16 shop items across different categories:</p>
+                    <ul class="text-left mt-3 space-y-1">
+                        <li>• <strong>Training Items:</strong> Training Camp, Fitness Coach, Skill Academy</li>
+                        <li>• <strong>Financial Items:</strong> Sponsorship Deal, Stadium Upgrade, Merchandise Boost</li>
+                        <li>• <strong>Special Items:</strong> Lucky Charm, Scout Network, Energy Drink</li>
+                        <li>• <strong>Premium Items:</strong> Golden Boot, Tactical Genius, Club Legend</li>
+                        <li>• <strong>Squad Expansion:</strong> Youth Academy, Training Facilities, Elite Academy</li>
+                        <li>• <strong>Stadium Items:</strong> Stadium Name Change</li>
+                    </ul>
+                    <p class="mt-3 text-sm text-gray-600">Items range from €1.5M to €50M with various effects and durations.</p>
+                `,
+                showCancelButton: true,
+                confirmButtonColor: '#7c3aed',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: 'Create Shop Items',
+                cancelButtonText: 'Cancel',
+                showLoaderOnConfirm: true,
+                preConfirm: () => {
+                    return fetch('database/seed.php?seed=shop')
+                        .then(response => response.text())
+                        .then(data => {
+                            return data;
+                        })
+                        .catch(error => {
+                            Swal.showValidationMessage(`Request failed: ${error}`);
+                        });
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Shop Items Created!',
+                        html: `
+                            <div class="text-left">
+                                <p class="mb-3">16 shop items have been created successfully!</p>
+                                <div class="bg-gray-50 p-3 rounded text-sm">
+                                    <strong>Categories Created:</strong><br>
+                                    • Training Items (3 items)<br>
+                                    • Financial Items (3 items)<br>
+                                    • Special Items (3 items)<br>
+                                    • Premium Items (3 items)<br>
+                                    • Squad Expansion (3 items)<br>
+                                    • Stadium Items (1 item)
+                                </div>
+                                <p class="mt-3 text-sm text-gray-600">Visit the shop page to see all available items!</p>
+                            </div>
+                        `,
+                        confirmButtonColor: '#7c3aed',
+                        confirmButtonText: 'Great!'
+                    });
+                }
+            });
+        });
     </script>
 </div>
 </div>
 
-<?php
-// End content capture and render layout
-endContent($app_name . ' - Installation', '', false);
-?>
+ <?php
+ // End content capture and render layout
+ endContent($app_name . ' - Installation', '', false);
+ ?>

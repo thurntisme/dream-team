@@ -86,15 +86,19 @@ try {
 startContent();
 ?>
 
-<!-- Ads for free users -->
-<?php if (shouldShowAds($_SESSION['user_id'])): ?>
-    <?php renderBannerAd('header', $_SESSION['user_id']); ?>
-<?php endif; ?>
+<div class="container mx-auto max-w-6xl">
+    <!-- Ads for free users -->
+    <?php if (shouldShowAds($_SESSION['user_id'])): ?>
+        <div class="pt-6">
+            <?php renderBannerAd('header', $_SESSION['user_id']); ?>
+        </div>
+    <?php endif; ?>
 
-<!-- Plan comparison for free users -->
-<?php if (shouldShowAds($_SESSION['user_id'])): ?>
-    <?php renderPlanComparison($_SESSION['user_id']); ?>
-<?php endif; ?>
+    <!-- Plan comparison for free users -->
+    <?php if (shouldShowAds($_SESSION['user_id'])): ?>
+        <?php renderPlanComparison($_SESSION['user_id']); ?>
+    <?php endif; ?>
+</div>
 
 <div class="container mx-auto p-4 max-w-4xl flex items-center justify-center min-h-[calc(100vh-200px)]">
     <div class="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-6">

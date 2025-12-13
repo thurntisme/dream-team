@@ -199,12 +199,14 @@ if (php_sapi_name() === 'cli') {
 
     echo "\n💡 Usage:\n";
     echo "   CLI: php seed.php\n";
-    echo "   Web: visit seed.php?seed=clubs\n";
-    echo "   Install: Use 'Seed Demo Clubs' button in install.php\n";
+    echo "   Web: visit seed.php?seed=clubs (demo clubs)\n";
+    echo "   Web: visit seed.php?seed=shop (shop items)\n";
+    echo "   Web: visit seed.php?seed=all (everything)\n";
+    echo "   Install: Use 'Seed Demo Clubs' or 'Seed Shop Items' buttons in install.php\n";
 }
 
 // Web execution
-if (isset($_GET['seed']) && $_GET['seed'] === 'clubs') {
+if (isset($_GET['seed'])) {
     header('Content-Type: text/plain');
 
     if (!isDatabaseAvailable()) {
@@ -212,8 +214,122 @@ if (isset($_GET['seed']) && $_GET['seed'] === 'clubs') {
         exit;
     }
 
-    seedFakeClubs();
+    if ($_GET['seed'] === 'clubs') {
+        seedFakeClubs();
+    } elseif ($_GET['seed'] === 'shop') {
+        seedShopItems();
+    } elseif ($_GET['seed'] === 'all') {
+        echo "🚀 Starting complete demo data seeding...\n\n";
+
+        // Seed shop items first (no dependencies)
+        echo "1️⃣ Seeding shop items...\n";
+        seedShopItems();
+        echo "\n";
+
+        // Seed clubs (depends on shop items for purchases)
+        echo "2️⃣ Seeding demo clubs...\n";
+        seedFakeClubs();
+        echo "\n";
+
+        // Seed young players (depends on clubs existing)
+        echo "3️⃣ Seeding young players...\n";
+        seedYoungPlayers();
+        echo "\n";
+
+        echo "✅ Complete demo data seeding finished!\n";
+        echo "🎮 Ready to play with full demo environment!\n";
+    }
 }
+/**
+ * Seed shop items
+ */
+function seedShopItems()
+{
+    try {
+        $db = getDbConnection();
+
+        // Check if shop items already exist
+        $stmt = $db->prepare('SELECT COUNT(*) as count FROM shop_items');
+        $result = $stmt->execute();
+        $row = $result->fetchArray(SQLITE3_ASSOC);
+
+        if ($row['count'] > 0) {
+            echo "Shop items already exist. Skipping shop items seeding.\n";
+            return false;
+        }
+
+        // Create shop_items table if it doesn't exist
+        $db->exec('CREATE TABLE IF NOT EXISTS shop_items (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            description TEXT NOT NULL,
+            price INTEGER NOT NULL,
+            effect_type TEXT NOT NULL,
+            effect_value TEXT NOT NULL,
+            category TEXT NOT NULL,
+            icon TEXT DEFAULT "package",
+            duration INTEGER DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )');
+
+        $default_items = [
+            // Training Items
+            ['Training Camp', 'Boost all players rating by +2 for 7 days', 5000000, 'player_boost', '{"rating": 2}', 'training', 'dumbbell', 7],
+            ['Fitness Coach', 'Reduce injury risk by 50% for 14 days', 3000000, 'injury_protection', '{"reduction": 0.5}', 'training', 'heart-pulse', 14],
+            ['Skill Academy', 'Boost specific position players by +3 rating for 5 days', 4000000, 'position_boost', '{"rating": 3}', 'training', 'graduation-cap', 5],
+
+            // Financial Items
+            ['Sponsorship Deal', 'Increase budget by €10M instantly', 8000000, 'budget_boost', '{"amount": 10000000}', 'financial', 'handshake', 0],
+            ['Stadium Upgrade', 'Generate €500K daily for 30 days', 15000000, 'daily_income', '{"amount": 500000}', 'financial', 'building', 30],
+            ['Merchandise Boost', 'Increase transfer sale prices by 20% for 14 days', 6000000, 'sale_boost', '{"multiplier": 1.2}', 'financial', 'shopping-bag', 14],
+
+            // Special Items
+            ['Lucky Charm', 'Increase chance of successful transfers by 25%', 2500000, 'transfer_luck', '{"boost": 0.25}', 'special', 'clover', 10],
+            ['Scout Network', 'Reveal hidden player stats for 7 days', 3500000, 'player_insight', '{"enabled": true}', 'special', 'search', 7],
+            ['Energy Drink', 'Boost team performance by 15% for next 3 matches', 1500000, 'match_boost', '{"performance": 0.15, "matches": 3}', 'special', 'zap', 0],
+
+            // Premium Items
+            ['Golden Boot', 'Permanently increase striker ratings by +1', 20000000, 'permanent_boost', '{"position": "ST", "rating": 1}', 'premium', 'award', 0],
+            ['Tactical Genius', 'Unlock advanced formations for 30 days', 12000000, 'formation_unlock', '{"advanced": true}', 'premium', 'brain', 30],
+            ['Club Legend', 'Attract better players in transfers for 21 days', 18000000, 'player_attraction', '{"quality_boost": 0.3}', 'premium', 'star', 21],
+
+            // Squad Expansion Items
+            ['Youth Academy', 'Permanently increase squad size by +2 players', 25000000, 'squad_expansion', '{"players": 2}', 'premium', 'users', 0],
+            ['Training Facilities', 'Permanently increase squad size by +3 players', 35000000, 'squad_expansion', '{"players": 3}', 'premium', 'building-2', 0],
+            ['Elite Academy', 'Permanently increase squad size by +5 players', 50000000, 'squad_expansion', '{"players": 5}', 'premium', 'graduation-cap', 0],
+
+            // Stadium Items
+            ['Stadium Name Change', 'Allows you to change your stadium name', 2000000, 'stadium_rename', '{"enabled": true}', 'special', 'edit-3', 0]
+        ];
+
+        $stmt = $db->prepare('INSERT INTO shop_items (name, description, price, effect_type, effect_value, category, icon, duration) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+
+        $seededCount = 0;
+        foreach ($default_items as $item) {
+            $stmt->bindValue(1, $item[0], SQLITE3_TEXT);
+            $stmt->bindValue(2, $item[1], SQLITE3_TEXT);
+            $stmt->bindValue(3, $item[2], SQLITE3_INTEGER);
+            $stmt->bindValue(4, $item[3], SQLITE3_TEXT);
+            $stmt->bindValue(5, $item[4], SQLITE3_TEXT);
+            $stmt->bindValue(6, $item[5], SQLITE3_TEXT);
+            $stmt->bindValue(7, $item[6], SQLITE3_TEXT);
+            $stmt->bindValue(8, $item[7], SQLITE3_INTEGER);
+
+            if ($stmt->execute()) {
+                $seededCount++;
+            }
+        }
+
+        $db->close();
+        echo "Successfully seeded {$seededCount} shop items.\n";
+        return true;
+
+    } catch (Exception $e) {
+        echo "Error seeding shop items: " . $e->getMessage() . "\n";
+        return false;
+    }
+}
+
 /**
  * Seed young players for all clubs
  */

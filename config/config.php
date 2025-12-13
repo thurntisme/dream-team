@@ -141,6 +141,25 @@ function isDatabaseAvailable()
                     FOREIGN KEY (owner_club_id) REFERENCES users (id) ON DELETE CASCADE
                 )');
             }
+
+            // Create shop_items table if it doesn't exist
+            $result = $db->query("SELECT name FROM sqlite_master WHERE type='table' AND name='shop_items'");
+            $shopItemsTableExists = $result->fetchArray() !== false;
+
+            if (!$shopItemsTableExists) {
+                $db->exec('CREATE TABLE shop_items (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL,
+                    description TEXT NOT NULL,
+                    price INTEGER NOT NULL,
+                    effect_type TEXT NOT NULL,
+                    effect_value TEXT NOT NULL,
+                    category TEXT NOT NULL,
+                    icon TEXT DEFAULT "package",
+                    duration INTEGER DEFAULT 0,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )');
+            }
         }
 
         $db->close();
