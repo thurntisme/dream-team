@@ -34,10 +34,10 @@ This document outlines the optimized folder structure implemented to improve cod
 │   ├── ads.php              # Advertisement system
 │   ├── helpers.php          # Helper functions
 │   ├── league_functions.php # League-specific functions
+│   ├── routing.php          # Routing helper functions
 │   └── staff_functions.php  # Staff management functions
 │
-├── pages/                   # Main application pages
-│   └── welcome.php          # Dashboard/welcome page
+├── pages/                   # Main application pages (for future use)
 │
 ├── partials/                # Template partials and includes
 │   ├── analytics.php        # Analytics tracking partial
@@ -63,8 +63,9 @@ This document outlines the optimized folder structure implemented to improve cod
     ├── meta.php             # Redirect to partials/meta.php
     ├── payment.php          # Payment processing
     ├── plans.php            # Subscription plans
+    ├── routes.php           # Centralized routing system
     ├── settings.php         # User settings
-    ├── welcome.php          # Redirect to pages/welcome.php
+    ├── welcome.php          # Dashboard/welcome page
     └── [Other game pages]   # Team, transfer, league, etc.
 ```
 
@@ -97,6 +98,16 @@ This document outlines the optimized folder structure implemented to improve cod
 - **Pages**: Main application screens organized separately
 - **Clear separation** between presentation logic and business logic
 
+### 6. **Centralized Routing System**
+- **Clean URLs**: SEO-friendly URLs without .php extensions or folder structure
+- **Internal mapping**: URLs like `/welcome` map to `pages/welcome.php` internally
+- **Parameter routing**: Dynamic routes with parameters (e.g., `/club/123`)
+- **Route helpers**: Functions for URL generation and navigation
+- **404 handling**: Centralized error handling for missing pages
+- **Maintainable**: All routes defined in one place (`routes.php`)
+
+**Important**: Users only see clean URLs like `/welcome`, `/team`, `/clubs`. The internal folder structure (`pages/`, `partials/`, `components/`) is completely hidden from users.
+
 ## Clean URL Access
 
 ### API Endpoints
@@ -107,8 +118,32 @@ APIs are accessible via clean URLs:
 - `/api/young_player` → `api/young_player_api.php`
 
 ### Pages
-Main application pages are accessible via clean URLs:
-- `/welcome` → `pages/welcome.php`
+Main application pages are accessible via clean URLs through the centralized routing system:
+- `/` or `/home` → `landing.php`
+- `/welcome` or `/dashboard` → `welcome.php`
+- `/team` or `/squad` → `team.php`
+- `/transfer` or `/transfers` → `transfer.php`
+- `/scouting` or `/scout` → `scouting.php`
+- `/league` → `league.php`
+- `/clubs` → `clubs.php`
+- `/shop` or `/store` → `shop.php`
+- `/plans` or `/pricing` → `plans.php`
+- `/settings` or `/profile` → `settings.php`
+- `/academy` → `academy.php`
+- `/young-players` → `young_player_market.php`
+- `/match` or `/simulator` → `match-simulator.php`
+- `/stadium` → `stadium.php`
+- `/staff` → `staff.php`
+- `/payment` → `payment.php`
+- `/payment-success` → `payment_success.php`
+- `/login` or `/play` or `/game` → `index.php`
+- `/install` or `/setup` → `install.php`
+
+### Parameter Routes
+Dynamic routes with parameters:
+- `/club/123` → `clubs.php?id=123`
+- `/player/456` → `transfer.php?player_id=456`
+- `/match/vs/789` → `match-simulator.php?opponent_id=789`
 
 ## Migration Notes
 
@@ -132,12 +167,15 @@ require_once 'includes/helpers.php';
 - ✅ SEO configuration paths fixed
 - ✅ All syntax errors resolved
 - ✅ **NEW**: Pages folder created for main application pages
-- ✅ **NEW**: Welcome page moved to `pages/welcome.php` with clean URL routing
+- ✅ **NEW**: Welcome page moved back to root `welcome.php` for simplicity
 - ✅ **NEW**: Components folder created for reusable UI components
 - ✅ **NEW**: Partials folder created for template includes
 - ✅ **NEW**: Layout, meta, and analytics moved to `partials/`
 - ✅ **NEW**: Field components moved to `components/`
 - ✅ **NEW**: Backward compatibility maintained with redirect files
+- ✅ **NEW**: Centralized routing system with `routes.php`
+- ✅ **NEW**: Clean URLs for all pages and parameter routes
+- ✅ **NEW**: Routing helper functions for URL generation
 
 ### Database Path
 Database path updated in configuration:
@@ -204,3 +242,21 @@ require_once '../config/constants.php';
 ```
 
 This structure provides a solid foundation for the Dream Team application while maintaining backward compatibility and preparing for future enhancements.
+
+## Routing System Fixes
+
+### Fixed Redirect Loop Issue & Simplified Structure
+- **Problem**: `/welcome` was causing infinite redirects due to complex folder structure
+- **Solution**: 
+  - Moved `pages/welcome.php` back to root `welcome.php`
+  - Updated routing to point to `welcome.php` directly
+  - Simplified paths back to relative includes
+  - Maintained clean URL `/welcome` → `welcome.php`
+
+### Path Resolution Best Practices
+- **Root pages**: Use simple relative paths like `config/config.php`
+- **Partials**: Use `__DIR__ . '/meta.php'` for same-directory includes  
+- **JavaScript**: Use clean URLs like `/login` for redirects, relative paths for forms
+- **Forms**: Use relative paths like `save_club.php` for same-directory actions
+
+The routing system now works correctly without redirect loops and provides clean, professional URLs.

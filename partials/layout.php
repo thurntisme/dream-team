@@ -5,8 +5,9 @@
 function renderLayout($title, $content, $currentPage = '', $showAuth = true)
 {
     // Ensure constants and helpers are available
-    require_once __DIR__ . '/config/constants.php';
-    require_once __DIR__ . '/includes/ads.php';
+    require_once __DIR__ . '/../config/constants.php';
+    require_once __DIR__ . '/../includes/ads.php';
+    require_once __DIR__ . '/../includes/routing.php';
 
     $isLoggedIn = isset($_SESSION['user_id']);
     $clubName = $_SESSION['club_name'] ?? '';
@@ -119,8 +120,8 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true)
             $pageType = 'game';
 
         // Include meta.php if it exists
-        if (file_exists('partials/meta.php')) {
-            require_once 'partials/meta.php';
+        if (file_exists(__DIR__ . '/meta.php')) {
+            require_once __DIR__ . '/meta.php';
             generateMetaTags($pageType);
         } else {
             // Fallback meta tags
@@ -144,7 +145,7 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true)
                 <div class="flex justify-between items-center h-16">
                     <!-- Logo & Brand -->
                     <div class="flex items-center gap-4">
-                        <a href="<?php echo $isLoggedIn ? 'welcome.php' : 'index.php'; ?>"
+                        <a href="<?php echo $isLoggedIn ? route('welcome') : route('login'); ?>"
                             class="flex items-center gap-2 hover:opacity-80 transition-opacity">
                             <i data-lucide="shield" class="w-8 h-8 text-blue-600"></i>
                             <div>
@@ -159,7 +160,7 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true)
                     <!-- Main Navigation -->
                     <?php if ($isLoggedIn && $showAuth): ?>
                         <div class="hidden md:flex items-center gap-1">
-                            <a href="welcome.php"
+                            <a href="<?php echo route('welcome'); ?>"
                                 class="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors <?php echo $currentPage === 'welcome' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100'; ?>">
                                 <i data-lucide="home" class="w-4 h-4"></i>
                                 <span class="font-medium">Home</span>
@@ -587,7 +588,7 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true)
                             } else {
                                 // Logout
                                 $.post('auth.php', { action: 'logout' }, function () {
-                                    window.location.href = 'index.php';
+                                    window.location.href = '/login';
                                 }, 'json');
                             }
                         });
@@ -600,7 +601,7 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true)
                             confirmButtonColor: '#3085d6',
                             confirmButtonText: 'Login'
                         }).then(() => {
-                            window.location.href = 'index.php';
+                            window.location.href = '/login';
 
                         });
                     }
@@ -647,10 +648,10 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true)
                 }).then((result) => {
                     if (result.isConfirmed) {
                         $.post('auth.php', { action: 'logout' }, function () {
-                            window.location.href = 'index.php';
+                            window.location.href = '/login';
                         }, 'json').fail(function () {
                             // Fallback if auth.php fails
-                            window.location.href = 'index.php';
+                            window.location.href = '/login';
                         });
                     }
                 });
@@ -686,8 +687,8 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true)
 
         <?php
         // Add analytics tracking if available
-        if (file_exists('partials/analytics.php')) {
-            require_once 'partials/analytics.php';
+        if (file_exists(__DIR__ . '/analytics.php')) {
+            require_once __DIR__ . '/analytics.php';
             if (shouldLoadAnalytics()) {
                 renderGoogleAnalytics();
                 renderFacebookPixel();
