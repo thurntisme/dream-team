@@ -39,6 +39,15 @@ This document outlines the optimized folder structure implemented to improve cod
 ├── pages/                   # Main application pages
 │   └── welcome.php          # Dashboard/welcome page
 │
+├── partials/                # Template partials and includes
+│   ├── analytics.php        # Analytics tracking partial
+│   ├── layout.php           # Main layout template
+│   └── meta.php             # SEO meta tags partial
+│
+├── components/              # Reusable UI components
+│   ├── field-component.php  # Football field rendering component
+│   └── field-modal.php      # Modal component for field display
+│
 ├── public/                  # Public assets (future use)
 ├── storage/                 # Logs, cache, temporary files
 │   ├── cache/               # Application cache
@@ -46,9 +55,12 @@ This document outlines the optimized folder structure implemented to improve cod
 │
 └── [Root Pages]             # Core pages and utilities
     ├── academy.php          # Young player academy
+    ├── analytics.php        # Redirect to partials/analytics.php
     ├── auth.php             # Authentication
+    ├── field-component.php  # Redirect to components/field-component.php
     ├── index.php            # Login page
-    ├── layout.php           # Main layout template
+    ├── layout.php           # Redirect to partials/layout.php
+    ├── meta.php             # Redirect to partials/meta.php
     ├── payment.php          # Payment processing
     ├── plans.php            # Subscription plans
     ├── settings.php         # User settings
@@ -78,6 +90,12 @@ This document outlines the optimized folder structure implemented to improve cod
 - Structure supports future growth
 - Easy to add new modules and features
 - Prepared for MVC architecture migration
+
+### 5. **Component-Based Architecture**
+- **Components**: Reusable UI elements (field displays, modals, widgets)
+- **Partials**: Template includes (layout, meta tags, analytics)
+- **Pages**: Main application screens organized separately
+- **Clear separation** between presentation logic and business logic
 
 ## Clean URL Access
 
@@ -115,6 +133,11 @@ require_once 'includes/helpers.php';
 - ✅ All syntax errors resolved
 - ✅ **NEW**: Pages folder created for main application pages
 - ✅ **NEW**: Welcome page moved to `pages/welcome.php` with clean URL routing
+- ✅ **NEW**: Components folder created for reusable UI components
+- ✅ **NEW**: Partials folder created for template includes
+- ✅ **NEW**: Layout, meta, and analytics moved to `partials/`
+- ✅ **NEW**: Field components moved to `components/`
+- ✅ **NEW**: Backward compatibility maintained with redirect files
 
 ### Database Path
 Database path updated in configuration:

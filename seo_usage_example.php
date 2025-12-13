@@ -11,7 +11,7 @@
 
 <head>
     <?php
-    require_once 'meta.php';
+    require_once 'partials/meta.php';
     generateMetaTags('game'); // Use 'landing', 'game', 'team', 'clubs', 'match', or 'default'
     ?>
 
@@ -25,7 +25,7 @@
 
     <!-- Analytics before closing body tag -->
     <?php
-    require_once 'analytics.php';
+    require_once 'partials/analytics.php';
     if (shouldLoadAnalytics()) {
         renderGoogleAnalytics(); // Uses config from seo_config.php
         renderFacebookPixel();   // Uses config from seo_config.php

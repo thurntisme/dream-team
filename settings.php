@@ -3,7 +3,7 @@ session_start();
 require_once 'config/config.php';
 require_once 'config/constants.php';
 require_once 'includes/helpers.php';
-require_once 'layout.php';
+require_once 'partials/layout.php';
 
 // Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
@@ -258,67 +258,67 @@ startContent();
     function autoSaveSettings() {
         const form = document.querySelector('form');
         const formData = new FormData(form);
-        
+
         // Show saving indicator
         const saveBtn = document.querySelector('button[type="submit"]');
         const originalText = saveBtn.innerHTML;
         saveBtn.innerHTML = '<div class="flex items-center gap-2"><i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Saving...</span></div>';
         saveBtn.disabled = true;
-        
+
         // Re-initialize icons for the new loader icon
         lucide.createIcons();
-        
+
         fetch('settings_api.php', {
             method: 'POST',
             body: formData
         })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                // Show success feedback
-                saveBtn.innerHTML = '<div class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-green-500"></i><span>Saved!</span></div>';
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Show success feedback
+                    saveBtn.innerHTML = '<div class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-green-500"></i><span>Saved!</span></div>';
+                    lucide.createIcons();
+
+                    // Reset button after 2 seconds
+                    setTimeout(() => {
+                        saveBtn.innerHTML = originalText;
+                        saveBtn.disabled = false;
+                        lucide.createIcons();
+                    }, 2000);
+                } else {
+                    throw new Error(data.message || 'Failed to save settings');
+                }
+            })
+            .catch(error => {
+                console.error('Error saving settings:', error);
+                saveBtn.innerHTML = '<div class="flex items-center gap-2"><i data-lucide="x" class="w-4 h-4 text-red-500"></i><span>Error</span></div>';
                 lucide.createIcons();
-                
-                // Reset button after 2 seconds
+
+                // Reset button after 3 seconds
                 setTimeout(() => {
                     saveBtn.innerHTML = originalText;
                     saveBtn.disabled = false;
                     lucide.createIcons();
-                }, 2000);
-            } else {
-                throw new Error(data.message || 'Failed to save settings');
-            }
-        })
-        .catch(error => {
-            console.error('Error saving settings:', error);
-            saveBtn.innerHTML = '<div class="flex items-center gap-2"><i data-lucide="x" class="w-4 h-4 text-red-500"></i><span>Error</span></div>';
-            lucide.createIcons();
-            
-            // Reset button after 3 seconds
-            setTimeout(() => {
-                saveBtn.innerHTML = originalText;
-                saveBtn.disabled = false;
-                lucide.createIcons();
-            }, 3000);
-        });
+                }, 3000);
+            });
     }
 
     // Add event listeners for real-time saving on toggle switches
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
         const toggles = document.querySelectorAll('input[type="checkbox"]');
         const selects = document.querySelectorAll('select');
-        
+
         // Auto-save on toggle change
         toggles.forEach(toggle => {
-            toggle.addEventListener('change', function() {
+            toggle.addEventListener('change', function () {
                 // Small delay to allow UI to update
                 setTimeout(autoSaveSettings, 100);
             });
         });
-        
+
         // Auto-save on select change
         selects.forEach(select => {
-            select.addEventListener('change', function() {
+            select.addEventListener('change', function () {
                 setTimeout(autoSaveSettings, 100);
             });
         });
@@ -328,7 +328,7 @@ startContent();
     function previewTheme(theme) {
         const body = document.body;
         body.classList.remove('theme-light', 'theme-dark', 'theme-auto');
-        
+
         if (theme === 'dark') {
             body.classList.add('theme-dark');
         } else if (theme === 'auto') {
@@ -341,10 +341,10 @@ startContent();
     }
 
     // Add theme preview on change
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
         const themeSelect = document.getElementById('theme');
         if (themeSelect) {
-            themeSelect.addEventListener('change', function() {
+            themeSelect.addEventListener('change', function () {
                 previewTheme(this.value);
             });
         }

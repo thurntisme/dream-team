@@ -3,7 +3,7 @@ session_start();
 require_once 'config/config.php';
 require_once 'config/constants.php';
 require_once 'includes/helpers.php';
-require_once 'layout.php';
+require_once 'partials/layout.php';
 
 // Check if user is logged in
 if (!isset($_SESSION['user_id'])) {

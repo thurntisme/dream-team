@@ -303,7 +303,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reset'])) {
     }
 }
 
-require_once 'layout.php';
+require_once 'partials/layout.php';
 
 // Start content capture
 startContent();

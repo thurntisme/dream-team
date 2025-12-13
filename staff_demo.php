@@ -3,7 +3,7 @@ session_start();
 
 require_once 'config/config.php';
 require_once 'config/constants.php';
-require_once 'layout.php';
+require_once 'partials/layout.php';
 
 // Check if database is available, redirect to install if not
 if (!isDatabaseAvailable()) {
@@ -91,7 +91,8 @@ startContent();
                 <div class="mt-4 p-3 bg-blue-50 rounded-lg">
                     <div class="text-sm font-semibold text-blue-900 mb-2">Total Weekly Cost</div>
                     <div class="text-lg font-bold text-blue-700">
-                        <?php echo formatMarketValue($staff_effectiveness['total_weekly_cost']); ?></div>
+                        <?php echo formatMarketValue($staff_effectiveness['total_weekly_cost']); ?>
+                    </div>
                 </div>
             <?php endif; ?>
         </div>
@@ -185,7 +186,7 @@ startContent();
                                     <span class="text-sm"><?php echo htmlspecialchars($player['name']); ?></span>
                                     <span class="text-sm font-medium">★<?php echo $player['rating']; ?></span>
                                 </div>
-                            <?php
+                                <?php
                             endif;
                         endforeach;
                         $avg_rating_original = $player_count > 0 ? round($total_rating_original / $player_count, 1) : 0;
@@ -220,7 +221,7 @@ startContent();
                                         <?php endif; ?>
                                     </span>
                                 </div>
-                            <?php
+                                <?php
                             endif;
                         endforeach;
                         $avg_rating_bonus = $player_count_bonus > 0 ? round($total_rating_bonus / $player_count_bonus, 1) : 0;

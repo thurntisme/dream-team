@@ -1,6 +1,6 @@
 <?php
-require_once 'meta.php';
-require_once 'analytics.php';
+require_once 'partials/meta.php';
+require_once 'partials/analytics.php';
 ?>
 <!DOCTYPE html>
 <html lang="en">

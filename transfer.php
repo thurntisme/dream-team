@@ -3,7 +3,7 @@ session_start();
 
 require_once 'config/config.php';
 require_once 'config/constants.php';
-require_once 'layout.php';
+require_once 'partials/layout.php';
 
 // Check if database is available, redirect to install if not
 if (!isDatabaseAvailable()) {
@@ -59,23 +59,23 @@ try {
         while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
             $columns[] = $row['name'];
         }
-        
+
         // Add player_uuid column if it doesn't exist
         if (!in_array('player_uuid', $columns)) {
             $db->exec('ALTER TABLE player_inventory ADD COLUMN player_uuid TEXT DEFAULT ""');
         }
-        
+
         // Add purchase_price column if it doesn't exist
         if (!in_array('purchase_price', $columns)) {
             $db->exec('ALTER TABLE player_inventory ADD COLUMN purchase_price INTEGER DEFAULT 0');
         }
-        
+
         // Migrate data from player_name to player_uuid if needed
         if (in_array('player_name', $columns) && in_array('player_uuid', $columns)) {
             // Get all records with empty player_uuid but have player_name
             $stmt = $db->prepare('SELECT id, player_name, player_data FROM player_inventory WHERE player_uuid = "" AND player_name != ""');
             $result = $stmt->execute();
-            
+
             while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
                 $player_data = json_decode($row['player_data'], true);
                 if ($player_data && isset($player_data['uuid'])) {
@@ -87,24 +87,24 @@ try {
                 }
             }
         }
-        
+
         // Check transfer_bids table
         $result = $db->query("PRAGMA table_info(transfer_bids)");
         $bid_columns = [];
         while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
             $bid_columns[] = $row['name'];
         }
-        
+
         // Add player_uuid column to transfer_bids if it doesn't exist
         if (!in_array('player_uuid', $bid_columns)) {
             $db->exec('ALTER TABLE transfer_bids ADD COLUMN player_uuid TEXT DEFAULT ""');
         }
-        
+
         // Migrate transfer_bids data from player_name to player_uuid if needed
         if (in_array('player_name', $bid_columns) && in_array('player_uuid', $bid_columns)) {
             $stmt = $db->prepare('SELECT id, player_name, player_data FROM transfer_bids WHERE player_uuid = "" AND player_name != ""');
             $result = $stmt->execute();
-            
+
             while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
                 $player_data = json_decode($row['player_data'], true);
                 if ($player_data && isset($player_data['uuid'])) {
