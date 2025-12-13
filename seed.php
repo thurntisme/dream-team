@@ -214,3 +214,76 @@ if (isset($_GET['seed']) && $_GET['seed'] === 'clubs') {
 
     seedFakeClubs();
 }
+/**
+ * Seed young players for all clubs
+ */
+function seedYoungPlayers()
+{
+    try {
+        $db = getDbConnection();
+
+        // Check if young players already exist
+        $stmt = $db->prepare('SELECT COUNT(*) as count FROM young_players');
+        $result = $stmt->execute();
+        $row = $result->fetchArray(SQLITE3_ASSOC);
+
+        if ($row['count'] > 0) {
+            echo "Young players already exist. Skipping young player seeding.\n";
+            return false;
+        }
+
+        // Get all clubs
+        $stmt = $db->prepare('SELECT id, club_name FROM users WHERE club_name IS NOT NULL');
+        $result = $stmt->execute();
+        $clubs = [];
+        while ($club = $result->fetchArray(SQLITE3_ASSOC)) {
+            $clubs[] = $club;
+        }
+
+        if (empty($clubs)) {
+            echo "No clubs found. Please seed clubs first.\n";
+            return false;
+        }
+
+        $seededCount = 0;
+
+        foreach ($clubs as $club) {
+            // Generate 3-6 young players per club
+            $numPlayers = rand(3, 6);
+
+            for ($i = 0; $i < $numPlayers; $i++) {
+                $youngPlayer = generateYoungPlayer($club['id']);
+
+                $stmt = $db->prepare('INSERT INTO young_players (club_id, name, age, position, potential_rating, current_rating, development_stage, contract_years, value, training_focus) VALUES (:club_id, :name, :age, :position, :potential_rating, :current_rating, :development_stage, :contract_years, :value, :training_focus)');
+                $stmt->bindValue(':club_id', $youngPlayer['club_id'], SQLITE3_INTEGER);
+                $stmt->bindValue(':name', $youngPlayer['name'], SQLITE3_TEXT);
+                $stmt->bindValue(':age', $youngPlayer['age'], SQLITE3_INTEGER);
+                $stmt->bindValue(':position', $youngPlayer['position'], SQLITE3_TEXT);
+                $stmt->bindValue(':potential_rating', $youngPlayer['potential_rating'], SQLITE3_INTEGER);
+                $stmt->bindValue(':current_rating', $youngPlayer['current_rating'], SQLITE3_INTEGER);
+                $stmt->bindValue(':development_stage', $youngPlayer['development_stage'], SQLITE3_TEXT);
+                $stmt->bindValue(':contract_years', $youngPlayer['contract_years'], SQLITE3_INTEGER);
+                $stmt->bindValue(':value', $youngPlayer['value'], SQLITE3_INTEGER);
+                $stmt->bindValue(':training_focus', $youngPlayer['training_focus'], SQLITE3_TEXT);
+
+                if ($stmt->execute()) {
+                    $seededCount++;
+                }
+            }
+        }
+
+        $db->close();
+        echo "Successfully seeded {$seededCount} young players across " . count($clubs) . " clubs.\n";
+        return true;
+
+    } catch (Exception $e) {
+        echo "Error seeding young players: " . $e->getMessage() . "\n";
+        return false;
+    }
+}
+
+// Run young player seeding if this file is executed directly
+if (basename(__FILE__) == basename($_SERVER['SCRIPT_NAME'])) {
+    echo "Seeding young players...\n";
+    seedYoungPlayers();
+}

@@ -47,12 +47,16 @@ try {
         // For now, we'll just include it in the response
     }
 
+    // Process young player development
+    $young_player_results = processWeeklyYoungPlayerDevelopment($db, $_SESSION['user_id']);
+
     $db->close();
 
     // Return results
     echo json_encode([
         'success' => true,
-        'results' => $staff_results
+        'results' => $staff_results,
+        'young_player_development' => $young_player_results
     ]);
 
 } catch (Exception $e) {

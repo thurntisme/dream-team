@@ -88,6 +88,49 @@ function isDatabaseAvailable()
                     UNIQUE(user_id, setting_key)
                 )');
             }
+
+            // Create young_players table if it doesn't exist
+            $result = $db->query("SELECT name FROM sqlite_master WHERE type='table' AND name='young_players'");
+            $youngPlayersTableExists = $result->fetchArray() !== false;
+
+            if (!$youngPlayersTableExists) {
+                $db->exec('CREATE TABLE young_players (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    club_id INTEGER NOT NULL,
+                    name TEXT NOT NULL,
+                    age INTEGER NOT NULL,
+                    position TEXT NOT NULL,
+                    potential_rating INTEGER NOT NULL,
+                    current_rating INTEGER NOT NULL,
+                    development_stage TEXT DEFAULT "academy",
+                    contract_years INTEGER DEFAULT 3,
+                    value INTEGER NOT NULL,
+                    training_focus TEXT DEFAULT "balanced",
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    promoted_at DATETIME,
+                    FOREIGN KEY (club_id) REFERENCES users (id) ON DELETE CASCADE
+                )');
+            }
+
+            // Create young_player_bids table if it doesn't exist
+            $result = $db->query("SELECT name FROM sqlite_master WHERE type='table' AND name='young_player_bids'");
+            $youngPlayerBidsTableExists = $result->fetchArray() !== false;
+
+            if (!$youngPlayerBidsTableExists) {
+                $db->exec('CREATE TABLE young_player_bids (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    young_player_id INTEGER NOT NULL,
+                    bidder_club_id INTEGER NOT NULL,
+                    owner_club_id INTEGER NOT NULL,
+                    bid_amount INTEGER NOT NULL,
+                    status TEXT DEFAULT "pending",
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    expires_at DATETIME NOT NULL,
+                    FOREIGN KEY (young_player_id) REFERENCES young_players (id) ON DELETE CASCADE,
+                    FOREIGN KEY (bidder_club_id) REFERENCES users (id) ON DELETE CASCADE,
+                    FOREIGN KEY (owner_club_id) REFERENCES users (id) ON DELETE CASCADE
+                )');
+            }
         }
 
         $db->close();
