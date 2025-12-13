@@ -2,7 +2,7 @@
 session_start();
 header('Content-Type: application/json');
 
-require_once 'config.php';
+require_once 'config/config.php';
 
 // Check if database is available
 if (!isDatabaseAvailable()) {

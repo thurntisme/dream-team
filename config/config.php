@@ -25,7 +25,7 @@ function saveConfig($config)
 $config = loadConfig();
 
 // Database configuration
-define('DB_FILE', $config['db_file'] ?? 'dreamteam.db');
+define('DB_FILE', $config['db_file'] ?? __DIR__ . '/../database/dreamteam.db');
 define('APP_NAME', $config['app_name'] ?? 'Dream Team');
 
 // Database connection function

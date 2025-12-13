@@ -5,8 +5,8 @@
 function renderLayout($title, $content, $currentPage = '', $showAuth = true)
 {
     // Ensure constants and helpers are available
-    require_once __DIR__ . '/constants.php';
-    require_once __DIR__ . '/ads.php';
+    require_once __DIR__ . '/config/constants.php';
+    require_once __DIR__ . '/includes/ads.php';
 
     $isLoggedIn = isset($_SESSION['user_id']);
     $clubName = $_SESSION['club_name'] ?? '';
@@ -42,8 +42,8 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true)
         }
 
         // Load players data to calculate team quality
-        if (file_exists('players.json') && !empty($team)) {
-            $players_json = file_get_contents('players.json');
+        if (file_exists('assets/players.json') && !empty($team)) {
+            $players_json = file_get_contents('assets/players.json');
             $players_data = json_decode($players_json, true) ?? [];
 
             $totalRating = 0;

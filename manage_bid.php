@@ -1,8 +1,8 @@
 <?php
 session_start();
 
-require_once 'config.php';
-require_once 'constants.php';
+require_once 'config/config.php';
+require_once 'config/constants.php';
 
 header('Content-Type: application/json');
 

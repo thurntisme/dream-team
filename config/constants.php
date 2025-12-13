@@ -5,7 +5,7 @@
 define('DREAM_TEAM_APP', true);
 
 // Include helper functions
-require_once __DIR__ . '/helpers.php';
+require_once __DIR__ . '/../includes/helpers.php';
 
 // Budget configuration
 define('DEFAULT_BUDGET', 500000000); // €500M default budget - optimal for competitive lineups

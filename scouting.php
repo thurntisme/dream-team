@@ -1,8 +1,8 @@
 <?php
 session_start();
 
-require_once 'config.php';
-require_once 'constants.php';
+require_once 'config/config.php';
+require_once 'config/constants.php';
 require_once 'layout.php';
 
 // Check if database is available, redirect to install if not
@@ -57,8 +57,8 @@ try {
 
 // Load players data
 $players_data = [];
-if (file_exists('players.json')) {
-    $players_json = file_get_contents('players.json');
+if (file_exists('assets/players.json')) {
+    $players_json = file_get_contents('assets/players.json');
     $players_data = json_decode($players_json, true) ?? [];
 }
 

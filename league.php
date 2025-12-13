@@ -1,7 +1,7 @@
 <?php
 session_start();
-require_once 'config.php';
-require_once 'constants.php';
+require_once 'config/config.php';
+require_once 'config/constants.php';
 require_once 'layout.php';
 
 // Check if database is available, redirect to install if not
@@ -13,7 +13,7 @@ if (!isDatabaseAvailable()) {
 // Require user to be logged in and have a club name
 requireClubName('league');
 
-require_once 'league_functions.php';
+require_once 'includes/league_functions.php';
 
 try {
     $db = getDbConnection();

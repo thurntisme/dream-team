@@ -6,7 +6,7 @@
 
 function renderGoogleAnalytics($trackingId = null)
 {
-    require_once 'seo_config.php';
+    require_once 'config/seo_config.php';
 
     // Use config if no tracking ID provided
     if (!$trackingId) {
@@ -30,7 +30,7 @@ function renderGoogleAnalytics($trackingId = null)
 
 function renderFacebookPixel($pixelId = null)
 {
-    require_once 'seo_config.php';
+    require_once 'config/seo_config.php';
 
     // Use config if no pixel ID provided
     if (!$pixelId) {
@@ -77,4 +77,3 @@ function trackEvent($eventName, $parameters = [])
 // renderGoogleAnalytics('GA_TRACKING_ID');
 // renderFacebookPixel('FB_PIXEL_ID');
 // trackEvent('game_start', ['club_name' => 'Manchester United']);
-?>

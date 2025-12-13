@@ -2,9 +2,9 @@
 session_start();
 header('Content-Type: application/json');
 
-require_once 'config.php';
-require_once 'constants.php';
-require_once 'helpers.php';
+require_once 'config/config.php';
+require_once 'config/constants.php';
+require_once 'includes/helpers.php';
 
 // Check authentication
 if (!isset($_SESSION['user_id'])) {

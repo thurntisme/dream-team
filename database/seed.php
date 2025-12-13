@@ -1,7 +1,7 @@
 <?php
 // Dream Team Seeder - Generate fake clubs with realistic teams
-require_once 'config.php';
-require_once 'constants.php';
+require_once '../config/config.php';
+require_once '../config/constants.php';
 
 /**
  * Seed function to create demo clubs with realistic teams

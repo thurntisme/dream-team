@@ -2,8 +2,8 @@
 session_start();
 header('Content-Type: application/json');
 
-require_once 'config.php';
-require_once 'constants.php';
+require_once 'config/config.php';
+require_once 'config/constants.php';
 
 // Check if database is available, redirect to install if not
 if (!isDatabaseAvailable()) {

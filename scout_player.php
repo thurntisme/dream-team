@@ -1,8 +1,8 @@
 <?php
 session_start();
 
-require_once 'config.php';
-require_once 'constants.php';
+require_once 'config/config.php';
+require_once 'config/constants.php';
 
 header('Content-Type: application/json');
 
@@ -89,8 +89,8 @@ try {
 
     // Load players data to validate player exists
     $players_data = [];
-    if (file_exists('players.json')) {
-        $players_json = file_get_contents('players.json');
+    if (file_exists('assets/players.json')) {
+        $players_json = file_get_contents('assets/players.json');
         $players_data = json_decode($players_json, true) ?? [];
     }
 

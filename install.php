@@ -1,7 +1,7 @@
 <?php
 // Dream Team Installation Script
-require_once 'config.php';
-require_once 'constants.php';
+require_once 'config/config.php';
+require_once 'config/constants.php';
 
 $errors = [];
 $success = [];
@@ -18,7 +18,7 @@ if (!extension_loaded('sqlite3')) {
 
 // Get current configuration
 $config = loadConfig();
-$db_file = $config['db_file'] ?? 'dreamteam.db';
+$db_file = $config['db_file'] ?? 'database/dreamteam.db';
 $app_name = $config['app_name'] ?? 'Dream Team';
 
 // Check database status
@@ -52,7 +52,7 @@ if ($db_exists) {
 // Handle configuration save
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_config'])) {
     $new_config = [
-        'db_file' => $_POST['db_file'] ?? 'dreamteam.db',
+        'db_file' => $_POST['db_file'] ?? 'database/dreamteam.db',
         'app_name' => $_POST['app_name'] ?? 'Dream Team'
     ];
 
@@ -249,7 +249,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install'])) {
             )');
 
             // League tables
-            require_once 'league_functions.php';
+            require_once 'includes/league_functions.php';
             createLeagueTables($db);
 
             $success[] = 'All database tables created successfully';
@@ -398,7 +398,7 @@ startContent();
                             <label class="block text-sm font-medium mb-1">Database File</label>
                             <input type="text" name="db_file" value="<?php echo htmlspecialchars($db_file); ?>"
                                 class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                placeholder="dreamteam.db">
+                                placeholder="database/dreamteam.db">
                         </div>
                     </div>
                 </div>

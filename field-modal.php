@@ -2,8 +2,8 @@
 // Field Modal API - Returns club data for modal display
 session_start();
 
-require_once 'config.php';
-require_once 'constants.php';
+require_once 'config/config.php';
+require_once 'config/constants.php';
 
 // Set JSON header
 header('Content-Type: application/json');

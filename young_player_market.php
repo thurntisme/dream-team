@@ -1,10 +1,10 @@
 <?php
 session_start();
-require_once 'config.php';
-require_once 'constants.php';
-require_once 'helpers.php';
+require_once 'config/config.php';
+require_once 'config/constants.php';
+require_once 'includes/helpers.php';
 require_once 'layout.php';
-require_once 'ads.php';
+require_once 'includes/ads.php';
 
 // Check if user is logged in
 if (!isset($_SESSION['user_id'])) {

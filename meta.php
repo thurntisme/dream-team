@@ -6,7 +6,7 @@
 
 function generateMetaTags($page = 'default')
 {
-    require_once 'seo_config.php';
+    require_once 'config/seo_config.php';
 
     $baseUrl = getSiteUrl();
     $currentUrl = getCurrentUrl();
