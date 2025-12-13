@@ -296,64 +296,6 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true)
                                         <?php endif; ?>
                                     </div>
 
-                                    <a href="welcome.php"
-                                        class="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                                        <i data-lucide="home" class="w-4 h-4"></i>
-                                        <span>Dashboard</span>
-                                    </a>
-
-                                    <a href="team.php"
-                                        class="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                                        <i data-lucide="users" class="w-4 h-4"></i>
-                                        <span>My Team</span>
-                                    </a>
-
-                                    <a href="staff.php"
-                                        class="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                                        <i data-lucide="user-check" class="w-4 h-4"></i>
-                                        <span>Club Staff</span>
-                                    </a>
-
-                                    <div class="border-t border-gray-100 my-1"></div>
-
-                                    <a href="transfer.php"
-                                        class="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                                        <i data-lucide="arrow-left-right" class="w-4 h-4"></i>
-                                        <span>Transfer Market</span>
-                                    </a>
-
-                                    <a href="scouting.php"
-                                        class="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                                        <i data-lucide="search" class="w-4 h-4"></i>
-                                        <span>Scouting</span>
-                                    </a>
-
-                                    <a href="shop.php"
-                                        class="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                                        <i data-lucide="shopping-bag" class="w-4 h-4"></i>
-                                        <span>Shop</span>
-                                    </a>
-
-                                    <a href="league.php"
-                                        class="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                                        <i data-lucide="trophy" class="w-4 h-4"></i>
-                                        <span>League</span>
-                                    </a>
-
-                                    <a href="clubs.php"
-                                        class="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                                        <i data-lucide="users" class="w-4 h-4"></i>
-                                        <span>Other Clubs</span>
-                                    </a>
-
-                                    <a href="stadium.php"
-                                        class="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                                        <i data-lucide="building" class="w-4 h-4"></i>
-                                        <span>Stadium</span>
-                                    </a>
-
-                                    <div class="border-t border-gray-100 my-1"></div>
-
                                     <a href="settings.php"
                                         class="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
                                         <i data-lucide="settings" class="w-4 h-4"></i>
@@ -390,47 +332,6 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true)
                 <?php if ($isLoggedIn && $showAuth): ?>
                     <div id="mobileMenu" class="hidden md:hidden border-t py-4">
                         <div class="flex flex-col gap-1">
-                            <a href="welcome.php"
-                                class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors <?php echo $currentPage === 'welcome' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100'; ?>">
-                                <i data-lucide="home" class="w-5 h-5"></i>
-                                <span class="font-medium">Home</span>
-                            </a>
-                            <a href="team.php"
-                                class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors <?php echo $currentPage === 'team' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100'; ?>">
-                                <i data-lucide="users" class="w-5 h-5"></i>
-                                <span class="font-medium">My Team</span>
-                            </a>
-                            <a href="staff.php"
-                                class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors <?php echo $currentPage === 'staff' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100'; ?>">
-                                <i data-lucide="user-check" class="w-5 h-5"></i>
-                                <span class="font-medium">Club Staff</span>
-                            </a>
-                            <a href="transfer.php"
-                                class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors <?php echo $currentPage === 'transfer' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100'; ?>">
-                                <i data-lucide="arrow-left-right" class="w-5 h-5"></i>
-                                <span class="font-medium">Transfer Market</span>
-                            </a>
-                            <a href="scouting.php"
-                                class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors <?php echo $currentPage === 'scouting' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100'; ?>">
-                                <i data-lucide="search" class="w-5 h-5"></i>
-                                <span class="font-medium">Scouting</span>
-                            </a>
-                            <a href="clubs.php"
-                                class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors <?php echo $currentPage === 'clubs' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100'; ?>">
-                                <i data-lucide="trophy" class="w-5 h-5"></i>
-                                <span class="font-medium">Other Clubs</span>
-                            </a>
-                            <a href="shop.php"
-                                class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors <?php echo $currentPage === 'shop' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100'; ?>">
-                                <i data-lucide="shopping-bag" class="w-5 h-5"></i>
-                                <span class="font-medium">Shop</span>
-                            </a>
-                            <a href="stadium.php"
-                                class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors <?php echo $currentPage === 'stadium' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100'; ?>">
-                                <i data-lucide="building" class="w-5 h-5"></i>
-                                <span class="font-medium">Stadium</span>
-                            </a>
-
                             <a href="settings.php"
                                 class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors <?php echo $currentPage === 'settings' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100'; ?>">
                                 <i data-lucide="settings" class="w-5 h-5"></i>
