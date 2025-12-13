@@ -41,6 +41,37 @@ try {
     $club_name = $user_data['club_name'] ?? '';
     $user_fans = $user_data['fans'] ?? 5000;
 
+    // Check if user has purchased stadium name change item
+    try {
+        $stmt = $db->prepare(
+            'SELECT 1
+             FROM user_inventory ui
+             JOIN shop_items si ON ui.item_id = si.id
+             WHERE ui.user_id = :user_id
+               AND si.effect_type = "stadium_rename"
+               AND ui.quantity > 0
+             LIMIT 1'
+        );
+
+        if (!$stmt) {
+            throw new Exception('Prepare failed: ' . $db->lastErrorMsg());
+        }
+
+        $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+
+        $result = $stmt->execute();
+        if (!$result) {
+            throw new Exception('Execute failed: ' . $db->lastErrorMsg());
+        }
+
+        $can_rename_stadium = (bool) $result->fetchArray();
+
+    } catch (Exception $e) {
+        error_log('[canRenameStadium] ' . $e->getMessage());
+
+        $can_rename_stadium = false;
+    }
+
     // Get or create stadium data
     $stmt = $db->prepare('SELECT * FROM stadiums WHERE user_id = :user_id');
     $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
@@ -60,6 +91,15 @@ try {
         $result = $stmt->execute();
         $stadium_data = $result->fetchArray(SQLITE3_ASSOC);
     }
+
+    // Get current stadium rename item quantity for JavaScript
+    $stmt = $db->prepare('SELECT SUM(ui.quantity) as total_quantity FROM user_inventory ui 
+                         JOIN shop_items si ON ui.item_id = si.id 
+                         WHERE ui.user_id = :user_id AND si.effect_type = "stadium_rename" 
+                         AND ui.quantity > 0');
+    $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+    $result = $stmt->execute();
+    $current_rename_quantity = $result->fetchArray(SQLITE3_ASSOC)['total_quantity'] ?? 0;
 
     $db->close();
 
@@ -345,12 +385,27 @@ startContent();
                 <h3 class="font-semibold text-gray-900 mb-2">Stadium Name</h3>
                 <div class="flex gap-2">
                     <input type="text" id="stadiumName" value="<?php echo htmlspecialchars($stadium_data['name']); ?>"
-                        class="flex-1 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        class="flex-1 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 <?php echo !$can_rename_stadium ? 'bg-gray-100 cursor-not-allowed' : ''; ?>"
+                        <?php echo !$can_rename_stadium ? 'readonly' : ''; ?>>
                     <button id="renameStadium"
-                        class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors">
+                        class="px-4 py-2 rounded-lg transition-colors <?php echo $can_rename_stadium ? 'bg-gray-600 text-white hover:bg-gray-700' : 'bg-gray-300 text-gray-500 cursor-not-allowed'; ?>"
+                        <?php echo !$can_rename_stadium ? 'disabled' : ''; ?>>
                         <i data-lucide="edit" class="w-4 h-4"></i>
                     </button>
                 </div>
+                <?php if (!$can_rename_stadium): ?>
+                    <div class="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <div class="flex items-start gap-2">
+                            <i data-lucide="lock" class="w-4 h-4 text-yellow-600 mt-0.5 flex-shrink-0"></i>
+                            <div class="text-sm">
+                                <p class="text-yellow-800 font-medium">Stadium name cannot be changed</p>
+                                <p class="text-yellow-700 mt-1">Purchase the "Stadium Name Change" item from the <a
+                                        href="shop.php" class="underline hover:text-yellow-900">Club Shop</a> to unlock this
+                                    feature.</p>
+                            </div>
+                        </div>
+                    </div>
+                <?php endif; ?>
             </div>
 
             <!-- Stadium Revenue Info -->
@@ -394,6 +449,12 @@ startContent();
 </div>
 
 <script>
+    // Stadium rename permission
+    const canRename = <?php echo $can_rename_stadium ? 'true' : 'false'; ?>;
+
+    // Get current stadium rename item quantity for display
+    const renameItemsCount = <?php echo $current_rename_quantity; ?>;
+
     // Stadium upgrade functionality
     document.getElementById('upgradeStadium')?.addEventListener('click', function () {
         const cost = parseInt(this.dataset.cost);
@@ -436,7 +497,24 @@ startContent();
 
     // Stadium rename functionality
     document.getElementById('renameStadium').addEventListener('click', function () {
+        // Check if rename is allowed
+        if (this.disabled) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Feature Locked',
+                html: 'You need to purchase the "Stadium Name Change" item from the <a href="shop.php" class="text-blue-600 underline">Club Shop</a> to change your stadium name.',
+                confirmButtonColor: '#f59e0b',
+                confirmButtonText: 'Go to Shop'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = 'shop.php';
+                }
+            });
+            return;
+        }
+
         const newName = document.getElementById('stadiumName').value.trim();
+        const currentName = '<?php echo addslashes($stadium_data['name']); ?>';
 
         if (!newName) {
             Swal.fire({
@@ -448,7 +526,85 @@ startContent();
             return;
         }
 
-        renameStadium(newName);
+        if (newName.length > 100) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Name Too Long',
+                text: 'Stadium name must be 100 characters or less.',
+                confirmButtonColor: '#ef4444'
+            });
+            return;
+        }
+
+        if (newName === currentName) {
+            Swal.fire({
+                icon: 'info',
+                title: 'No Change',
+                text: 'The new name is the same as the current name.',
+                confirmButtonColor: '#3b82f6'
+            });
+            return;
+        }
+
+        // Show confirmation popup
+        Swal.fire({
+            title: 'Confirm Stadium Rename',
+            html: `
+        <div style = "text-align: left; padding: 10px;" >
+                    <p style="margin-bottom: 15px; color: #374151;">Are you sure you want to rename your stadium?</p>
+                    <div style="background-color: #f9fafb; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <span style="color: #6b7280;">Current Name:</span>
+                            <span style="font-weight: 500; color: #111827;">${currentName}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="color: #6b7280;">New Name:</span>
+                            <span style="font-weight: 500; color: #2563eb;">${newName}</span>
+                        </div>
+                    </div>
+                    <div style="background-color: #fefce8; padding: 12px; border-radius: 8px; border: 1px solid #fde047;">
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                            <i data-lucide="alert-triangle" style="width: 16px; height: 16px; color: #d97706;"></i>
+                            <span style="font-size: 14px; color: #92400e;">This will consume 1 Stadium Name Change item.</span>
+                        </div>
+                        <div style="font-size: 12px; color: #78716c;">
+                            You currently have ${renameItemsCount} Stadium Name Change item${renameItemsCount !== 1 ? 's' : ''}.
+                        </div>
+                    </div>
+                </div >
+        `,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#2563eb',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Rename Stadium',
+            cancelButtonText: 'Cancel',
+            didOpen: () => {
+                // Initialize Lucide icons in the popup
+                lucide.createIcons();
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                renameStadium(newName);
+            }
+        });
+    });
+
+    // Handle clicks on disabled stadium name input
+    document.getElementById('stadiumName').addEventListener('click', function () {
+        if (!canRename) {
+            Swal.fire({
+                icon: 'info',
+                title: 'Stadium Name Locked',
+                html: 'Purchase the "Stadium Name Change" item from the <a href="shop.php" class="text-blue-600 underline">Club Shop</a> to unlock stadium renaming.',
+                confirmButtonColor: '#3b82f6',
+                confirmButtonText: 'Go to Shop'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = 'shop.php';
+                }
+            });
+        }
     });
 
     // Format market value function
@@ -535,12 +691,13 @@ startContent();
                     Swal.fire({
                         icon: 'success',
                         title: 'Stadium Renamed!',
-                        text: `Stadium renamed to "${newName}"`,
-                        timer: 2000,
+                        text: data.message || `Stadium renamed to "${newName}"`,
+                        timer: 3000,
                         showConfirmButton: false,
                         toast: true,
                         position: 'top-end'
                     }).then(() => {
+                        // Always reload the page to reflect changes
                         window.location.reload();
                     });
                 } else {

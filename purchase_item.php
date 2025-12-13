@@ -94,14 +94,29 @@ try {
         $expires_at = date('Y-m-d H:i:s', strtotime('+' . $item['duration'] . ' days'));
     }
 
-    // Add item to user's inventory
-    $stmt = $db->prepare('INSERT INTO user_items (user_id, item_id, expires_at) VALUES (:user_id, :item_id, :expires_at)');
+    // Add item to user's inventory or increase quantity if already exists
+    $stmt = $db->prepare('SELECT id, quantity FROM user_inventory WHERE user_id = :user_id AND item_id = :item_id');
     $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
     $stmt->bindValue(':item_id', $item_id, SQLITE3_INTEGER);
-    $stmt->bindValue(':expires_at', $expires_at, SQLITE3_TEXT);
+    $result = $stmt->execute();
+    $existing_item = $result->fetchArray(SQLITE3_ASSOC);
 
-    if (!$stmt->execute()) {
-        throw new Exception('Failed to add item to inventory');
+    if ($existing_item) {
+        // Update existing item quantity
+        $stmt = $db->prepare('UPDATE user_inventory SET quantity = quantity + 1 WHERE id = :id');
+        $stmt->bindValue(':id', $existing_item['id'], SQLITE3_INTEGER);
+        if (!$stmt->execute()) {
+            throw new Exception('Failed to update item quantity');
+        }
+    } else {
+        // Insert new item
+        $stmt = $db->prepare('INSERT INTO user_inventory (user_id, item_id, expires_at, quantity) VALUES (:user_id, :item_id, :expires_at, 1)');
+        $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+        $stmt->bindValue(':item_id', $item_id, SQLITE3_INTEGER);
+        $stmt->bindValue(':expires_at', $expires_at, SQLITE3_TEXT);
+        if (!$stmt->execute()) {
+            throw new Exception('Failed to add item to inventory');
+        }
     }
 
     // Apply item effects

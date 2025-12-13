@@ -132,20 +132,69 @@ try {
             exit;
         }
 
-        // Update stadium name
-        $stmt = $db->prepare('UPDATE stadiums SET name = :name WHERE user_id = :user_id');
-        $stmt->bindValue(':name', $newName, SQLITE3_TEXT);
-        $stmt->bindValue(':user_id', $userId, SQLITE3_INTEGER);
-        $result = $stmt->execute();
+        // Begin transaction for stadium rename
+        $db->exec('BEGIN TRANSACTION');
 
-        if ($result) {
+        try {
+            // Check if user has purchased stadium name change item and get the first available item
+            $stmt = $db->prepare('SELECT ui.id, ui.quantity FROM user_inventory ui 
+                                 JOIN shop_items si ON ui.item_id = si.id 
+                                 WHERE ui.user_id = :user_id AND si.effect_type = "stadium_rename" 
+                                 AND ui.quantity > 0 
+                                 ORDER BY ui.purchased_at ASC 
+                                 LIMIT 1');
+            $stmt->bindValue(':user_id', $userId, SQLITE3_INTEGER);
+            $result = $stmt->execute();
+            $rename_item = $result->fetchArray(SQLITE3_ASSOC);
+
+            if (!$rename_item) {
+                throw new Exception('You need to purchase the Stadium Name Change item from the shop to rename your stadium');
+            }
+
+            // Update stadium name
+            $stmt = $db->prepare('UPDATE stadiums SET name = :name WHERE user_id = :user_id');
+            $stmt->bindValue(':name', $newName, SQLITE3_TEXT);
+            $stmt->bindValue(':user_id', $userId, SQLITE3_INTEGER);
+
+            if (!$stmt->execute()) {
+                throw new Exception('Failed to rename stadium');
+            }
+
+            // Consume the stadium name change item
+            $new_quantity = $rename_item['quantity'] - 1;
+
+            if ($new_quantity <= 0) {
+                // Remove the item from inventory if quantity becomes 0 or less
+                $stmt = $db->prepare('DELETE FROM user_inventory WHERE id = :id');
+                $stmt->bindValue(':id', $rename_item['id'], SQLITE3_INTEGER);
+            } else {
+                // Decrease quantity by 1
+                $stmt = $db->prepare('UPDATE user_inventory SET quantity = :quantity WHERE id = :id');
+                $stmt->bindValue(':quantity', $new_quantity, SQLITE3_INTEGER);
+                $stmt->bindValue(':id', $rename_item['id'], SQLITE3_INTEGER);
+            }
+
+            if (!$stmt->execute()) {
+                throw new Exception('Failed to consume stadium name change item');
+            }
+
+            // Clean up any items with quantity 0 (optional cleanup)
+            $cleanup_stmt = $db->prepare('DELETE FROM user_inventory WHERE quantity <= 0');
+            $cleanup_stmt->execute();
+
+            // Commit transaction
+            $db->exec('COMMIT');
+
             echo json_encode([
                 'success' => true,
-                'message' => 'Stadium renamed successfully',
-                'new_name' => $newName
+                'message' => 'Stadium renamed successfully! Stadium Name Change item consumed.',
+                'new_name' => $newName,
+                'reload_page' => true
             ]);
-        } else {
-            echo json_encode(['success' => false, 'message' => 'Failed to rename stadium']);
+
+        } catch (Exception $e) {
+            $db->exec('ROLLBACK');
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
         }
 
     } else {

@@ -224,10 +224,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install'])) {
             $db->exec('CREATE TABLE IF NOT EXISTS user_inventory (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL,
-                item_id TEXT NOT NULL,
+                item_id INTEGER NOT NULL,
+                purchased_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                expires_at DATETIME NULL,
                 quantity INTEGER DEFAULT 1,
-                purchase_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users(id)
+                FOREIGN KEY (user_id) REFERENCES users (id),
+                FOREIGN KEY (item_id) REFERENCES shop_items (id)
             )');
 
             // Staff system table

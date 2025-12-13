@@ -7,9 +7,9 @@
 function getUserActiveItems($db, $user_id)
 {
     $stmt = $db->prepare('SELECT ui.*, si.name, si.effect_type, si.effect_value, si.duration 
-                         FROM user_items ui 
+                         FROM user_inventory ui 
                          JOIN shop_items si ON ui.item_id = si.id 
-                         WHERE ui.user_id = :user_id AND ui.is_active = 1 
+                         WHERE ui.user_id = :user_id AND ui.quantity > 0 
                          AND (ui.expires_at IS NULL OR ui.expires_at > datetime("now"))');
     $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
     $result = $stmt->execute();
@@ -161,10 +161,10 @@ function getDailyIncome($active_items)
 function processDailyIncome($db)
 {
     // Get all users with active daily income items
-    $stmt = $db->prepare('SELECT DISTINCT ui.user_id, SUM(CAST(JSON_EXTRACT(si.effect_value, "$.amount") AS INTEGER)) as daily_amount
-                         FROM user_items ui 
+    $stmt = $db->prepare('SELECT DISTINCT ui.user_id, SUM(CAST(JSON_EXTRACT(si.effect_value, "$.amount") AS INTEGER) * ui.quantity) as daily_amount
+                         FROM user_inventory ui 
                          JOIN shop_items si ON ui.item_id = si.id 
-                         WHERE ui.is_active = 1 
+                         WHERE ui.quantity > 0 
                          AND si.effect_type = "daily_income"
                          AND (ui.expires_at IS NULL OR ui.expires_at > datetime("now"))
                          GROUP BY ui.user_id');
@@ -187,7 +187,19 @@ function processDailyIncome($db)
  */
 function cleanupExpiredItems($db)
 {
-    $stmt = $db->prepare('UPDATE user_items SET is_active = 0 WHERE expires_at IS NOT NULL AND expires_at <= datetime("now")');
+    $stmt = $db->prepare('UPDATE user_inventory SET quantity = 0 WHERE expires_at IS NOT NULL AND expires_at <= datetime("now")');
+    $stmt->execute();
+
+    // Remove items with quantity 0
+    cleanupZeroQuantityItems($db);
+}
+
+/**
+ * Remove items with quantity 0 from inventory
+ */
+function cleanupZeroQuantityItems($db)
+{
+    $stmt = $db->prepare('DELETE FROM user_inventory WHERE quantity <= 0');
     $stmt->execute();
 }
 

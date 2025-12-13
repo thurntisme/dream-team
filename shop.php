@@ -46,14 +46,14 @@ try {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )');
 
-    // Create user_items table to track purchased items
-    $db->exec('CREATE TABLE IF NOT EXISTS user_items (
+    // Create user_inventory table to track purchased items
+    $db->exec('CREATE TABLE IF NOT EXISTS user_inventory (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
         item_id INTEGER NOT NULL,
         purchased_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         expires_at DATETIME NULL,
-        is_active INTEGER DEFAULT 1,
+        quantity INTEGER DEFAULT 1,
         FOREIGN KEY (user_id) REFERENCES users (id),
         FOREIGN KEY (item_id) REFERENCES shop_items (id)
     )');
@@ -88,7 +88,10 @@ try {
             // Squad Expansion Items
             ['Youth Academy', 'Permanently increase squad size by +2 players', 25000000, 'squad_expansion', '{"players": 2}', 'premium', 'users', 0],
             ['Training Facilities', 'Permanently increase squad size by +3 players', 35000000, 'squad_expansion', '{"players": 3}', 'premium', 'building-2', 0],
-            ['Elite Academy', 'Permanently increase squad size by +5 players', 50000000, 'squad_expansion', '{"players": 5}', 'premium', 'graduation-cap', 0]
+            ['Elite Academy', 'Permanently increase squad size by +5 players', 50000000, 'squad_expansion', '{"players": 5}', 'premium', 'graduation-cap', 0],
+
+            // Stadium Items
+            ['Stadium Name Change', 'Allows you to change your stadium name', 2000000, 'stadium_rename', '{"enabled": true}', 'special', 'edit-3', 0]
         ];
 
         $stmt = $db->prepare('INSERT INTO shop_items (name, description, price, effect_type, effect_value, category, icon, duration) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
@@ -117,9 +120,9 @@ try {
 
     // Get user's active items
     $stmt = $db->prepare('SELECT ui.*, si.name, si.description, si.effect_type, si.effect_value, si.icon 
-                         FROM user_items ui 
+                         FROM user_inventory ui 
                          JOIN shop_items si ON ui.item_id = si.id 
-                         WHERE ui.user_id = :user_id AND ui.is_active = 1 
+                         WHERE ui.user_id = :user_id AND ui.quantity > 0 
                          AND (ui.expires_at IS NULL OR ui.expires_at > datetime("now"))
                          ORDER BY ui.purchased_at DESC');
     $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
@@ -231,6 +234,9 @@ startContent();
                                     </div>
                                 </div>
                                 <div class="text-right">
+                                    <div class="text-lg font-bold text-blue-600 mb-1">
+                                        Qty: <?php echo $item['quantity']; ?>
+                                    </div>
                                     <?php if ($item['expires_at']): ?>
                                         <div class="text-sm font-medium text-orange-600">
                                             Expires: <?php echo date('M j, Y', strtotime($item['expires_at'])); ?>
@@ -238,7 +244,6 @@ startContent();
                                     <?php else: ?>
                                         <div class="text-sm font-medium text-green-600">Permanent</div>
                                     <?php endif; ?>
-                                    <div class="text-xs text-gray-500 mt-1">Active</div>
                                 </div>
                             </div>
                         </div>
