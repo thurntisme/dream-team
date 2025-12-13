@@ -179,17 +179,30 @@ try {
         $response_cost = $cost;
     }
 
+    // Award experience for player purchase
+    $expResult = addClubExp($_SESSION['user_id'], 15, 'Player purchased: ' . ($player_data['name'] ?? 'Unknown Player'));
+
     // Commit transaction
     $db->exec('COMMIT');
     $db->close();
 
-    echo json_encode([
+    $response = [
         'success' => true,
         'message' => $response_message,
         'new_budget' => $new_budget,
         'player_name' => $player_data['name'] ?? 'Unknown Player',
         'player_cost' => $response_cost
-    ]);
+    ];
+
+    // Add level up information if applicable
+    if ($expResult['success'] && $expResult['leveled_up']) {
+        $response['level_up'] = [
+            'new_level' => $expResult['new_level'],
+            'levels_gained' => $expResult['levels_gained']
+        ];
+    }
+
+    echo json_encode($response);
 
 } catch (Exception $e) {
     // Rollback transaction on error

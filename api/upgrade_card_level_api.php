@@ -152,11 +152,18 @@ try {
     $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
 
     if ($stmt->execute()) {
+        // Award experience for card level upgrade attempt (more if successful)
+        $expGain = $upgrade_successful ? 12 : 5;
+        $expReason = $upgrade_successful ?
+            'Card level upgraded for ' . $current_player['name'] :
+            'Card level upgrade attempted for ' . $current_player['name'];
+        $expResult = addClubExp($_SESSION['user_id'], $expGain, $expReason);
+
         $card_info = getCardLevelDisplayInfo($new_card_level);
         $benefits = getCardLevelBenefits($new_card_level);
         $new_salary = calculatePlayerSalary($current_player);
 
-        echo json_encode([
+        $response = [
             'success' => true,
             'upgrade_result' => $upgrade_result,
             'message' => $result_message,
@@ -171,7 +178,17 @@ try {
             'benefits' => $benefits,
             'new_salary' => $new_salary,
             'updated_player' => $current_player
-        ]);
+        ];
+
+        // Add level up information if applicable
+        if ($expResult['success'] && $expResult['leveled_up']) {
+            $response['level_up'] = [
+                'new_level' => $expResult['new_level'],
+                'levels_gained' => $expResult['levels_gained']
+            ];
+        }
+
+        echo json_encode($response);
     } else {
         echo json_encode(['success' => false, 'message' => 'Failed to update database']);
     }

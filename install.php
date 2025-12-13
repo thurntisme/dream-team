@@ -110,12 +110,71 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install'])) {
             budget INTEGER DEFAULT ' . DEFAULT_BUDGET . ',
             max_players INTEGER DEFAULT 23,
             fans INTEGER DEFAULT 5000,
+            club_exp INTEGER DEFAULT 0,
+            club_level INTEGER DEFAULT 1,
+            user_plan TEXT DEFAULT "free",
+            plan_expires_at DATETIME,
             last_login DATETIME,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )';
 
         if ($db->exec($sql)) {
             $success[] = 'Database and users table created successfully';
+
+            // Add missing columns to existing users table (migration)
+            try {
+                $result = $db->query("PRAGMA table_info(users)");
+                $columns = [];
+                while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+                    $columns[] = $row['name'];
+                }
+
+                // Add club_exp column if missing
+                if (!in_array('club_exp', $columns)) {
+                    $db->exec('ALTER TABLE users ADD COLUMN club_exp INTEGER DEFAULT 0');
+                    $success[] = 'Added club_exp column to users table';
+                }
+
+                // Add club_level column if missing
+                if (!in_array('club_level', $columns)) {
+                    $db->exec('ALTER TABLE users ADD COLUMN club_level INTEGER DEFAULT 1');
+                    $success[] = 'Added club_level column to users table';
+                }
+
+                // Add user_plan column if missing
+                if (!in_array('user_plan', $columns)) {
+                    $db->exec('ALTER TABLE users ADD COLUMN user_plan TEXT DEFAULT "free"');
+                    $success[] = 'Added user_plan column to users table';
+                }
+
+                // Add plan_expires_at column if missing
+                if (!in_array('plan_expires_at', $columns)) {
+                    $db->exec('ALTER TABLE users ADD COLUMN plan_expires_at DATETIME');
+                    $success[] = 'Added plan_expires_at column to users table';
+                }
+
+                // Add substitutes column if missing
+                if (!in_array('substitutes', $columns)) {
+                    $db->exec('ALTER TABLE users ADD COLUMN substitutes TEXT DEFAULT "[]"');
+                    $success[] = 'Added substitutes column to users table';
+                }
+
+                // Add max_players column if missing
+                if (!in_array('max_players', $columns)) {
+                    $db->exec('ALTER TABLE users ADD COLUMN max_players INTEGER DEFAULT 23');
+                    $success[] = 'Added max_players column to users table';
+                }
+
+                // Add fans column if missing
+                if (!in_array('fans', $columns)) {
+                    $db->exec('ALTER TABLE users ADD COLUMN fans INTEGER DEFAULT 5000');
+                    $success[] = 'Added fans column to users table';
+                }
+
+            } catch (Exception $e) {
+                // Migration failed, but continue - table might be new
+                $errors[] = 'Column migration warning: ' . $e->getMessage();
+            }
 
             // Create additional tables
 
@@ -300,6 +359,70 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reset'])) {
         } else {
             $errors[] = 'Failed to delete database file';
         }
+    }
+}
+
+// Handle database repair
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['repair'])) {
+    try {
+        // Ensure database directory exists
+        $db_dir = dirname($db_file);
+        if (!is_dir($db_dir)) {
+            if (mkdir($db_dir, 0755, true)) {
+                $success[] = 'Created database directory: ' . $db_dir;
+            } else {
+                $errors[] = 'Failed to create database directory: ' . $db_dir;
+            }
+        }
+
+        // Set proper permissions on directory
+        if (is_dir($db_dir)) {
+            chmod($db_dir, 0755);
+            $success[] = 'Set directory permissions to 755';
+        }
+
+        // If database file exists, set proper permissions
+        if (file_exists($db_file)) {
+            chmod($db_file, 0666);
+            $success[] = 'Set database file permissions to 666';
+        }
+
+        // Test database connection
+        $db = new SQLite3($db_file);
+        $db->exec('PRAGMA foreign_keys = ON');
+
+        // Test basic functionality
+        $result = $db->query("SELECT sqlite_version()");
+        if ($result) {
+            $row = $result->fetchArray();
+            $success[] = 'Database connection test successful (SQLite ' . $row[0] . ')';
+        }
+
+        $db->close();
+
+        // Recheck database status
+        $db_exists = file_exists($db_file);
+        if ($db_exists) {
+            try {
+                $db = new SQLite3($db_file);
+                $result = $db->query("SELECT name FROM sqlite_master WHERE type='table' AND name='users'");
+                $table_exists = $result->fetchArray() !== false;
+
+                if ($table_exists) {
+                    $result = $db->query("SELECT COUNT(*) as count FROM users");
+                    $row = $result->fetchArray(SQLITE3_ASSOC);
+                    $has_users = $row['count'] > 0;
+                }
+
+                $db->close();
+                $is_ready = $db_exists && $table_exists && $has_users;
+            } catch (Exception $e) {
+                $errors[] = 'Database repair check failed: ' . $e->getMessage();
+            }
+        }
+
+    } catch (Exception $e) {
+        $errors[] = 'Database repair failed: ' . $e->getMessage();
     }
 }
 
@@ -505,15 +628,23 @@ startContent();
                             </div>
                         </div>
 
-                        <div class="flex gap-3">
+                        <div class="flex gap-3 flex-wrap">
                             <button type="submit" name="install"
                                 class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">
                                 <?php echo ($db_exists && $table_exists) ? 'Complete Setup' : 'Install'; ?>
-                            </button> <?php if ($db_exists && $table_exists): ?>
+                            </button>
+
+                            <button type="submit" name="repair"
+                                class="bg-yellow-600 text-white px-6 py-2 rounded-lg hover:bg-yellow-700">
+                                Repair Database
+                            </button>
+
+                            <?php if ($db_exists && $table_exists): ?>
                                 <button type="button" id="resetDatabaseBtn"
                                     class="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700">
                                     Reset Database
                                 </button>
+
                             <?php endif; ?>
                         </div>
                     </div>
@@ -530,6 +661,14 @@ startContent();
                 <p>3. Run this installer to set up the database and tables</p>
                 <p>4. Create an admin user during installation (required for first setup)</p>
                 <p>5. Delete this install.php file after installation for security</p>
+            </div>
+
+            <div class="mt-4 p-3 bg-blue-50 rounded-lg">
+                <p class="text-sm text-blue-800">
+                    <strong>Troubleshooting:</strong> If you're having database issues,
+                    <a href="db_test.php" class="underline hover:text-blue-900">run the database test</a>
+                    to diagnose connection problems.
+                </p>
             </div>
         </div>
     </div>

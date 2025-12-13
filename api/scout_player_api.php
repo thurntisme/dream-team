@@ -126,16 +126,36 @@ try {
             $stmt->execute();
         }
 
+        // Award experience for scouting
+        require_once '../includes/helpers.php';
+        $expGain = match ($scoutType) {
+            'premium' => 10,
+            'detailed' => 6,
+            'basic' => 3,
+            default => 3
+        };
+        $expResult = addClubExp($userId, $expGain, 'Player scouted (' . $scoutType . ' report)');
+
         // Commit transaction
         $db->exec('COMMIT');
 
-        echo json_encode([
+        $response = [
             'success' => true,
             'message' => 'Player scouted successfully',
             'scout_type' => $scoutType,
             'report_quality' => $report_quality,
             'remaining_budget' => $currentBudget - $cost
-        ]);
+        ];
+
+        // Add level up information if applicable
+        if ($expResult['success'] && $expResult['leveled_up']) {
+            $response['level_up'] = [
+                'new_level' => $expResult['new_level'],
+                'levels_gained' => $expResult['levels_gained']
+            ];
+        }
+
+        echo json_encode($response);
 
     } catch (Exception $e) {
         $db->exec('ROLLBACK');

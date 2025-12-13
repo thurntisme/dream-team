@@ -120,7 +120,7 @@ function calculateMatchRewards($user_id, $match_result, $challenge_cost, $potent
     $user_data = $result->fetchArray(SQLITE3_ASSOC);
 
     $user_team = json_decode($user_data['team'] ?? '[]', true);
-    $club_level = calculateClubLevel($user_team);
+    $club_level = $user_data['club_level'] ?? 1;
     $level_bonus = calculateLevelBonus($club_level);
 
     $earnings = 0;
@@ -176,60 +176,13 @@ function calculateMatchRewards($user_id, $match_result, $challenge_cost, $potent
     ];
 }
 
-// Calculate club level based on team quality
-function calculateClubLevel($team)
-{
-    if (!is_array($team))
-        return 1;
 
-    $total_rating = 0;
-    $player_count = 0;
-    $total_value = 0;
-
-    foreach ($team as $player) {
-        if ($player && isset($player['rating']) && isset($player['value'])) {
-            $total_rating += $player['rating'];
-            $total_value += $player['value'];
-            $player_count++;
-        }
-    }
-
-    if ($player_count === 0)
-        return 1;
-
-    $avg_rating = $total_rating / $player_count;
-    $avg_value = $total_value / $player_count;
-
-    // Level calculation based on average rating and value
-    if ($avg_rating >= 85 && $avg_value >= 50000000) { // €50M+ avg, 85+ rating
-        return 5; // Elite
-    } elseif ($avg_rating >= 80 && $avg_value >= 30000000) { // €30M+ avg, 80+ rating
-        return 4; // Professional
-    } elseif ($avg_rating >= 75 && $avg_value >= 15000000) { // €15M+ avg, 75+ rating
-        return 3; // Semi-Professional
-    } elseif ($avg_rating >= 70 && $avg_value >= 5000000) { // €5M+ avg, 70+ rating
-        return 2; // Amateur
-    } else {
-        return 1; // Beginner
-    }
-}
 
 // Calculate level bonus percentage
 function calculateLevelBonus($level)
 {
-    switch ($level) {
-        case 5:
-            return 0.25; // 25% bonus for Elite clubs
-        case 4:
-            return 0.20; // 20% bonus for Professional clubs
-        case 3:
-            return 0.15; // 15% bonus for Semi-Professional clubs
-        case 2:
-            return 0.10; // 10% bonus for Amateur clubs
-        case 1:
-        default:
-            return 0.0; // No bonus for Beginner clubs
-    }
+    // Progressive bonus system: 2% per level up to 100%
+    return min($level * 0.02, 1.0); // Cap at 100% bonus
 }
 
 // Get club level name

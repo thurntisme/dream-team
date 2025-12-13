@@ -44,7 +44,19 @@ try {
     $stmt->bindValue(':id', $_SESSION['user_id'], SQLITE3_INTEGER);
 
     if ($stmt->execute()) {
-        echo json_encode(['success' => true]);
+        // Award experience for team management
+        require_once '../includes/helpers.php';
+        $expResult = addClubExp($_SESSION['user_id'], 10, 'Team formation updated');
+
+        $response = ['success' => true];
+        if ($expResult['success'] && $expResult['leveled_up']) {
+            $response['level_up'] = [
+                'new_level' => $expResult['new_level'],
+                'levels_gained' => $expResult['levels_gained']
+            ];
+        }
+
+        echo json_encode($response);
     } else {
         echo json_encode(['success' => false, 'message' => $db->lastErrorMsg()]);
     }

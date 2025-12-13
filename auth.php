@@ -27,11 +27,26 @@ $db->exec('CREATE TABLE IF NOT EXISTS users (
     formation TEXT,
     team TEXT,
     budget INTEGER DEFAULT ' . DEFAULT_BUDGET . ',
+    club_exp INTEGER DEFAULT 0,
+    club_level INTEGER DEFAULT 1,
     user_plan TEXT DEFAULT "' . DEFAULT_USER_PLAN . '",
     plan_expires_at DATETIME,
     last_login DATETIME,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 )');
+
+// Add club_exp and club_level columns if they don't exist (migration)
+try {
+    $db->exec('ALTER TABLE users ADD COLUMN club_exp INTEGER DEFAULT 0');
+} catch (Exception $e) {
+    // Column already exists, ignore
+}
+
+try {
+    $db->exec('ALTER TABLE users ADD COLUMN club_level INTEGER DEFAULT 1');
+} catch (Exception $e) {
+    // Column already exists, ignore
+}
 
 $db->exec('CREATE TABLE IF NOT EXISTS user_settings (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

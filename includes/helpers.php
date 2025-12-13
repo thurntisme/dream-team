@@ -407,54 +407,117 @@ if (!function_exists('getSessionInfo')) {
 }
 
 /**
- * Calculate club level based on team quality
+ * Calculate experience points required for a specific club level
  * 
- * @param array $team Team array
- * @return int Club level (1-10)
+ * @param int $level Target level
+ * @return int Experience points required
  */
-if (!function_exists('calculateClubLevel')) {
-    function calculateClubLevel($team)
+if (!function_exists('getExpRequiredForLevel')) {
+    function getExpRequiredForLevel($level)
     {
-        if (!is_array($team)) {
-            return 1;
+        if ($level <= 1)
+            return 0;
+
+        // Exponential growth: level^2 * 100
+        return ($level - 1) * ($level - 1) * 100;
+    }
+}
+
+/**
+ * Calculate club level from experience points
+ * 
+ * @param int $exp Current experience points
+ * @return int Club level
+ */
+if (!function_exists('getLevelFromExp')) {
+    function getLevelFromExp($exp)
+    {
+        $level = 1;
+        while ($level < 50 && getExpRequiredForLevel($level + 1) <= $exp) {
+            $level++;
         }
+        return $level;
+    }
+}
 
-        $totalRating = 0;
-        $playerCount = 0;
+/**
+ * Add experience points to a user's club
+ * 
+ * @param int $userId User ID
+ * @param int $expGain Experience points to add
+ * @param string $reason Reason for experience gain
+ * @return array Result with level up information
+ */
+if (!function_exists('addClubExp')) {
+    function addClubExp($userId, $expGain, $reason = '')
+    {
+        try {
+            $db = getDbConnection();
 
-        foreach ($team as $player) {
-            if ($player && isset($player['rating'])) {
-                $totalRating += $player['rating'];
-                $playerCount++;
+            // Get current exp and level
+            $stmt = $db->prepare('SELECT club_exp, club_level FROM users WHERE id = :user_id');
+            $stmt->bindValue(':user_id', $userId, SQLITE3_INTEGER);
+            $result = $stmt->execute();
+            $userData = $result->fetchArray(SQLITE3_ASSOC);
+
+            if (!$userData) {
+                return ['success' => false, 'message' => 'User not found'];
             }
+
+            $currentExp = $userData['club_exp'] ?? 0;
+            $currentLevel = $userData['club_level'] ?? 1;
+            $newExp = $currentExp + $expGain;
+            $newLevel = getLevelFromExp($newExp);
+
+            // Update database
+            $stmt = $db->prepare('UPDATE users SET club_exp = :exp, club_level = :level WHERE id = :user_id');
+            $stmt->bindValue(':exp', $newExp, SQLITE3_INTEGER);
+            $stmt->bindValue(':level', $newLevel, SQLITE3_INTEGER);
+            $stmt->bindValue(':user_id', $userId, SQLITE3_INTEGER);
+            $stmt->execute();
+
+            $db->close();
+
+            $leveledUp = $newLevel > $currentLevel;
+
+            return [
+                'success' => true,
+                'exp_gained' => $expGain,
+                'new_exp' => $newExp,
+                'new_level' => $newLevel,
+                'leveled_up' => $leveledUp,
+                'levels_gained' => $newLevel - $currentLevel,
+                'reason' => $reason
+            ];
+
+        } catch (Exception $e) {
+            return ['success' => false, 'message' => 'Database error: ' . $e->getMessage()];
         }
+    }
+}
 
-        if ($playerCount === 0) {
-            return 1;
-        }
+/**
+ * Get experience progress for current level
+ * 
+ * @param int $exp Current experience points
+ * @param int $level Current level
+ * @return array Progress information
+ */
+if (!function_exists('getExpProgress')) {
+    function getExpProgress($exp, $level)
+    {
+        $currentLevelExp = getExpRequiredForLevel($level);
+        $nextLevelExp = getExpRequiredForLevel($level + 1);
+        $expInCurrentLevel = $exp - $currentLevelExp;
+        $expNeededForNext = $nextLevelExp - $currentLevelExp;
 
-        $averageRating = $totalRating / $playerCount;
-
-        // Convert average rating to club level (1-10)
-        if ($averageRating >= 90)
-            return 10;
-        if ($averageRating >= 85)
-            return 9;
-        if ($averageRating >= 80)
-            return 8;
-        if ($averageRating >= 75)
-            return 7;
-        if ($averageRating >= 70)
-            return 6;
-        if ($averageRating >= 65)
-            return 5;
-        if ($averageRating >= 60)
-            return 4;
-        if ($averageRating >= 55)
-            return 3;
-        if ($averageRating >= 50)
-            return 2;
-        return 1;
+        return [
+            'current_level_exp' => $currentLevelExp,
+            'next_level_exp' => $nextLevelExp,
+            'exp_in_current_level' => $expInCurrentLevel,
+            'exp_needed_for_next' => $expNeededForNext,
+            'progress_percentage' => $expNeededForNext > 0 ? round(($expInCurrentLevel / $expNeededForNext) * 100, 1) : 100
+        ];
     }
 }
 

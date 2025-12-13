@@ -118,15 +118,28 @@ try {
             // Set training cooldown
             $_SESSION[$last_training_key] = time();
 
+            // Award experience for training players
+            $expResult = addClubExp($user_id, 20, 'Training session completed');
+
             $avg_improvement = round($total_improvement / $players_trained, 1);
 
-            echo json_encode([
+            $response = [
                 'success' => true,
                 'players_trained' => $players_trained,
                 'avg_improvement' => $avg_improvement,
                 'cost' => $training_cost,
                 'new_budget' => $new_budget
-            ]);
+            ];
+
+            // Add level up information if applicable
+            if ($expResult['success'] && $expResult['leveled_up']) {
+                $response['level_up'] = [
+                    'new_level' => $expResult['new_level'],
+                    'levels_gained' => $expResult['levels_gained']
+                ];
+            }
+
+            echo json_encode($response);
         } else {
             echo json_encode(['success' => false, 'message' => 'No players to train']);
         }

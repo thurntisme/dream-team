@@ -108,14 +108,27 @@ try {
     $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
 
     if ($stmt->execute()) {
-        echo json_encode([
+        // Award experience for contract renewal
+        $expResult = addClubExp($_SESSION['user_id'], 8, 'Contract renewed for ' . $player_name);
+
+        $response = [
             'success' => true,
             'message' => 'Contract renewed successfully',
             'new_budget' => $new_budget,
             'player_name' => $player_name,
             'matches_added' => $new_matches,
             'cost' => $renewal_cost
-        ]);
+        ];
+
+        // Add level up information if applicable
+        if ($expResult['success'] && $expResult['leveled_up']) {
+            $response['level_up'] = [
+                'new_level' => $expResult['new_level'],
+                'levels_gained' => $expResult['levels_gained']
+            ];
+        }
+
+        echo json_encode($response);
     } else {
         echo json_encode(['success' => false, 'message' => 'Failed to update database']);
     }

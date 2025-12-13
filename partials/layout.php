@@ -13,91 +13,31 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true)
     $clubName = $_SESSION['club_name'] ?? '';
     $userName = $_SESSION['user_name'] ?? '';
 
-    // Function to calculate team level based on various factors
-    function calculateTeamLevel($budget, $fans, $team)
-    {
-        $level = 1;
 
-        // Budget factor (0-3 levels)
-        if ($budget >= 500000000) { // 500M+
-            $level += 3;
-        } elseif ($budget >= 200000000) { // 200M+
-            $level += 2;
-        } elseif ($budget >= 50000000) { // 50M+
-            $level += 1;
-        }
 
-        // Fan factor (0-2 levels)
-        if ($fans >= 100000) { // 100K+ fans
-            $level += 2;
-        } elseif ($fans >= 50000) { // 50K+ fans
-            $level += 1;
-        }
-
-        // Team size factor (0-2 levels)
-        $teamSize = count($team);
-        if ($teamSize >= 20) {
-            $level += 2;
-        } elseif ($teamSize >= 15) {
-            $level += 1;
-        }
-
-        // Load players data to calculate team quality
-        if (file_exists('assets/json/players.json') && !empty($team)) {
-            $players_json = file_get_contents('assets/json/players.json');
-            $players_data = json_decode($players_json, true) ?? [];
-
-            $totalRating = 0;
-            $playerCount = 0;
-
-            foreach ($team as $playerId) {
-                if (isset($players_data[$playerId])) {
-                    $totalRating += $players_data[$playerId]['rating'];
-                    $playerCount++;
-                }
-            }
-
-            if ($playerCount > 0) {
-                $avgRating = $totalRating / $playerCount;
-
-                // Team quality factor (0-3 levels)
-                if ($avgRating >= 85) { // World class team
-                    $level += 3;
-                } elseif ($avgRating >= 80) { // Elite team
-                    $level += 2;
-                } elseif ($avgRating >= 75) { // Good team
-                    $level += 1;
-                }
-            }
-        }
-
-        // Cap the level at 10
-        return min($level, 10);
-    }
-
-    // Get user budget, fans, and calculate team level if logged in
+    // Get user budget, fans, and club level if logged in
     $userBudget = 0;
     $userFans = 0;
-    $teamLevel = 1;
+    $clubLevel = 1;
+    $clubExp = 0;
     if ($isLoggedIn && isDatabaseAvailable()) {
         try {
             $db = getDbConnection();
-            $stmt = $db->prepare('SELECT budget, fans, team FROM users WHERE id = :user_id');
+            $stmt = $db->prepare('SELECT budget, fans, club_level, club_exp FROM users WHERE id = :user_id');
             $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
             $result = $stmt->execute();
             $userData = $result->fetchArray(SQLITE3_ASSOC);
             $userBudget = $userData['budget'] ?? 0;
             $userFans = $userData['fans'] ?? 5000;
-            $userTeam = json_decode($userData['team'] ?? '[]', true);
-
-            // Calculate team level based on multiple factors
-            $teamLevel = calculateTeamLevel($userBudget, $userFans, $userTeam);
+            $clubLevel = $userData['club_level'] ?? 1;
+            $clubExp = $userData['club_exp'] ?? 0;
 
             $db->close();
         } catch (Exception $e) {
             $userBudget = 0;
             $userFans = 5000;
-            $teamLevel = 1;
+            $clubLevel = 1;
+            $clubExp = 0;
         }
     }
 
@@ -134,6 +74,7 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true)
         <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
         <script src="https://unpkg.com/lucide@latest"></script>
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
         <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
         <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
     </head>
@@ -296,8 +237,8 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true)
                                             <div class="flex items-center gap-1">
                                                 <i data-lucide="star" class="w-3 h-3 text-yellow-600"></i>
                                                 <span class="text-xs font-medium text-yellow-600">
-                                                    Team Level
-                                                    <?php echo $teamLevel; ?>
+                                                    Club Level
+                                                    <?php echo $clubLevel; ?>
                                                 </span>
                                             </div>
                                         <?php endif; ?>
@@ -410,9 +351,9 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true)
                                     </span>
                                 </div>
                                 <div class="flex justify-between items-center mt-1">
-                                    <span>Team Level:</span>
+                                    <span>Club Level:</span>
                                     <span class="font-medium text-gray-900">
-                                        <?php echo $teamLevel; ?>
+                                        <?php echo $clubLevel; ?>
                                     </span>
                                 </div>
                             </div>
@@ -551,6 +492,71 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true)
         <script>
             // Initialize Lucide icons
             lucide.createIcons();
+
+            // Global level-up notification handler
+            window.handleLevelUpNotification = function (response) {
+                if (response && response.level_up) {
+                    const levelUp = response.level_up;
+                    const levelsGained = levelUp.levels_gained || 1;
+                    const newLevel = levelUp.new_level;
+
+                    // Show celebration notification
+                    Swal.fire({
+                        title: '🎉 Level Up!',
+                        html: `
+                            <div class="text-center">
+                                <div class="text-6xl mb-4">⭐</div>
+                                <div class="text-xl font-bold text-purple-600 mb-2">
+                                    Club Level ${newLevel}
+                                </div>
+                                <div class="text-gray-600 mb-4">
+                                    ${levelsGained > 1 ? `Gained ${levelsGained} levels!` : 'Level up achieved!'}
+                                </div>
+                                <div class="bg-gradient-to-r from-purple-100 to-blue-100 rounded-lg p-3 text-sm">
+                                    <div class="font-semibold text-purple-800">New Benefits Unlocked!</div>
+                                    <div class="text-purple-700 mt-1">
+                                        • Increased match rewards<br>
+                                        • Better player development<br>
+                                        • Enhanced club prestige
+                                    </div>
+                                </div>
+                            </div>
+                        `,
+                        icon: 'success',
+                        confirmButtonColor: '#7c3aed',
+                        confirmButtonText: 'Awesome!',
+                        showClass: {
+                            popup: 'animate__animated animate__bounceIn'
+                        },
+                        hideClass: {
+                            popup: 'animate__animated animate__bounceOut'
+                        }
+                    }).then(() => {
+                        // Refresh the page to update level displays
+                        window.location.reload();
+                    });
+                }
+            };
+
+            // Enhanced AJAX success handler for level-ups
+            window.handleApiResponse = function (response, successCallback) {
+                if (response.success) {
+                    // Handle level up first if present
+                    if (response.level_up) {
+                        handleLevelUpNotification(response);
+                    } else if (successCallback) {
+                        successCallback(response);
+                    }
+                } else {
+                    // Handle error
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: response.message || 'An error occurred',
+                        confirmButtonColor: '#ef4444'
+                    });
+                }
+            };
 
             // Session management
             <?php if ($isLoggedIn && isset($_SESSION['expire_time'])): ?>

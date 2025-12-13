@@ -41,7 +41,7 @@ try {
     $user_data = $result->fetchArray(SQLITE3_ASSOC);
 
     $user_team = json_decode($user_data['team'] ?? '[]', true);
-    $club_level = calculateClubLevel($user_team);
+    $club_level = $user_data['club_level'] ?? 1;
     $level_bonus = calculateLevelBonus($club_level);
 
     $db->close();
@@ -93,6 +93,24 @@ try {
         }
     }
 
+    // Award experience based on match result
+    require_once '../includes/helpers.php';
+    $expGain = 0;
+    $expReason = '';
+
+    if ($matchResult === 'win') {
+        $expGain = 30;
+        $expReason = 'Match victory against ' . $pending_reward['opponent_name'];
+    } elseif ($matchResult === 'draw') {
+        $expGain = 15;
+        $expReason = 'Match draw against ' . $pending_reward['opponent_name'];
+    } else {
+        $expGain = 5;
+        $expReason = 'Match participation against ' . $pending_reward['opponent_name'];
+    }
+
+    $expResult = addClubExp($_SESSION['user_id'], $expGain, $expReason);
+
     // Update session with live result
     $_SESSION['pending_reward'] = [
         'amount' => $earnings,
@@ -110,69 +128,32 @@ try {
         ]
     ];
 
-    echo json_encode([
+    $response = [
         'success' => true,
         'match_result' => $matchResult,
         'earnings' => $earnings,
         'message' => $result_message
-    ]);
+    ];
+
+    // Add level up information if applicable
+    if ($expResult['success'] && $expResult['leveled_up']) {
+        $response['level_up'] = [
+            'new_level' => $expResult['new_level'],
+            'levels_gained' => $expResult['levels_gained']
+        ];
+    }
+
+    echo json_encode($response);
 
 } catch (Exception $e) {
     echo json_encode(['success' => false, 'message' => 'Failed to update match result: ' . $e->getMessage()]);
 }
 
-// Club level calculation functions (copied from other files for consistency)
-function calculateClubLevel($team)
-{
-    if (!is_array($team))
-        return 1;
 
-    $total_rating = 0;
-    $player_count = 0;
-    $total_value = 0;
-
-    foreach ($team as $player) {
-        if ($player && isset($player['rating']) && isset($player['value'])) {
-            $total_rating += $player['rating'];
-            $total_value += $player['value'];
-            $player_count++;
-        }
-    }
-
-    if ($player_count === 0)
-        return 1;
-
-    $avg_rating = $total_rating / $player_count;
-    $avg_value = $total_value / $player_count;
-
-    // Level calculation based on average rating and value
-    if ($avg_rating >= 85 && $avg_value >= 50000000) {
-        return 5; // Elite
-    } elseif ($avg_rating >= 80 && $avg_value >= 30000000) {
-        return 4; // Professional
-    } elseif ($avg_rating >= 75 && $avg_value >= 15000000) {
-        return 3; // Semi-Professional
-    } elseif ($avg_rating >= 70 && $avg_value >= 5000000) {
-        return 2; // Amateur
-    } else {
-        return 1; // Beginner
-    }
-}
 
 function calculateLevelBonus($level)
 {
-    switch ($level) {
-        case 5:
-            return 0.25; // 25%
-        case 4:
-            return 0.20; // 20%
-        case 3:
-            return 0.15; // 15%
-        case 2:
-            return 0.10; // 10%
-        case 1:
-        default:
-            return 0.0; // 0%
-    }
+    // Progressive bonus system: 2% per level up to 100%
+    return min($level * 0.02, 1.0); // Cap at 100% bonus
 }
 ?>

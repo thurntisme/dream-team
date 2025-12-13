@@ -74,7 +74,7 @@ function isDatabaseAvailable()
 
             // Add user_plan column if missing
             if (!in_array('user_plan', $columns)) {
-                $db->exec('ALTER TABLE users ADD COLUMN user_plan TEXT DEFAULT "' . DEFAULT_USER_PLAN . '"');
+                $db->exec('ALTER TABLE users ADD COLUMN user_plan TEXT DEFAULT "free"');
             }
 
             // Add plan_expires_at column if missing

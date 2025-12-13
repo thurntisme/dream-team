@@ -134,8 +134,13 @@ try {
 
     $club_ranking = $higher_clubs + 1;
 
-    // Calculate club level
-    $club_level = calculateClubLevel($team_data);
+    // Get club level from database
+    $stmt = $db->prepare('SELECT club_level, club_exp FROM users WHERE id = :user_id');
+    $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+    $result = $stmt->execute();
+    $clubData = $result->fetchArray(SQLITE3_ASSOC);
+    $club_level = $clubData['club_level'] ?? 1;
+    $club_exp = $clubData['club_exp'] ?? 0;
     $level_name = getClubLevelName($club_level);
 
     $db->close();
@@ -144,76 +149,48 @@ try {
     exit;
 }
 
-// Club level calculation functions
-function calculateClubLevel($team)
-{
-    if (!is_array($team))
-        return 1;
 
-    $total_rating = 0;
-    $player_count = 0;
-    $total_value = 0;
-
-    foreach ($team as $player) {
-        if ($player && isset($player['rating']) && isset($player['value'])) {
-            $total_rating += $player['rating'];
-            $total_value += $player['value'];
-            $player_count++;
-        }
-    }
-
-    if ($player_count === 0)
-        return 1;
-
-    $avg_rating = $total_rating / $player_count;
-    $avg_value = $total_value / $player_count;
-
-    // Level calculation based on average rating and value
-    if ($avg_rating >= 85 && $avg_value >= 50000000) {
-        return 5; // Elite
-    } elseif ($avg_rating >= 80 && $avg_value >= 30000000) {
-        return 4; // Professional
-    } elseif ($avg_rating >= 75 && $avg_value >= 15000000) {
-        return 3; // Semi-Professional
-    } elseif ($avg_rating >= 70 && $avg_value >= 5000000) {
-        return 2; // Amateur
-    } else {
-        return 1; // Beginner
-    }
-}
 
 function getClubLevelName($level)
 {
-    switch ($level) {
-        case 5:
-            return 'Elite';
-        case 4:
-            return 'Professional';
-        case 3:
-            return 'Semi-Professional';
-        case 2:
-            return 'Amateur';
-        case 1:
-        default:
-            return 'Beginner';
-    }
+    if ($level >= 40)
+        return 'Legendary';
+    if ($level >= 35)
+        return 'Mythical';
+    if ($level >= 30)
+        return 'Elite Master';
+    if ($level >= 25)
+        return 'Elite';
+    if ($level >= 20)
+        return 'Professional Master';
+    if ($level >= 15)
+        return 'Professional';
+    if ($level >= 10)
+        return 'Semi-Professional';
+    if ($level >= 5)
+        return 'Amateur';
+    return 'Beginner';
 }
 
 function getLevelColor($level)
 {
-    switch ($level) {
-        case 5:
-            return 'bg-purple-100 text-purple-800 border-purple-200';
-        case 4:
-            return 'bg-blue-100 text-blue-800 border-blue-200';
-        case 3:
-            return 'bg-green-100 text-green-800 border-green-200';
-        case 2:
-            return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-        case 1:
-        default:
-            return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
+    if ($level >= 40)
+        return 'bg-gradient-to-r from-yellow-400 to-orange-500 text-white border-yellow-500';
+    if ($level >= 35)
+        return 'bg-gradient-to-r from-purple-500 to-pink-500 text-white border-purple-500';
+    if ($level >= 30)
+        return 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white border-indigo-500';
+    if ($level >= 25)
+        return 'bg-purple-100 text-purple-800 border-purple-200';
+    if ($level >= 20)
+        return 'bg-indigo-100 text-indigo-800 border-indigo-200';
+    if ($level >= 15)
+        return 'bg-blue-100 text-blue-800 border-blue-200';
+    if ($level >= 10)
+        return 'bg-green-100 text-green-800 border-green-200';
+    if ($level >= 5)
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+    return 'bg-gray-100 text-gray-800 border-gray-200';
 }
 
 // Start content capture
@@ -438,21 +415,29 @@ startContent();
                         Level Progress
                     </h3>
                     <?php
-                    $next_level = $club_level < 5 ? $club_level + 1 : 5;
-                    $level_bonus = match ($club_level) {
-                        5 => 25,
-                        4 => 20,
-                        3 => 15,
-                        2 => 10,
-                        default => 0
-                    };
+                    $progress = getExpProgress($club_exp, $club_level);
+                    $next_level = $club_level + 1;
                     ?>
-                    <div class="text-lg font-bold text-purple-600">+
-                        <?php echo $level_bonus; ?>% Bonus
+                    <div class="text-lg font-bold text-purple-600">
+                        Level <?php echo $club_level; ?>
                     </div>
-                    <div class="text-sm text-gray-600 mt-1">
-                        <?php echo $club_level < 5 ? 'Next: Level ' . $next_level : 'Maximum level reached'; ?>
-                    </div>
+                    <?php if ($club_level < 50): ?>
+                        <div class="text-sm text-gray-600 mt-1 mb-2">
+                            <?php echo number_format($progress['exp_in_current_level']); ?> /
+                            <?php echo number_format($progress['exp_needed_for_next']); ?> EXP
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2 mb-1">
+                            <div class="bg-purple-600 h-2 rounded-full transition-all duration-300"
+                                style="width: <?php echo $progress['progress_percentage']; ?>%"></div>
+                        </div>
+                        <div class="text-xs text-gray-500">
+                            <?php echo $progress['progress_percentage']; ?>% to Level <?php echo $next_level; ?>
+                        </div>
+                    <?php else: ?>
+                        <div class="text-sm text-gray-600 mt-1">
+                            Maximum level reached!
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
@@ -1229,8 +1214,8 @@ startContent();
         // Update average rating in club overview
         $('#clubAvgRating').text(avgRating > 0 ? avgRating.toFixed(1) : '0');
 
-        // Calculate and update club level
-        const clubLevel = calculateClubLevelJS(selectedPlayers);
+        // Use club level from PHP (passed from server)
+        const clubLevel = <?php echo $club_level; ?>;
         const levelName = getClubLevelNameJS(clubLevel);
         const levelColors = getLevelColorJS(clubLevel);
 
@@ -1274,63 +1259,30 @@ startContent();
         lucide.createIcons();
     }
 
-    // JavaScript version of club level calculation
-    function calculateClubLevelJS(team) {
-        if (!Array.isArray(team)) return 1;
-
-        let totalRating = 0;
-        let playerCount = 0;
-        let totalValue = 0;
-
-        team.forEach(player => {
-            if (player && player.rating && player.value) {
-                totalRating += player.rating;
-                totalValue += player.value;
-                playerCount++;
-            }
-        });
-
-        if (playerCount === 0) return 1;
-
-        const avgRating = totalRating / playerCount;
-        const avgValue = totalValue / playerCount;
-
-        // Level calculation based on average rating and value
-        if (avgRating >= 85 && avgValue >= 50000000) {
-            return 5; // Elite
-        } else if (avgRating >= 80 && avgValue >= 30000000) {
-            return 4; // Professional
-        } else if (avgRating >= 75 && avgValue >= 15000000) {
-            return 3; // Semi-Professional
-        } else if (avgRating >= 70 && avgValue >= 5000000) {
-            return 2; // Amateur
-        } else {
-            return 1; // Beginner
-        }
-    }
-
     // JavaScript version of club level name
     function getClubLevelNameJS(level) {
-        switch (level) {
-            case 5: return 'Elite';
-            case 4: return 'Professional';
-            case 3: return 'Semi-Professional';
-            case 2: return 'Amateur';
-            case 1:
-            default: return 'Beginner';
-        }
+        if (level >= 40) return 'Legendary';
+        if (level >= 35) return 'Mythical';
+        if (level >= 30) return 'Elite Master';
+        if (level >= 25) return 'Elite';
+        if (level >= 20) return 'Professional Master';
+        if (level >= 15) return 'Professional';
+        if (level >= 10) return 'Semi-Professional';
+        if (level >= 5) return 'Amateur';
+        return 'Beginner';
     }
 
     // JavaScript version of level colors
     function getLevelColorJS(level) {
-        switch (level) {
-            case 5: return 'bg-purple-100 text-purple-800 border-purple-200';
-            case 4: return 'bg-blue-100 text-blue-800 border-blue-200';
-            case 3: return 'bg-green-100 text-green-800 border-green-200';
-            case 2: return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-            case 1:
-            default: return 'bg-gray-100 text-gray-800 border-gray-200';
-        }
+        if (level >= 40) return 'bg-gradient-to-r from-yellow-400 to-orange-500 text-white border-yellow-500';
+        if (level >= 35) return 'bg-gradient-to-r from-purple-500 to-pink-500 text-white border-purple-500';
+        if (level >= 30) return 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white border-indigo-500';
+        if (level >= 25) return 'bg-purple-100 text-purple-800 border-purple-200';
+        if (level >= 20) return 'bg-indigo-100 text-indigo-800 border-indigo-200';
+        if (level >= 15) return 'bg-blue-100 text-blue-800 border-blue-200';
+        if (level >= 10) return 'bg-green-100 text-green-800 border-green-200';
+        if (level >= 5) return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+        return 'bg-gray-100 text-gray-800 border-gray-200';
     }
 
     // JavaScript version of level bonus calculation
@@ -2727,14 +2679,19 @@ startContent();
                     if (response.redirect) {
                         window.location.href = response.redirect;
                     } else if (response.success) {
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Team Saved!',
-                            text: filledSlots === totalSlots
-                                ? 'Your complete team has been saved successfully!'
-                                : `Team saved successfully! (${filledSlots}/${totalSlots} players selected)`,
-                            confirmButtonColor: '#10b981'
-                        });
+                        // Handle level up notification first
+                        if (response.level_up) {
+                            handleLevelUpNotification(response);
+                        } else {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Team Saved!',
+                                text: filledSlots === totalSlots
+                                    ? 'Your complete team has been saved successfully!'
+                                    : `Team saved successfully! (${filledSlots}/${totalSlots} players selected)`,
+                                confirmButtonColor: '#10b981'
+                            });
+                        }
                     } else {
                         Swal.fire({
                             icon: 'error',
@@ -3507,27 +3464,32 @@ startContent();
                 })
                     .done(function (response) {
                         if (response.success) {
-                            Swal.fire({
-                                icon: 'success',
-                                title: 'Training Complete!',
-                                html: `
-                                <div class="text-left">
-                                    <p class="mb-3">All players have completed training successfully!</p>
-                                    <div class="bg-green-50 p-3 rounded">
-                                        <div class="text-sm text-green-800">
-                                            <strong>Results:</strong><br>
-                                            • ${response.players_trained} players trained<br>
-                                            • Average fitness improvement: +${response.avg_improvement}<br>
-                                            • Cost: €${response.cost.toLocaleString()}
+                            // Handle level up notification first
+                            if (response.level_up) {
+                                handleLevelUpNotification(response);
+                            } else {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Training Complete!',
+                                    html: `
+                                    <div class="text-left">
+                                        <p class="mb-3">All players have completed training successfully!</p>
+                                        <div class="bg-green-50 p-3 rounded">
+                                            <div class="text-sm text-green-800">
+                                                <strong>Results:</strong><br>
+                                                • ${response.players_trained} players trained<br>
+                                                • Average fitness improvement: +${response.avg_improvement}<br>
+                                                • Cost: €${response.cost.toLocaleString()}
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            `,
-                                confirmButtonColor: '#16a34a'
-                            }).then(() => {
-                                // Reload page to show updated player conditions
-                                window.location.reload();
-                            });
+                                `,
+                                    confirmButtonColor: '#16a34a'
+                                }).then(() => {
+                                    // Reload page to show updated player conditions
+                                    window.location.reload();
+                                });
+                            }
                         } else {
                             Swal.fire({
                                 icon: 'error ',
