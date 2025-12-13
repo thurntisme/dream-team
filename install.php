@@ -230,6 +230,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install'])) {
                 FOREIGN KEY (user_id) REFERENCES users(id)
             )');
 
+            // Staff system table
+            $db->exec('CREATE TABLE IF NOT EXISTS club_staff (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                staff_type TEXT NOT NULL,
+                name TEXT NOT NULL,
+                level INTEGER DEFAULT 1,
+                salary INTEGER NOT NULL,
+                contract_weeks INTEGER DEFAULT 52,
+                contract_weeks_remaining INTEGER DEFAULT 52,
+                hired_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+                bonus_applied_this_week BOOLEAN DEFAULT 0,
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            )');
+
             // League tables
             require_once 'league_functions.php';
             createLeagueTables($db);

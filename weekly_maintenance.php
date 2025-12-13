@@ -1,0 +1,62 @@
+<?php
+// Weekly maintenance script for staff and other recurring tasks
+session_start();
+
+require_once 'config.php';
+require_once 'constants.php';
+
+// Check if database is available
+if (!isDatabaseAvailable()) {
+    http_response_code(500);
+    echo json_encode(['error' => 'Database not available']);
+    exit;
+}
+
+// Check if user is logged in
+if (!isset($_SESSION['user_id'])) {
+    http_response_code(401);
+    echo json_encode(['error' => 'Not authenticated']);
+    exit;
+}
+
+try {
+    $db = getDbConnection();
+
+    // Process weekly staff maintenance
+    $staff_results = processWeeklyStaffMaintenance($db, $_SESSION['user_id']);
+
+    // Update user budget if salary was deducted
+    if ($staff_results['salary_cost'] > 0) {
+        $stmt = $db->prepare('SELECT budget FROM users WHERE id = :user_id');
+        $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+        $result = $stmt->execute();
+        $user_data = $result->fetchArray(SQLITE3_ASSOC);
+
+        if ($user_data && $user_data['budget'] >= $staff_results['salary_cost']) {
+            $new_budget = $user_data['budget'] - $staff_results['salary_cost'];
+            $stmt = $db->prepare('UPDATE users SET budget = :budget WHERE id = :user_id');
+            $stmt->bindValue(':budget', $new_budget, SQLITE3_INTEGER);
+            $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+            $stmt->execute();
+        }
+    }
+
+    // Add academy prospect to available players if generated
+    if ($staff_results['academy_prospect']) {
+        // This would typically be added to a prospects table or available players
+        // For now, we'll just include it in the response
+    }
+
+    $db->close();
+
+    // Return results
+    echo json_encode([
+        'success' => true,
+        'results' => $staff_results
+    ]);
+
+} catch (Exception $e) {
+    http_response_code(500);
+    echo json_encode(['error' => 'Maintenance failed: ' . $e->getMessage()]);
+}
+?>

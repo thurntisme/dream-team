@@ -74,6 +74,14 @@ try {
         }
     }
 
+    // Get user's staff and apply bonuses
+    $user_staff = getUserStaff($db, $_SESSION['user_id']);
+    if (!empty($user_staff)) {
+        $team_data = applyStaffBonuses($team_data, $user_staff);
+        $substitutes_data = applyStaffBonuses($substitutes_data, $user_staff);
+        $team_updated = true; // Mark as updated to include staff bonuses
+    }
+
     // Update database if players were modified
     if ($team_updated || $subs_updated) {
         $stmt = $db->prepare('UPDATE users SET team = :team, substitutes = :substitutes WHERE id = :user_id');
@@ -340,6 +348,60 @@ startContent();
                 </div>
             </div>
 
+            <!-- Staff Effectiveness -->
+            <?php if (!empty($user_staff)): ?>
+                <?php $staff_effectiveness = getStaffEffectiveness($user_staff); ?>
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                    <h3 class="font-semibold text-blue-900 mb-3 flex items-center gap-2">
+                        <i data-lucide="user-check" class="w-5 h-5"></i>
+                        Staff Bonuses Active
+                    </h3>
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-3 text-sm">
+                        <?php if ($staff_effectiveness['team_rating_bonus'] > 0): ?>
+                            <div class="text-center">
+                                <div class="text-lg font-bold text-green-600">+
+                                    <?php echo $staff_effectiveness['team_rating_bonus']; ?>
+                                </div>
+                                <div class="text-xs text-blue-700">Team Rating</div>
+                            </div>
+                        <?php endif; ?>
+                        <?php if ($staff_effectiveness['fitness_protection'] > 0): ?>
+                            <div class="text-center">
+                                <div class="text-lg font-bold text-green-600">
+                                    <?php echo $staff_effectiveness['fitness_protection']; ?>%
+                                </div>
+                                <div class="text-xs text-blue-700">Fitness Protection</div>
+                            </div>
+                        <?php endif; ?>
+                        <?php if ($staff_effectiveness['youth_development'] > 0): ?>
+                            <div class="text-center">
+                                <div class="text-lg font-bold text-green-600">+
+                                    <?php echo $staff_effectiveness['youth_development']; ?>%
+                                </div>
+                                <div class="text-xs text-blue-700">Youth Development</div>
+                            </div>
+                        <?php endif; ?>
+                        <?php if ($staff_effectiveness['medical_care'] > 0): ?>
+                            <div class="text-center">
+                                <div class="text-lg font-bold text-green-600">+<?php echo $staff_effectiveness['medical_care']; ?>%</div>
+                                        <div class=" text-xs text-blue-700">Medical Care</div>
+                                    </div>
+                            <?php endif; ?>
+                            <div class="text-center">
+                                <div class="text-lg font-bold text-red-600">
+                                    <?php echo formatMarketValue($staff_effectiveness['total_weekly_cost']); ?>
+                                </div>
+                                <div class="text-xs text-blue-700">Weekly Cost</div>
+                            </div>
+                        </div>
+                        <div class="mt-3 text-center">
+                                <a href="staff.php" class="text-sm text-blue-600 hover:text-blue-800 underline">
+                                Manage Staff →
+                            </a>
+                        </div>
+                        </div>
+                    <?php endif; ?>
+
             <!-- Formation and Strategy Info -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div class="bg-gray-50 rounded-lg p-4">
@@ -347,8 +409,9 @@ startContent();
                         <i data-lucide="layout" class="w-4 h-4"></i>
                         Formation
                     </h3>
-                    <div class="text-lg font-bold text-gray-700"><?php echo htmlspecialchars($saved_formation); ?></div>
-                    <div class="text-sm text-gray-600 mt-1">
+                    <div class="text-lg font-bold text-gray-700"><?php echo htmlspecialchars($saved_formation); ?>
+                </div>
+                <div class="text-sm text-gray-600 mt-1">
                         <?php echo htmlspecialchars(FORMATIONS[$saved_formation]['description'] ?? 'Classic formation'); ?>
                     </div>
                 </div>
@@ -363,100 +426,102 @@ startContent();
                     ?>
                     <div class="text-lg font-bold <?php echo $can_challenge ? 'text-green-600' : 'text-red-600'; ?>">
                         <?php echo $can_challenge ? 'Ready' : 'Not Ready'; ?>
-                    </div>
-                    <div class="text-sm text-gray-600 mt-1">
-                        <?php echo $can_challenge ? 'Can challenge other clubs' : 'Need ' . (11 - $player_count) . ' more players'; ?>
-                    </div>
                 </div>
-                <div class="bg-gray-50 rounded-lg p-4">
-                    <h3 class="font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                        <i data-lucide="trending-up" class="w-4 h-4"></i>
-                        Level Progress
-                    </h3>
-                    <?php
-                    $next_level = $club_level < 5 ? $club_level + 1 : 5;
-                    $level_bonus = match ($club_level) {
-                        5 => 25,
-                        4 => 20,
-                        3 => 15,
-                        2 => 10,
-                        default => 0
-                    };
-                    ?>
-                    <div class="text-lg font-bold text-purple-600">+<?php echo $level_bonus; ?>% Bonus</div>
-                    <div class="text-sm text-gray-600 mt-1">
-                        <?php echo $club_level < 5 ? 'Next: Level ' . $next_level : 'Maximum level reached'; ?>
-                    </div>
+                <div class="text-sm text-gray-600 mt-1">
+                    <?php echo $can_challenge ? 'Can challenge other clubs' : 'Need ' . (11 - $player_count) . ' more players'; ?>
+                </div>
+            </div>
+            <div class="bg-gray-50 rounded-lg p-4">
+                <h3 class="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                    <i data-lucide="trending-up" class="w-4 h-4"></i>
+                    Level Progress
+                </h3>
+                <?php
+                $next_level = $club_level < 5 ? $club_level + 1 : 5;
+                $level_bonus = match ($club_level) {
+                    5 => 25,
+                    4 => 20,
+                    3 => 15,
+                    2 => 10,
+                    default => 0
+                };
+                ?>
+                <div class="text-lg font-bold text-purple-600">+
+                    <?php echo $level_bonus; ?>% Bonus
+                </div>
+                <div class="text-sm text-gray-600 mt-1">
+                    <?php echo $club_level < 5 ? 'Next: Level ' . $next_level : 'Maximum level reached'; ?>
                 </div>
             </div>
         </div>
     </div>
+</div>
 
-    <!-- Training Center Section -->
-    <div class="mb-6">
-        <div class="bg-white rounded-lg p-6">
-            <div class="flex items-center justify-between mb-4">
-                <h2 class="text-xl font-bold text-gray-900 flex items-center gap-2">
-                    <i data-lucide="dumbbell" class="w-6 h-6 text-green-600"></i>
-                    Training Center
-                </h2>
-                <button id="trainAllBtn"
-                    class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center gap-2">
-                    <i data-lucide="play" class="w-4 h-4"></i>
-                    Train All Players
-                </button>
+<!-- Training Center Section -->
+<div class="mb-6">
+    <div class="bg-white rounded-lg p-6">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-xl font-bold text-gray-900 flex items-center gap-2">
+                <i data-lucide="dumbbell" class="w-6 h-6 text-green-600"></i>
+                Training Center
+            </h2>
+            <button id="trainAllBtn"
+                class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center gap-2">
+                <i data-lucide="play" class="w-4 h-4"></i>
+                Train All Players
+            </button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div class="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+                <div class="text-2xl font-bold text-green-700">€2M</div>
+                <div class="text-sm text-green-600">Training Cost</div>
             </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                <div class="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
-                    <div class="text-2xl font-bold text-green-700">€2M</div>
-                    <div class="text-sm text-green-600">Training Cost</div>
-                </div>
-                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
-                    <div class="text-2xl font-bold text-blue-700">+5-15</div>
-                    <div class="text-sm text-blue-600">Fitness Boost</div>
-                </div>
-                <div class="bg-purple-50 border border-purple-200 rounded-lg p-4 text-center">
-                    <div class="text-2xl font-bold text-purple-700">24h</div>
-                    <div class="text-sm text-purple-600">Cooldown</div>
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
+                <div class="text-2xl font-bold text-blue-700">+5-15</div>
+                <div class="text-sm text-blue-600">Fitness Boost</div>
+            </div>
+            <div class="bg-purple-50 border border-purple-200 rounded-lg p-4 text-center">
+                <div class="text-2xl font-bold text-purple-700">24h</div>
+                <div class="text-sm text-purple-600">Cooldown</div>
                 </div>
             </div>
 
             <div class="bg-gray-50 rounded-lg p-4">
-                <h3 class="font-semibold text-gray-900 mb-2">Training Benefits:</h3>
-                <ul class="text-sm text-gray-600 space-y-1">
-                    <li>• Improves player fitness by 5-15 points</li>
-                    <li>• Helps maintain player form</li>
-                    <li>• Reduces injury risk for low-fitness players</li>
-                    <li>• Can only be used once per day</li>
-                </ul>
+                    <h3 class="font-semibold text-gray-900 mb-2">Training Benefits:</h3>
+                    <ul class="text-sm text-gray-600 space-y-1">
+                        <li>• Improves player fitness by 5-15 points</li>
+                        <li>• Helps maintain player form</li>
+                        <li>• Reduces injury risk for low-fitness players</li>
+                        <li>• Can only be used once per day</li>
+                    </ul>
+                </div>
             </div>
         </div>
-    </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div>
-            <!-- Formation Selector -->
-            <div class="bg-white rounded-lg shadow p-4">
-                <h2 class="text-xl font-bold mb-4">Formation</h2>
-                <select id="formation"
-                    class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <?php foreach (FORMATIONS as $key => $formation): ?>
-                        <option value="<?php echo htmlspecialchars($key); ?>"
-                            title="<?php echo htmlspecialchars($formation['description']); ?>">
-                            <?php echo htmlspecialchars($formation['name']); ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div>
+                <!-- Formation Selector -->
+                <div class="bg-white rounded-lg shadow p-4">
+                    <h2 class="text-xl font-bold mb-4">Formation</h2>
+                    <select id="formation"
+                        class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <?php foreach (FORMATIONS as $key => $formation): ?>
+                            <option value="<?php echo htmlspecialchars($key); ?>"
+                                title="<?php echo htmlspecialchars($formation['description']); ?>">
+                                <?php echo htmlspecialchars($formation['name']); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
 
-                <h2 class="text-xl font-bold mt-6 mb-2">Your Players</h2>
-                <p class="text-xs text-gray-500 mb-4">Click to select • <i data-lucide="user-plus"
-                        class="w-3 h-3 inline"></i> Choose • <i data-lucide="arrow-left-right"
-                        class="w-3 h-3 inline"></i>
-                    Switch • <i data-lucide="trash-2" class="w-3 h-3 inline"></i> Remove
-                </p>
-                <div id="teamValueSummary" class="mb-4 p-3 bg-gray-50 rounded-lg border">
-                    <div class="flex justify-between items-center mb-2">
+                    <h2 class="text-xl font-bold mt-6 mb-2">Your Players</h2>
+                    <p class="text-xs text-gray-500 mb-4">Click to select • <i data-lucide="user-plus"
+                            class="w-3 h-3 inline"></i> Choose • <i data-lucide="arrow-left-right"
+                            class="w-3 h-3 inline"></i>
+                        Switch • <i data-lucide="trash-2" class="w-3 h-3 inline"></i> Remove
+                    </p>
+                    <div id="teamValueSummary" class="mb-4 p-3 bg-gray-50 rounded-lg border">
+                        <div class="flex justify-between items-center mb-2">
                         <div class="text-sm text-gray-600">Budget</div>
                         <div id="remainingBudget" class="text-sm font-bold text-blue-600">€200.0M</div>
                     </div>
@@ -575,8 +640,8 @@ startContent();
         </div>
 
         <div class="border-t pt-4">
-            <input type="text" id="playerSearch" placeholder="Search player..."
-                class="w-full px-3 py-2 border rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <input type="text" id="playerSearch" placeholder="Search player..." class="w-full px-3 py-2
+                border rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500">
             <div id="modalPlayerList" class="space-y-2 max-h-64 overflow-y-auto"></div>
         </div>
     </div>
@@ -587,8 +652,7 @@ startContent();
     <div class="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <div class="flex justify-end mb-6">
             <button id="closePlayerInfoModal" class="text-gray-500 hover:text-gray-700">
-                <i data-lucide="x" class="w-6 h-6"></i>
-            </button>
+                <i data-lucide="x" class="w-6 h-6"></i> </button>
         </div>
 
         <div id="playerInfoContent">
@@ -3041,7 +3105,7 @@ startContent();
         const newCardLevel = currentCardLevel + 1;
         const cardInfo = getCardLevelDisplayInfo(newCardLevel);
         const benefits = getCardLevelBenefits(newCardLevel);
-        
+
         // Calculate success rate
         const baseSuccessRate = 85;
         const levelPenalty = (currentCardLevel - 1) * 10;
@@ -3139,7 +3203,7 @@ startContent();
         let progress = 0;
         let currentStep = 0;
         let progressInterval = null;
-        
+
         const steps = [
             'Preparing upgrade materials...',
             'Analyzing player potential...',
@@ -3195,12 +3259,12 @@ startContent();
         // Animate progress
         progressInterval = setInterval(() => {
             progress += Math.random() * 15 + 5; // Random progress between 5-20%
-            
+
             if (progress >= 100) {
                 progress = 100;
                 clearTimeout(timeoutId); // Clear timeout since we're completing normally
                 cleanupIntervals();
-                
+
                 // Process the actual upgrade
                 processUpgrade(playerUuid, playerName, currentCardLevel);
                 return;
@@ -3210,10 +3274,10 @@ startContent();
             const progressBar = document.getElementById('upgradeProgress');
             const progressText = document.getElementById('upgradePercentage');
             const stepText = document.getElementById('upgradeStep');
-            
+
             if (progressBar) progressBar.style.width = progress + '%';
             if (progressText) progressText.textContent = Math.floor(progress) + '%';
-            
+
             // Update step text
             const stepIndex = Math.min(Math.floor(progress / 20), steps.length - 1);
             if (stepIndex !== currentStep) {
@@ -3465,22 +3529,22 @@ startContent();
                             });
                         } else {
                             Swal.fire({
-         icon: 'error ',
+                                icon: 'error ',
                                 title: 'Training Failed ',
                                 text: response.message || ' Unable to complete training session ',
-                                    confirmButtonColor: '#ef4444'
+                                confirmButtonColor: '#ef4444'
                             });
+                        }
+                    })
+                    .fail(function () {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Training Failed',
+                            text: 'Network error occurred during training',
+                            confirmButtonColor: '#ef4444'
+                        });
+                    });
             }
-        })
-            .fail(function () {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Training Failed',
-                    text: 'Network error occurred during training',
-                    confirmButtonColor: '#ef4444'
-                });
-            });
-    }
         });
     });
 
