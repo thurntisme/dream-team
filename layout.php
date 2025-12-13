@@ -6,6 +6,7 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true)
 {
     // Ensure constants and helpers are available
     require_once __DIR__ . '/constants.php';
+    require_once __DIR__ . '/ads.php';
 
     $isLoggedIn = isset($_SESSION['user_id']);
     $clubName = $_SESSION['club_name'] ?? '';
@@ -307,6 +308,12 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true)
                                         <span>Settings</span>
                                     </a>
 
+                                    <a href="plans.php"
+                                        class="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                                        <i data-lucide="crown" class="w-4 h-4"></i>
+                                        <span>Plans & Pricing</span>
+                                    </a>
+
                                     <div class="border-t border-gray-100 my-1"></div>
 
                                     <button id="logoutBtn"
@@ -364,6 +371,13 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true)
         <!-- Footer -->
         <footer class="bg-white border-t mt-auto">
             <?php if ($isLoggedIn): ?>
+                <!-- Ads for free users -->
+                <?php if (shouldShowAds($_SESSION['user_id'])): ?>
+                    <div class="container mx-auto px-4 max-w-6xl py-4">
+                        <?php renderBannerAd('footer', $_SESSION['user_id']); ?>
+                    </div>
+                <?php endif; ?>
+
                 <!-- Logged-in User Footer -->
                 <div class="container mx-auto px-4 max-w-6xl py-6">
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">

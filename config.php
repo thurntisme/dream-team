@@ -72,6 +72,16 @@ function isDatabaseAvailable()
                 $db->exec('ALTER TABLE users ADD COLUMN max_players INTEGER DEFAULT 23');
             }
 
+            // Add user_plan column if missing
+            if (!in_array('user_plan', $columns)) {
+                $db->exec('ALTER TABLE users ADD COLUMN user_plan TEXT DEFAULT "' . DEFAULT_USER_PLAN . '"');
+            }
+
+            // Add plan_expires_at column if missing
+            if (!in_array('plan_expires_at', $columns)) {
+                $db->exec('ALTER TABLE users ADD COLUMN plan_expires_at DATETIME');
+            }
+
             // Create user_settings table if it doesn't exist
             $result = $db->query("SELECT name FROM sqlite_master WHERE type='table' AND name='user_settings'");
             $settingsTableExists = $result->fetchArray() !== false;

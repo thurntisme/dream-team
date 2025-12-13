@@ -4,6 +4,7 @@ require_once 'config.php';
 require_once 'constants.php';
 require_once 'helpers.php';
 require_once 'layout.php';
+require_once 'ads.php';
 
 // Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
@@ -27,27 +28,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
     if ($action === 'generate_player') {
-        // Generate a new young player for the academy
-        $youngPlayer = generateYoungPlayer($userId);
+        // Check if user can add more academy players
+        $currentAcademyCount = count(getClubYoungPlayers($userId, 'academy'));
+        $maxAcademyPlayers = getUserFeatureLimit($userId, 'max_academy_players');
 
-        $stmt = $db->prepare('INSERT INTO young_players (club_id, name, age, position, potential_rating, current_rating, development_stage, contract_years, value, training_focus) VALUES (:club_id, :name, :age, :position, :potential_rating, :current_rating, :development_stage, :contract_years, :value, :training_focus)');
-        $stmt->bindValue(':club_id', $youngPlayer['club_id'], SQLITE3_INTEGER);
-        $stmt->bindValue(':name', $youngPlayer['name'], SQLITE3_TEXT);
-        $stmt->bindValue(':age', $youngPlayer['age'], SQLITE3_INTEGER);
-        $stmt->bindValue(':position', $youngPlayer['position'], SQLITE3_TEXT);
-        $stmt->bindValue(':potential_rating', $youngPlayer['potential_rating'], SQLITE3_INTEGER);
-        $stmt->bindValue(':current_rating', $youngPlayer['current_rating'], SQLITE3_INTEGER);
-        $stmt->bindValue(':development_stage', $youngPlayer['development_stage'], SQLITE3_TEXT);
-        $stmt->bindValue(':contract_years', $youngPlayer['contract_years'], SQLITE3_INTEGER);
-        $stmt->bindValue(':value', $youngPlayer['value'], SQLITE3_INTEGER);
-        $stmt->bindValue(':training_focus', $youngPlayer['training_focus'], SQLITE3_TEXT);
-
-        if ($stmt->execute()) {
-            $message = 'New young player added to academy!';
-            $messageType = 'success';
-        } else {
-            $message = 'Failed to add young player to academy.';
+        if ($currentAcademyCount >= $maxAcademyPlayers) {
+            $message = 'You have reached the maximum number of academy players for your plan. Upgrade to add more players.';
             $messageType = 'error';
+        } else {
+            // Generate a new young player for the academy
+            $youngPlayer = generateYoungPlayer($userId);
+
+            $stmt = $db->prepare('INSERT INTO young_players (club_id, name, age, position, potential_rating, current_rating, development_stage, contract_years, value, training_focus) VALUES (:club_id, :name, :age, :position, :potential_rating, :current_rating, :development_stage, :contract_years, :value, :training_focus)');
+            $stmt->bindValue(':club_id', $youngPlayer['club_id'], SQLITE3_INTEGER);
+            $stmt->bindValue(':name', $youngPlayer['name'], SQLITE3_TEXT);
+            $stmt->bindValue(':age', $youngPlayer['age'], SQLITE3_INTEGER);
+            $stmt->bindValue(':position', $youngPlayer['position'], SQLITE3_TEXT);
+            $stmt->bindValue(':potential_rating', $youngPlayer['potential_rating'], SQLITE3_INTEGER);
+            $stmt->bindValue(':current_rating', $youngPlayer['current_rating'], SQLITE3_INTEGER);
+            $stmt->bindValue(':development_stage', $youngPlayer['development_stage'], SQLITE3_TEXT);
+            $stmt->bindValue(':contract_years', $youngPlayer['contract_years'], SQLITE3_INTEGER);
+            $stmt->bindValue(':value', $youngPlayer['value'], SQLITE3_INTEGER);
+            $stmt->bindValue(':training_focus', $youngPlayer['training_focus'], SQLITE3_TEXT);
+
+            if ($stmt->execute()) {
+                $message = 'New young player added to academy!';
+                $messageType = 'success';
+            } else {
+                $message = 'Failed to add young player to academy.';
+                $messageType = 'error';
+            }
         }
     } elseif ($action === 'promote_player') {
         $playerId = $_POST['player_id'] ?? 0;
@@ -171,6 +181,20 @@ startContent();
                 <span><?php echo htmlspecialchars($message); ?></span>
             </div>
         </div>
+    <?php endif; ?>
+
+    <!-- Ads for free users -->
+    <?php if (shouldShowAds($userId)): ?>
+        <?php renderBannerAd('content', $userId); ?>
+    <?php endif; ?>
+
+    <!-- Plan upgrade prompt if user hit limits -->
+    <?php
+    $currentAcademyCount = count($academyPlayers);
+    $maxAcademyPlayers = getUserFeatureLimit($userId, 'max_academy_players');
+    if ($currentAcademyCount >= $maxAcademyPlayers && shouldShowAds($userId)):
+        ?>
+        <?php renderUpgradePrompt($userId, 'max_academy_players'); ?>
     <?php endif; ?>
 
     <!-- Tab Navigation -->
@@ -638,6 +662,11 @@ startContent();
         });
     }
 </script>
+
+<!-- Floating ad for free users -->
+<?php if (shouldShowAds($userId)): ?>
+    <?php renderFloatingAd($userId); ?>
+<?php endif; ?>
 
 <?php
 endContent('Young Player Academy', 'academy');

@@ -27,6 +27,8 @@ $db->exec('CREATE TABLE IF NOT EXISTS users (
     formation TEXT,
     team TEXT,
     budget INTEGER DEFAULT ' . DEFAULT_BUDGET . ',
+    user_plan TEXT DEFAULT "' . DEFAULT_USER_PLAN . '",
+    plan_expires_at DATETIME,
     last_login DATETIME,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 )');

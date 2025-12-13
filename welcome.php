@@ -4,6 +4,7 @@ session_start();
 require_once 'config.php';
 require_once 'constants.php';
 require_once 'layout.php';
+require_once 'ads.php';
 
 // Check if database is available, redirect to install if not
 if (!isDatabaseAvailable()) {
@@ -83,6 +84,17 @@ try {
 // Start content capture
 startContent();
 ?>
+
+<!-- Ads for free users -->
+<?php if (shouldShowAds($_SESSION['user_id'])): ?>
+    <?php renderBannerAd('header', $_SESSION['user_id']); ?>
+<?php endif; ?>
+
+<!-- Plan comparison for free users -->
+<?php if (shouldShowAds($_SESSION['user_id'])): ?>
+    <?php renderPlanComparison($_SESSION['user_id']); ?>
+<?php endif; ?>
+
 <div class="container mx-auto p-4 max-w-4xl flex items-center justify-center min-h-[calc(100vh-200px)]">
     <div class="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-6">
         <!-- Club Creation Form or User Club Info -->
@@ -272,6 +284,11 @@ startContent();
         }, 'json');
     });
 </script>
+
+<!-- Floating ad for free users -->
+<?php if (shouldShowAds($_SESSION['user_id'])): ?>
+    <?php renderFloatingAd($_SESSION['user_id']); ?>
+<?php endif; ?>
 
 <?php
 // End content capture and render layout

@@ -4,6 +4,7 @@ require_once 'config.php';
 require_once 'constants.php';
 require_once 'helpers.php';
 require_once 'layout.php';
+require_once 'ads.php';
 
 // Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
@@ -102,6 +103,11 @@ startContent();
         </div>
     <?php endif; ?>
 
+    <!-- Ads for free users -->
+    <?php if (shouldShowAds($userId)): ?>
+        <?php renderBannerAd('content', $userId); ?>
+    <?php endif; ?>
+
     <!-- Navigation -->
     <div class="mb-6">
         <div class="flex gap-4">
@@ -139,13 +145,16 @@ startContent();
                                     <h4 class="font-semibold text-gray-900"><?php echo htmlspecialchars($bid['player_name']); ?>
                                     </h4>
                                     <p class="text-sm text-gray-600"><?php echo htmlspecialchars($bid['position']); ?> • Age
-                                        <?php echo $bid['age']; ?> • Potential <?php echo $bid['potential_rating']; ?></p>
+                                        <?php echo $bid['age']; ?> • Potential <?php echo $bid['potential_rating']; ?>
+                                    </p>
                                     <p class="text-sm text-gray-500">From
-                                        <?php echo htmlspecialchars($bid['owner_club_name']); ?></p>
+                                        <?php echo htmlspecialchars($bid['owner_club_name']); ?>
+                                    </p>
                                 </div>
                                 <div class="text-right">
                                     <div class="text-lg font-bold text-blue-600">
-                                        <?php echo formatMarketValue($bid['bid_amount']); ?></div>
+                                        <?php echo formatMarketValue($bid['bid_amount']); ?>
+                                    </div>
                                     <div class="text-xs text-gray-500">
                                         Expires: <?php echo date('M j, H:i', strtotime($bid['expires_at'])); ?>
                                     </div>

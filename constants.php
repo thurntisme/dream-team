@@ -11,6 +11,66 @@ require_once __DIR__ . '/helpers.php';
 define('DEFAULT_BUDGET', 500000000); // €500M default budget - optimal for competitive lineups
 define('DEFAULT_MAX_PLAYERS', 23); // Default maximum players in squad
 
+// User Plan/Package Configuration
+define('USER_PLANS', [
+    'free' => [
+        'name' => 'Free Plan',
+        'price' => 0,
+        'duration_days' => 0, // Unlimited
+        'features' => [
+            'max_academy_players' => 3,
+            'max_staff_members' => 2,
+            'max_stadium_capacity' => 25000,
+            'weekly_scout_limit' => 1,
+            'transfer_market_access' => true,
+            'young_player_market_access' => true,
+            'show_ads' => true,
+            'priority_support' => false
+        ],
+        'description' => 'Basic features with ads'
+    ],
+    'premium' => [
+        'name' => 'Premium Plan',
+        'price' => 999, // €9.99 in cents
+        'duration_days' => 30,
+        'features' => [
+            'max_academy_players' => 10,
+            'max_staff_members' => 8,
+            'max_stadium_capacity' => 75000,
+            'weekly_scout_limit' => 5,
+            'transfer_market_access' => true,
+            'young_player_market_access' => true,
+            'show_ads' => false,
+            'priority_support' => true,
+            'advanced_analytics' => true,
+            'custom_formations' => true
+        ],
+        'description' => 'Enhanced features without ads'
+    ],
+    'pro' => [
+        'name' => 'Pro Plan',
+        'price' => 1999, // €19.99 in cents
+        'duration_days' => 30,
+        'features' => [
+            'max_academy_players' => 25,
+            'max_staff_members' => 15,
+            'max_stadium_capacity' => 100000,
+            'weekly_scout_limit' => 10,
+            'transfer_market_access' => true,
+            'young_player_market_access' => true,
+            'show_ads' => false,
+            'priority_support' => true,
+            'advanced_analytics' => true,
+            'custom_formations' => true,
+            'exclusive_players' => true,
+            'tournament_access' => true
+        ],
+        'description' => 'All features unlocked'
+    ]
+]);
+
+define('DEFAULT_USER_PLAN', 'free');
+
 // Demo clubs for seeding
 define('DEMO_CLUBS', [
     [
