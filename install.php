@@ -208,7 +208,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install'])) {
             $db->exec('CREATE TABLE IF NOT EXISTS scouting_reports (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL,
-                player_id TEXT NOT NULL,
+                player_uuid TEXT NOT NULL,
                 scouted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 report_quality INTEGER DEFAULT 1,
                 FOREIGN KEY (user_id) REFERENCES users (id)
@@ -275,6 +275,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install'])) {
                             $update_stmt->execute();
                         }
                     }
+                }
+
+                // Check scouting_reports table
+                $result = $db->query("PRAGMA table_info(scouting_reports)");
+                $scout_columns = [];
+                while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+                    $scout_columns[] = $row['name'];
+                }
+
+                // Add player_uuid column to scouting_reports if it doesn't exist
+                if (!in_array('player_uuid', $scout_columns)) {
+                    $db->exec('ALTER TABLE scouting_reports ADD COLUMN player_uuid TEXT DEFAULT ""');
+                }
+
+                // Migrate scouting_reports data from player_id to player_uuid if needed
+                if (in_array('player_id', $scout_columns) && in_array('player_uuid', $scout_columns)) {
+                    // For scouting reports, player_id is already the UUID, so we can copy it directly
+                    $db->exec('UPDATE scouting_reports SET player_uuid = player_id WHERE player_uuid = ""');
                 }
             } catch (Exception $e) {
                 // Migration failed, but continue - table might be new
@@ -1016,7 +1034,7 @@ startContent();
 </div>
 </div>
 
- <?php
- // End content capture and render layout
- endContent($app_name . ' - Installation', '', false);
- ?>
+<?php
+// End content capture and render layout
+endContent($app_name . ' - Installation', '', false);
+?>

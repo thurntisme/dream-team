@@ -21,7 +21,7 @@ if (!isDatabaseAvailable()) {
 // Get JSON input
 $input = json_decode(file_get_contents('php://input'), true);
 
-if (!$input || !isset($input['player_id']) || !isset($input['scout_type']) || !isset($input['cost'])) {
+if (!$input || !isset($input['player_uuid']) || !isset($input['scout_type']) || !isset($input['cost'])) {
     echo json_encode(['success' => false, 'message' => 'Invalid request']);
     exit;
 }
@@ -29,7 +29,7 @@ if (!$input || !isset($input['player_id']) || !isset($input['scout_type']) || !i
 try {
     $db = getDbConnection();
     $userId = $_SESSION['user_id'];
-    $playerId = $input['player_id'];
+    $playerUuid = $input['player_uuid'];
     $scoutType = $input['scout_type'];
     $cost = intval($input['cost']);
 
@@ -65,9 +65,9 @@ try {
     }
 
     // Check if player is already scouted
-    $stmt = $db->prepare('SELECT report_quality FROM scouting_reports WHERE user_id = :user_id AND player_id = :player_id');
+    $stmt = $db->prepare('SELECT report_quality FROM scouting_reports WHERE user_id = :user_id AND player_uuid = :player_uuid');
     $stmt->bindValue(':user_id', $userId, SQLITE3_INTEGER);
-    $stmt->bindValue(':player_id', $playerId, SQLITE3_TEXT);
+    $stmt->bindValue(':player_uuid', $playerUuid, SQLITE3_TEXT);
     $result = $stmt->execute();
     $existingReport = $result->fetchArray(SQLITE3_ASSOC);
 
@@ -89,14 +89,19 @@ try {
 
     // Load players data to validate player exists
     $players_data = [];
-    if (file_exists('assets/json/players.json')) {
-        $players_json = file_get_contents('assets/json/players.json');
+    if (file_exists('../assets/json/players.json')) {
+        $players_json = file_get_contents('../assets/json/players.json');
         $players_data = json_decode($players_json, true) ?? [];
     }
 
-    if (!isset($players_data[$playerId])) {
+    $found_players = array_filter($players_data, function ($player) use ($playerUuid) {
+        return $player['uuid'] === $playerUuid;
+    });
+    if (count($found_players) > 0) {
+        $player = array_values($found_players)[0];
+    } else {
+        $player = null;
         echo json_encode(['success' => false, 'message' => 'Player not found']);
-        exit;
     }
 
     // Begin transaction
@@ -112,21 +117,30 @@ try {
         // Insert or update scouting report
         if ($existingReport) {
             // Update existing report
-            $stmt = $db->prepare('UPDATE scouting_reports SET report_quality = :quality, scouted_at = CURRENT_TIMESTAMP WHERE user_id = :user_id AND player_id = :player_id');
+            $stmt = $db->prepare('UPDATE scouting_reports SET report_quality = :quality, scouted_at = CURRENT_TIMESTAMP WHERE user_id = :user_id AND player_uuid = :player_uuid');
             $stmt->bindValue(':quality', $report_quality, SQLITE3_INTEGER);
             $stmt->bindValue(':user_id', $userId, SQLITE3_INTEGER);
-            $stmt->bindValue(':player_id', $playerId, SQLITE3_TEXT);
+            $stmt->bindValue(':player_uuid', $playerUuid, SQLITE3_TEXT);
             $stmt->execute();
         } else {
             // Insert new report
-            $stmt = $db->prepare('INSERT INTO scouting_reports (user_id, player_id, report_quality) VALUES (:user_id, :player_id, :quality)');
+            $stmt = $db->prepare('INSERT INTO scouting_reports (user_id, player_uuid, report_quality) VALUES (:user_id, :player_uuid, :quality)');
             $stmt->bindValue(':user_id', $userId, SQLITE3_INTEGER);
-            $stmt->bindValue(':player_id', $playerId, SQLITE3_TEXT);
+            $stmt->bindValue(':player_uuid', $playerUuid, SQLITE3_TEXT);
             $stmt->bindValue(':quality', $report_quality, SQLITE3_INTEGER);
             $stmt->execute();
         }
 
-        // Award experience for scouting
+        // Commit transaction first
+        $db->exec('COMMIT');
+
+        // Close the database connection to prevent locks
+        $db->close();
+
+        // Small delay to ensure database connection is fully released
+        usleep(50000); // 50ms
+
+        // Award experience for scouting (after transaction is complete and connection closed)
         require_once '../includes/helpers.php';
         $expGain = match ($scoutType) {
             'premium' => 10,
@@ -134,10 +148,7 @@ try {
             'basic' => 3,
             default => 3
         };
-        $expResult = addClubExp($userId, $expGain, 'Player scouted (' . $scoutType . ' report)');
-
-        // Commit transaction
-        $db->exec('COMMIT');
+        $expResult = addClubExp($userId, $expGain, "Player scouted ($scoutType report)");
 
         $response = [
             'success' => true,
@@ -159,12 +170,10 @@ try {
 
     } catch (Exception $e) {
         $db->exec('ROLLBACK');
+        $db->close();
         echo json_encode(['success' => false, 'message' => 'Failed to scout player']);
     }
-
-    $db->close();
 
 } catch (Exception $e) {
     echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
 }
-?>

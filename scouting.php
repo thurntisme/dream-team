@@ -23,7 +23,7 @@ try {
     $db->exec('CREATE TABLE IF NOT EXISTS scouting_reports (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
-        player_id TEXT NOT NULL,
+        player_uuid TEXT NOT NULL,
         scouted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         report_quality INTEGER DEFAULT 1,
         FOREIGN KEY (user_id) REFERENCES users (id)
@@ -40,12 +40,12 @@ try {
     $user_formation = $user_data['formation'] ?? '4-4-2';
 
     // Get user's scouted players
-    $stmt = $db->prepare('SELECT player_id, scouted_at, report_quality FROM scouting_reports WHERE user_id = :user_id ORDER BY scouted_at DESC');
+    $stmt = $db->prepare('SELECT player_uuid, scouted_at, report_quality FROM scouting_reports WHERE user_id = :user_id ORDER BY scouted_at DESC');
     $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
     $result = $stmt->execute();
     $scouted_players = [];
     while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
-        $scouted_players[$row['player_id']] = $row;
+        $scouted_players[$row['player_uuid']] = $row;
     }
 
     $db->close();
@@ -98,9 +98,9 @@ function getRecommendedPlayers($players_data, $user_team, $user_formation, $user
     $position_counts = ['GK' => 0, 'DEF' => 0, 'MID' => 0, 'FWD' => 0];
     $team_ratings = [];
 
-    foreach ($user_team as $player_id) {
-        if (isset($players_data[$player_id])) {
-            $player = $players_data[$player_id];
+    foreach ($user_team as $player_uuid) {
+        if (isset($players_data[$player_uuid])) {
+            $player = $players_data[$player_uuid];
             $general_position = mapPositionToCategory($player['position']);
             $position_counts[$general_position]++;
             $team_ratings[] = $player['rating'];
@@ -125,9 +125,9 @@ function getRecommendedPlayers($players_data, $user_team, $user_formation, $user
 
     // Score each player
     $player_scores = [];
-    foreach ($players_data as $player_id => $player) {
+    foreach ($players_data as $player_uuid => $player) {
         // Skip if already in team or already scouted
-        if (in_array($player_id, $user_team) || isset($scouted_players[$player_id])) {
+        if (in_array($player_uuid, $user_team) || isset($scouted_players[$player_uuid])) {
             continue;
         }
 
@@ -166,7 +166,7 @@ function getRecommendedPlayers($players_data, $user_team, $user_formation, $user
         // Random factor for variety
         $score += rand(0, 10);
 
-        $player_scores[$player_id] = $score;
+        $player_scores[$player_uuid] = $score;
     }
 
     // Sort by score and return top 12
@@ -177,9 +177,9 @@ function getRecommendedPlayers($players_data, $user_team, $user_formation, $user
 // Get recommended players
 $recommended_player_ids = getRecommendedPlayers($players_data, $user_team, $user_formation, $user_budget, $scouted_players);
 $recommended_players = [];
-foreach ($recommended_player_ids as $player_id) {
-    if (isset($players_data[$player_id])) {
-        $recommended_players[$player_id] = $players_data[$player_id];
+foreach ($recommended_player_ids as $player_uuid) {
+    if (isset($players_data[$player_uuid])) {
+        $recommended_players[$player_uuid] = $players_data[$player_uuid];
     }
 }
 
@@ -321,13 +321,14 @@ startContent();
                         <p class="text-gray-600">Complete your team setup to get personalized player recommendations.</p>
                     </div>
                 <?php else: ?>
-                    <?php foreach ($recommended_players as $player_id => $player): ?>
+                    <?php foreach ($recommended_players as $player): ?>
                         <?php
-                        $is_scouted = isset($scouted_players[$player_id]);
-                        $scout_quality = $is_scouted ? $scouted_players[$player_id]['report_quality'] : 0;
+                        $player_uuid = $player['uuid'];
+                        $is_scouted = isset($scouted_players[$player_uuid]);
+                        $scout_quality = $is_scouted ? $scouted_players[$player_uuid]['report_quality'] : 0;
                         ?>
                         <div class="player-card bg-white border rounded-lg p-4 hover:shadow-md transition-shadow"
-                            data-player-id="<?php echo $player_id; ?>" data-position="<?php echo $player['position']; ?>"
+                            data-player-uuid="<?php echo $player_uuid; ?>" data-position="<?php echo $player['position']; ?>"
                             data-rating="<?php echo $player['rating']; ?>"
                             data-scouted="<?php echo $is_scouted ? 'true' : 'false'; ?>"
                             data-name="<?php echo strtolower($player['name']); ?>">
@@ -386,13 +387,14 @@ startContent();
 
                             <div class="flex gap-2">
                                 <?php if (!$is_scouted): ?>
-                                    <button onclick="scoutPlayer('<?php echo $player_id; ?>', 'basic')"
+                                    <button
+                                        onclick="showScoutOptions('<?php echo $player_uuid; ?>', '<?php echo htmlspecialchars($player['name']); ?>', 0)"
                                         class="flex-1 px-3 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors">
                                         <i data-lucide="search" class="w-3 h-3 inline mr-1"></i>
-                                        Basic Scout
+                                        Scout Player
                                     </button>
                                 <?php else: ?>
-                                    <button onclick="showPlayerInfo('<?php echo $player_id; ?>')"
+                                    <button onclick="showPlayerInfo('<?php echo $player_uuid; ?>')"
                                         class="flex-1 px-3 py-2 bg-gray-600 text-white text-sm rounded hover:bg-gray-700 transition-colors">
                                         <i data-lucide="eye" class="w-3 h-3 inline mr-1"></i>
                                         View Report
@@ -400,9 +402,11 @@ startContent();
                                 <?php endif; ?>
 
                                 <?php if ($is_scouted && $scout_quality < 3): ?>
-                                    <button onclick="scoutPlayer('<?php echo $player_id; ?>', 'premium')"
+                                    <button
+                                        onclick="showScoutOptions('<?php echo $player_uuid; ?>', '<?php echo htmlspecialchars($player['name']); ?>', <?php echo $scout_quality; ?>)"
                                         class="px-3 py-2 bg-yellow-600 text-white text-sm rounded hover:bg-yellow-700 transition-colors">
-                                        <i data-lucide="star" class="w-3 h-3 inline"></i>
+                                        <i data-lucide="star" class="w-3 h-3 inline mr-1"></i>
+                                        Upgrade
                                     </button>
                                 <?php endif; ?>
                             </div>
@@ -428,11 +432,16 @@ startContent();
                 </div>
             <?php else: ?>
                 <div class="space-y-4">
-                    <?php foreach ($scouted_players as $player_id => $scout_data): ?>
-                        <?php
-                        $player = $players_data[$player_id] ?? null;
-                        if (!$player)
-                            continue;
+                    <?php
+                    foreach ($scouted_players as $player_uuid => $scout_data):
+                        $found_players = array_filter($players_data, function ($player) use ($player_uuid) {
+                            return $player['uuid'] === $player_uuid;
+                        });
+                        if (count($found_players) > 0) {
+                            $player = array_values($found_players)[0];
+                        } else {
+                            $player = null;
+                        }
                         ?>
                         <div class="bg-gray-50 rounded-lg p-4 border">
                             <div class="flex items-start justify-between">
@@ -483,10 +492,19 @@ startContent();
                                             ?>
                                         </div>
                                     </div>
-                                    <button onclick="showPlayerInfo('<?php echo $player_id; ?>')"
-                                        class="px-3 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors">
-                                        <i data-lucide="eye" class="w-4 h-4"></i>
-                                    </button>
+                                    <div class="flex gap-2">
+                                        <button onclick="showPlayerInfo('<?php echo $player_uuid; ?>')"
+                                            class="px-3 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors">
+                                            <i data-lucide="eye" class="w-4 h-4"></i>
+                                        </button>
+                                        <?php if ($scout_data['report_quality'] < 3): ?>
+                                            <button
+                                                onclick="showScoutOptions('<?php echo $player_uuid; ?>', '<?php echo htmlspecialchars($player['name']); ?>', <?php echo $scout_data['report_quality']; ?>)"
+                                                class="px-3 py-2 bg-yellow-600 text-white text-sm rounded hover:bg-yellow-700 transition-colors">
+                                                <i data-lucide="arrow-up" class="w-4 h-4"></i>
+                                            </button>
+                                        <?php endif; ?>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -506,7 +524,9 @@ startContent();
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div class="bg-blue-50 rounded-lg p-4 border border-blue-200">
                 <h3 class="font-semibold text-blue-900 mb-2">Basic Scout
-                    (<?php echo formatMarketValue($scouting_costs['basic']); ?>)</h3>
+                    (
+                    <?php echo formatMarketValue($scouting_costs['basic']); ?>)
+                </h3>
                 <ul class="text-sm text-blue-700 space-y-1">
                     <li>• Reveals player market value</li>
                     <li>• Basic player information</li>
@@ -516,7 +536,9 @@ startContent();
 
             <div class="bg-green-50 rounded-lg p-4 border border-green-200">
                 <h3 class="font-semibold text-green-900 mb-2">Detailed Scout
-                    (<?php echo formatMarketValue($scouting_costs['detailed']); ?>)</h3>
+                    (
+                    <?php echo formatMarketValue($scouting_costs['detailed']); ?>)
+                </h3>
                 <ul class="text-sm text-green-700 space-y-1">
                     <li>• All basic information</li>
                     <li>• Player statistics</li>
@@ -526,7 +548,9 @@ startContent();
 
             <div class="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
                 <h3 class="font-semibold text-yellow-900 mb-2">Premium Scout
-                    (<?php echo formatMarketValue($scouting_costs['premium']); ?>)</h3>
+                    (
+                    <?php echo formatMarketValue($scouting_costs['premium']); ?>)
+                </h3>
                 <ul class="text-sm text-yellow-700 space-y-1">
                     <li>• Complete player profile</li>
                     <li>• Age and nationality</li>
@@ -537,6 +561,91 @@ startContent();
         </div>
     </div>
 </div>
+
+<style>
+    .scout-option.selected {
+        border-color: #10b981 !important;
+        background-color: #f0fdf4 !important;
+    }
+
+    .scout-option:not(.opacity-50):hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .scout-option .text-blue-600 {
+        color: #2563eb !important;
+    }
+
+    .scout-option .text-green-600 {
+        color: #16a34a !important;
+    }
+
+    .scout-option .text-yellow-600 {
+        color: #ca8a04 !important;
+    }
+
+    .scout-option .bg-blue-100 {
+        background-color: #dbeafe !important;
+    }
+
+    .scout-option .bg-green-100 {
+        background-color: #dcfce7 !important;
+    }
+
+    .scout-option .bg-yellow-100 {
+        background-color: #fef3c7 !important;
+    }
+
+    /* Player report dynamic colors */
+    .from-blue-50 {
+        background: linear-gradient(to right, #eff6ff, #dbeafe);
+    }
+
+    .from-green-50 {
+        background: linear-gradient(to right, #f0fdf4, #dcfce7);
+    }
+
+    .from-yellow-50 {
+        background: linear-gradient(to right, #fefce8, #fef3c7);
+    }
+
+    .border-blue-200 {
+        border-color: #bfdbfe !important;
+    }
+
+    .border-green-200 {
+        border-color: #bbf7d0 !important;
+    }
+
+    .border-yellow-200 {
+        border-color: #fde68a !important;
+    }
+
+    .bg-blue-600 {
+        background-color: #2563eb !important;
+    }
+
+    .bg-green-600 {
+        background-color: #16a34a !important;
+    }
+
+    .bg-yellow-600 {
+        background-color: #ca8a04 !important;
+    }
+
+    .text-blue-600 {
+        color: #2563eb !important;
+    }
+
+    .text-green-600 {
+        color: #16a34a !important;
+    }
+
+    .text-yellow-600 {
+        color: #ca8a04 !important;
+    }
+</style>
 
 <script>
     // Tab switching
@@ -621,8 +730,200 @@ startContent();
     if (positionFilter) positionFilter.addEventListener('change', filterPlayers);
     if (scoutFilter) scoutFilter.addEventListener('change', filterPlayers);
 
+    // Show scout options popup
+    function showScoutOptions(playerUuid, playerName, currentQuality) {
+        const costs = {
+            'basic': <?php echo $scouting_costs['basic']; ?>,
+            'detailed': <?php echo $scouting_costs['detailed']; ?>,
+            'premium': <?php echo $scouting_costs['premium']; ?>
+        };
+
+        const userBudget = <?php echo $user_budget; ?>;
+
+        const scoutTypes = [
+            {
+                type: 'basic',
+                name: 'Basic Scout',
+                cost: costs.basic,
+                quality: 1,
+                icon: 'search',
+                color: 'blue',
+                features: [
+                    'Reveals player market value',
+                    'Basic player information',
+                    'Quick and affordable',
+                    'Perfect for initial assessment'
+                ]
+            },
+            {
+                type: 'detailed',
+                name: 'Detailed Scout',
+                cost: costs.detailed,
+                quality: 2,
+                icon: 'file-text',
+                color: 'green',
+                features: [
+                    'All basic information',
+                    'Player statistics',
+                    'Performance analysis',
+                    'Detailed attributes'
+                ]
+            },
+            {
+                type: 'premium',
+                name: 'Premium Scout',
+                cost: costs.premium,
+                quality: 3,
+                icon: 'star',
+                color: 'yellow',
+                features: [
+                    'Complete player profile',
+                    'Age and nationality',
+                    'Detailed attributes',
+                    'Transfer recommendations',
+                    'Hidden potential analysis'
+                ]
+            }
+        ];
+
+        // Filter available scout types based on current quality and budget
+        const availableScouts = scoutTypes.filter(scout => {
+            return scout.quality > currentQuality && scout.cost <= userBudget;
+        });
+
+        if (availableScouts.length === 0) {
+            let message = currentQuality >= 3
+                ? 'This player already has the highest quality scouting report.'
+                : 'You don\'t have enough budget for any scout upgrades.';
+
+            Swal.fire({
+                icon: 'info',
+                title: 'No Scout Options Available',
+                text: message,
+                confirmButtonColor: '#3b82f6'
+            });
+            return;
+        }
+
+        // Build scout options HTML
+        let scoutOptionsHtml = '';
+        availableScouts.forEach(scout => {
+            const canAfford = scout.cost <= userBudget;
+            const isRecommended = scout.type === 'detailed' && currentQuality === 0;
+
+            scoutOptionsHtml += `
+                <div class="scout-option border-2 rounded-lg p-4 cursor-pointer transition-all hover:shadow-md ${canAfford ? 'border-gray-200 hover:border-' + scout.color + '-300' : 'border-gray-100 opacity-50'}" 
+                     data-scout-type="${scout.type}" data-cost="${scout.cost}">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 bg-${scout.color}-100 rounded-full flex items-center justify-center">
+                                <i data-lucide="${scout.icon}" class="w-5 h-5 text-${scout.color}-600"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-gray-900">${scout.name} ${isRecommended ? '(Recommended)' : ''}</h4>
+                                <p class="text-sm text-gray-600">Quality Level ${scout.quality}</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-lg font-bold text-${scout.color}-600">${formatMarketValue(scout.cost)}</div>
+                            <div class="text-xs text-gray-500">Scout Cost</div>
+                        </div>
+                    </div>
+                    <div class="space-y-1">
+                        ${scout.features.map(feature => `<div class="flex items-center gap-2 text-sm text-gray-600">
+                            <i data-lucide="check" class="w-3 h-3 text-green-500"></i>
+                            <span>${feature}</span>
+                        </div>`).join('')}
+                    </div>
+                    ${!canAfford ? '<div class="mt-2 text-xs text-red-500">Insufficient budget</div>' : ''}
+                </div>
+            `;
+        });
+
+        Swal.fire({
+            title: `🔍 Scout ${playerName}`,
+            html: `
+                <div class="text-left">
+                    <div class="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                        <div class="flex items-center gap-2 mb-2">
+                            <i data-lucide="info" class="w-4 h-4 text-blue-600"></i>
+                            <span class="font-medium text-blue-900">Choose Your Scouting Package</span>
+                        </div>
+                        <p class="text-sm text-blue-700">
+                            ${currentQuality === 0
+                    ? 'Select a scouting package to reveal detailed information about this player.'
+                    : `Current report quality: Level ${currentQuality}. You can upgrade to get more detailed information.`
+                }
+                        </p>
+                        <div class="mt-2 text-sm text-blue-600">
+                            <strong>Your Budget:</strong> ${formatMarketValue(userBudget)}
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-3 max-h-96 overflow-y-auto">
+                        ${scoutOptionsHtml}
+                    </div>
+                </div>
+            `,
+            icon: null,
+            showCancelButton: true,
+            confirmButtonColor: '#16a34a',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: '🔍 Scout Player',
+            cancelButtonText: 'Maybe Later',
+            // width: '600px',
+            // showClass: {
+            //     popup: 'animate__animated animate__fadeInDown'
+            // },
+            // hideClass: {
+            //     popup: 'animate__animated animate__fadeOutUp'
+            // },
+            preConfirm: () => {
+                const selectedOption = document.querySelector('.scout-option.selected');
+                if (!selectedOption) {
+                    Swal.showValidationMessage('Please select a scouting package');
+                    return false;
+                }
+                return {
+                    scoutType: selectedOption.dataset.scoutType,
+                    cost: parseInt(selectedOption.dataset.cost)
+                };
+            },
+            didOpen: () => {
+                // Add click handlers for scout options
+                document.querySelectorAll('.scout-option').forEach(option => {
+                    option.addEventListener('click', function () {
+                        if (this.classList.contains('opacity-50')) return; // Skip if can't afford
+
+                        // Remove previous selection
+                        document.querySelectorAll('.scout-option').forEach(opt => {
+                            opt.classList.remove('selected', 'border-green-500', 'bg-green-50');
+                        });
+
+                        // Add selection to clicked option
+                        this.classList.add('selected', 'border-green-500', 'bg-green-50');
+                    });
+                });
+
+                // Auto-select first affordable option
+                const firstAffordable = document.querySelector('.scout-option:not(.opacity-50)');
+                if (firstAffordable) {
+                    firstAffordable.click();
+                }
+
+                // Initialize Lucide icons
+                lucide.createIcons();
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const { scoutType, cost } = result.value;
+                performScout(playerUuid, scoutType, cost);
+            }
+        });
+    }
+
     // Scout player function
-    function scoutPlayer(playerId, scoutType) {
+    function scoutPlayer(playerUuid, scoutType) {
         const costs = {
             'basic': <?php echo $scouting_costs['basic']; ?>,
             'detailed': <?php echo $scouting_costs['detailed']; ?>,
@@ -671,13 +972,13 @@ startContent();
             cancelButtonText: 'Cancel'
         }).then((result) => {
             if (result.isConfirmed) {
-                performScout(playerId, scoutType, cost);
+                performScout(playerUuid, scoutType, cost);
             }
         });
     }
 
     // Perform scout function
-    function performScout(playerId, scoutType, cost) {
+    function performScout(playerUuid, scoutType, cost) {
         Swal.fire({
             title: 'Scouting Player...',
             text: 'Please wait while we gather information',
@@ -695,7 +996,7 @@ startContent();
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                player_id: playerId,
+                player_uuid: playerUuid,
                 scout_type: scoutType,
                 cost: cost
             })
@@ -732,14 +1033,222 @@ startContent();
     }
 
     // Show player info function
-    function showPlayerInfo(playerId) {
-        // This would show detailed player information
-        // For now, just show a placeholder
+    function showPlayerInfo(playerUuid) {
+        // Get player data from PHP
+        const playersData = <?php echo json_encode($players_data); ?>;
+        const scoutedPlayers = <?php echo json_encode($scouted_players); ?>;
+
+        const player = playersData.filter(p => p.uuid === playerUuid)[0];
+        const scoutData = scoutedPlayers[playerUuid];
+
+        if (!player || !scoutData) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Player Not Found',
+                text: 'Unable to load player information.',
+                confirmButtonColor: '#ef4444'
+            });
+            return;
+        }
+
+        const reportQuality = scoutData.report_quality;
+        const scoutedDate = new Date(scoutData.scouted_at).toLocaleDateString();
+
+        // Quality names and colors
+        const qualityInfo = {
+            1: { name: 'Basic', color: 'blue', icon: 'search' },
+            2: { name: 'Detailed', color: 'green', icon: 'file-text' },
+            3: { name: 'Premium', color: 'yellow', icon: 'star' }
+        };
+
+        const quality = qualityInfo[reportQuality] || qualityInfo[1];
+
+        // Build player information based on report quality
+        let playerInfoHtml = `
+            <div class="text-left">
+                <!-- Player Header -->
+                <div class="bg-gradient-to-r from-${quality.color}-50 to-${quality.color}-100 p-4 rounded-lg mb-4 border border-${quality.color}-200">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 bg-${quality.color}-600 rounded-full flex items-center justify-center">
+                                <i data-lucide="user" class="w-6 h-6 text-white"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-xl font-bold text-gray-900">${player.name}</h3>
+                                <div class="flex items-center gap-2">
+                                    <span class="px-2 py-1 bg-gray-100 text-gray-800 text-sm rounded-full font-medium">
+                                        ${player.position}
+                                    </span>
+                                    <span class="px-2 py-1 bg-yellow-100 text-yellow-800 text-sm rounded-full font-medium">
+                                        ⭐ ${player.rating}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="flex items-center gap-1 text-${quality.color}-600 mb-1">
+                                <i data-lucide="${quality.icon}" class="w-4 h-4"></i>
+                                <span class="text-sm font-medium">${quality.name} Report</span>
+                            </div>
+                            <div class="text-xs text-gray-500">Scouted: ${scoutedDate}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Basic Information (Always Available) -->
+                <div class="mb-4">
+                    <h4 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                        <i data-lucide="info" class="w-4 h-4"></i>
+                        Basic Information
+                    </h4>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-gray-50 p-3 rounded-lg">
+                            <div class="text-sm text-gray-600">Market Value</div>
+                            <div class="text-lg font-bold text-green-600">${formatMarketValue(player.value)}</div>
+                        </div>
+                        <div class="bg-gray-50 p-3 rounded-lg">
+                            <div class="text-sm text-gray-600">Overall Rating</div>
+                            <div class="text-lg font-bold text-blue-600">${player.rating}</div>
+                        </div>
+                    </div>
+                </div>
+        `;
+
+        // Detailed Information (Quality 2+)
+        if (reportQuality >= 2) {
+            playerInfoHtml += `
+                <div class="mb-4">
+                    <h4 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                        <i data-lucide="bar-chart" class="w-4 h-4"></i>
+                        Performance Analysis
+                    </h4>
+                    <div class="bg-green-50 p-3 rounded-lg border border-green-200">
+                        <div class="grid grid-cols-2 gap-3 text-sm">
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Position:</span>
+                                <span class="font-medium">${player.position}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Rating:</span>
+                                <span class="font-medium">${player.rating}/99</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Form:</span>
+                                <span class="font-medium text-green-600">Excellent</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Fitness:</span>
+                                <span class="font-medium text-blue-600">100%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Premium Information (Quality 3)
+        if (reportQuality >= 3) {
+            const age = player.age || (20 + Math.floor(Math.random() * 15));
+            const nationality = player.nationality || 'International';
+
+            playerInfoHtml += `
+                <div class="mb-4">
+                    <h4 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                        <i data-lucide="user-check" class="w-4 h-4"></i>
+                        Personal Details
+                    </h4>
+                    <div class="bg-yellow-50 p-3 rounded-lg border border-yellow-200">
+                        <div class="grid grid-cols-2 gap-3 text-sm">
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Age:</span>
+                                <span class="font-medium">${age} years</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Nationality:</span>
+                                <span class="font-medium">${nationality}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Contract:</span>
+                                <span class="font-medium">Available</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Potential:</span>
+                                <span class="font-medium text-purple-600">${Math.min(99, player.rating + Math.floor(Math.random() * 10))}/99</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <h4 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                        <i data-lucide="target" class="w-4 h-4"></i>
+                        Scout Recommendation
+                    </h4>
+                    <div class="bg-purple-50 p-3 rounded-lg border border-purple-200">
+                        <div class="flex items-start gap-2">
+                            <i data-lucide="check-circle" class="w-5 h-5 text-purple-600 mt-0.5"></i>
+                            <div class="text-sm text-purple-800">
+                                <p class="font-medium mb-1">Transfer Recommendation: 
+                                    <span class="text-green-600">
+                                        ${player.rating >= 85 ? 'Highly Recommended' : player.rating >= 75 ? 'Recommended' : 'Consider'}
+                                    </span>
+                                </p>
+                                <p class="text-purple-700">
+                                    ${player.rating >= 85
+                    ? 'Exceptional player who would significantly strengthen your squad. Worth the investment.'
+                    : player.rating >= 75
+                        ? 'Solid player who would be a good addition to your team. Fair value for money.'
+                        : 'Decent player but consider if they fit your tactical needs and budget constraints.'
+                }
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Upgrade suggestion
+        if (reportQuality < 3) {
+            const nextQuality = reportQuality + 1;
+            const nextQualityName = qualityInfo[nextQuality].name;
+
+            playerInfoHtml += `
+                <div class="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                    <div class="flex items-center gap-2 mb-2">
+                        <i data-lucide="arrow-up" class="w-4 h-4 text-blue-600"></i>
+                        <span class="text-sm font-medium text-blue-900">Upgrade Available</span>
+                    </div>
+                    <p class="text-sm text-blue-700 mb-2">
+                        Get more detailed information with a ${nextQualityName} Scout report.
+                    </p>
+                    <button onclick="Swal.close(); showScoutOptions('${playerUuid}', '${player.name}', ${reportQuality});" 
+                            class="text-sm bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition-colors">
+                        Upgrade Report
+                    </button>
+                </div>
+            `;
+        }
+
+        playerInfoHtml += '</div>';
+
         Swal.fire({
-            title: 'Player Information',
-            text: 'Detailed player information would be displayed here.',
-            icon: 'info',
-            confirmButtonColor: '#2563eb'
+            title: null,
+            html: playerInfoHtml,
+            icon: null,
+            confirmButtonColor: '#3b82f6',
+            confirmButtonText: 'Close Report',
+            width: '600px',
+            // showClass: {
+            //     popup: 'animate__animated animate__fadeInDown'
+            // },
+            // hideClass: {
+            //     popup: 'animate__animated animate__fadeOutUp'
+            // },
+            didOpen: () => {
+                // Initialize Lucide icons
+                lucide.createIcons();
+            }
         });
     }
 

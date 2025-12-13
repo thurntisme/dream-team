@@ -561,7 +561,7 @@ startContent();
                                         ?>
                                         <div class="text-center">
                                             <div
-                                                class="p-2 border rounded-lg <?php echo $is_current ? 'border-green-500 bg-green-100' : 'border-gray-200'; ?>">
+                                                class="p-2 border rounded-lg h-full <?php echo $is_current ? 'border-green-500 bg-green-100' : 'border-gray-200'; ?>">
                                                 <div class="text-xs font-semibold">Level <?php echo $level; ?></div>
                                                 <div class="text-xs text-gray-600">
                                                     <?php echo formatMarketValue($level_config['salary']); ?>/week
@@ -731,6 +731,17 @@ startContent();
 <script>
     lucide.createIcons();
 
+    // Format market value for display
+    function formatMarketValue(value) {
+        if (value >= 1000000) {
+            return '€' + (value / 1000000).toFixed(1) + 'M';
+        } else if (value >= 1000) {
+            return '€' + Math.round(value / 1000) + 'K';
+        } else {
+            return '€' + value.toLocaleString();
+        }
+    }
+
     // Handle candidate selection
     document.addEventListener('DOMContentLoaded', function () {
         // Candidate selection
@@ -769,11 +780,156 @@ startContent();
             });
         });
 
-        // Select candidate buttons
+        // Select candidate buttons with popup
         document.querySelectorAll('.select-candidate-btn').forEach(btn => {
             btn.addEventListener('click', function (e) {
                 e.stopPropagation();
-                this.closest('.candidate-card').click();
+                e.preventDefault();
+
+                const candidateCard = this.closest('.candidate-card');
+                const candidateName = candidateCard.querySelector('h4').textContent.trim();
+                const candidateExperience = candidateCard.querySelector('.text-xs.text-gray-500').textContent.trim();
+                const candidateSpecialty = candidateCard.querySelector('p.text-sm.text-gray-600').textContent.replace('Specialty: ', '').trim();
+
+                // Get staff type from the candidate card data attribute
+                const staffType = candidateCard.dataset.staffType;
+                const staffTypeDisplay = staffType.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+
+                console.log('Opening popup for:', candidateName, 'Type:', staffType);
+
+                // Get staff configuration for this type
+                const staffConfig = <?php echo json_encode(getStaffCosts()); ?>;
+                const config = staffConfig[staffType];
+
+                if (!config) {
+                    console.error('Staff configuration not found for type:', staffType);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Configuration Error',
+                        text: 'Staff configuration not found. Please refresh the page and try again.',
+                        confirmButtonColor: '#3b82f6'
+                    });
+                    return;
+                }
+
+                // Build level options HTML
+                let levelOptionsHtml = '';
+                Object.keys(config.levels).forEach(level => {
+                    const levelConfig = config.levels[level];
+                    const isRecommended = level == 2; // Level 2 is usually recommended
+
+                    levelOptionsHtml += `
+                        <label class="flex items-center p-4 border border-gray-200 rounded-lg hover:border-blue-300 cursor-pointer ${isRecommended ? 'border-blue-300 bg-blue-50' : ''}">
+                            <input type="radio" name="selected_level" value="${level}" class="mr-4" ${level == 1 ? 'checked' : ''}>
+                            <div class="flex-1">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="font-semibold text-gray-900">Level ${level} ${isRecommended ? '(Recommended)' : ''}</span>
+                                    <span class="text-lg font-bold text-green-600">${formatMarketValue(levelConfig.cost)}</span>
+                                </div>
+                                <div class="text-sm text-gray-600">
+                                    <div>Weekly Salary: ${formatMarketValue(levelConfig.salary)}</div>
+                                    <div>Bonus: ${levelConfig.bonus}</div>
+                                </div>
+                            </div>
+                        </label>
+                    `;
+                });
+
+                Swal.fire({
+                    title: `🤝 Hire ${candidateName}`,
+                    html: `
+                        <div class="text-left">
+                            <div class="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg mb-4 border border-blue-200">
+                                <div class="flex items-center gap-3 mb-3">
+                                    <div class="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
+                                        <i data-lucide="user" class="w-6 h-6 text-white"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-bold text-gray-900 text-lg">${candidateName}</h4>
+                                        <p class="text-blue-600 font-medium">${staffTypeDisplay}</p>
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-2 gap-4 text-sm">
+                                    <div>
+                                        <span class="text-gray-600">Experience:</span>
+                                        <p class="font-semibold text-gray-900">${candidateExperience}</p>
+                                    </div>
+                                    <div>
+                                        <span class="text-gray-600">Specialty:</span>
+                                        <p class="font-semibold text-gray-900">${candidateSpecialty}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <h5 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                                    💼 Select Contract Package:
+                                </h5>
+                                <div class="space-y-3 max-h-[360px] overflow-y-auto">
+                                    ${levelOptionsHtml}
+                                </div>
+                            </div>
+                            
+                            <div class="bg-green-50 p-4 rounded-lg text-sm border border-green-200">
+                                <p class="text-green-800 font-semibold mb-2">✅ What You Get:</p>
+                                <div class="grid grid-cols-1 gap-1 text-green-700">
+                                    <p>• Immediate performance bonuses for your team</p>
+                                    <p>• Professional expertise in ${staffTypeDisplay.toLowerCase()}</p>
+                                    <p>• Weekly salary automatically deducted</p>
+                                    <p>• Upgrade to higher levels anytime</p>
+                                    <p>• 52-week contract with renewal options</p>
+                                </div>
+                            </div>
+                        </div>
+                    `,
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonColor: '#16a34a',
+                    cancelButtonColor: '#6b7280',
+                    confirmButtonText: '🤝 Hire Now',
+                    cancelButtonText: 'Maybe Later',
+                    width: '650px',
+                    // showClass: {
+                    //     popup: 'animate__animated animate__fadeInDown'
+                    // },
+                    // hideClass: {
+                    //     popup: 'animate__animated animate__fadeOutUp'
+                    // },
+                    preConfirm: () => {
+                        const selectedLevel = document.querySelector('input[name="selected_level"]:checked');
+                        if (!selectedLevel) {
+                            Swal.showValidationMessage('Please select a level package');
+                            return false;
+                        }
+                        return {
+                            level: selectedLevel.value,
+                            cost: config.levels[selectedLevel.value].cost,
+                            salary: config.levels[selectedLevel.value].salary
+                        };
+                    }
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        const { level, cost, salary } = result.value;
+
+                        // Create and submit hiring form
+                        const form = document.createElement('form');
+                        form.method = 'POST';
+                        form.innerHTML = `
+                            <input type="hidden" name="hire_staff" value="1">
+                            <input type="hidden" name="staff_type" value="${staffType}">
+                            <input type="hidden" name="staff_name" value="${candidateName}">
+                            <input type="hidden" name="staff_level" value="${level}">
+                        `;
+
+                        document.body.appendChild(form);
+                        form.submit();
+                    }
+                });
+
+                // Initialize Lucide icons in the popup
+                setTimeout(() => {
+                    lucide.createIcons();
+                }, 100);
             });
         });
 

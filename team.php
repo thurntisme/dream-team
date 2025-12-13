@@ -149,6 +149,12 @@ try {
     exit;
 }
 
+// Calculate player counts for use throughout the page
+$starting_players = count(array_filter($team_data ?: [], fn($p) => $p !== null));
+$substitute_data = json_decode($saved_substitutes, true) ?: [];
+$substitute_players = count(array_filter($substitute_data, fn($p) => $p !== null));
+$total_players = $starting_players + $substitute_players;
+
 
 
 function getClubLevelName($level)
@@ -294,13 +300,7 @@ startContent();
                 <div
                     class="bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg p-4 text-center border border-purple-200">
                     <div class="text-2xl font-bold text-purple-700" id="clubPlayerCount">
-                        <?php
-                        $starting_players = count(array_filter($team_data ?: [], fn($p) => $p !== null));
-                        $substitute_data = json_decode($saved_substitutes, true) ?: [];
-                        $substitute_players = count(array_filter($substitute_data, fn($p) => $p !== null));
-                        $total_players = $starting_players + $substitute_players;
-                        echo $total_players . '/' . $max_players;
-                        ?>
+                        <?php echo $total_players . '/' . $max_players; ?>
                     </div>
                     <div class="text-sm text-purple-600">Squad Size</div>
                 </div>
@@ -443,47 +443,83 @@ startContent();
         </div>
     </div>
 
-    <!-- Training Center Section -->
-    <div class="mb-6">
-        <div class="bg-white rounded-lg p-6">
-            <div class="flex items-center justify-between mb-4">
-                <h2 class="text-xl font-bold text-gray-900 flex items-center gap-2">
-                    <i data-lucide="dumbbell" class="w-6 h-6 text-green-600"></i>
-                    Training Center
-                </h2>
-                <button id="trainAllBtn"
-                    class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center gap-2">
-                    <i data-lucide="play" class="w-4 h-4"></i>
-                    Train All Players
-                </button>
-            </div>
+    <?php
+    // Only show Training Center if club has at least 11 players
+    if ($total_players >= 11):
+        ?>
+        <!-- Training Center Section -->
+        <div class="mb-6">
+            <div class="bg-white rounded-lg p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xl font-bold text-gray-900 flex items-center gap-2">
+                        <i data-lucide="dumbbell" class="w-6 h-6 text-green-600"></i>
+                        Training Center
+                    </h2>
+                    <button id="trainAllBtn"
+                        class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center gap-2">
+                        <i data-lucide="play" class="w-4 h-4"></i>
+                        Train All Players
+                    </button>
+                </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                <div class="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
-                    <div class="text-2xl font-bold text-green-700">€2M</div>
-                    <div class="text-sm text-green-600">Training Cost</div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <div class="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+                        <div class="text-2xl font-bold text-green-700">€2M</div>
+                        <div class="text-sm text-green-600">Training Cost</div>
+                    </div>
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
+                        <div class="text-2xl font-bold text-blue-700">+5-15</div>
+                        <div class="text-sm text-blue-600">Fitness Boost</div>
+                    </div>
+                    <div class="bg-purple-50 border border-purple-200 rounded-lg p-4 text-center">
+                        <div class="text-2xl font-bold text-purple-700">24h</div>
+                        <div class="text-sm text-purple-600">Cooldown</div>
+                    </div>
                 </div>
-                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
-                    <div class="text-2xl font-bold text-blue-700">+5-15</div>
-                    <div class="text-sm text-blue-600">Fitness Boost</div>
-                </div>
-                <div class="bg-purple-50 border border-purple-200 rounded-lg p-4 text-center">
-                    <div class="text-2xl font-bold text-purple-700">24h</div>
-                    <div class="text-sm text-purple-600">Cooldown</div>
-                </div>
-            </div>
 
-            <div class="bg-gray-50 rounded-lg p-4">
-                <h3 class="font-semibold text-gray-900 mb-2">Training Benefits:</h3>
-                <ul class="text-sm text-gray-600 space-y-1">
-                    <li>• Improves player fitness by 5-15 points</li>
-                    <li>• Helps maintain player form</li>
-                    <li>• Reduces injury risk for low-fitness players</li>
-                    <li>• Can only be used once per day</li>
-                </ul>
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <h3 class="font-semibold text-gray-900 mb-2">Training Benefits:</h3>
+                    <ul class="text-sm text-gray-600 space-y-1">
+                        <li>• Improves player fitness by 5-15 points</li>
+                        <li>• Helps maintain player form</li>
+                        <li>• Reduces injury risk for low-fitness players</li>
+                        <li>• Can only be used once per day</li>
+                    </ul>
+                </div>
             </div>
         </div>
-    </div>
+    <?php else: ?>
+        <!-- Training Center Locked Message -->
+        <div class="mb-6">
+            <div class="bg-white rounded-lg p-6 border-l-4 border-yellow-400">
+                <div class="flex items-center gap-3">
+                    <div class="flex-shrink-0">
+                        <i data-lucide="lock" class="w-8 h-8 text-yellow-600"></i>
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-1">Training Center Locked</h3>
+                        <p class="text-gray-600 mb-3">
+                            You need at least 11 players to access the Training Center.
+                            Currently you have <?php echo $total_players; ?> players
+                            (need <?php echo 11 - $total_players; ?> more).
+                        </p>
+                        <div class="flex gap-3">
+                            <a href="transfer.php"
+                                class="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm">
+                                <i data-lucide="users" class="w-4 h-4"></i>
+                                Buy Players
+                            </a>
+                            <a href="scouting.php"
+                                class="inline-flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm">
+                                <i data-lucide="search" class="w-4 h-4"></i>
+                                Scout Players
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    <?php endif; ?>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div>
@@ -499,9 +535,8 @@ startContent();
                         </option>
                     <?php endforeach; ?>
                 </select>
-
                 <h2 class="text-xl font-bold mt-6 mb-2">Your Players</h2>
-                <p class="text-xs text-gray-500 mb-4">Click to select • <i data-lucide="user-plus"
+                <p class=" text-xs text-gray-500 mb-4">Click to select • <i data-lucide="user-plus"
                         class="w-3 h-3 inline"></i> Choose • <i data-lucide="arrow-left-right"
                         class="w-3 h-3 inline"></i>
                     Switch • <i data-lucide="trash-2" class="w-3 h-3 inline"></i> Remove
@@ -610,14 +645,14 @@ startContent();
         <div class="flex justify-between items-center mb-4">
             <h3 id="modalTitle" class="text-xl font-bold">Select Player</h3>
             <button id="closeModal" class="text-gray-500 hover:text-gray-700">
-                <i data-lucide="x" class="w-6 h-6"></i>
+                <i data-lucide="x" class="w-6 h-6 "></i>
             </button>
         </div>
 
         <div class="mb-4">
-            <label id="customPlayerLabel" class="block text-sm font-medium mb-2">Custom Player Name</label>
+            <label id=" customPlayerLabel" class="block text-sm font-medium mb-2">Custom Player Name</label>
             <div class="flex gap-2">
-                <input type="text" id="customPlayerName" placeholder="Enter custom name..."
+                <input type=" text" id="customPlayerName" placeholder="Enter custom name..."
                     class="flex-1 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                 <button id="addCustomPlayer" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">
                     Add
@@ -3417,7 +3452,7 @@ startContent();
         });
     }
 
-    // Training functionality
+    // Training functionality (only if button exists)
     $('#trainAllBtn').click(function () {
         Swal.fire({
             icon: 'question',
@@ -3547,7 +3582,7 @@ startContent();
     }
 
     // Close player info modal
-    $('#closePlayerInfoModal').click(function () {
+    $('#closePlayerInfoModal ').click(function () {
         $('#playerInfoModal ').addClass('hidden ');
     });
 

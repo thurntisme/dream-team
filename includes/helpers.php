@@ -451,48 +451,61 @@ if (!function_exists('getLevelFromExp')) {
 if (!function_exists('addClubExp')) {
     function addClubExp($userId, $expGain, $reason = '')
     {
-        try {
-            $db = getDbConnection();
+        $maxRetries = 3;
+        $retryDelay = 100000; // 100ms in microseconds
 
-            // Get current exp and level
-            $stmt = $db->prepare('SELECT club_exp, club_level FROM users WHERE id = :user_id');
-            $stmt->bindValue(':user_id', $userId, SQLITE3_INTEGER);
-            $result = $stmt->execute();
-            $userData = $result->fetchArray(SQLITE3_ASSOC);
+        for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
+            try {
+                $db = getDbConnection();
 
-            if (!$userData) {
-                return ['success' => false, 'message' => 'User not found'];
+                // Get current exp and level
+                $stmt = $db->prepare('SELECT club_exp, club_level FROM users WHERE id = :user_id');
+                $stmt->bindValue(':user_id', $userId, SQLITE3_INTEGER);
+                $result = $stmt->execute();
+                $userData = $result->fetchArray(SQLITE3_ASSOC);
+
+                if (!$userData) {
+                    return ['success' => false, 'message' => 'User not found'];
+                }
+
+                $currentExp = $userData['club_exp'] ?? 0;
+                $currentLevel = $userData['club_level'] ?? 1;
+                $newExp = $currentExp + $expGain;
+                $newLevel = getLevelFromExp($newExp);
+
+                // Update database
+                $stmt = $db->prepare('UPDATE users SET club_exp = :exp, club_level = :level WHERE id = :user_id');
+                $stmt->bindValue(':exp', $newExp, SQLITE3_INTEGER);
+                $stmt->bindValue(':level', $newLevel, SQLITE3_INTEGER);
+                $stmt->bindValue(':user_id', $userId, SQLITE3_INTEGER);
+                $stmt->execute();
+
+                $db->close();
+
+                $leveledUp = $newLevel > $currentLevel;
+
+                return [
+                    'success' => true,
+                    'exp_gained' => $expGain,
+                    'new_exp' => $newExp,
+                    'new_level' => $newLevel,
+                    'leveled_up' => $leveledUp,
+                    'levels_gained' => $newLevel - $currentLevel,
+                    'reason' => $reason
+                ];
+
+            } catch (Exception $e) {
+                if ($attempt < $maxRetries && strpos($e->getMessage(), 'database is locked') !== false) {
+                    // Wait before retrying
+                    usleep($retryDelay * $attempt); // Exponential backoff
+                    continue;
+                }
+                return ['success' => false, 'message' => 'Database error: ' . $e->getMessage()];
             }
-
-            $currentExp = $userData['club_exp'] ?? 0;
-            $currentLevel = $userData['club_level'] ?? 1;
-            $newExp = $currentExp + $expGain;
-            $newLevel = getLevelFromExp($newExp);
-
-            // Update database
-            $stmt = $db->prepare('UPDATE users SET club_exp = :exp, club_level = :level WHERE id = :user_id');
-            $stmt->bindValue(':exp', $newExp, SQLITE3_INTEGER);
-            $stmt->bindValue(':level', $newLevel, SQLITE3_INTEGER);
-            $stmt->bindValue(':user_id', $userId, SQLITE3_INTEGER);
-            $stmt->execute();
-
-            $db->close();
-
-            $leveledUp = $newLevel > $currentLevel;
-
-            return [
-                'success' => true,
-                'exp_gained' => $expGain,
-                'new_exp' => $newExp,
-                'new_level' => $newLevel,
-                'leveled_up' => $leveledUp,
-                'levels_gained' => $newLevel - $currentLevel,
-                'reason' => $reason
-            ];
-
-        } catch (Exception $e) {
-            return ['success' => false, 'message' => 'Database error: ' . $e->getMessage()];
         }
+
+        // If all retries failed
+        return ['success' => false, 'message' => 'Database locked after multiple attempts'];
     }
 }
 

@@ -104,7 +104,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 startContent();
 ?>
 
-<div class="container mx-auto px-4 max-w-4xl py-8">
+<div class="container mx-auto px-4 max-w-6xl py-8">
     <!-- Header -->
     <div class="mb-8">
         <div class="flex items-center gap-3 mb-4">
