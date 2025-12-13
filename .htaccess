@@ -12,6 +12,9 @@ RewriteRule ^game/?$ index.php [L]
 # API Routes
 RewriteRule ^api/([^/]+)/?$ api/$1.php [L]
 
+# Pages Routes
+RewriteRule ^welcome/?$ pages/welcome.php [L]
+
 # Force HTTPS (uncomment when SSL is available)
 # RewriteCond %{HTTPS} off
 # RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]

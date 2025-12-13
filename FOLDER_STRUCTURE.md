@@ -36,12 +36,15 @@ This document outlines the optimized folder structure implemented to improve cod
 │   ├── league_functions.php # League-specific functions
 │   └── staff_functions.php  # Staff management functions
 │
+├── pages/                   # Main application pages
+│   └── welcome.php          # Dashboard/welcome page
+│
 ├── public/                  # Public assets (future use)
 ├── storage/                 # Logs, cache, temporary files
 │   ├── cache/               # Application cache
 │   └── logs/                # Application logs
 │
-└── [Root Pages]             # Main application pages
+└── [Root Pages]             # Core pages and utilities
     ├── academy.php          # Young player academy
     ├── auth.php             # Authentication
     ├── index.php            # Login page
@@ -49,7 +52,7 @@ This document outlines the optimized folder structure implemented to improve cod
     ├── payment.php          # Payment processing
     ├── plans.php            # Subscription plans
     ├── settings.php         # User settings
-    ├── welcome.php          # Dashboard
+    ├── welcome.php          # Redirect to pages/welcome.php
     └── [Other game pages]   # Team, transfer, league, etc.
 ```
 
@@ -76,13 +79,18 @@ This document outlines the optimized folder structure implemented to improve cod
 - Easy to add new modules and features
 - Prepared for MVC architecture migration
 
-## API Access
+## Clean URL Access
 
-APIs are now accessible via clean URLs:
+### API Endpoints
+APIs are accessible via clean URLs:
 - `/api/payment` → `api/payment_api.php`
 - `/api/plan` → `api/plan_api.php`
 - `/api/settings` → `api/settings_api.php`
 - `/api/young_player` → `api/young_player_api.php`
+
+### Pages
+Main application pages are accessible via clean URLs:
+- `/welcome` → `pages/welcome.php`
 
 ## Migration Notes
 
@@ -98,13 +106,15 @@ require_once 'config/config.php';
 require_once 'includes/helpers.php';
 ```
 
-### Migration Status: ✅ COMPLETE
+### Migration Status: ✅ COMPLETE + ENHANCED
 - ✅ All 59 PHP files moved to organized folders
 - ✅ All include paths updated across 25+ files
 - ✅ API endpoints restructured with clean URLs
 - ✅ Database paths updated
 - ✅ SEO configuration paths fixed
 - ✅ All syntax errors resolved
+- ✅ **NEW**: Pages folder created for main application pages
+- ✅ **NEW**: Welcome page moved to `pages/welcome.php` with clean URL routing
 
 ### Database Path
 Database path updated in configuration:
