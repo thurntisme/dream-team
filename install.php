@@ -110,6 +110,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install'])) {
             budget INTEGER DEFAULT ' . DEFAULT_BUDGET . ',
             max_players INTEGER DEFAULT 23,
             fans INTEGER DEFAULT 5000,
+            last_login DATETIME,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )';
 
