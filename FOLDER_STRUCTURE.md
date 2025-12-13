@@ -37,7 +37,7 @@ This document outlines the optimized folder structure implemented to improve cod
 │   ├── routing.php          # Routing helper functions
 │   └── staff_functions.php  # Staff management functions
 │
-├── pages/                   # Main application pages (for future use)
+
 │
 ├── partials/                # Template partials and includes
 │   ├── analytics.php        # Analytics tracking partial
@@ -55,12 +55,8 @@ This document outlines the optimized folder structure implemented to improve cod
 │
 └── [Root Pages]             # Core pages and utilities
     ├── academy.php          # Young player academy
-    ├── analytics.php        # Redirect to partials/analytics.php
     ├── auth.php             # Authentication
-    ├── field-component.php  # Redirect to components/field-component.php
     ├── index.php            # Login page
-    ├── layout.php           # Redirect to partials/layout.php
-    ├── meta.php             # Redirect to partials/meta.php
     ├── payment.php          # Payment processing
     ├── plans.php            # Subscription plans
     ├── routes.php           # Centralized routing system
@@ -172,7 +168,7 @@ require_once 'includes/helpers.php';
 - ✅ **NEW**: Partials folder created for template includes
 - ✅ **NEW**: Layout, meta, and analytics moved to `partials/`
 - ✅ **NEW**: Field components moved to `components/`
-- ✅ **NEW**: Backward compatibility maintained with redirect files
+- ✅ **NEW**: Cleaned up unused files and redirect files
 - ✅ **NEW**: Centralized routing system with `routes.php`
 - ✅ **NEW**: Clean URLs for all pages and parameter routes
 - ✅ **NEW**: Routing helper functions for URL generation
@@ -226,7 +222,7 @@ app/
 require_once 'config/config.php';
 require_once 'config/constants.php';
 require_once 'includes/helpers.php';
-require_once 'layout.php';
+require_once 'partials/layout.php';
 ```
 
 ### For API Endpoints
