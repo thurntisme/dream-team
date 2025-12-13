@@ -8,6 +8,7 @@ This document outlines the optimized folder structure implemented to improve cod
 ```
 /
 ├── api/                     # API endpoints
+│   ├── field_modal.php      # Field modal API endpoint
 │   ├── payment_api.php      # Payment processing API
 │   ├── plan_api.php         # User plan management API
 │   ├── settings_api.php     # User settings API
@@ -45,8 +46,7 @@ This document outlines the optimized folder structure implemented to improve cod
 │   └── meta.php             # SEO meta tags partial
 │
 ├── components/              # Reusable UI components
-│   ├── field-component.php  # Football field rendering component
-│   └── field-modal.php      # Modal component for field display
+│   └── field-component.php  # Football field rendering component
 │
 ├── public/                  # Public assets (future use)
 ├── storage/                 # Logs, cache, temporary files
@@ -108,6 +108,7 @@ This document outlines the optimized folder structure implemented to improve cod
 
 ### API Endpoints
 APIs are accessible via clean URLs:
+- `/api/field_modal` → `api/field_modal.php`
 - `/api/payment` → `api/payment_api.php`
 - `/api/plan` → `api/plan_api.php`
 - `/api/settings` → `api/settings_api.php`

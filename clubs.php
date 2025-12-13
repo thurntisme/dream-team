@@ -713,7 +713,7 @@ startContent();
         }
 
         // Load field via AJAX
-        fetch(`field-modal.php?club_id=${clubId}&formation=${encodeURIComponent(club.formation)}`)
+        fetch(`/api/field_modal?club_id=${clubId}&formation=${encodeURIComponent(club.formation)}`)
             .then(response => response.text())
             .then(result => {
                 const { club, formation, players } = JSON.parse(result);
