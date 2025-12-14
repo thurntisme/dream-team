@@ -250,6 +250,14 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true)
                                         <span>Settings</span>
                                     </a>
 
+                                    <a href="feedback.php"
+                                        class="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                                        <i data-lucide="message-circle" class="w-4 h-4"></i>
+                                        <span>Feedback</span>
+                                        <span class="ml-auto text-xs bg-green-100 text-green-600 px-2 py-1 rounded-full">💰
+                                            Earn</span>
+                                    </a>
+
                                     <a href="plans.php"
                                         class="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
                                         <i data-lucide="crown" class="w-4 h-4"></i>
@@ -290,6 +298,13 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true)
                                 class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors <?php echo $currentPage === 'settings' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100'; ?>">
                                 <i data-lucide="settings" class="w-5 h-5"></i>
                                 <span class="font-medium">Settings</span>
+                            </a>
+
+                            <a href="feedback.php"
+                                class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors <?php echo $currentPage === 'feedback' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100'; ?>">
+                                <i data-lucide="message-circle" class="w-5 h-5"></i>
+                                <span class="font-medium">Feedback</span>
+                                <span class="ml-auto text-xs bg-green-100 text-green-600 px-2 py-1 rounded-full">💰 Earn</span>
                             </a>
 
                             <div class="border-t border-gray-200 my-2"></div>

@@ -50,6 +50,7 @@ $routes = [
     // User Management
     'settings' => 'settings.php',          // User settings
     'profile' => 'settings.php',           // Alternative settings
+    'feedback' => 'feedback.php',          // User feedback
     'auth' => 'auth.php',                  // Authentication
     'install' => 'install.php',            // Installation
     'setup' => 'install.php',              // Alternative install
