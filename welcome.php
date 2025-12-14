@@ -1,14 +1,15 @@
 <?php
 session_start();
 
-require_once 'config.php';
-require_once 'constants.php';
-require_once 'layout.php';
-require_once 'ads.php';
+require_once 'config/config.php';
+require_once 'config/constants.php';
+require_once 'partials/layout.php';
+require_once 'includes/ads.php';
+require_once 'includes/routing.php';
 
 // Check if database is available, redirect to install if not
 if (!isDatabaseAvailable()) {
-    header('Location: install.php');
+    header('Location: /install');
     exit;
 }
 
@@ -75,7 +76,7 @@ try {
 
     $db->close();
 } catch (Exception $e) {
-    header('Location: install.php');
+    header('Location: /install');
     exit;
 }
 
@@ -85,15 +86,19 @@ try {
 startContent();
 ?>
 
-<!-- Ads for free users -->
-<?php if (shouldShowAds($_SESSION['user_id'])): ?>
-    <?php renderBannerAd('header', $_SESSION['user_id']); ?>
-<?php endif; ?>
+<div class="container mx-auto max-w-6xl">
+    <!-- Ads for free users -->
+    <?php if (shouldShowAds($_SESSION['user_id'])): ?>
+        <div class="pt-6">
+            <?php renderBannerAd('header', $_SESSION['user_id']); ?>
+        </div>
+    <?php endif; ?>
 
-<!-- Plan comparison for free users -->
-<?php if (shouldShowAds($_SESSION['user_id'])): ?>
-    <?php renderPlanComparison($_SESSION['user_id']); ?>
-<?php endif; ?>
+    <!-- Plan comparison for free users -->
+    <?php if (shouldShowAds($_SESSION['user_id'])): ?>
+        <?php renderPlanComparison($_SESSION['user_id']); ?>
+    <?php endif; ?>
+</div>
 
 <div class="container mx-auto p-4 max-w-4xl flex items-center justify-center min-h-[calc(100vh-200px)]">
     <div class="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -181,7 +186,7 @@ startContent();
                     </div>
                 </div>
 
-                <a href="team.php"
+                <a href="<?php echo route('team'); ?>"
                     class="block w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 text-center">
                     Manage Your Club
                 </a>
@@ -257,7 +262,7 @@ startContent();
                         </div>
                     <?php endif; ?>
                 </div>
-                <a href="clubs.php"
+                <a href="<?php echo route('clubs'); ?>"
                     class="block w-full bg-gray-100 text-gray-700 py-2 rounded-lg hover:bg-gray-200 text-center transition-colors">
                     <i data-lucide="eye" class="w-4 h-4 inline mr-1"></i>
                     View All Clubs
@@ -275,11 +280,11 @@ startContent();
 <script>
     $('#clubForm').submit(function (e) {
         e.preventDefault();
-        $.post('save_club.php', $(this).serialize(), function (response) {
+        $.post('api/save_club_api.php', $(this).serialize(), function (response) {
             if (response.redirect) {
                 window.location.href = response.redirect;
             } else if (response.success) {
-                window.location.href = 'team.php';
+                window.location.href = '/team';
             }
         }, 'json');
     });

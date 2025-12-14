@@ -1,9 +1,9 @@
 <?php
 session_start();
-require_once 'config.php';
-require_once 'constants.php';
-require_once 'helpers.php';
-require_once 'layout.php';
+require_once 'config/config.php';
+require_once 'config/constants.php';
+require_once 'includes/helpers.php';
+require_once 'partials/layout.php';
 
 // Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
@@ -104,7 +104,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 startContent();
 ?>
 
-<div class="container mx-auto px-4 max-w-4xl py-8">
+<div class="container mx-auto px-4 max-w-6xl py-8">
     <!-- Header -->
     <div class="mb-8">
         <div class="flex items-center gap-3 mb-4">

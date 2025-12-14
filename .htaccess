@@ -4,10 +4,17 @@ RewriteEngine On
 # Redirect to landing page as default
 DirectoryIndex landing.php
 
-# SEO-friendly URLs
-RewriteRule ^home/?$ landing.php [L]
-RewriteRule ^play/?$ index.php [L]
-RewriteRule ^game/?$ index.php [L]
+# API Routes (handled separately from main routing)
+RewriteRule ^api/([^/]+)/?$ api/$1.php [L]
+
+# Main Application Routing
+# Skip routing for existing files and directories
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+# Skip routing for API calls (already handled above)
+RewriteCond %{REQUEST_URI} !^/api/
+# Route everything else through routes.php
+RewriteRule ^(.*)$ routes.php [QSA,L]
 
 # Force HTTPS (uncomment when SSL is available)
 # RewriteCond %{HTTPS} off
@@ -60,6 +67,11 @@ RewriteRule ^ /%1%2 [R=301,L]
 <Files "constants.php">
     Order allow,deny
     Deny from all
+</Files>
+
+<Files "routes.php">
+    Order allow,deny
+    Allow from all
 </Files>
 
 <Files ".htaccess">

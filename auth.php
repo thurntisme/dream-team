@@ -2,8 +2,8 @@
 session_start();
 header('Content-Type: application/json');
 
-require_once 'config.php';
-require_once 'constants.php';
+require_once 'config/config.php';
+require_once 'config/constants.php';
 
 // Check if database is available, redirect to install if not
 if (!isDatabaseAvailable()) {
@@ -27,6 +27,8 @@ $db->exec('CREATE TABLE IF NOT EXISTS users (
     formation TEXT,
     team TEXT,
     budget INTEGER DEFAULT ' . DEFAULT_BUDGET . ',
+    club_exp INTEGER DEFAULT 0,
+    club_level INTEGER DEFAULT 1,
     user_plan TEXT DEFAULT "' . DEFAULT_USER_PLAN . '",
     plan_expires_at DATETIME,
     last_login DATETIME,

@@ -1,9 +1,9 @@
 <?php
 session_start();
 
-require_once 'config.php';
-require_once 'constants.php';
-require_once 'layout.php';
+require_once 'config/config.php';
+require_once 'config/constants.php';
+require_once 'partials/layout.php';
 
 // Check if database is available, redirect to install if not
 if (!isDatabaseAvailable()) {
@@ -631,7 +631,7 @@ startContent();
             }
         });
 
-        fetch('upgrade_stadium.php', {
+        fetch('api/upgrade_stadium_api.php', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -675,7 +675,7 @@ startContent();
 
     // Rename stadium function
     function renameStadium(newName) {
-        fetch('upgrade_stadium.php', {
+        fetch('api/upgrade_stadium_api.php', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

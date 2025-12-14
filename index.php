@@ -1,10 +1,10 @@
 <?php
 session_start();
 
-require_once 'config.php';
-require_once 'layout.php';
-require_once 'meta.php';
-require_once 'analytics.php';
+require_once 'config/config.php';
+require_once 'partials/layout.php';
+require_once 'partials/meta.php';
+require_once 'partials/analytics.php';
 
 // Check if database is available, redirect to install if not
 if (!isDatabaseAvailable()) {

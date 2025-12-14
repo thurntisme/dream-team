@@ -118,7 +118,7 @@ This document outlines the SEO features implemented for the Dream Team football 
 
 ```php
 <?php
-require_once 'meta.php';
+require_once 'partials/meta.php';
 generateMetaTags('landing'); // For landing page
 generateStructuredData('WebApplication');
 ?>
@@ -128,7 +128,7 @@ generateStructuredData('WebApplication');
 
 ```php
 <?php
-require_once 'analytics.php';
+require_once 'partials/analytics.php';
 renderGoogleAnalytics('YOUR_GA_TRACKING_ID');
 renderFacebookPixel('YOUR_FB_PIXEL_ID');
 ?>

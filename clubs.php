@@ -1,10 +1,10 @@
 <?php
 session_start();
 
-require_once 'config.php';
-require_once 'constants.php';
-require_once 'layout.php';
-require_once 'field-component.php';
+require_once 'config/config.php';
+require_once 'config/constants.php';
+require_once 'partials/layout.php';
+require_once 'components/field-component.php';
 
 // Check if database is available, redirect to install if not
 if (!isDatabaseAvailable()) {
@@ -19,7 +19,7 @@ try {
     $db = getDbConnection();
 
     // Get current user's data for budget validation
-    $stmt = $db->prepare('SELECT budget, team FROM users WHERE id = :user_id');
+    $stmt = $db->prepare('SELECT budget, team, club_level FROM users WHERE id = :user_id');
     $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
     $result = $stmt->execute();
     $user_data = $result->fetchArray(SQLITE3_ASSOC);
@@ -713,7 +713,7 @@ startContent();
         }
 
         // Load field via AJAX
-        fetch(`field-modal.php?club_id=${clubId}&formation=${encodeURIComponent(club.formation)}`)
+        fetch(`/api/field_modal?club_id=${clubId}&formation=${encodeURIComponent(club.formation)}`)
             .then(response => response.text())
             .then(result => {
                 const { club, formation, players } = JSON.parse(result);
@@ -781,6 +781,7 @@ startContent();
         // Get current user data (from PHP session)
         const currentBudget = <?php echo $user_data['budget'] ?? 0; ?>;
         const userTeam = <?php echo json_encode(json_decode($user_data['team'] ?? '[]', true)); ?>;
+        const userClubLevel = <?php echo $user_data['club_level'] ?? 1; ?>;
         const userPlayerCount = userTeam.filter(p => p !== null).length;
 
         // Check if user has enough players
@@ -897,17 +898,17 @@ startContent();
                         <div class="space-y-1 text-sm">
                             <div class="flex justify-between">
                                 <span class="text-gray-600">Your Level:</span>
-                                <span class="font-medium text-purple-600">Level ${calculateClubLevel(userTeam)} - ${getClubLevelName(calculateClubLevel(userTeam))}</span>
+                                <span class="font-medium text-purple-600">Level ${userClubLevel} - ${getClubLevelName(userClubLevel)}</span>
                             </div>
                             <div class="flex justify-between">
                                 <span class="text-gray-600">Win Bonus:</span>
-                                <span class="font-medium text-purple-600">+${getLevelBonus(calculateClubLevel(userTeam))}%</span>
+                                <span class="font-medium text-purple-600">+${getLevelBonus(userClubLevel)}%</span>
                             </div>
                             <div class="flex justify-between">
                                 <span class="text-gray-600">Draw Bonus:</span>
-                                <span class="font-medium text-purple-600">+${Math.round(getLevelBonus(calculateClubLevel(userTeam)) / 2)}%</span>
+                                <span class="font-medium text-purple-600">+${Math.round(getLevelBonus(userClubLevel) / 2)}%</span>
                             </div>
-                            ${calculateClubLevel(userTeam) >= 3 ? `
+                            ${userClubLevel >= 3 ? `
                             <div class="flex justify-between">
                                 <span class="text-gray-600">Loss Consolation:</span>
                                 <span class="font-medium text-purple-600">${formatMarketValue(challengeCost * 0.1)}</span>
@@ -996,60 +997,23 @@ startContent();
         }, 0);
     }
 
-    function calculateClubLevel(team) {
-        if (!Array.isArray(team)) return 1;
 
-        let totalRating = 0;
-        let playerCount = 0;
-        let totalValue = 0;
-
-        team.forEach(player => {
-            if (player && player.rating && player.value) {
-                totalRating += player.rating;
-                totalValue += player.value;
-                playerCount++;
-            }
-        });
-
-        if (playerCount === 0) return 1;
-
-        const avgRating = totalRating / playerCount;
-        const avgValue = totalValue / playerCount;
-
-        // Level calculation based on average rating and value
-        if (avgRating >= 85 && avgValue >= 50000000) { // €50M+ avg, 85+ rating
-            return 5; // Elite
-        } else if (avgRating >= 80 && avgValue >= 30000000) { // €30M+ avg, 80+ rating
-            return 4; // Professional
-        } else if (avgRating >= 75 && avgValue >= 15000000) { // €15M+ avg, 75+ rating
-            return 3; // Semi-Professional
-        } else if (avgRating >= 70 && avgValue >= 5000000) { // €5M+ avg, 70+ rating
-            return 2; // Amateur
-        } else {
-            return 1; // Beginner
-        }
-    }
 
     function getClubLevelName(level) {
-        switch (level) {
-            case 5: return 'Elite';
-            case 4: return 'Professional';
-            case 3: return 'Semi-Professional';
-            case 2: return 'Amateur';
-            case 1:
-            default: return 'Beginner';
-        }
+        if (level >= 40) return 'Legendary';
+        if (level >= 35) return 'Mythical';
+        if (level >= 30) return 'Elite Master';
+        if (level >= 25) return 'Elite';
+        if (level >= 20) return 'Professional Master';
+        if (level >= 15) return 'Professional';
+        if (level >= 10) return 'Semi-Professional';
+        if (level >= 5) return 'Amateur';
+        return 'Beginner';
     }
 
     function getLevelBonus(level) {
-        switch (level) {
-            case 5: return 25; // 25% bonus for Elite clubs
-            case 4: return 20; // 20% bonus for Professional clubs
-            case 3: return 15; // 15% bonus for Semi-Professional clubs
-            case 2: return 10; // 10% bonus for Amateur clubs
-            case 1:
-            default: return 0; // No bonus for Beginner clubs
-        }
+        // Progressive bonus system: 2% per level up to 100%
+        return Math.min(level * 2, 100); // Cap at 100% bonus
     }
 
     function formatMarketValue(value) {

@@ -1,8 +1,8 @@
 <?php
 session_start();
-require_once 'config.php';
-require_once 'constants.php';
-require_once 'layout.php';
+require_once 'config/config.php';
+require_once 'config/constants.php';
+require_once 'partials/layout.php';
 
 // Check if database is available, redirect to install if not
 if (!isDatabaseAvailable()) {
@@ -13,7 +13,7 @@ if (!isDatabaseAvailable()) {
 // Require user to be logged in and have a club name
 requireClubName('league');
 
-require_once 'league_functions.php';
+require_once 'includes/league_functions.php';
 
 try {
     $db = getDbConnection();
@@ -135,7 +135,7 @@ startContent();
                 <div class="flex-1">
                     <h3 class="font-semibold text-yellow-800 mb-2">League Participation Requirements</h3>
                     <p class="text-yellow-700 text-sm mb-3">
-                        Your club doesn't meet the minimum requirements to participate in league matches. 
+                        Your club doesn't meet the minimum requirements to participate in league matches.
                         Please address these issues:
                     </p>
                     <ul class="list-disc list-inside space-y-1 text-yellow-700 text-sm mb-3">
@@ -143,7 +143,8 @@ startContent();
                             <li><?php echo htmlspecialchars($error); ?></li>
                         <?php endforeach; ?>
                     </ul>
-                    <a href="team.php" class="inline-flex items-center gap-2 bg-yellow-600 text-white px-3 py-2 rounded text-sm hover:bg-yellow-700">
+                    <a href="team.php"
+                        class="inline-flex items-center gap-2 bg-yellow-600 text-white px-3 py-2 rounded text-sm hover:bg-yellow-700">
                         <i data-lucide="settings" class="w-4 h-4"></i>
                         Fix Team Setup
                     </a>
@@ -461,7 +462,7 @@ startContent();
                                         </a>
                                     </div>
                                 <?php endif; ?>
-                                           <?php elseif ($match['status'] === 'completed'): ?>
+                            <?php elseif ($match['status'] === 'completed'): ?>
                                 <div class="text-sm font-medium">
                                     <?php echo $match['home_score']; ?> - <?php echo $match['away_score']; ?>
                                 </div>
