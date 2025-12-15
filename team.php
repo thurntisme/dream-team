@@ -1217,9 +1217,11 @@ startContent();
                             ${!isCustom ? `<button onclick="showPlayerInfo(${JSON.stringify(player).replace(/"/g, '&quot;')})" class="p-1 text-gray-600 hover:bg-gray-100 rounded transition-colors" title="Player Info">
                                 <i data-lucide="info" class="w-4 h-4"></i>
                             </button>` : ''}
-                            <button onclick="promoteSubstitute(${idx})" class="p-1 text-blue-600 hover:bg-blue-100 rounded transition-colors" title="Promote to Starting XI">
+                            ${selectedPlayers.findIndex(p => p === null) !== -1 ? `<button onclick="promoteSubstitute(${idx})" class="p-1 text-blue-600 hover:bg-blue-100 rounded transition-colors" title="Promote to Starting XI">
                                 <i data-lucide="arrow-up" class="w-4 h-4"></i>
-                            </button>
+                            </button>` : `<button onclick="switchWithStartingPlayer(${idx})" class="p-1 text-orange-600 hover:bg-orange-100 rounded transition-colors" title="Switch with Starting Player">
+                                <i data-lucide="repeat" class="w-4 h-4"></i>
+                            </button>`}
                             <button onclick="removeSubstitute(${idx})" class="p-1 text-red-600 hover:bg-red-100 rounded transition-colors" title="Remove Substitute">
                                 <i data-lucide="trash-2" class="w-4 h-4"></i>
                             </button>
@@ -1575,6 +1577,128 @@ startContent();
                 Swal.fire({
                     icon: 'error',
                     title: 'Failed to Swap Players',
+                    text: response.message || 'Could not save changes. Please try again.',
+                    confirmButtonColor: '#ef4444'
+                });
+            }
+        }, 'json').fail(function () {
+            // If request failed, revert the change
+            selectedPlayers[startingIdx] = startingPlayer;
+            substitutePlayers[subIdx] = substitute;
+            renderPlayers();
+            renderField();
+            renderSubstitutes();
+            updateClubStats();
+
+            Swal.fire({
+                icon: 'error',
+                title: 'Connection Error',
+                text: 'Could not save changes. Please check your connection and try again.',
+                confirmButtonColor: '#ef4444'
+            });
+        });
+    }
+
+    // Switch substitute with starting player
+    function switchWithStartingPlayer(subIdx) {
+        const substitute = substitutePlayers[subIdx];
+        let playersHtml = '';
+
+        selectedPlayers.forEach((player, idx) => {
+            if (player) {
+                const position = getPositionForSlot(idx);
+                const isCustom = player.isCustom || false;
+                const nameClass = isCustom ? 'font-medium text-purple-700' : 'font-medium';
+                const customBadge = isCustom ? '<span class="text-xs text-purple-600 bg-purple-100 px-1 py-0.5 rounded ml-1">CUSTOM</span>' : '';
+                
+                playersHtml += `
+                    <div class="flex items-center justify-between p-3 border rounded hover:bg-gray-50 cursor-pointer" onclick="performPlayerSwitch(${idx}, ${subIdx})">
+                        <div>
+                            <div class="${nameClass}">${player.name}${customBadge}</div>
+                            <div class="text-sm text-gray-600">${position} • ★${getEffectiveRating(player)} • Lv.${player.level || 1}</div>
+                            <div class="text-xs text-gray-500">Fitness: ${player.fitness || 100}% • Form: ${(player.form || 7).toFixed(1)}</div>
+                        </div>
+                        <div class="text-sm text-green-600 font-semibold">${formatMarketValue(player.value || 0)}</div>
+                    </div>
+                `;
+            }
+        });
+
+        Swal.fire({
+            title: `Switch ${substitute.name}`,
+            html: `
+                <div class="text-left">
+                    <p class="mb-4 text-gray-600">Select a starting player to switch with:</p>
+                    <div class="space-y-2 max-h-60 overflow-y-auto">
+                        ${playersHtml}
+                    </div>
+                </div>
+            `,
+            showConfirmButton: false,
+            showCancelButton: true,
+            cancelButtonText: 'Cancel',
+            customClass: {
+                popup: 'swal-wide'
+            }
+        });
+    }
+
+    // Perform the actual player switch
+    function performPlayerSwitch(startingIdx, subIdx) {
+        const startingPlayer = selectedPlayers[startingIdx];
+        const substitute = substitutePlayers[subIdx];
+
+        // Swap players
+        selectedPlayers[startingIdx] = substitute;
+        substitutePlayers[subIdx] = startingPlayer;
+
+        renderPlayers();
+        renderField();
+        renderSubstitutes();
+        updateClubStats();
+
+        Swal.close();
+
+        // Auto-save the changes to database
+        $.post('api/save_team_api.php', {
+            formation: $('#formation').val(),
+            team: JSON.stringify(selectedPlayers),
+            substitutes: JSON.stringify(substitutePlayers)
+        }, function (response) {
+            if (response.success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Players Switched!',
+                    text: `${substitute.name} ↔ ${startingPlayer.name}`,
+                    timer: 3000,
+                    showConfirmButton: false,
+                    toast: true,
+                    position: 'top-end'
+                });
+
+                // Add level up notification if applicable
+                if (response.level_up) {
+                    setTimeout(() => {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Level Up!',
+                            text: `Congratulations! Your club reached level ${response.level_up.new_level}!`,
+                            confirmButtonColor: '#3b82f6'
+                        });
+                    }, 3500);
+                }
+            } else {
+                // If save failed, revert the change
+                selectedPlayers[startingIdx] = startingPlayer;
+                substitutePlayers[subIdx] = substitute;
+                renderPlayers();
+                renderField();
+                renderSubstitutes();
+                updateClubStats();
+
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Failed to Switch Players',
                     text: response.message || 'Could not save changes. Please try again.',
                     confirmButtonColor: '#ef4444'
                 });
@@ -3595,6 +3719,8 @@ startContent();
     // Make substitute functions globally available
     window.removeSubstitute = removeSubstitute;
     window.promoteSubstitute = promoteSubstitute;
+    window.switchWithStartingPlayer = switchWithStartingPlayer;
+    window.performPlayerSwitch = performPlayerSwitch;
     window.replaceStartingPlayer = replaceStartingPlayer;
     window.showPlayerInfo = showPlayerInfo;
 
