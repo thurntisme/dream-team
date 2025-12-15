@@ -442,24 +442,30 @@ startContent();
                             </div>
 
                             <?php if ($match['status'] === 'scheduled' && ($match['home_team_id'] == $user_id || $match['away_team_id'] == $user_id)): ?>
-                                <?php if ($current_validation['is_valid']): ?>
-                                    <form method="POST" class="inline">
-                                        <input type="hidden" name="match_id" value="<?php echo $match['id']; ?>">
-                                        <button type="submit" name="simulate_match"
-                                            class="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700"
-                                            title="This will simulate all matches in gameweek <?php echo $match['gameweek']; ?>">
-                                            Play Gameweek <?php echo $match['gameweek']; ?>
-                                        </button>
-                                    </form>
+                                <?php if ($match['gameweek'] == $current_gameweek): ?>
+                                    <?php if ($current_validation['is_valid']): ?>
+                                        <form method="POST" class="inline">
+                                            <input type="hidden" name="match_id" value="<?php echo $match['id']; ?>">
+                                            <button type="submit" name="simulate_match"
+                                                class="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700"
+                                                title="This will simulate all matches in gameweek <?php echo $match['gameweek']; ?>">
+                                                Play Gameweek <?php echo $match['gameweek']; ?>
+                                            </button>
+                                        </form>
+                                    <?php else: ?>
+                                        <div class="flex items-center gap-2">
+                                            <button disabled class="bg-gray-400 text-white px-3 py-1 rounded text-sm cursor-not-allowed"
+                                                title="Club not eligible - check team requirements">
+                                                Club Not Eligible
+                                            </button>
+                                            <a href="team.php" class="text-blue-600 hover:text-blue-800 text-sm">
+                                                Fix Issues
+                                            </a>
+                                        </div>
+                                    <?php endif; ?>
                                 <?php else: ?>
-                                    <div class="flex items-center gap-2">
-                                        <button disabled class="bg-gray-400 text-white px-3 py-1 rounded text-sm cursor-not-allowed"
-                                            title="Club not eligible - check team requirements">
-                                            Club Not Eligible
-                                        </button>
-                                        <a href="team.php" class="text-blue-600 hover:text-blue-800 text-sm">
-                                            Fix Issues
-                                        </a>
+                                    <div class="text-sm text-gray-500">
+                                        Gameweek <?php echo $match['gameweek']; ?>
                                     </div>
                                 <?php endif; ?>
                             <?php elseif ($match['status'] === 'completed'): ?>

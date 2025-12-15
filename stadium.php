@@ -19,19 +19,6 @@ if (!isset($_SESSION['user_id']) || !isset($_SESSION['club_name'])) {
 try {
     $db = getDbConnection();
 
-    // Create stadium table if it doesn't exist
-    $db->exec('CREATE TABLE IF NOT EXISTS stadiums (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        name TEXT DEFAULT "Home Stadium",
-        capacity INTEGER DEFAULT 10000,
-        level INTEGER DEFAULT 1,
-        facilities TEXT DEFAULT "{}",
-        last_upgrade DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users (id)
-    )');
-
-
     // Get user's current data including budget and fans
     $stmt = $db->prepare('SELECT budget, club_name, fans FROM users WHERE id = :user_id');
     $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
@@ -77,20 +64,6 @@ try {
     $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
     $result = $stmt->execute();
     $stadium_data = $result->fetchArray(SQLITE3_ASSOC);
-
-    if (!$stadium_data) {
-        // Create default stadium
-        $stmt = $db->prepare('INSERT INTO stadiums (user_id, name) VALUES (:user_id, :name)');
-        $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
-        $stmt->bindValue(':name', $club_name . ' Stadium', SQLITE3_TEXT);
-        $stmt->execute();
-
-        // Get the newly created stadium
-        $stmt = $db->prepare('SELECT * FROM stadiums WHERE user_id = :user_id');
-        $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
-        $result = $stmt->execute();
-        $stadium_data = $result->fetchArray(SQLITE3_ASSOC);
-    }
 
     // Get current stadium rename item quantity for JavaScript
     $stmt = $db->prepare('SELECT SUM(ui.quantity) as total_quantity FROM user_inventory ui 

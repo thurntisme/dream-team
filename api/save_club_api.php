@@ -26,6 +26,33 @@ try {
 
     if ($stmt->execute()) {
         $_SESSION['club_name'] = $club_name;
+        
+        // Create stadiums table if it doesn't exist
+        $db->exec('CREATE TABLE IF NOT EXISTS stadiums (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            name TEXT DEFAULT "Home Stadium",
+            capacity INTEGER DEFAULT 10000,
+            level INTEGER DEFAULT 1,
+            facilities TEXT DEFAULT "{}",
+            last_upgrade DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users (id)
+        )');
+        
+        // Check if stadium already exists for this user
+        $stmt = $db->prepare('SELECT COUNT(*) as count FROM stadiums WHERE user_id = :user_id');
+        $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+        $result = $stmt->execute();
+        $stadium_exists = $result->fetchArray(SQLITE3_ASSOC)['count'] > 0;
+        
+        // Create default stadium if it doesn't exist
+        if (!$stadium_exists) {
+            $stmt = $db->prepare('INSERT INTO stadiums (user_id, name) VALUES (:user_id, :name)');
+            $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+            $stmt->bindValue(':name', $club_name . ' Stadium', SQLITE3_TEXT);
+            $stmt->execute();
+        }
+        
         echo json_encode(['success' => true]);
     } else {
         echo json_encode(['success' => false, 'message' => $db->lastErrorMsg()]);
