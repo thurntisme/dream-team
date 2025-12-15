@@ -281,6 +281,30 @@ startContent();
                 </div>
             </div>
 
+            <!-- Team Management Navigation -->
+            <div class="mb-6 flex flex-wrap gap-3">
+                <a href="shirt_numbers.php"
+                    class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2 transition-colors">
+                    <i data-lucide="shirt" class="w-4 h-4"></i>
+                    Shirt Numbers
+                </a>
+                <a href="contracts.php"
+                    class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center gap-2 transition-colors">
+                    <i data-lucide="file-text" class="w-4 h-4"></i>
+                    Contracts
+                </a>
+                <a href="transfer.php"
+                    class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 flex items-center gap-2 transition-colors">
+                    <i data-lucide="users" class="w-4 h-4"></i>
+                    Transfer Market
+                </a>
+                <a href="staff.php"
+                    class="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 flex items-center gap-2 transition-colors">
+                    <i data-lucide="briefcase" class="w-4 h-4"></i>
+                    Staff
+                </a>
+            </div>
+
             <!-- Club Statistics Grid -->
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                 <div
@@ -1610,7 +1634,7 @@ startContent();
                 const isCustom = player.isCustom || false;
                 const nameClass = isCustom ? 'font-medium text-purple-700' : 'font-medium';
                 const customBadge = isCustom ? '<span class="text-xs text-purple-600 bg-purple-100 px-1 py-0.5 rounded ml-1">CUSTOM</span>' : '';
-                
+
                 playersHtml += `
                     <div class="flex items-center justify-between p-3 border rounded hover:bg-gray-50 cursor-pointer" onclick="performPlayerSwitch(${idx}, ${subIdx})">
                         <div>

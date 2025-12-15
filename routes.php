@@ -22,6 +22,9 @@ $routes = [
     // Team Management
     'team' => 'team.php',                  // Team management
     'squad' => 'team.php',                 // Alternative team
+    'shirt-numbers' => 'shirt_numbers.php', // Shirt number management
+    'shirts' => 'shirt_numbers.php',       // Alternative shirts
+    'contracts' => 'contracts.php',        // Player contracts
     'staff' => 'staff.php',                // Club staff
     'stadium' => 'stadium.php',            // Stadium management
     'academy' => 'academy.php',            // Young player academy
