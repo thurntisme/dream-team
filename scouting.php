@@ -98,9 +98,19 @@ function getRecommendedPlayers($players_data, $user_team, $user_formation, $user
     $position_counts = ['GK' => 0, 'DEF' => 0, 'MID' => 0, 'FWD' => 0];
     $team_ratings = [];
 
-    foreach ($user_team as $player_uuid) {
-        if (isset($players_data[$player_uuid])) {
-            $player = $players_data[$player_uuid];
+    foreach ($user_team as $player_data) {
+        // Handle both UUID strings and player objects
+        if (is_array($player_data)) {
+            // If it's a player object, use it directly
+            $player = $player_data;
+            $player_uuid = $player['uuid'] ?? null;
+        } else {
+            // If it's a UUID string, look up the player
+            $player_uuid = $player_data;
+            $player = isset($players_data[$player_uuid]) ? $players_data[$player_uuid] : null;
+        }
+
+        if ($player && isset($player['position']) && isset($player['rating'])) {
             $general_position = mapPositionToCategory($player['position']);
             $position_counts[$general_position]++;
             $team_ratings[] = $player['rating'];
@@ -127,7 +137,22 @@ function getRecommendedPlayers($players_data, $user_team, $user_formation, $user
     $player_scores = [];
     foreach ($players_data as $player_uuid => $player) {
         // Skip if already in team or already scouted
-        if (in_array($player_uuid, $user_team) || isset($scouted_players[$player_uuid])) {
+        $is_in_team = false;
+        foreach ($user_team as $team_player) {
+            if (is_array($team_player)) {
+                if (isset($team_player['uuid']) && $team_player['uuid'] === $player_uuid) {
+                    $is_in_team = true;
+                    break;
+                }
+            } else {
+                if ($team_player === $player_uuid) {
+                    $is_in_team = true;
+                    break;
+                }
+            }
+        }
+        
+        if ($is_in_team || isset($scouted_players[$player_uuid])) {
             continue;
         }
 
