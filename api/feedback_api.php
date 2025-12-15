@@ -75,7 +75,7 @@ try {
 
                 // Award experience for approved feedback
                 require_once '../includes/helpers.php';
-                $expResult = addClubExp($feedback['user_id'], 25, 'Feedback approved');
+                $expResult = addClubExp($feedback['user_id'], 25, 'Feedback approved', $db);
 
                 $db->exec('COMMIT');
 

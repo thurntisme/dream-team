@@ -119,7 +119,7 @@ try {
             $_SESSION[$last_training_key] = time();
 
             // Award experience for training players
-            $expResult = addClubExp($user_id, 20, 'Training session completed');
+            $expResult = addClubExp($user_id, 20, 'Training session completed', $db);
 
             $avg_improvement = round($total_improvement / $players_trained, 1);
 

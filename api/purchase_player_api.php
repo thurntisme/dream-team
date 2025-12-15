@@ -180,7 +180,7 @@ try {
     }
 
     // Award experience for player purchase
-    $expResult = addClubExp($_SESSION['user_id'], 15, 'Player purchased: ' . ($player_data['name'] ?? 'Unknown Player'));
+    $expResult = addClubExp($_SESSION['user_id'], 15, 'Player purchased: ' . ($player_data['name'] ?? 'Unknown Player'), $db);
 
     // Commit transaction
     $db->exec('COMMIT');

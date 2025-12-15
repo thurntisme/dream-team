@@ -157,7 +157,7 @@ try {
         $expReason = $upgrade_successful ?
             'Card level upgraded for ' . $current_player['name'] :
             'Card level upgrade attempted for ' . $current_player['name'];
-        $expResult = addClubExp($_SESSION['user_id'], $expGain, $expReason);
+        $expResult = addClubExp($_SESSION['user_id'], $expGain, $expReason, $db);
 
         $card_info = getCardLevelDisplayInfo($new_card_level);
         $benefits = getCardLevelBenefits($new_card_level);

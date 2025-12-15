@@ -109,7 +109,7 @@ try {
 
     if ($stmt->execute()) {
         // Award experience for contract renewal
-        $expResult = addClubExp($_SESSION['user_id'], 8, 'Contract renewed for ' . $player_name);
+        $expResult = addClubExp($_SESSION['user_id'], 8, 'Contract renewed for ' . $player_name, $db);
 
         $response = [
             'success' => true,

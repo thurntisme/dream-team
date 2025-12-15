@@ -46,7 +46,7 @@ try {
     if ($stmt->execute()) {
         // Award experience for team management
         require_once '../includes/helpers.php';
-        $expResult = addClubExp($_SESSION['user_id'], 10, 'Team formation updated');
+        $expResult = addClubExp($_SESSION['user_id'], 10, 'Team formation updated', $db);
 
         $response = ['success' => true];
         if ($expResult['success'] && $expResult['leveled_up']) {

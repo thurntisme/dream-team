@@ -108,7 +108,7 @@ try {
 
             // Award experience for stadium upgrade
             require_once '../includes/helpers.php';
-            $expResult = addClubExp($userId, 25, 'Stadium upgraded to level ' . $newLevel);
+            $expResult = addClubExp($userId, 25, 'Stadium upgraded to level ' . $newLevel, $db);
 
             // Commit transaction
             $db->exec('COMMIT');

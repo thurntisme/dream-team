@@ -449,14 +449,18 @@ if (!function_exists('getLevelFromExp')) {
  * @return array Result with level up information
  */
 if (!function_exists('addClubExp')) {
-    function addClubExp($userId, $expGain, $reason = '')
+    function addClubExp($userId, $expGain, $reason = '', $db = null)
     {
         $maxRetries = 3;
         $retryDelay = 100000; // 100ms in microseconds
+        $shouldCloseDb = false;
 
         for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
             try {
-                $db = getDbConnection();
+                if ($db === null) {
+                    $db = getDbConnection();
+                    $shouldCloseDb = true;
+                }
 
                 // Get current exp and level
                 $stmt = $db->prepare('SELECT club_exp, club_level FROM users WHERE id = :user_id');
@@ -480,7 +484,9 @@ if (!function_exists('addClubExp')) {
                 $stmt->bindValue(':user_id', $userId, SQLITE3_INTEGER);
                 $stmt->execute();
 
-                $db->close();
+                if ($shouldCloseDb) {
+                    $db->close();
+                }
 
                 $leveledUp = $newLevel > $currentLevel;
 
