@@ -294,53 +294,90 @@ startContent();
                                 </span>
                                 <span class="text-lg font-bold text-blue-600">
                                     <?php echo number_format($results['fan_change_info']['new_fans']); ?>
-                                        </span>
-                                    </div>
-                                    <div class="text-xs text-blue-700">
-                                        <?php
-                                        $fan_change = $results['fan_change_info']['fan_change'];
-                                        if ($fan_change > 0): ?>
-                                                <span class="text-green-600">+<?php echo number_format($fan_change); ?> new fans</span>
-                                        <?php elseif ($fan_change < 0): ?>
-                                                <span class="text-red-600"><?php echo number_format($fan_change); ?> fans lost</span>
-                                        <?php else: ?>
-                                                <span class="text-gray-600">No change in fan base</span>
-                                        <?php endif; ?>
-                                    </div>
-                                </div>
-                        <?php endif; ?>
-                    </div>
-
-                    <!-- All Match Results -->
-                    <div class="space-y-2">
-                        <h4 class="font-semibold text-gray-900 mb-3">All Gameweek Results:</h4>
-                        <div class="grid gap-2 max-h-48 overflow-y-auto">
-                            <?php foreach ($results['all_results'] as $match): ?>
-                                    <div class="flex items-center justify-between p-2 bg-gray-50 rounded text-sm">
-                                        <div class="flex items-center gap-3 flex-1">
-                                            <span class="w-32 text-right"><?php echo htmlspecialchars($match['home_team']); ?></span>
-                                            <div class="bg-white px-2 py-1 rounded border font-medium min-w-[50px] text-center">
-                                                <?php echo $match['home_score']; ?> - <?php echo $match['away_score']; ?>
-                                            </div>
-                                            <span class="w-32"><?php echo htmlspecialchars($match['away_team']); ?></span>
-                                        </div>
-                                    </div>
-                            <?php endforeach; ?>
+                                </span>
+                            </div>
+                            <div class="text-xs text-blue-700">
+                                <?php
+                                $fan_change = $results['fan_change_info']['fan_change'];
+                                if ($fan_change > 0): ?>
+                                    <span class="text-green-600">+<?php echo number_format($fan_change); ?> new fans</span>
+                                <?php elseif ($fan_change < 0): ?>
+                                    <span class="text-red-600"><?php echo number_format($fan_change); ?> fans lost</span>
+                                <?php else: ?>
+                                    <span class="text-gray-600">No change in fan base</span>
+                                <?php endif; ?>
+                            </div>
                         </div>
+                    <?php endif; ?>
+                </div>
+
+                <!-- Post-Match Player Selection Info -->
+                <?php if ($results['user_match']): ?>
+                    <div class="mb-4 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                        <div class="flex items-center gap-2 mb-2">
+                            <i data-lucide="gift" class="w-4 h-4 text-purple-600"></i>
+                            <span class="font-medium text-purple-800">Post-Match Reward Available</span>
+                        </div>
+                        <p class="text-sm text-purple-700">
+                            You can now choose 1 of 3 mystery boxes to reveal a random player reward!
+                            <span class="font-medium">Check above for the mystery box selection.</span>
+                        </p>
+                    </div>
+                <?php endif; ?>
+
+                <!-- All Match Results -->
+                <div class="space-y-2">
+                    <h4 class="font-semibold text-gray-900 mb-3">All Gameweek Results:</h4>
+                    <div class="grid gap-2 max-h-48 overflow-y-auto">
+                        <?php foreach ($results['all_results'] as $match): ?>
+                            <div class="flex items-center justify-between p-2 bg-gray-50 rounded text-sm">
+                                <div class="flex items-center gap-3 flex-1">
+                                    <span class="w-32 text-right"><?php echo htmlspecialchars($match['home_team']); ?></span>
+                                    <div class="bg-white px-2 py-1 rounded border font-medium min-w-[50px] text-center">
+                                        <?php echo $match['home_score']; ?> - <?php echo $match['away_score']; ?>
+                                    </div>
+                                    <span class="w-32"><?php echo htmlspecialchars($match['away_team']); ?></span>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
                     </div>
                 </div>
             </div>
+        </div>
     <?php elseif (isset($_GET['simulated'])): ?>
-            <!-- Fallback for old simulation method -->
-            <div class="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-                <div class="flex items-center gap-2">
-                    <i data-lucide="check-circle" class="w-5 h-5 text-green-600"></i>
-                    <span class="font-semibold text-green-800">
-                        Gameweek completed! Simulated <?php echo (int) $_GET['simulated']; ?> matches.
-                    </span>
-                </div>
+        <!-- Fallback for old simulation method -->
+        <div class="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+            <div class="flex items-center gap-2">
+                <i data-lucide="check-circle" class="w-5 h-5 text-green-600"></i>
+                <span class="font-semibold text-green-800">
+                    Gameweek completed! Simulated <?php echo (int) $_GET['simulated']; ?> matches.
+                </span>
             </div>
+        </div>
     <?php endif; ?>
+
+    <!-- Post-Match Player Selection Notification -->
+    <div id="postMatchNotification"
+        class="mb-6 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg shadow-lg border border-purple-300 overflow-hidden"
+        style="display: none;">
+        <div class="p-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                        <i data-lucide="gift" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold">Post-Match Reward Available!</h3>
+                        <p class="text-purple-100">You can select 1 of 3 players to add to your squad</p>
+                    </div>
+                </div>
+                <button id="openPostMatchModal"
+                    class="bg-white text-purple-600 px-4 py-2 rounded-lg hover:bg-purple-50 font-medium transition-colors">
+                    Choose Player
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- Tabs -->
     <div class="border-b border-gray-200 mb-6">
@@ -399,46 +436,46 @@ startContent();
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
                         <?php foreach ($standings as $index => $team): ?>
-                                <tr class="<?php echo $team['is_user'] ? 'bg-blue-50' : ''; ?> hover:bg-gray-50">
-                                    <td class="px-4 py-3 text-sm font-medium">
-                                        <span class="<?php
-                                        if ($index < 4)
-                                            echo 'text-green-600'; // Champions League
-                                        elseif ($index < 6)
-                                            echo 'text-blue-600'; // Europa League
-                                        elseif ($index >= 17)
-                                            echo 'text-red-600'; // Relegation
-                                        else
-                                            echo 'text-gray-900';
-                                        ?>"><?php echo $index + 1; ?></span>
-                                    </td>
-                                    <td class="px-4 py-3">
-                                        <div class="flex items-center gap-2">
-                                            <?php if ($team['is_user']): ?>
-                                                    <div class="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
-                                                        <i data-lucide="user" class="w-3 h-3 text-white"></i>
-                                                    </div>
-                                            <?php else: ?>
-                                                    <div class="w-6 h-6 bg-gray-400 rounded-full"></div>
-                                            <?php endif; ?>
-                                            <span class="font-medium <?php echo $team['is_user'] ? 'text-blue-600' : ''; ?>">
-                                                <?php echo htmlspecialchars($team['name']); ?>
-                                            </span>
-                                        </div>
-                                    </td>
-                                    <td class="px-4 py-3 text-center text-sm"><?php echo $team['matches_played']; ?></td>
-                                    <td class="px-4 py-3 text-center text-sm"><?php echo $team['wins']; ?></td>
-                                    <td class="px-4 py-3 text-center text-sm"><?php echo $team['draws']; ?></td>
-                                    <td class="px-4 py-3 text-center text-sm"><?php echo $team['losses']; ?></td>
-                                    <td class="px-4 py-3 text-center text-sm"><?php echo $team['goals_for']; ?></td>
-                                    <td class="px-4 py-3 text-center text-sm"><?php echo $team['goals_against']; ?></td>
-                                    <td
-                                        class="px-4 py-3 text-center text-sm <?php echo $team['goal_difference'] >= 0 ? 'text-green-600' : 'text-red-600'; ?>">
-                                        <?php echo $team['goal_difference'] >= 0 ? '+' : ''; ?>
-                                        <?php echo $team['goal_difference']; ?>
-                                    </td>
-                                    <td class="px-4 py-3 text-center text-sm font-bold"><?php echo $team['points']; ?></td>
-                                </tr>
+                            <tr class="<?php echo $team['is_user'] ? 'bg-blue-50' : ''; ?> hover:bg-gray-50">
+                                <td class="px-4 py-3 text-sm font-medium">
+                                    <span class="<?php
+                                    if ($index < 4)
+                                        echo 'text-green-600'; // Champions League
+                                    elseif ($index < 6)
+                                        echo 'text-blue-600'; // Europa League
+                                    elseif ($index >= 17)
+                                        echo 'text-red-600'; // Relegation
+                                    else
+                                        echo 'text-gray-900';
+                                    ?>"><?php echo $index + 1; ?></span>
+                                </td>
+                                <td class="px-4 py-3">
+                                    <div class="flex items-center gap-2">
+                                        <?php if ($team['is_user']): ?>
+                                            <div class="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
+                                                <i data-lucide="user" class="w-3 h-3 text-white"></i>
+                                            </div>
+                                        <?php else: ?>
+                                            <div class="w-6 h-6 bg-gray-400 rounded-full"></div>
+                                        <?php endif; ?>
+                                        <span class="font-medium <?php echo $team['is_user'] ? 'text-blue-600' : ''; ?>">
+                                            <?php echo htmlspecialchars($team['name']); ?>
+                                        </span>
+                                    </div>
+                                </td>
+                                <td class="px-4 py-3 text-center text-sm"><?php echo $team['matches_played']; ?></td>
+                                <td class="px-4 py-3 text-center text-sm"><?php echo $team['wins']; ?></td>
+                                <td class="px-4 py-3 text-center text-sm"><?php echo $team['draws']; ?></td>
+                                <td class="px-4 py-3 text-center text-sm"><?php echo $team['losses']; ?></td>
+                                <td class="px-4 py-3 text-center text-sm"><?php echo $team['goals_for']; ?></td>
+                                <td class="px-4 py-3 text-center text-sm"><?php echo $team['goals_against']; ?></td>
+                                <td
+                                    class="px-4 py-3 text-center text-sm <?php echo $team['goal_difference'] >= 0 ? 'text-green-600' : 'text-red-600'; ?>">
+                                    <?php echo $team['goal_difference'] >= 0 ? '+' : ''; ?>
+                                    <?php echo $team['goal_difference']; ?>
+                                </td>
+                                <td class="px-4 py-3 text-center text-sm font-bold"><?php echo $team['points']; ?></td>
+                            </tr>
                         <?php endforeach; ?>
                     </tbody>
                 </table>
@@ -466,82 +503,82 @@ startContent();
     <div id="calendar-tab" class="tab-content hidden">
         <div class="grid gap-4">
             <?php if (!empty($upcoming_matches)): ?>
-                    <?php
-                    $current_gw = null;
-                    foreach ($upcoming_matches as $match):
-                        if ($current_gw !== $match['gameweek']):
-                            $current_gw = $match['gameweek'];
-                            ?>
-                                    <div class="bg-white rounded-lg shadow p-4">
-                                        <h3 class="font-semibold text-lg mb-3">Gameweek <?php echo $match['gameweek']; ?></h3>
-                                <?php endif; ?>
+                <?php
+                $current_gw = null;
+                foreach ($upcoming_matches as $match):
+                    if ($current_gw !== $match['gameweek']):
+                        $current_gw = $match['gameweek'];
+                        ?>
+                        <div class="bg-white rounded-lg shadow p-4">
+                            <h3 class="font-semibold text-lg mb-3">Gameweek <?php echo $match['gameweek']; ?></h3>
+                        <?php endif; ?>
 
-                                <div class="flex items-center justify-between p-3 border rounded-lg mb-2 last:mb-0">
-                                    <div class="flex items-center gap-4">
-                                        <div class="text-sm text-gray-500">
-                                            <?php echo date('M j, Y', strtotime($match['match_date'])); ?>
-                                        </div>
-                                        <div class="flex items-center gap-2">
-                                            <span
-                                                class="font-medium <?php echo $match['home_team_id'] == $user_id ? 'text-blue-600' : ''; ?>">
-                                                <?php echo htmlspecialchars($match['home_team']); ?>
-                                            </span>
-                                            <span class="text-gray-400">vs</span>
-                                            <span
-                                                class="font-medium <?php echo $match['away_team_id'] == $user_id ? 'text-blue-600' : ''; ?>">
-                                                <?php echo htmlspecialchars($match['away_team']); ?>
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    <?php if ($match['status'] === 'scheduled' && ($match['home_team_id'] == $user_id || $match['away_team_id'] == $user_id)): ?>
-                                            <?php if ($match['gameweek'] == $current_gameweek): ?>
-                                                    <?php if ($current_validation['is_valid']): ?>
-                                                            <form method="POST" class="inline">
-                                                                <input type="hidden" name="match_id" value="<?php echo $match['id']; ?>">
-                                                                <button type="submit" name="simulate_match"
-                                                                    class="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700"
-                                                                    title="This will simulate all matches in gameweek <?php echo $match['gameweek']; ?>">
-                                                                    Play Gameweek <?php echo $match['gameweek']; ?>
-                                                                </button>
-                                                            </form>
-                                                    <?php else: ?>
-                                                            <div class="flex items-center gap-2">
-                                                                <button disabled class="bg-gray-400 text-white px-3 py-1 rounded text-sm cursor-not-allowed"
-                                                                    title="Club not eligible - check team requirements">
-                                                                    Club Not Eligible
-                                                                </button>
-                                                                <a href="team.php" class="text-blue-600 hover:text-blue-800 text-sm">
-                                                                    Fix Issues
-                                                                </a>
-                                                            </div>
-                                                    <?php endif; ?>
-                                            <?php else: ?>
-                                                    <div class="text-sm text-gray-500">
-                                                        Gameweek <?php echo $match['gameweek']; ?>
-                                                    </div>
-                                            <?php endif; ?>
-                                    <?php elseif ($match['status'] === 'completed'): ?>
-                                            <div class="text-sm font-medium">
-                                                <?php echo $match['home_score']; ?> - <?php echo $match['away_score']; ?>
-                                            </div>
-                                    <?php endif; ?>
+                        <div class="flex items-center justify-between p-3 border rounded-lg mb-2 last:mb-0">
+                            <div class="flex items-center gap-4">
+                                <div class="text-sm text-gray-500">
+                                    <?php echo date('M j, Y', strtotime($match['match_date'])); ?>
                                 </div>
+                                <div class="flex items-center gap-2">
+                                    <span
+                                        class="font-medium <?php echo $match['home_team_id'] == $user_id ? 'text-blue-600' : ''; ?>">
+                                        <?php echo htmlspecialchars($match['home_team']); ?>
+                                    </span>
+                                    <span class="text-gray-400">vs</span>
+                                    <span
+                                        class="font-medium <?php echo $match['away_team_id'] == $user_id ? 'text-blue-600' : ''; ?>">
+                                        <?php echo htmlspecialchars($match['away_team']); ?>
+                                    </span>
+                                </div>
+                            </div>
 
-                                <?php
-                                // Check if this is the last match of the gameweek
-                                $next_key = array_search($match, $upcoming_matches) + 1;
-                                if (!isset($upcoming_matches[$next_key]) || $upcoming_matches[$next_key]['gameweek'] !== $current_gw):
-                                    ?>
+                            <?php if ($match['status'] === 'scheduled' && ($match['home_team_id'] == $user_id || $match['away_team_id'] == $user_id)): ?>
+                                <?php if ($match['gameweek'] == $current_gameweek): ?>
+                                    <?php if ($current_validation['is_valid']): ?>
+                                        <form method="POST" class="inline">
+                                            <input type="hidden" name="match_id" value="<?php echo $match['id']; ?>">
+                                            <button type="submit" name="simulate_match"
+                                                class="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700"
+                                                title="This will simulate all matches in gameweek <?php echo $match['gameweek']; ?>">
+                                                Play Gameweek <?php echo $match['gameweek']; ?>
+                                            </button>
+                                        </form>
+                                    <?php else: ?>
+                                        <div class="flex items-center gap-2">
+                                            <button disabled class="bg-gray-400 text-white px-3 py-1 rounded text-sm cursor-not-allowed"
+                                                title="Club not eligible - check team requirements">
+                                                Club Not Eligible
+                                            </button>
+                                            <a href="team.php" class="text-blue-600 hover:text-blue-800 text-sm">
+                                                Fix Issues
+                                            </a>
+                                        </div>
+                                    <?php endif; ?>
+                                <?php else: ?>
+                                    <div class="text-sm text-gray-500">
+                                        Gameweek <?php echo $match['gameweek']; ?>
                                     </div>
+                                <?php endif; ?>
+                            <?php elseif ($match['status'] === 'completed'): ?>
+                                <div class="text-sm font-medium">
+                                    <?php echo $match['home_score']; ?> - <?php echo $match['away_score']; ?>
+                                </div>
                             <?php endif; ?>
-                    <?php endforeach; ?>
+                        </div>
+
+                        <?php
+                        // Check if this is the last match of the gameweek
+                        $next_key = array_search($match, $upcoming_matches) + 1;
+                        if (!isset($upcoming_matches[$next_key]) || $upcoming_matches[$next_key]['gameweek'] !== $current_gw):
+                            ?>
+                        </div>
+                    <?php endif; ?>
+                <?php endforeach; ?>
             <?php else: ?>
-                    <div class="bg-white rounded-lg shadow p-8 text-center">
-                        <i data-lucide="calendar-x" class="w-12 h-12 text-gray-400 mx-auto mb-4"></i>
-                        <h3 class="text-lg font-medium text-gray-900 mb-2">No Upcoming Matches</h3>
-                        <p class="text-gray-600">The season has ended or no matches are scheduled.</p>
-                    </div>
+                <div class="bg-white rounded-lg shadow p-8 text-center">
+                    <i data-lucide="calendar-x" class="w-12 h-12 text-gray-400 mx-auto mb-4"></i>
+                    <h3 class="text-lg font-medium text-gray-900 mb-2">No Upcoming Matches</h3>
+                    <p class="text-gray-600">The season has ended or no matches are scheduled.</p>
+                </div>
             <?php endif; ?>
         </div>
     </div>
@@ -550,65 +587,65 @@ startContent();
     <div id="history-tab" class="tab-content hidden">
         <div class="bg-white rounded-lg shadow overflow-hidden">
             <?php if (!empty($user_matches)): ?>
-                    <div class="overflow-x-auto">
-                        <table class="w-full">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Date</th>
-                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        GW</th>
-                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Opponent</th>
-                                    <th
-                                        class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        H/A</th>
-                                    <th
-                                        class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Result</th>
-                                    <th
-                                        class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Score</th>
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Date</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    GW</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Opponent</th>
+                                <th
+                                    class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    H/A</th>
+                                <th
+                                    class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Result</th>
+                                <th
+                                    class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Score</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            <?php foreach ($user_matches as $match): ?>
+                                <tr class="hover:bg-gray-50">
+                                    <td class="px-4 py-3 text-sm">
+                                        <?php echo date('M j, Y', strtotime($match['match_date'])); ?>
+                                    </td>
+                                    <td class="px-4 py-3 text-sm"><?php echo $match['gameweek']; ?></td>
+                                    <td class="px-4 py-3 text-sm font-medium">
+                                        <?php echo htmlspecialchars($match['opponent']); ?>
+                                    </td>
+                                    <td class="px-4 py-3 text-center text-sm">
+                                        <span
+                                            class="<?php echo $match['venue'] === 'H' ? 'text-blue-600' : 'text-gray-600'; ?>">
+                                            <?php echo $match['venue']; ?>
+                                        </span>
+                                    </td>
+                                    <td class="px-4 py-3 text-center">
+                                        <span class="px-2 py-1 text-xs font-medium rounded-full <?php
+                                        echo $match['result'] === 'W' ? 'bg-green-100 text-green-800' :
+                                            ($match['result'] === 'D' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800');
+                                        ?>">
+                                            <?php echo $match['result']; ?>
+                                        </span>
+                                    </td>
+                                    <td class="px-4 py-3 text-center text-sm font-medium">
+                                        <?php echo $match['user_score']; ?> - <?php echo $match['opponent_score']; ?>
+                                    </td>
                                 </tr>
-                            </thead>
-                            <tbody class="bg-white divide-y divide-gray-200">
-                                <?php foreach ($user_matches as $match): ?>
-                                        <tr class="hover:bg-gray-50">
-                                            <td class="px-4 py-3 text-sm">
-                                                <?php echo date('M j, Y', strtotime($match['match_date'])); ?>
-                                            </td>
-                                            <td class="px-4 py-3 text-sm"><?php echo $match['gameweek']; ?></td>
-                                            <td class="px-4 py-3 text-sm font-medium">
-                                                <?php echo htmlspecialchars($match['opponent']); ?>
-                                            </td>
-                                            <td class="px-4 py-3 text-center text-sm">
-                                                <span
-                                                    class="<?php echo $match['venue'] === 'H' ? 'text-blue-600' : 'text-gray-600'; ?>">
-                                                    <?php echo $match['venue']; ?>
-                                                </span>
-                                            </td>
-                                            <td class="px-4 py-3 text-center">
-                                                <span class="px-2 py-1 text-xs font-medium rounded-full <?php
-                                                echo $match['result'] === 'W' ? 'bg-green-100 text-green-800' :
-                                                    ($match['result'] === 'D' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800');
-                                                ?>">
-                                                    <?php echo $match['result']; ?>
-                                                </span>
-                                            </td>
-                                            <td class="px-4 py-3 text-center text-sm font-medium">
-                                                <?php echo $match['user_score']; ?> - <?php echo $match['opponent_score']; ?>
-                                            </td>
-                                        </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
             <?php else: ?>
-                    <div class="p-8 text-center">
-                        <i data-lucide="history" class="w-12 h-12 text-gray-400 mx-auto mb-4"></i>
-                        <h3 class="text-lg font-medium text-gray-900 mb-2">No Match History</h3>
-                        <p class="text-gray-600">You haven't played any matches yet this season.</p>
-                    </div>
+                <div class="p-8 text-center">
+                    <i data-lucide="history" class="w-12 h-12 text-gray-400 mx-auto mb-4"></i>
+                    <h3 class="text-lg font-medium text-gray-900 mb-2">No Match History</h3>
+                    <p class="text-gray-600">You haven't played any matches yet this season.</p>
+                </div>
             <?php endif; ?>
         </div>
     </div>
@@ -646,6 +683,85 @@ startContent();
     .user-match-highlight {
         background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
         border: 2px solid #3b82f6;
+    }
+
+    /* Post-Match Player Selection Animations */
+    .mystery-box {
+        transition: all 0.3s ease;
+    }
+
+    .mystery-box:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+
+    }
+
+    .mystery-content,
+    .revealed-content {
+        transition: all 0.3s ease;
+    }
+
+    .selected-player {
+        animation: selectedGlow 2s ease-in-out infinite alternate;
+    }
+
+    @keyframes selectedGlow {
+        0% {
+            box-shadow: 0 0 5px rgba(59, 130, 246, 0.5);
+        }
+
+        100% {
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.8);
+        }
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .animate-fade-in {
+        animation: fadeIn 0.5s ease-out;
+    }
+
+    @keyframes pulse {
+
+        0%,
+        100% {
+            transform: scale(1);
+        }
+
+        50% {
+            transform: scale(1.05);
+        }
+    }
+
+    .animate-pulse {
+        animation: pulse 1s ease-in-out infinite;
+    }
+
+    /* Reveal animation effects */
+    .mystery-icon {
+        animation: mysteryFloat 2s ease-in-out infinite;
+    }
+
+    @keyframes mysteryFloat {
+
+        0%,
+        100% {
+            transform: translateY(0px);
+        }
+
+        50% {
+            transform: translateY(-5px);
+        }
     }
 </style>
 
@@ -734,6 +850,444 @@ startContent();
             });
         });
     });
+
+    // Check for post-match player selection on page load
+    checkPostMatchPlayers();
+
+    function checkPostMatchPlayers() {
+        fetch('api/get_post_match_players_api.php')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.players) {
+                    showPostMatchNotification(data.players, data.time_remaining);
+                }
+            })
+            .catch(error => {
+                console.log('No post-match players available');
+            });
+    }
+
+    function showPostMatchNotification(players, timeRemaining) {
+        const notification = document.getElementById('postMatchNotification');
+        if (notification) {
+            notification.style.display = 'block';
+
+            // Store data for modal
+            notification.playersData = players;
+            notification.timeRemaining = timeRemaining;
+
+            // Add click handler for opening modal
+            document.getElementById('openPostMatchModal').addEventListener('click', () => {
+                showPostMatchPlayerModal(players, timeRemaining);
+                notification.style.display = 'none';
+            });
+        }
+    }
+
+    function showPostMatchPlayerModal(players, timeRemaining) {
+        const modalHtml = `
+            <div id="postMatchModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+                    <div class="bg-gradient-to-r from-green-500 to-green-600 text-white p-6 rounded-t-lg">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <i data-lucide="gift" class="w-6 h-6"></i>
+                                <div>
+                                    <h3 class="text-xl font-bold">Post-Match Reward</h3>
+                                    <p class="text-green-100">Choose 1 of 3 mystery boxes to reveal your reward</p>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-sm text-green-100">Expires in</div>
+                                <div id="timeRemaining" class="font-bold">${formatTimeRemaining(timeRemaining)}</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="p-6">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6" id="player-option-box">
+                            ${players.map((player, index) => `
+                                <div class="player-option mystery-box border-2 border-gray-200 rounded-lg p-4 cursor-pointer hover:border-blue-500 transition-all duration-300 transform hover:scale-105" data-index="${index}">
+                                    <!-- Mystery Box State -->
+                                    <div class="mystery-content text-center">
+                                        <div class="w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-3 mystery-icon relative">
+                                            <i data-lucide="gift" class="w-8 h-8 text-white"></i>
+                                            <div class="absolute -top-1 -right-1 w-4 h-4 bg-yellow-400 rounded-full flex items-center justify-center">
+                                                <span class="text-xs font-bold text-yellow-800">?</span>
+                                            </div>
+                                        </div>
+                                        <h4 class="font-bold text-lg mb-1 text-gray-700">Mystery Player</h4>
+                                        <div class="text-sm text-gray-500 mb-2">Click to reveal</div>
+                                        <div class="text-xs text-purple-600 font-medium">Option ${index + 1}</div>
+                                    </div>
+                                    
+                                    <!-- Revealed Player State (hidden initially) -->
+                                    <div class="revealed-content text-center hidden">
+                                        <div class="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-3 player-rating">
+                                            <span class="text-white font-bold text-lg">${player.rating}</span>
+                                        </div>
+                                        <h4 class="font-bold text-lg mb-1 player-name">${player.name}</h4>
+                                        <div class="flex items-center justify-center gap-2 mb-2">
+                                            <span class="px-2 py-1 bg-gray-100 rounded text-sm font-medium player-position">${player.position}</span>
+                                            <span class="px-2 py-1 bg-${player.category === 'young' ? 'green' : 'gray'}-100 text-${player.category === 'young' ? 'green' : 'gray'}-800 rounded text-sm font-medium capitalize player-category">${player.category}</span>
+                                        </div>
+                                        <div class="text-sm text-gray-600 mb-2 player-age">Age: ${player.age}</div>
+                                        <div class="text-sm font-medium text-blue-600 player-value">${formatMarketValue(player.value)}</div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                        
+                        <div class="flex justify-between items-center">
+                            <div class="text-sm text-gray-600">
+                                <i data-lucide="clock" class="w-4 h-4 inline mr-1"></i>
+                                Mystery boxes expire in <span id="timeRemainingText">${formatTimeRemaining(timeRemaining)}</span>
+                            </div>
+                            <div class="flex gap-3">
+                                <button id="skipSelection" class="px-4 py-2 text-gray-600 hover:text-gray-800">
+                                    Skip for now
+                                </button>
+                                <button id="confirmSelection" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed" disabled>
+                                    Select a Mystery Box
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+        // Add event listeners
+        let selectedIndex = null;
+        let isRevealing = false;
+
+        document.querySelectorAll('.player-option').forEach((option, index) => {
+            option.addEventListener('click', () => {
+                if (isRevealing) return; // Prevent multiple clicks during animation
+
+                selectedIndex = index;
+                isRevealing = true;
+
+                // Disable all options during reveal
+                document.querySelectorAll('.player-option').forEach(opt => {
+                    opt.style.pointerEvents = 'none';
+                });
+
+                // Update button text
+                const confirmBtn = document.getElementById('confirmSelection');
+                confirmBtn.textContent = 'Revealing...';
+                confirmBtn.disabled = true;
+
+                // Start reveal animation sequence
+                revealPlayerSequence(players, selectedIndex);
+            });
+        });
+
+        document.getElementById('confirmSelection').addEventListener('click', () => {
+            const confirmBtn = document.getElementById('confirmSelection');
+
+            // If button text is "Close", just close the modal
+            if (confirmBtn.textContent === 'Close') {
+                closePostMatchModal();
+                return;
+            }
+
+            // Otherwise, this shouldn't happen since we auto-save now
+            if (selectedIndex !== null && !isRevealing) {
+                closePostMatchModal();
+            }
+        });
+
+        document.getElementById('skipSelection').addEventListener('click', () => {
+            if (isRevealing) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Reveal in Progress',
+                    text: 'Please wait for the reveal to complete before skipping.',
+                    confirmButtonColor: '#3b82f6'
+                });
+                return;
+            }
+            closePostMatchModal();
+        });
+
+        // Close modal when clicking outside
+        document.getElementById('postMatchModal').addEventListener('click', (e) => {
+            if (e.target.id === 'postMatchModal') {
+                closePostMatchModal();
+            }
+        });
+
+        // Update countdown timer
+        const timer = setInterval(() => {
+            timeRemaining--;
+            if (timeRemaining <= 0) {
+                clearInterval(timer);
+                closePostMatchModal();
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Selection Expired',
+                    text: 'The post-match player selection has expired.',
+                    confirmButtonColor: '#3b82f6'
+                });
+            } else {
+                document.getElementById('timeRemaining').textContent = formatTimeRemaining(timeRemaining);
+                document.getElementById('timeRemainingText').textContent = formatTimeRemaining(timeRemaining);
+            }
+        }, 1000);
+
+        // Store timer reference for cleanup
+        document.getElementById('postMatchModal').timer = timer;
+
+        lucide.createIcons();
+    }
+
+    function revealPlayerSequence(players, selectedIndex) {
+        const options = document.querySelectorAll('.player-option');
+
+        // First, add shake animation to selected box
+        const selectedOption = options[selectedIndex];
+        selectedOption.classList.add('animate-pulse');
+
+        // Create reveal sequence with delays
+        const revealOrder = [selectedIndex]; // Selected first
+        const otherIndices = [0, 1, 2].filter(i => i !== selectedIndex);
+        revealOrder.push(...otherIndices);
+
+        let revealCount = 0;
+
+        revealOrder.forEach((index, sequenceIndex) => {
+            setTimeout(() => {
+                const option = options[index];
+                const mysteryContent = option.querySelector('.mystery-content');
+                const revealedContent = option.querySelector('.revealed-content');
+
+                // Add dramatic reveal animation
+                option.classList.add('transform', 'scale-110');
+                option.style.background = 'linear-gradient(135deg, #fbbf24, #f59e0b)';
+                option.style.borderColor = '#f59e0b';
+                option.style.boxShadow = '0 0 30px rgba(251, 191, 36, 0.6)';
+
+                setTimeout(() => {
+                    // Flip animation
+                    mysteryContent.style.transform = 'rotateY(90deg)';
+                    mysteryContent.style.opacity = '0';
+
+                    setTimeout(() => {
+                        mysteryContent.classList.add('hidden');
+                        revealedContent.classList.remove('hidden');
+                        revealedContent.style.transform = 'rotateY(-90deg)';
+                        revealedContent.style.opacity = '0';
+
+                        setTimeout(() => {
+                            revealedContent.style.transform = 'rotateY(0deg)';
+                            revealedContent.style.opacity = '1';
+                            revealedContent.style.transition = 'all 0.5s ease';
+
+                            // Reset option styling
+                            setTimeout(() => {
+                                option.classList.remove('transform', 'scale-110');
+                                option.style.background = '';
+
+                                if (index === selectedIndex) {
+                                    option.style.borderColor = '#3b82f6';
+                                    option.style.backgroundColor = '#dbeafe';
+                                    option.classList.add('selected-player');
+                                } else {
+                                    option.style.borderColor = '#d1d5db';
+                                    option.style.backgroundColor = '#f9fafb';
+                                    option.style.opacity = '0.7';
+                                }
+
+                                revealCount++;
+
+                                // When all are revealed, automatically save the selected player
+                                if (revealCount === 3) {
+                                    setTimeout(() => {
+                                        // Automatically save the selected player
+                                        saveSelectedPlayer(selectedIndex, players[selectedIndex]);
+                                    }, 500);
+                                }
+                            }, 300);
+                        }, 100);
+                    }, 200);
+                }, 300);
+            }, sequenceIndex * 800); // 800ms delay between each reveal
+        });
+    }
+
+    function saveSelectedPlayer(selectedIndex, selectedPlayer) {
+        // Show saving message
+        const confirmBtn = document.getElementById('confirmSelection');
+        confirmBtn.textContent = 'Saving Player...';
+        confirmBtn.disabled = true;
+
+        // Show selection message
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-center animate-fade-in';
+        messageDiv.innerHTML = `
+            <div class="flex items-center justify-center gap-2 mb-2">
+                <i data-lucide="user-plus" class="w-5 h-5 text-blue-600"></i>
+                <span class="font-medium text-blue-800">Adding ${selectedPlayer.name} to your club...</span>
+            </div>
+            <div class="flex items-center justify-center gap-2">
+                <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                <span class="text-sm text-blue-700">Please wait</span>
+            </div>
+        `;
+
+        const container = document.querySelector('#postMatchModal .grid');
+        container.parentNode.insertBefore(messageDiv, container.nextSibling);
+        lucide.createIcons();
+
+        // Make API call to save player
+        fetch('api/select_post_match_player_api.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                selected_index: selectedIndex
+            })
+        })
+            .then(response => response.json())
+            .then(data => {
+                // Remove loading message
+                messageDiv.remove();
+
+                if (data.success) {
+                    // Show success message
+                    const successDiv = document.createElement('div');
+                    successDiv.className = 'mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-center animate-fade-in';
+                    successDiv.innerHTML = `
+                    <div class="flex items-center justify-center gap-2 mb-2">
+                        <i data-lucide="check-circle" class="w-5 h-5 text-green-600"></i>
+                        <span class="font-medium text-green-800">${selectedPlayer.name} added to your club!</span>
+                    </div>
+                    <p class="text-sm text-green-700">The player has been added to your inventory</p>
+                `;
+
+                    const container = document.querySelector('#postMatchModal .grid');
+                    container.parentNode.insertBefore(successDiv, container.nextSibling);
+
+                    // Update button to close modal
+                    confirmBtn.textContent = 'Close';
+                    confirmBtn.disabled = false;
+                    confirmBtn.classList.remove('animate-pulse');
+                    confirmBtn.classList.add('bg-green-600', 'hover:bg-green-700');
+                    confirmBtn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+
+                    // Store success info for notification after modal closes
+                    confirmBtn.dataset.playerAdded = 'true';
+                    confirmBtn.dataset.playerName = selectedPlayer.name;
+
+                    lucide.createIcons();
+                } else {
+                    // Show error message
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-center animate-fade-in';
+                    errorDiv.innerHTML = `
+                    <div class="flex items-center justify-center gap-2 mb-2">
+                        <i data-lucide="x-circle" class="w-5 h-5 text-red-600"></i>
+                        <span class="font-medium text-red-800">Failed to add player</span>
+                    </div>
+                    <p class="text-sm text-red-700">${data.message || 'An error occurred'}</p>
+                `;
+
+                    const container = document.querySelector('#postMatchModal .grid');
+                    container.parentNode.insertBefore(errorDiv, container.nextSibling);
+
+                    // Update button to close modal
+                    confirmBtn.textContent = 'Close';
+                    confirmBtn.disabled = false;
+
+                    lucide.createIcons();
+                }
+            })
+            .catch(error => {
+                // Remove loading message
+                messageDiv.remove();
+
+                // Show error message
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-center animate-fade-in';
+                errorDiv.innerHTML = `
+                <div class="flex items-center justify-center gap-2 mb-2">
+                    <i data-lucide="wifi-off" class="w-5 h-5 text-red-600"></i>
+                    <span class="font-medium text-red-800">Connection Error</span>
+                </div>
+                <p class="text-sm text-red-700">Please check your connection and try again</p>
+            `;
+
+                const container = document.querySelector('#postMatchModal .grid');
+                container.parentNode.insertBefore(errorDiv, container.nextSibling);
+
+                // Update button to close modal
+                confirmBtn.textContent = 'Close';
+                confirmBtn.disabled = false;
+
+                lucide.createIcons();
+            });
+    }
+
+
+
+    function closePostMatchModal() {
+        const modal = document.getElementById('postMatchModal');
+        if (modal) {
+            // Check if we need to show success notification
+            const confirmBtn = document.getElementById('confirmSelection');
+            const playerAdded = confirmBtn && confirmBtn.dataset.playerAdded === 'true';
+            const playerName = confirmBtn && confirmBtn.dataset.playerName;
+            
+            if (modal.timer) {
+                clearInterval(modal.timer);
+            }
+            modal.remove();
+            
+            // Show success notification after modal is closed
+            if (playerAdded && playerName) {
+                setTimeout(() => {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Player Added!',
+                        html: `<strong>${playerName}</strong> has been added to your club!<br><small>Check your transfer page to manage your players.</small>`,
+                        confirmButtonColor: '#10b981',
+                        confirmButtonText: 'Great!',
+                        timer: 4000,
+                        timerProgressBar: true
+                    });
+                }, 300);
+            }
+        }
+    }
+
+    function formatTimeRemaining(seconds) {
+        const hours = Math.floor(seconds / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        const secs = seconds % 60;
+
+        if (hours > 0) {
+            return `${hours}h ${minutes}m`;
+        } else if (minutes > 0) {
+            return `${minutes}m ${secs}s`;
+        } else {
+            return `${secs}s`;
+        }
+    }
+
+    // Helper function for market value formatting (if not already available)
+    function formatMarketValue(value) {
+        if (value >= 1000000) {
+            return '€' + (value / 1000000).toFixed(1) + 'M';
+        } else if (value >= 1000) {
+            return '€' + (value / 1000).toFixed(0) + ' K ';
+        } else {
+            return '€' + value;
+        }
+    }
 
     lucide.createIcons();
 </script>

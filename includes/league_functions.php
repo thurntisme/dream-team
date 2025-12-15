@@ -598,6 +598,11 @@ function simulateGameweek($db, $match_id, $user_id)
             'fan_change' => $fan_result['fan_change'],
             'new_fans' => $fan_result['new_fans']
         ];
+
+        // Generate post-match player options if user had a match
+        if ($user_match_result) {
+            generatePostMatchPlayerOptions($db, $user_id);
+        }
     }
 
     return [
@@ -1053,4 +1058,95 @@ function updatePlayerConditions($db, $user_id, $wins, $draws, $losses, $goals_fo
         $stmt->execute();
     }
 }
-?>
+/**
+ * Generate 3 random players (young or standard) for post-match selection
+ */
+function getPostMatchPlayerOptions()
+{
+    $all_players = getDefaultPlayers();
+
+    // Filter for young and standard players only
+    $eligible_players = array_filter($all_players, function ($player) {
+        return in_array($player['category'], ['young', 'standard']);
+    });
+
+    if (count($eligible_players) < 3) {
+        return []; // Not enough players
+    }
+
+    // Shuffle and get 3 random players
+    $shuffled = $eligible_players;
+    shuffle($shuffled);
+    return array_slice($shuffled, 0, 3);
+}
+
+/**
+ * Store post-match player options in session for user selection
+ */
+function generatePostMatchPlayerOptions($db, $user_id)
+{
+    $player_options = getPostMatchPlayerOptions();
+    if (empty($player_options)) {
+        return false;
+    }
+
+    // Store in session with timestamp
+    $_SESSION['post_match_players'] = [
+        'options' => $player_options,
+        'user_id' => $user_id,
+        'generated_at' => time(),
+        'expires_at' => time() + (24 * 60 * 60) // 24 hours
+    ];
+
+    return true;
+}
+
+/**
+ * Process user's selection of post-match player
+ */
+function selectPostMatchPlayer($db, $user_id, $selected_index)
+{
+    if (!isset($_SESSION['post_match_players'])) {
+        return ['success' => false, 'message' => 'No player options available'];
+    }
+
+    $post_match_data = $_SESSION['post_match_players'];
+
+    // Validate session data
+    if ($post_match_data['user_id'] != $user_id) {
+        return ['success' => false, 'message' => 'Invalid user session'];
+    }
+
+    if (time() > $post_match_data['expires_at']) {
+        unset($_SESSION['post_match_players']);
+        return ['success' => false, 'message' => 'Player selection has expired'];
+    }
+
+    if (!isset($post_match_data['options'][$selected_index])) {
+        return ['success' => false, 'message' => 'Invalid player selection'];
+    }
+
+    $selected_player = $post_match_data['options'][$selected_index];
+
+    try {
+        // Add player to user's inventory
+        $stmt = $db->prepare('INSERT INTO player_inventory (user_id, player_uuid, player_data, purchase_price, purchase_date, status) VALUES (:user_id, :uuid, :data, 0, CURRENT_TIMESTAMP, "available")');
+        $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+        $stmt->bindValue(':uuid', $selected_player['uuid'], SQLITE3_TEXT);
+        $stmt->bindValue(':data', json_encode($selected_player), SQLITE3_TEXT);
+        $stmt->execute();
+
+        // Clear the session data
+        unset($_SESSION['post_match_players']);
+
+        return [
+            'success' => true,
+            'message' => 'Player added to your squad successfully!',
+            'player' => $selected_player
+        ];
+
+    } catch (Exception $e) {
+        error_log("Post-match player selection error: " . $e->getMessage());
+        return ['success' => false, 'message' => 'Failed to add player to squad'];
+    }
+}
