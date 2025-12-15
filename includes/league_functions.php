@@ -379,6 +379,35 @@ function simulateMatch($db, $match_id, $user_id)
     return true;
 }
 
+function getFanRevenueBreakdown($db, $user_id, $is_home, $total_revenue)
+{
+    if (!$is_home || $total_revenue <= 0) {
+        return [['description' => 'Stadium & Fan Revenue', 'amount' => $total_revenue]];
+    }
+
+    // Get detailed fan revenue breakdown
+    $stmt = $db->prepare('SELECT u.fans, s.capacity, s.level FROM users u LEFT JOIN stadiums s ON u.id = s.user_id WHERE u.id = :user_id');
+    $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+    $result = $stmt->execute();
+    $user_data = $result->fetchArray(SQLITE3_ASSOC);
+
+    $current_fans = $user_data['fans'] ?? 5000;
+    $stadium_capacity = $user_data['capacity'] ?? 10000;
+    $stadium_level = $user_data['level'] ?? 1;
+
+    $stadium_multipliers = [1 => 1.0, 2 => 1.2, 3 => 1.5, 4 => 1.8, 5 => 2.2];
+    $stadium_multiplier = $stadium_multipliers[$stadium_level] ?? 1.0;
+
+    $attendance = min($current_fans, $stadium_capacity);
+    $fan_ticket_revenue = $attendance * 10;
+    $stadium_facility_revenue = 50000 * $stadium_multiplier;
+
+    return [
+        ['description' => "Ticket Sales ({$attendance} fans)", 'amount' => $fan_ticket_revenue],
+        ['description' => "Stadium Facilities (Level {$stadium_level})", 'amount' => $stadium_facility_revenue]
+    ];
+}
+
 function updateFansAfterMatch($db, $user_id, $user_score, $opponent_score, $is_home)
 {
     // Get user's current fans and stadium info
@@ -507,6 +536,9 @@ function simulateGameweek($db, $match_id, $user_id)
     // Get user's current position in the league and budget info
     $user_position = null;
     $budget_earned = 0;
+    $budget_breakdown = [];
+    $fan_change_info = null;
+
     if ($user_team_id && $user_match_result) {
         $standings = getLeagueStandings($db, $season);
         foreach ($standings as $index => $team) {
@@ -522,24 +554,50 @@ function simulateGameweek($db, $match_id, $user_id)
 
         // Base reward
         if ($user_score > $opponent_score) {
-            $budget_earned += 5000000; // €5M for win
+            $base_reward = 5000000; // €5M for win
+            $budget_earned += $base_reward;
+            $budget_breakdown[] = ['description' => 'Match Victory', 'amount' => $base_reward];
         } elseif ($user_score == $opponent_score) {
-            $budget_earned += 2000000; // €2M for draw
+            $base_reward = 2000000; // €2M for draw
+            $budget_earned += $base_reward;
+            $budget_breakdown[] = ['description' => 'Match Draw', 'amount' => $base_reward];
         } else {
-            $budget_earned += 1000000; // €1M for participation
+            $base_reward = 1000000; // €1M for participation
+            $budget_earned += $base_reward;
+            $budget_breakdown[] = ['description' => 'Match Participation', 'amount' => $base_reward];
         }
 
         // Goal bonus
-        $budget_earned += $user_score * 500000; // €500K per goal
+        if ($user_score > 0) {
+            $goal_bonus = $user_score * 500000; // €500K per goal
+            $budget_earned += $goal_bonus;
+            $budget_breakdown[] = ['description' => "Goals Scored ({$user_score})", 'amount' => $goal_bonus];
+        }
 
         // Home bonus
         if ($user_match_result['is_home']) {
-            $budget_earned += 1000000; // €1M home bonus
+            $home_bonus = 1000000; // €1M home bonus
+            $budget_earned += $home_bonus;
+            $budget_breakdown[] = ['description' => 'Home Match Bonus', 'amount' => $home_bonus];
         }
 
         // Update fans and calculate additional revenue
         $fan_result = updateFansAfterMatch($db, $user_id, $user_score, $opponent_score, $user_match_result['is_home']);
-        $budget_earned += $fan_result['additional_revenue'];
+
+        if ($fan_result['additional_revenue'] > 0) {
+            $budget_earned += $fan_result['additional_revenue'];
+            // Get detailed fan revenue breakdown
+            $fan_breakdown = getFanRevenueBreakdown($db, $user_id, $user_match_result['is_home'], $fan_result['additional_revenue']);
+            foreach ($fan_breakdown as $item) {
+                $budget_breakdown[] = $item;
+            }
+        }
+
+        // Fan change information
+        $fan_change_info = [
+            'fan_change' => $fan_result['fan_change'],
+            'new_fans' => $fan_result['new_fans']
+        ];
     }
 
     return [
@@ -548,7 +606,9 @@ function simulateGameweek($db, $match_id, $user_id)
         'user_match' => $user_match_result,
         'all_results' => $all_results,
         'user_position' => $user_position,
-        'budget_earned' => $budget_earned
+        'budget_earned' => $budget_earned,
+        'budget_breakdown' => $budget_breakdown,
+        'fan_change_info' => $fan_change_info
     ];
 }
 
@@ -619,6 +679,9 @@ function simulateCurrentGameweek($db, $user_id, $season, $gameweek)
 
     // Calculate budget earned if user had a match
     $budget_earned = 0;
+    $budget_breakdown = [];
+    $fan_change_info = null;
+
     if ($user_team_id && $user_match_result) {
         // Calculate budget earned from the match
         $user_score = $user_match_result['is_home'] ? $user_match_result['home_score'] : $user_match_result['away_score'];
@@ -626,24 +689,50 @@ function simulateCurrentGameweek($db, $user_id, $season, $gameweek)
 
         // Base reward
         if ($user_score > $opponent_score) {
-            $budget_earned += 5000000; // €5M for win
+            $base_reward = 5000000; // €5M for win
+            $budget_earned += $base_reward;
+            $budget_breakdown[] = ['description' => 'Match Victory', 'amount' => $base_reward];
         } elseif ($user_score == $opponent_score) {
-            $budget_earned += 2000000; // €2M for draw
+            $base_reward = 2000000; // €2M for draw
+            $budget_earned += $base_reward;
+            $budget_breakdown[] = ['description' => 'Match Draw', 'amount' => $base_reward];
         } else {
-            $budget_earned += 1000000; // €1M for participation
+            $base_reward = 1000000; // €1M for participation
+            $budget_earned += $base_reward;
+            $budget_breakdown[] = ['description' => 'Match Participation', 'amount' => $base_reward];
         }
 
         // Goal bonus
-        $budget_earned += $user_score * 500000; // €500K per goal
+        if ($user_score > 0) {
+            $goal_bonus = $user_score * 500000; // €500K per goal
+            $budget_earned += $goal_bonus;
+            $budget_breakdown[] = ['description' => "Goals Scored ({$user_score})", 'amount' => $goal_bonus];
+        }
 
         // Home bonus
         if ($user_match_result['is_home']) {
-            $budget_earned += 1000000; // €1M home bonus
+            $home_bonus = 1000000; // €1M home bonus
+            $budget_earned += $home_bonus;
+            $budget_breakdown[] = ['description' => 'Home Match Bonus', 'amount' => $home_bonus];
         }
 
         // Update fans and calculate additional revenue
         $fan_result = updateFansAfterMatch($db, $user_id, $user_score, $opponent_score, $user_match_result['is_home']);
-        $budget_earned += $fan_result['additional_revenue'];
+
+        if ($fan_result['additional_revenue'] > 0) {
+            $budget_earned += $fan_result['additional_revenue'];
+            // Get detailed fan revenue breakdown
+            $fan_breakdown = getFanRevenueBreakdown($db, $user_id, $user_match_result['is_home'], $fan_result['additional_revenue']);
+            foreach ($fan_breakdown as $item) {
+                $budget_breakdown[] = $item;
+            }
+        }
+
+        // Fan change information
+        $fan_change_info = [
+            'fan_change' => $fan_result['fan_change'],
+            'new_fans' => $fan_result['new_fans']
+        ];
     }
 
     return [
@@ -652,7 +741,9 @@ function simulateCurrentGameweek($db, $user_id, $season, $gameweek)
         'user_match' => $user_match_result,
         'all_results' => $all_results,
         'user_position' => $user_position,
-        'budget_earned' => $budget_earned
+        'budget_earned' => $budget_earned,
+        'budget_breakdown' => $budget_breakdown,
+        'fan_change_info' => $fan_change_info
     ];
 }
 
@@ -704,7 +795,7 @@ function validateClubForLeague($user)
     if (!is_array($team)) {
         $validation_errors[] = 'Invalid team data';
     } else {
-        $team = array_filter(array_map(function($item){
+        $team = array_filter(array_map(function ($item) {
             return !empty($item);
         }, $team));
         $total_players = count($team);
@@ -820,7 +911,32 @@ function updateTeamStats($db, $team_id, $goals_for, $goals_against, $is_home)
         // Add home advantage bonus
         $home_bonus = $is_home ? 1000000 : 0; // €1M home bonus
 
-        $total_reward = $budget_reward + $goal_bonus + $home_bonus;
+        // Calculate fan revenue for home matches
+        $fan_revenue = 0;
+        if ($is_home) {
+            // Get user's current fans and stadium info
+            $stmt_fan = $db->prepare('SELECT u.fans, s.capacity, s.level FROM users u LEFT JOIN stadiums s ON u.id = s.user_id WHERE u.id = :user_id');
+            $stmt_fan->bindValue(':user_id', $user_team['user_id'], SQLITE3_INTEGER);
+            $result_fan = $stmt_fan->execute();
+            $user_data = $result_fan->fetchArray(SQLITE3_ASSOC);
+
+            $current_fans = $user_data['fans'] ?? 5000;
+            $stadium_capacity = $user_data['capacity'] ?? 10000;
+            $stadium_level = $user_data['level'] ?? 1;
+
+            // Stadium revenue multipliers
+            $stadium_multipliers = [1 => 1.0, 2 => 1.2, 3 => 1.5, 4 => 1.8, 5 => 2.2];
+            $stadium_multiplier = $stadium_multipliers[$stadium_level] ?? 1.0;
+
+            // Calculate fan attendance and revenue
+            $attendance = min($current_fans, $stadium_capacity);
+            $fan_ticket_revenue = $attendance * 10; // €10 per fan
+            $stadium_facility_revenue = 50000 * $stadium_multiplier; // Base stadium revenue with multiplier
+
+            $fan_revenue = $fan_ticket_revenue + $stadium_facility_revenue;
+        }
+
+        $total_reward = $budget_reward + $goal_bonus + $home_bonus + $fan_revenue;
 
         // Update user budget
         $stmt = $db->prepare('UPDATE users SET budget = budget + :reward WHERE id = :user_id');
