@@ -303,59 +303,84 @@ function loadPlayersFromJson()
         return $cachedPlayers;
     }
 
-    $jsonFile = __DIR__ . '/../assets/json/players.json';
-
-    if (!file_exists($jsonFile)) {
-        error_log("Dream Team: players.json file not found at: " . $jsonFile);
-        $cachedPlayers = [];
-        return $cachedPlayers;
-    }
-
-    $jsonContent = file_get_contents($jsonFile);
-    if ($jsonContent === false) {
-        error_log("Dream Team: Failed to read players.json file");
-        $cachedPlayers = [];
-        return $cachedPlayers;
-    }
-
-    $playersData = json_decode($jsonContent, true);
-
-    if (json_last_error() !== JSON_ERROR_NONE) {
-        error_log("Dream Team: Invalid JSON in players.json - " . json_last_error_msg());
-        $cachedPlayers = [];
-        return $cachedPlayers;
-    }
-
-    if (!is_array($playersData)) {
-        error_log("Dream Team: players.json must contain an array of players");
-        $cachedPlayers = [];
-        return $cachedPlayers;
-    }
-
-    // Convert JSON objects to the expected array format
+    $jsonDir = __DIR__ . '/../assets/json/';
     $players = [];
-    foreach ($playersData as $index => $player) {
-        // Validate required fields
-        if (!isset($player['name']) || !isset($player['position']) || !isset($player['rating']) || !isset($player['value']) || !isset($player['uuid'])) {
-            error_log("Dream Team: Invalid player data at index $index - missing required fields (name, position, rating, value, uuid)");
+
+    // Get all JSON files in the assets/json directory
+    $jsonFiles = glob($jsonDir . '*.json');
+
+    if (empty($jsonFiles)) {
+        error_log("Dream Team: No JSON files found in assets/json directory");
+        $cachedPlayers = [];
+        return $cachedPlayers;
+    }
+
+    foreach ($jsonFiles as $jsonFile) {
+        $filename = basename($jsonFile);
+
+        if (!file_exists($jsonFile)) {
+            error_log("Dream Team: JSON file not found: " . $filename);
             continue;
         }
 
-        $players[] = [
-            'uuid' => $player['uuid'] ?? null,
-            'name' => (string) $player['name'],
-            'position' => (string) $player['position'],
-            'rating' => (int) $player['rating'],
-            'value' => (int) $player['value'],
-            'height' => $player['height'] ?? 'Unknown',
-            'weight' => $player['weight'] ?? 'Unknown',
-            'foot' => $player['foot'] ?? 'Right',
-            'playablePositions' => $player['playablePositions'] ?? [$player['position']],
-            'club' => $player['club'] ?? 'Free Agent',
-            'description' => $player['description'] ?? 'Professional football player.'
-        ];
+        $jsonContent = file_get_contents($jsonFile);
+        if ($jsonContent === false) {
+            error_log("Dream Team: Failed to read JSON file: " . $filename);
+            continue;
+        }
+
+        $playersData = json_decode($jsonContent, true);
+
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            error_log("Dream Team: Invalid JSON in " . $filename . " - " . json_last_error_msg());
+            continue;
+        }
+
+        if (!is_array($playersData)) {
+            error_log("Dream Team: " . $filename . " must contain an array of players");
+            continue;
+        }
+
+        // Convert JSON objects to the expected array format
+        foreach ($playersData as $index => $player) {
+            // Validate required fields
+            if (!isset($player['name']) || !isset($player['position']) || !isset($player['rating']) || !isset($player['value']) || !isset($player['uuid'])) {
+                error_log("Dream Team: Invalid player data in " . $filename . " at index $index - missing required fields (name, position, rating, value, uuid)");
+                continue;
+            }
+
+            // Determine player category based on filename
+            $category = 'modern';
+            if (strpos($filename, 'legend') !== false) {
+                $category = 'legend';
+            } elseif (strpos($filename, 'young') !== false) {
+                $category = 'young';
+            } elseif (strpos($filename, 'standard') !== false) {
+                $category = 'standard';
+            }
+
+            $players[] = [
+                'uuid' => $player['uuid'] ?? null,
+                'name' => (string) $player['name'],
+                'position' => (string) $player['position'],
+                'rating' => (int) $player['rating'],
+                'value' => (int) $player['value'],
+                'age' => $player['age'] ?? null,
+                'height' => $player['height'] ?? 'Unknown',
+                'weight' => $player['weight'] ?? 'Unknown',
+                'foot' => $player['foot'] ?? 'Right',
+                'playablePositions' => $player['playablePositions'] ?? [$player['position']],
+                'club' => $player['club'] ?? 'Free Agent',
+                'description' => $player['description'] ?? 'Professional football player.',
+                'category' => $category,
+                'source_file' => $filename
+            ];
+        }
+
+        error_log("Dream Team: Loaded " . count($playersData) . " players from " . $filename);
     }
 
+    error_log("Dream Team: Total players loaded: " . count($players));
     $cachedPlayers = $players;
     return $cachedPlayers;
 }

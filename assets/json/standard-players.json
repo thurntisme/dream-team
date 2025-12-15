@@ -1,0 +1,402 @@
+[
+    {
+        "name": "James Wilson",
+        "position": "GK",
+        "rating": 68,
+        "value": 3000000,
+        "age": 28,
+        "uuid": "std01-a1b2-c3d4-e5f6-g7h8i9j0k1l2"
+    },
+    {
+        "name": "Carlos Mendez",
+        "position": "GK",
+        "rating": 71,
+        "value": 4500000,
+        "age": 25,
+        "uuid": "std02-b2c3-d4e5-f6g7-h8i9j0k1l2m3"
+    },
+    {
+        "name": "Ahmed Al-Rashid",
+        "position": "CB",
+        "rating": 73,
+        "value": 6000000,
+        "age": 27,
+        "uuid": "std03-c3d4-e5f6-g7h8-i9j0k1l2m3n4"
+    },
+    {
+        "name": "Pierre Dubois",
+        "position": "CB",
+        "rating": 69,
+        "value": 4000000,
+        "age": 31,
+        "uuid": "std04-d4e5-f6g7-h8i9-j0k1l2m3n4o5"
+    },
+    {
+        "name": "Viktor Petrov",
+        "position": "CB",
+        "rating": 72,
+        "value": 5500000,
+        "age": 26,
+        "uuid": "std05-e5f6-g7h8-i9j0-k1l2m3n4o5p6"
+    },
+    {
+        "name": "Takeshi Yamada",
+        "position": "CB",
+        "rating": 70,
+        "value": 4800000,
+        "age": 29,
+        "uuid": "std06-f6g7-h8i9-j0k1-l2m3n4o5p6q7"
+    },
+    {
+        "name": "Marco Silva",
+        "position": "LB",
+        "rating": 74,
+        "value": 7000000,
+        "age": 24,
+        "uuid": "std07-g7h8-i9j0-k1l2-m3n4o5p6q7r8"
+    },
+    {
+        "name": "Sean O'Brien",
+        "position": "LB",
+        "rating": 67,
+        "value": 3500000,
+        "age": 32,
+        "uuid": "std08-h8i9-j0k1-l2m3-n4o5p6q7r8s9"
+    },
+    {
+        "name": "Lars Andersen",
+        "position": "LB",
+        "rating": 71,
+        "value": 5000000,
+        "age": 26,
+        "uuid": "std09-i9j0-k1l2-m3n4-o5p6q7r8s9t0"
+    },
+    {
+        "name": "Roberto Gonzalez",
+        "position": "RB",
+        "rating": 75,
+        "value": 8000000,
+        "age": 23,
+        "uuid": "std10-j0k1-l2m3-n4o5-p6q7r8s9t0u1"
+    },
+    {
+        "name": "Kwame Asante",
+        "position": "RB",
+        "rating": 68,
+        "value": 3800000,
+        "age": 30,
+        "uuid": "std11-k1l2-m3n4-o5p6-q7r8s9t0u1v2"
+    },
+    {
+        "name": "Dimitri Volkov",
+        "position": "RB",
+        "rating": 72,
+        "value": 5800000,
+        "age": 25,
+        "uuid": "std12-l2m3-n4o5-p6q7-r8s9t0u1v2w3"
+    },
+    {
+        "name": "Michael Thompson",
+        "position": "CDM",
+        "rating": 76,
+        "value": 9000000,
+        "age": 27,
+        "uuid": "std13-m3n4-o5p6-q7r8-s9t0u1v2w3x4"
+    },
+    {
+        "name": "Jean-Baptiste Moreau",
+        "position": "CDM",
+        "rating": 70,
+        "value": 4700000,
+        "age": 29,
+        "uuid": "std14-n4o5-p6q7-r8s9-t0u1v2w3x4y5"
+    },
+    {
+        "name": "Hiroshi Tanaka",
+        "position": "CDM",
+        "rating": 73,
+        "value": 6200000,
+        "age": 26,
+        "uuid": "std15-o5p6-q7r8-s9t0-u1v2w3x4y5z6"
+    },
+    {
+        "name": "Antonio Rossi",
+        "position": "CM",
+        "rating": 74,
+        "value": 7200000,
+        "age": 28,
+        "uuid": "std16-p6q7-r8s9-t0u1-v2w3x4y5z6a7"
+    },
+    {
+        "name": "Erik Johansson",
+        "position": "CM",
+        "rating": 69,
+        "value": 4200000,
+        "age": 31,
+        "uuid": "std17-q7r8-s9t0-u1v2-w3x4y5z6a7b8"
+    },
+    {
+        "name": "Mateo Rodriguez",
+        "position": "CM",
+        "rating": 72,
+        "value": 5600000,
+        "age": 25,
+        "uuid": "std18-r8s9-t0u1-v2w3-x4y5z6a7b8c9"
+    },
+    {
+        "name": "Pavel Novak",
+        "position": "CM",
+        "rating": 71,
+        "value": 5200000,
+        "age": 27,
+        "uuid": "std19-s9t0-u1v2-w3x4-y5z6a7b8c9d0"
+    },
+    {
+        "name": "Yuki Nakamura",
+        "position": "CAM",
+        "rating": 75,
+        "value": 8500000,
+        "age": 24,
+        "uuid": "std20-t0u1-v2w3-x4y5-z6a7b8c9d0e1"
+    },
+    {
+        "name": "Gabriel Santos",
+        "position": "CAM",
+        "rating": 68,
+        "value": 3900000,
+        "age": 30,
+        "uuid": "std21-u1v2-w3x4-y5z6-a7b8c9d0e1f2"
+    },
+    {
+        "name": "Oliver Schmidt",
+        "position": "CAM",
+        "rating": 73,
+        "value": 6500000,
+        "age": 26,
+        "uuid": "std22-v2w3-x4y5-z6a7-b8c9d0e1f2g3"
+    },
+    {
+        "name": "Liam Murphy",
+        "position": "CAM",
+        "rating": 70,
+        "value": 4900000,
+        "age": 28,
+        "uuid": "std23-w3x4-y5z6-a7b8-c9d0e1f2g3h4"
+    },
+    {
+        "name": "Aleksandr Petrov",
+        "position": "LM",
+        "rating": 72,
+        "value": 5700000,
+        "age": 25,
+        "uuid": "std24-x4y5-z6a7-b8c9-d0e1f2g3h4i5"
+    },
+    {
+        "name": "Diego Fernandez",
+        "position": "RM",
+        "rating": 74,
+        "value": 7100000,
+        "age": 27,
+        "uuid": "std25-y5z6-a7b8-c9d0-e1f2g3h4i5j6"
+    },
+    {
+        "name": "Connor Williams",
+        "position": "LW",
+        "rating": 76,
+        "value": 9500000,
+        "age": 23,
+        "uuid": "std26-z6a7-b8c9-d0e1-f2g3h4i5j6k7"
+    },
+    {
+        "name": "Fabio Costa",
+        "position": "LW",
+        "rating": 69,
+        "value": 4300000,
+        "age": 29,
+        "uuid": "std27-a7b8-c9d0-e1f2-g3h4i5j6k7l8"
+    },
+    {
+        "name": "Kai Nielsen",
+        "position": "LW",
+        "rating": 71,
+        "value": 5300000,
+        "age": 26,
+        "uuid": "std28-b8c9-d0e1-f2g3-h4i5j6k7l8m9"
+    },
+    {
+        "name": "Jamal Hassan",
+        "position": "RW",
+        "rating": 75,
+        "value": 8200000,
+        "age": 24,
+        "uuid": "std29-c9d0-e1f2-g3h4-i5j6k7l8m9n0"
+    },
+    {
+        "name": "Andre Moreau",
+        "position": "RW",
+        "rating": 67,
+        "value": 3600000,
+        "age": 32,
+        "uuid": "std30-d0e1-f2g3-h4i5-j6k7l8m9n0o1"
+    },
+    {
+        "name": "Tomasz Kowalski",
+        "position": "RW",
+        "rating": 73,
+        "value": 6300000,
+        "age": 25,
+        "uuid": "std31-e1f2-g3h4-i5j6-k7l8m9n0o1p2"
+    },
+    {
+        "name": "Ryan Mitchell",
+        "position": "CF",
+        "rating": 74,
+        "value": 7400000,
+        "age": 27,
+        "uuid": "std32-f2g3-h4i5-j6k7-l8m9n0o1p2q3"
+    },
+    {
+        "name": "Lorenzo Bianchi",
+        "position": "CF",
+        "rating": 70,
+        "value": 5000000,
+        "age": 28,
+        "uuid": "std33-g3h4-i5j6-k7l8-m9n0o1p2q3r4"
+    },
+    {
+        "name": "Finn Larsen",
+        "position": "ST",
+        "rating": 76,
+        "value": 10000000,
+        "age": 22,
+        "uuid": "std34-h4i5-j6k7-l8m9-n0o1p2q3r4s5"
+    },
+    {
+        "name": "Miguel Torres",
+        "position": "ST",
+        "rating": 68,
+        "value": 4000000,
+        "age": 30,
+        "uuid": "std35-i5j6-k7l8-m9n0-o1p2q3r4s5t6"
+    },
+    {
+        "name": "Kenji Sato",
+        "position": "ST",
+        "rating": 72,
+        "value": 5900000,
+        "age": 26,
+        "uuid": "std36-j6k7-l8m9-n0o1-p2q3r4s5t6u7"
+    },
+    {
+        "name": "Noah Anderson",
+        "position": "ST",
+        "rating": 71,
+        "value": 5400000,
+        "age": 25,
+        "uuid": "std37-k7l8-m9n0-o1p2-q3r4s5t6u7v8"
+    },
+    {
+        "name": "Emilio Gutierrez",
+        "position": "ST",
+        "rating": 74,
+        "value": 7600000,
+        "age": 24,
+        "uuid": "std38-l8m9-n0o1-p2q3-r4s5t6u7v8w9"
+    },
+    {
+        "name": "Patrik Svoboda",
+        "position": "ST",
+        "rating": 69,
+        "value": 4400000,
+        "age": 29,
+        "uuid": "std39-m9n0-o1p2-q3r4-s5t6u7v8w9x0"
+    },
+    {
+        "name": "Thiago Oliveira",
+        "position": "GK",
+        "rating": 70,
+        "value": 4600000,
+        "age": 27,
+        "uuid": "std40-n0o1-p2q3-r4s5-t6u7v8w9x0y1"
+    },
+    {
+        "name": "Mason Taylor",
+        "position": "CB",
+        "rating": 68,
+        "value": 3700000,
+        "age": 31,
+        "uuid": "std41-o1p2-q3r4-s5t6-u7v8w9x0y1z2"
+    },
+    {
+        "name": "Ravi Sharma",
+        "position": "LB",
+        "rating": 73,
+        "value": 6100000,
+        "age": 25,
+        "uuid": "std42-p2q3-r4s5-t6u7-v8w9x0y1z2a3"
+    },
+    {
+        "name": "Felix Wagner",
+        "position": "RB",
+        "rating": 70,
+        "value": 4800000,
+        "age": 28,
+        "uuid": "std43-q3r4-s5t6-u7v8-w9x0y1z2a3b4"
+    },
+    {
+        "name": "Ismail Benali",
+        "position": "CDM",
+        "rating": 71,
+        "value": 5100000,
+        "age": 26,
+        "uuid": "std44-r4s5-t6u7-v8w9-x0y1z2a3b4c5"
+    },
+    {
+        "name": "Ethan Davis",
+        "position": "CM",
+        "rating": 75,
+        "value": 8300000,
+        "age": 24,
+        "uuid": "std45-s5t6-u7v8-w9x0-y1z2a3b4c5d6"
+    },
+    {
+        "name": "Luca Romano",
+        "position": "CAM",
+        "rating": 72,
+        "value": 5800000,
+        "age": 27,
+        "uuid": "std46-t6u7-v8w9-x0y1-z2a3b4c5d6e7"
+    },
+    {
+        "name": "Axel Lindqvist",
+        "position": "LW",
+        "rating": 68,
+        "value": 3800000,
+        "age": 30,
+        "uuid": "std47-u7v8-w9x0-y1z2-a3b4c5d6e7f8"
+    },
+    {
+        "name": "Davi Pereira",
+        "position": "RW",
+        "rating": 74,
+        "value": 7000000,
+        "age": 23,
+        "uuid": "std48-v8w9-x0y1-z2a3-b4c5d6e7f8g9"
+    },
+    {
+        "name": "Leon Schneider",
+        "position": "CF",
+        "rating": 71,
+        "value": 5500000,
+        "age": 26,
+        "uuid": "std49-w9x0-y1z2-a3b4-c5d6e7f8g9h0"
+    },
+    {
+        "name": "Jayden Brown",
+        "position": "ST",
+        "rating": 73,
+        "value": 6400000,
+        "age": 25,
+        "uuid": "std50-x0y1-z2a3-b4c5-d6e7f8g9h0i1"
+    }
+]

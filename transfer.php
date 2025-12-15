@@ -193,6 +193,26 @@ startContent();
                 <i data-lucide="wallet" class="w-4 h-4"></i>
                 <span>Your Budget: <?php echo formatMarketValue($user_data['budget']); ?></span>
             </div>
+
+            <!-- Player Summary -->
+            <div class="mt-4 flex flex-wrap justify-center gap-4 text-sm">
+                <div class="flex items-center gap-2 bg-blue-50 text-blue-700 px-4 py-2 rounded-lg">
+                    <i data-lucide="users" class="w-4 h-4"></i>
+                    <span id="currentPlayersCount">0 Modern Players</span>
+                </div>
+                <div class="flex items-center gap-2 bg-yellow-50 text-yellow-700 px-4 py-2 rounded-lg">
+                    <i data-lucide="crown" class="w-4 h-4"></i>
+                    <span id="legendPlayersCount">0 Legends</span>
+                </div>
+                <div class="flex items-center gap-2 bg-green-50 text-green-700 px-4 py-2 rounded-lg">
+                    <i data-lucide="trending-up" class="w-4 h-4"></i>
+                    <span id="youngPlayersCount">0 Young Talents</span>
+                </div>
+                <div class="flex items-center gap-2 bg-gray-50 text-gray-700 px-4 py-2 rounded-lg">
+                    <i data-lucide="user-check" class="w-4 h-4"></i>
+                    <span id="standardPlayersCount">0 Standard Players</span>
+                </div>
+            </div>
         </div>
 
         <!-- Tab Navigation -->
@@ -216,7 +236,15 @@ startContent();
                     <input type="text" id="playerSearch" placeholder="Search players..."
                         class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                 </div>
-                <div class="flex gap-2">
+                <div class="flex gap-2 flex-wrap">
+                    <select id="categoryFilter"
+                        class="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">All Categories</option>
+                        <option value="modern">Modern Players</option>
+                        <option value="legend">Legends</option>
+                        <option value="young">Young Talents</option>
+                        <option value="standard">Standard Players</option>
+                    </select>
                     <select id="positionFilter"
                         class="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                         <option value="">All Positions</option>
@@ -254,7 +282,10 @@ startContent();
                                     Player</th>
                                 <th
                                     class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Salary</th>
+                                    Category</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Age</th>
                                 <th
                                     class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     Position</th>
@@ -313,8 +344,7 @@ startContent();
                         <i data-lucide="users" class="w-16 h-16 text-gray-400 mx-auto mb-4"></i>
                         <h3 class="text-lg font-medium text-gray-900 mb-2">No Players in Inventory</h3>
                         <p class="text-gray-600">Purchase players from the transfer market to manage them here.</p>
-                    </div>
-                <?php else: ?>
+                    </div> <?php else: ?>
                     <?php foreach ($player_inventory as $inventory_item): ?>
                         <?php $player = $inventory_item['player_data']; ?>
                         <div class="bg-blue-50 rounded-lg p-4 border border-blue-200">
@@ -326,10 +356,12 @@ startContent();
                                     <div>
                                         <h4 class="font-semibold text-gray-900"><?php echo htmlspecialchars($player['name']); ?>
                                         </h4>
-                                        <p class="text-sm text-gray-600">
+                                        <p class=" text-sm text-gray-600">
                                             <?php echo htmlspecialchars($player['position']); ?> •
-                                            Rating: <?php echo $player['rating'] ?? 'N/A'; ?> •
-                                            Value: <?php echo formatMarketValue($player['value'] ?? 0); ?>
+                                            Rating:
+                                            <?php echo $player['rating'] ?? 'N/A'; ?> •
+                                            Value:
+                                            <?php echo formatMarketValue($player['value'] ?? 0); ?>
                                         </p>
                                         <p class="text-xs text-gray-500 mt-1">
                                             Purchased:
@@ -338,7 +370,7 @@ startContent();
                                         </p>
                                     </div>
                                 </div>
-                                <div class="flex items-center gap-2">
+                                <div class=" flex items-center gap-2">
                                     <button onclick="showPlayerInfo(<?php echo htmlspecialchars(json_encode($player)); ?>)"
                                         class="p-2 text-blue-600 hover:bg-blue-100 rounded transition-colors"
                                         title="Player Info">
@@ -396,6 +428,26 @@ startContent();
     let currentPage = 1;
     const playersPerPage = 10;
 
+    // Update player category counts
+    function updatePlayerCounts() {
+        const counts = {
+            modern: 0,
+            legend: 0,
+            young: 0,
+            standard: 0
+        };
+
+        availablePlayers.forEach(item => {
+            const category = item.player.category || 'modern';
+            counts[category]++;
+        });
+
+        document.getElementById('currentPlayersCount').textContent = `${counts.modern} Modern Players`;
+        document.getElementById('legendPlayersCount').textContent = `${counts.legend} Legends`;
+        document.getElementById('youngPlayersCount').textContent = `${counts.young} Young Talents`;
+        document.getElementById('standardPlayersCount').textContent = `${counts.standard} Standard Players`;
+    }
+
     // Tab switching
     function switchTab(tabName) {
         // Hide all tab contents
@@ -429,6 +481,7 @@ startContent();
     // Filter and search functionality
     function filterPlayers() {
         const search = document.getElementById('playerSearch').value.toLowerCase();
+        const category = document.getElementById('categoryFilter').value;
         const position = document.getElementById('positionFilter').value;
         const priceRange = document.getElementById('priceFilter').value;
 
@@ -441,6 +494,9 @@ startContent();
                 item.club_name.toLowerCase().includes(search) ||
                 item.owner_name.toLowerCase().includes(search);
 
+            // Category filter
+            const matchesCategory = !category || player.category === category;
+
             // Position filter
             const matchesPosition = !position || player.position === position;
 
@@ -452,7 +508,7 @@ startContent();
                 matchesPrice = playerValue >= min && playerValue <= max;
             }
 
-            return matchesSearch && matchesPosition && matchesPrice;
+            return matchesSearch && matchesCategory && matchesPosition && matchesPrice;
         });
 
         currentPage = 1; // Reset to first page when filtering
@@ -487,6 +543,24 @@ startContent();
             const player = item.player;
             const canAfford = userBudget >= (player.value || 0);
 
+            // Get category display info
+            const getCategoryInfo = (category) => {
+                switch (category) {
+                    case 'legend':
+                        return { text: 'Legend', class: 'bg-yellow-100 text-yellow-800' };
+                    case 'young':
+                        return { text: 'Young', class: 'bg-green-100 text-green-800' };
+                    case 'modern':
+                        return { text: 'Modern', class: 'bg-blue-100 text-blue-800' };
+                    case 'standard':
+                        return { text: 'Standard', class: 'bg-gray-100 text-gray-800' };
+                    default:
+                        return { text: 'Modern', class: 'bg-blue-100 text-blue-800' };
+                }
+            };
+
+            const categoryInfo = getCategoryInfo(player.category);
+
             return `
                 <tr class="hover:bg-gray-50">
                     <td class="px-6 py-4 whitespace-nowrap">
@@ -503,11 +577,15 @@ startContent();
                         </div>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="text-sm font-medium text-gray-900">${formatMarketValue(calculateSalary(player))}</div>
-                        <div class="text-sm text-gray-500">per week</div>
+                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ${categoryInfo.class}">
+                            ${categoryInfo.text}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        ${player.age ? player.age + ' years' : 'Unknown'}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
-                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
                             ${player.position || 'N/A'}
                         </span>
                     </td>
@@ -1098,6 +1176,7 @@ startContent();
 
     // Event listeners for filters
     document.getElementById('playerSearch').addEventListener('input', filterPlayers);
+    document.getElementById('categoryFilter').addEventListener('change', filterPlayers);
     document.getElementById('positionFilter').addEventListener('change', filterPlayers);
     document.getElementById('priceFilter').addEventListener('change', filterPlayers);
 
@@ -1107,6 +1186,7 @@ startContent();
 
     // Initialize
     document.addEventListener('DOMContentLoaded', function () {
+        updatePlayerCounts();
         renderPlayers();
         lucide.createIcons();
     });
@@ -1124,8 +1204,10 @@ startContent();
     .player-in fo-header {
         background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
     }
-</style>
-<?php
-// End content capture and render layout
-endContent('Transfer Market - Dream Team', 'transfer');
-?>
+
+    
+ 
+ </style> <?php
+ // End content capture and render layout
+ endContent('Transfer Market - Dream Team', 'transfer');
+ ?>
