@@ -1036,5 +1036,5 @@ startContent();
 
 <?php
 // End content capture and render layout
-endContent($app_name . ' - Installation', '', false);
+endContent($app_name . ' - Installation', '', false, true);
 ?>

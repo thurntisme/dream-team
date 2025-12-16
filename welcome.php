@@ -7,11 +7,7 @@ require_once 'partials/layout.php';
 require_once 'includes/ads.php';
 require_once 'includes/routing.php';
 
-// Check if database is available, redirect to install if not
-if (!isDatabaseAvailable()) {
-    header('Location: /install');
-    exit;
-}
+
 
 // Validate session but allow access to welcome page
 validateSession('welcome');

@@ -2,7 +2,7 @@
 // Dream Team Layout Template
 // Provides consistent navigation and footer across all pages
 
-function renderLayout($title, $content, $currentPage = '', $showAuth = true)
+function renderLayout($title, $content, $currentPage = '', $showAuth = true, $skipDbCheck = false)
 {
     // Ensure constants and helpers are available
     require_once __DIR__ . '/../config/constants.php';
@@ -10,6 +10,12 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true)
     require_once __DIR__ . '/../includes/routing.php';
     require_once __DIR__ . '/nav.php';
     require_once __DIR__ . '/footer.php';
+
+    // Check if database is available, redirect to install if not (unless explicitly skipped)
+    if (!$skipDbCheck && !isDatabaseAvailable()) {
+        header('Location: install.php');
+        exit;
+    }
 
     $isLoggedIn = isset($_SESSION['user_id']);
     $clubName = $_SESSION['club_name'] ?? '';
@@ -318,9 +324,9 @@ function startContent()
 }
 
 // Helper function to end content capture and render layout
-function endContent($title, $currentPage = '', $showAuth = true)
+function endContent($title, $currentPage = '', $showAuth = true, $skipDbCheck = false)
 {
     $content = ob_get_clean();
-    echo renderLayout($title, $content, $currentPage, $showAuth);
+    echo renderLayout($title, $content, $currentPage, $showAuth, $skipDbCheck);
 }
 ?>

@@ -4,12 +4,6 @@ require_once 'config/config.php';
 require_once 'config/constants.php';
 require_once 'partials/layout.php';
 
-// Check if database is available, redirect to install if not
-if (!isDatabaseAvailable()) {
-    header('Location: install.php');
-    exit;
-}
-
 // Require user to be logged in
 if (!isset($_SESSION['user_id'])) {
     header('Location: auth.php');

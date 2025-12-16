@@ -11,11 +11,7 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
-// Check if database is available
-if (!isDatabaseAvailable()) {
-    header('Location: install.php');
-    exit;
-}
+
 
 $db = getDbConnection();
 $userId = $_SESSION['user_id'];

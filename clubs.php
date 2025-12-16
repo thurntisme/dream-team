@@ -6,12 +6,6 @@ require_once 'config/constants.php';
 require_once 'partials/layout.php';
 require_once 'components/field-component.php';
 
-// Check if database is available, redirect to install if not
-if (!isDatabaseAvailable()) {
-    header('Location: install.php');
-    exit;
-}
-
 // Require user to be logged in and have a club name
 requireClubName('clubs');
 

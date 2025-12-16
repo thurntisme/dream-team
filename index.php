@@ -6,11 +6,7 @@ require_once 'partials/layout.php';
 require_once 'partials/meta.php';
 require_once 'partials/analytics.php';
 
-// Check if database is available, redirect to install if not
-if (!isDatabaseAvailable()) {
-    header('Location: install.php');
-    exit;
-}
+
 
 // If user is already logged in, redirect to welcome page
 if (isset($_SESSION['user_id'])) {
