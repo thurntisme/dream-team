@@ -14,11 +14,14 @@ if (isset($_SESSION['user_id'])) {
     exit;
 }
 
-// If user came from landing page or has landing_visited cookie, show login/register
-// Otherwise redirect to landing page for better SEO and user experience
+// If user came from landing page, set the landing_visited cookie
+if (isset($_GET['from_landing'])) {
+    // Set cookie to remember they've clicked Play from landing page
+    setcookie('landing_visited', '1', time() + 86400 * 7, '/'); // 7 days
+}
+
+// If user hasn't visited landing page and didn't come from landing, redirect to landing page
 if (!isset($_GET['from_landing']) && !isset($_COOKIE['landing_visited'])) {
-    // Set cookie to remember they've seen the landing page
-    setcookie('landing_visited', '1', time() + (86400 * 30), '/'); // 30 days
     header('Location: landing.php');
     exit;
 }
