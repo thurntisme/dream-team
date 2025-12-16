@@ -414,16 +414,7 @@ startContent();
     </div>
 </div>
 
-<style>
-    .swal-wide {
-        width: 600px !important;
-    }
-
-    .swal-wide .swal2-html-container {
-        max-height: 400px;
-        overflow-y: auto;
-    }
-</style>
+<link rel="stylesheet" href="assets/css/swal-custom.css">
 
 <script>
     lucide.createIcons();

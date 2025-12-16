@@ -1,0 +1,103 @@
+/* League Page Styles */
+.tab-btn.active {
+    border-color: #3b82f6 !important;
+    color: #2563eb !important;
+}
+
+.tab-btn {
+    border-color: transparent;
+    color: #6b7280;
+}
+
+.tab-btn:hover {
+    color: #2563eb;
+}
+
+.match-result-card {
+    transition: all 0.2s ease;
+}
+
+.match-result-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.score-display {
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    border: 2px solid #cbd5e1;
+}
+
+.user-match-highlight {
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+    border: 2px solid #3b82f6;
+}
+
+/* Post-Match Player Selection Animations */
+.mystery-box {
+    transition: all 0.3s ease;
+}
+
+.mystery-box:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.mystery-content,
+.revealed-content {
+    transition: all 0.3s ease;
+}
+
+.selected-player {
+    animation: selectedGlow 2s ease-in-out infinite alternate;
+}
+
+@keyframes selectedGlow {
+    0% {
+        box-shadow: 0 0 5px rgba(59, 130, 246, 0.5);
+    }
+    100% {
+        box-shadow: 0 0 20px rgba(59, 130, 246, 0.8);
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-fade-in {
+    animation: fadeIn 0.5s ease-out;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+}
+
+.animate-pulse {
+    animation: pulse 1s ease-in-out infinite;
+}
+
+/* Reveal animation effects */
+.mystery-icon {
+    animation: mysteryFloat 2s ease-in-out infinite;
+}
+
+@keyframes mysteryFloat {
+    0%, 100% {
+        transform: translateY(0px);
+    }
+    50% {
+        transform: translateY(-5px);
+    }
+}

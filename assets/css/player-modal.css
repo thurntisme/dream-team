@@ -1,0 +1,17 @@
+/* Player Modal Styles - Shared across multiple pages */
+#playerInfoModal .max-w-2xl {
+    max-width: 48rem;
+}
+
+.player-info-stat-bar {
+    transition: width 0.3s ease;
+}
+
+.player-info-header {
+    background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
+}
+
+.player-info-flag {
+    object-fit: cover;
+    border-radius: 2px;
+}

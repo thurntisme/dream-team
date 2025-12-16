@@ -194,37 +194,7 @@ startContent();
     <?php endif; ?>
 
     <!-- Tab Navigation -->
-    <style>
-        .tab-button {
-            transition: all 0.2s ease-in-out;
-        }
-
-        .tab-button:hover {
-            border-color: #d1d5db !important;
-            color: #374151 !important;
-        }
-
-        .tab-content {
-            animation: fadeIn 0.3s ease-in-out;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .tab-button.active {
-            border-color: #3b82f6 !important;
-            color: #2563eb !important;
-        }
-    </style>
+    <link rel="stylesheet" href="assets/css/academy.css">
 
     <div class="bg-white rounded-lg shadow-sm border border-gray-200 mb-8">
         <div class="border-b border-gray-200">

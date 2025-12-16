@@ -1185,22 +1185,7 @@ startContent();
     });
 </script>
 
-<style>
-    #playerInfoModal .max-w-2xl {
-        max-width: 48rem;
-    }
-
-    .player-info-stat-bar {
-        transition: width 0.3s ease;
-    }
-
-    .player-in fo-header {
-        background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
-    }
-
-    
- 
- </style> <?php
+<link rel="stylesheet" href="assets/css/player-modal.css"> <?php
  // End content capture and render layout
  endContent('Transfer Market - Dream Team', 'transfer', true, false, true);
  ?>

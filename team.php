@@ -3863,28 +3863,8 @@ startContent();
 
 </script>
 
-<style>
-    .swal-wide {
-        width: 600px !important;
-    }
-
-    #playerInfoModal .max-w-2xl {
-        max-width: 48rem;
-    }
-
-    .player-info-stat-bar {
-        transition: width 0.3s ease;
-    }
-
-    .pla yer-info-flag {
-        object-fit: cover;
-        border-radius: 2px;
-    }
-
-    .pla yer-info-header {
-        background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
-    }
-</style>
+<link rel="stylesheet" href="assets/css/swal-custom.css">
+<link rel="stylesheet" href="assets/css/player-modal.css">
 <?php
 // End content capture and render layout
 endContent($_SESSION['club_name'], 'team', true, false, true);

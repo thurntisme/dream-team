@@ -1,0 +1,9 @@
+/* SweetAlert2 Custom Styles */
+.swal-wide {
+    width: 600px !important;
+}
+
+.swal-wide .swal2-html-container {
+    max-height: 400px;
+    overflow-y: auto;
+}
