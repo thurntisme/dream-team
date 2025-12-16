@@ -6,8 +6,7 @@ require_once 'config/constants.php';
 require_once 'partials/layout.php';
 require_once 'components/field-component.php';
 
-// Require user to be logged in and have a club name
-requireClubName('clubs');
+
 
 try {
     $db = getDbConnection();
@@ -1036,5 +1035,5 @@ startContent();
 
 <?php
 // End content capture and render layout
-endContent('Other Clubs', 'clubs');
+endContent('Other Clubs', 'clubs', true, false, true);
 ?>

@@ -5,8 +5,7 @@ require_once 'config/config.php';
 require_once 'config/constants.php';
 require_once 'partials/layout.php';
 
-// Require user to be logged in and have a club name
-requireClubName('staff');
+
 
 try {
     $db = getDbConnection();
@@ -1233,5 +1232,5 @@ startContent();
 
 <?php
 // End content capture and render layout
-endContent('Club Staff - ' . APP_NAME);
+endContent('Club Staff - ' . APP_NAME, 'staff', true, false, true);
 ?>

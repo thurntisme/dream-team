@@ -5,8 +5,7 @@ require_once 'config/config.php';
 require_once 'config/constants.php';
 require_once 'partials/layout.php';
 
-// Require user to be logged in and have a club name
-requireClubName('match-simulator');
+
 
 // Get opponent ID from URL
 $opponent_id = $_GET['opponent'] ?? null;
@@ -1714,5 +1713,5 @@ startContent();
 
 <?php
 // End content capture and render layout
-endContent('Live Match Simulation', 'match');
+endContent('Live Match Simulation', 'match', true, false, true);
 ?>

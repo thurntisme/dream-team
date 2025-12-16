@@ -5,8 +5,7 @@ require_once 'config/config.php';
 require_once 'config/constants.php';
 require_once 'partials/layout.php';
 
-// Require user to be logged in and have a club name
-requireClubName('transfer');
+
 
 try {
     $db = getDbConnection();
@@ -1203,5 +1202,5 @@ startContent();
  
  </style> <?php
  // End content capture and render layout
- endContent('Transfer Market - Dream Team', 'transfer');
+ endContent('Transfer Market - Dream Team', 'transfer', true, false, true);
  ?>

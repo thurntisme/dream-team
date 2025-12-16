@@ -4,8 +4,7 @@ require_once 'config/config.php';
 require_once 'config/constants.php';
 require_once 'partials/layout.php';
 
-// Require user to be logged in and have a club name
-requireClubName('league');
+
 
 require_once 'includes/league_functions.php';
 
@@ -1287,5 +1286,5 @@ startContent();
 </script>
 
 <?php
-endContent('League - Dream Team', 'league');
+endContent('League - Dream Team', 'league', true, false, true);
 ?>
