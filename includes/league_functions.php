@@ -1069,6 +1069,20 @@ function updatePlayerConditions($db, $user_id, $wins, $draws, $losses, $goals_fo
         // Store nation call notification in session for display
         $_SESSION['nation_call_notification'] = $nationCallResult;
     }
+
+    // Update player statistics
+    $matchResult = 'draw'; // Default
+    if ($wins > 0) {
+        $matchResult = 'win';
+    } elseif ($losses > 0) {
+        $matchResult = 'loss';
+    }
+
+    // Update statistics for main team players (they played the match)
+    if (is_array($team) && !empty($team)) {
+        $playingPlayers = array_filter($team);
+        updatePlayerStatistics($db, $user_id, $playingPlayers, $matchResult, $goals_for, $goals_against);
+    }
 }
 /**
  * Generate 3 random players (young or standard) for post-match selection
@@ -1161,4 +1175,188 @@ function selectPostMatchPlayer($db, $user_id, $selected_index)
         error_log("Post-match player selection error: " . $e->getMessage());
         return ['success' => false, 'message' => 'Failed to add player to squad'];
     }
+}
+
+/**
+ * Get top scorers across all teams in the league
+ */
+function getTopScorers($db, $season, $limit = 3)
+{
+    $sql = 'SELECT 
+        ps.player_name,
+        ps.goals,
+        ps.user_id,
+        u.club_name
+    FROM player_stats ps
+    JOIN users u ON ps.user_id = u.id
+    JOIN league_teams lt ON u.id = lt.user_id AND lt.season = :season
+    WHERE ps.goals > 0
+    ORDER BY ps.goals DESC, ps.assists DESC, ps.player_name ASC
+    LIMIT :limit';
+
+    $stmt = $db->prepare($sql);
+    $stmt->bindValue(':season', $season, SQLITE3_INTEGER);
+    $stmt->bindValue(':limit', $limit, SQLITE3_INTEGER);
+    $result = $stmt->execute();
+
+    $scorers = [];
+    while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+        $scorers[] = $row;
+    }
+
+    return $scorers;
+}
+
+/**
+ * Get top assist providers across all teams in the league
+ */
+function getTopAssists($db, $season, $limit = 3)
+{
+    $sql = 'SELECT 
+        ps.player_name,
+        ps.assists,
+        ps.user_id,
+        u.club_name
+    FROM player_stats ps
+    JOIN users u ON ps.user_id = u.id
+    JOIN league_teams lt ON u.id = lt.user_id AND lt.season = :season
+    WHERE ps.assists > 0
+    ORDER BY ps.assists DESC, ps.goals DESC, ps.player_name ASC
+    LIMIT :limit';
+
+    $stmt = $db->prepare($sql);
+    $stmt->bindValue(':season', $season, SQLITE3_INTEGER);
+    $stmt->bindValue(':limit', $limit, SQLITE3_INTEGER);
+    $result = $stmt->execute();
+
+    $assisters = [];
+    while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+        $assisters[] = $row;
+    }
+
+    return $assisters;
+}
+
+/**
+ * Get top rated players across all teams in the league
+ */
+function getTopRatedPlayers($db, $season, $limit = 3)
+{
+    $sql = 'SELECT 
+        ps.player_name,
+        ps.position,
+        ps.matches_played,
+        ps.user_id,
+        CASE WHEN ps.matches_played > 0 THEN ROUND(CAST(ps.total_rating AS REAL) / ps.matches_played, 1) ELSE 0 END as avg_rating,
+        u.club_name
+    FROM player_stats ps
+    JOIN users u ON ps.user_id = u.id
+    JOIN league_teams lt ON u.id = lt.user_id AND lt.season = :season
+    WHERE ps.matches_played >= 3
+    ORDER BY avg_rating DESC, ps.matches_played DESC, ps.player_name ASC
+    LIMIT :limit';
+
+    $stmt = $db->prepare($sql);
+    $stmt->bindValue(':season', $season, SQLITE3_INTEGER);
+    $stmt->bindValue(':limit', $limit, SQLITE3_INTEGER);
+    $result = $stmt->execute();
+
+    $players = [];
+    while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+        $players[] = $row;
+    }
+
+    return $players;
+}
+
+/**
+ * Get players with most yellow cards
+ */
+function getMostYellowCards($db, $season, $limit = 3)
+{
+    $sql = 'SELECT 
+        ps.player_name,
+        ps.yellow_cards,
+        ps.user_id,
+        u.club_name
+    FROM player_stats ps
+    JOIN users u ON ps.user_id = u.id
+    JOIN league_teams lt ON u.id = lt.user_id AND lt.season = :season
+    WHERE ps.yellow_cards > 0
+    ORDER BY ps.yellow_cards DESC, ps.red_cards DESC, ps.player_name ASC
+    LIMIT :limit';
+
+    $stmt = $db->prepare($sql);
+    $stmt->bindValue(':season', $season, SQLITE3_INTEGER);
+    $stmt->bindValue(':limit', $limit, SQLITE3_INTEGER);
+    $result = $stmt->execute();
+
+    $players = [];
+    while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+        $players[] = $row;
+    }
+
+    return $players;
+}
+
+/**
+ * Get players with most red cards
+ */
+function getMostRedCards($db, $season, $limit = 3)
+{
+    $sql = 'SELECT 
+        ps.player_name,
+        ps.red_cards,
+        ps.user_id,
+        u.club_name
+    FROM player_stats ps
+    JOIN users u ON ps.user_id = u.id
+    JOIN league_teams lt ON u.id = lt.user_id AND lt.season = :season
+    WHERE ps.red_cards > 0
+    ORDER BY ps.red_cards DESC, ps.yellow_cards DESC, ps.player_name ASC
+    LIMIT :limit';
+
+    $stmt = $db->prepare($sql);
+    $stmt->bindValue(':season', $season, SQLITE3_INTEGER);
+    $stmt->bindValue(':limit', $limit, SQLITE3_INTEGER);
+    $result = $stmt->execute();
+
+    $players = [];
+    while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+        $players[] = $row;
+    }
+
+    return $players;
+}
+
+/**
+ * Get top goalkeepers based on clean sheets and saves
+ */
+function getTopGoalkeepers($db, $season, $limit = 3)
+{
+    $sql = 'SELECT 
+        ps.player_name,
+        ps.clean_sheets,
+        ps.saves,
+        ps.matches_played,
+        ps.user_id,
+        u.club_name
+    FROM player_stats ps
+    JOIN users u ON ps.user_id = u.id
+    JOIN league_teams lt ON u.id = lt.user_id AND lt.season = :season
+    WHERE ps.position = "GK" AND ps.matches_played > 0
+    ORDER BY ps.clean_sheets DESC, ps.saves DESC, ps.matches_played DESC, ps.player_name ASC
+    LIMIT :limit';
+
+    $stmt = $db->prepare($sql);
+    $stmt->bindValue(':season', $season, SQLITE3_INTEGER);
+    $stmt->bindValue(':limit', $limit, SQLITE3_INTEGER);
+    $result = $stmt->execute();
+
+    $goalkeepers = [];
+    while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+        $goalkeepers[] = $row;
+    }
+
+    return $goalkeepers;
 }

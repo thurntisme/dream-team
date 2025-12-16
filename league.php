@@ -86,6 +86,14 @@ try {
     // Get current validation status for display
     $current_validation = validateClubForLeague($user);
 
+    // Get league statistics
+    $top_scorers = getTopScorers($db, $current_season, 3);
+    $top_assists = getTopAssists($db, $current_season, 3);
+    $top_rated = getTopRatedPlayers($db, $current_season, 3);
+    $most_yellow_cards = getMostYellowCards($db, $current_season, 3);
+    $most_red_cards = getMostRedCards($db, $current_season, 3);
+    $top_goalkeepers = getTopGoalkeepers($db, $current_season, 3);
+
     // Calculate nation call availability
     $matchesPlayed = $user['matches_played'] ?? 0;
     $matchesUntilNext = 8 - ($matchesPlayed % 8);
@@ -507,6 +515,10 @@ startContent();
                 <i data-lucide="bar-chart-3" class="w-4 h-4 inline mr-1"></i>
                 Standings
             </button>
+            <button class="tab-btn py-2 px-1 border-b-2 font-medium text-sm" data-tab="stats">
+                <i data-lucide="award" class="w-4 h-4 inline mr-1"></i>
+                Stats
+            </button>
             <button class="tab-btn py-2 px-1 border-b-2 font-medium text-sm" data-tab="calendar">
                 <i data-lucide="calendar" class="w-4 h-4 inline mr-1"></i>
                 Calendar
@@ -616,6 +628,316 @@ startContent();
             <div class="flex items-center gap-1">
                 <div class="w-3 h-3 bg-red-600 rounded"></div>
                 <span>Relegation</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Tab -->
+    <div id="stats-tab" class="tab-content hidden">
+        <div class="grid gap-6">
+            <!-- Top Scorers -->
+            <div class="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
+                <div class="bg-gradient-to-r from-green-500 to-green-600 text-white p-4">
+                    <div class="flex items-center gap-3">
+                        <i data-lucide="target" class="w-6 h-6"></i>
+                        <h3 class="text-lg font-bold">Top Scorers</h3>
+                    </div>
+                </div>
+                <div class="p-4">
+                    <?php if (!empty($top_scorers)): ?>
+                        <div class="space-y-3">
+                            <?php foreach ($top_scorers as $index => $scorer): ?>
+                                <?php $isUserPlayer = ($scorer['user_id'] == $user_id); ?>
+                                <div
+                                    class="flex items-center justify-between p-3 rounded-lg <?php echo $isUserPlayer ? 'bg-blue-50 border-2 border-blue-200' : 'bg-gray-50'; ?>">
+                                    <div class="flex items-center gap-3">
+                                        <div
+                                            class="w-8 h-8 <?php echo $isUserPlayer ? 'bg-blue-600' : 'bg-green-600'; ?> rounded-full flex items-center justify-center text-white font-bold text-sm">
+                                            <?php echo $index + 1; ?>
+                                        </div>
+                                        <div>
+                                            <div class="font-medium flex items-center gap-2">
+                                                <?php echo htmlspecialchars($scorer['player_name']); ?>
+                                                <?php if ($isUserPlayer): ?>
+                                                    <span class="px-2 py-1 bg-blue-600 text-white text-xs rounded-full">YOUR
+                                                        PLAYER</span>
+                                                <?php endif; ?>
+                                            </div>
+                                            <div
+                                                class="text-sm <?php echo $isUserPlayer ? 'text-blue-700' : 'text-gray-600'; ?>">
+                                                <?php echo htmlspecialchars($scorer['club_name']); ?></div>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <div
+                                            class="text-2xl font-bold <?php echo $isUserPlayer ? 'text-blue-600' : 'text-green-600'; ?>">
+                                            <?php echo $scorer['goals']; ?></div>
+                                        <div class="text-xs text-gray-500">goals</div>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php else: ?>
+                        <div class="text-center py-8">
+                            <i data-lucide="target" class="w-12 h-12 text-gray-400 mx-auto mb-4"></i>
+                            <p class="text-gray-600">No goals scored yet this season</p>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+
+            <!-- Top Assists -->
+            <div class="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
+                <div class="bg-gradient-to-r from-purple-500 to-purple-600 text-white p-4">
+                    <div class="flex items-center gap-3">
+                        <i data-lucide="users" class="w-6 h-6"></i>
+                        <h3 class="text-lg font-bold">Top Assists</h3>
+                    </div>
+                </div>
+                <div class="p-4">
+                    <?php if (!empty($top_assists)): ?>
+                        <div class="space-y-3">
+                            <?php foreach ($top_assists as $index => $assister): ?>
+                                <?php $isUserPlayer = ($assister['user_id'] == $user_id); ?>
+                                <div class="flex items-center justify-between p-3 rounded-lg <?php echo $isUserPlayer ? 'bg-blue-50 border-2 border-blue-200' : 'bg-gray-50'; ?>">
+                                    <div class="flex items-center gap-3">
+                                        <div
+                                            class="w-8 h-8 <?php echo $isUserPlayer ? 'bg-blue-600' : 'bg-purple-600'; ?> rounded-full flex items-center justify-center text-white font-bold text-sm">
+                                            <?php echo $index + 1; ?>
+                                        </div>
+                                        <div>
+                                            <div class="font-medium flex items-center gap-2">
+                                                <?php echo htmlspecialchars($assister['player_name']); ?>
+                                                <?php if ($isUserPlayer): ?>
+                                                    <span class="px-2 py-1 bg-blue-600 text-white text-xs rounded-full">YOUR PLAYER</span>
+                                                <?php endif; ?>
+                                            </div>
+                                            <div class="text-sm <?php echo $isUserPlayer ? 'text-blue-700' : 'text-gray-600'; ?>">
+                                                <?php echo htmlspecialchars($assister['club_name']); ?></div>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="text-2xl font-bold <?php echo $isUserPlayer ? 'text-blue-600' : 'text-purple-600'; ?>"><?php echo $assister['assists']; ?>
+                                        </div>
+                                        <div class="text-xs text-gray-500">assists</div>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php else: ?>
+                        <div class="text-center py-8">
+                            <i data-lucide="users" class="w-12 h-12 text-gray-400 mx-auto mb-4"></i>
+                            <p class="text-gray-600">No assists recorded yet this season</p>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+
+            <!-- Top Rated Players -->
+            <div class="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
+                <div class="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-4">
+                    <div class="flex items-center gap-3">
+                        <i data-lucide="star" class="w-6 h-6"></i>
+                        <h3 class="text-lg font-bold">Top Rated Players</h3>
+                    </div>
+                </div>
+                <div class="p-4">
+                    <?php if (!empty($top_rated)): ?>
+                        <div class="space-y-3">
+                            <?php foreach ($top_rated as $index => $player): ?>
+                                <?php $isUserPlayer = ($player['user_id'] == $user_id); ?>
+                                <div class="flex items-center justify-between p-3 rounded-lg <?php echo $isUserPlayer ? 'bg-blue-50 border-2 border-blue-200' : 'bg-gray-50'; ?>">
+                                    <div class="flex items-center gap-3">
+                                        <div
+                                            class="w-8 h-8 <?php echo $isUserPlayer ? 'bg-blue-600' : 'bg-blue-600'; ?> rounded-full flex items-center justify-center text-white font-bold text-sm">
+                                            <?php echo $index + 1; ?>
+                                        </div>
+                                        <div>
+                                            <div class="font-medium flex items-center gap-2">
+                                                <?php echo htmlspecialchars($player['player_name']); ?>
+                                                <?php if ($isUserPlayer): ?>
+                                                    <span class="px-2 py-1 bg-blue-600 text-white text-xs rounded-full">YOUR PLAYER</span>
+                                                <?php endif; ?>
+                                            </div>
+                                            <div class="text-sm <?php echo $isUserPlayer ? 'text-blue-700' : 'text-gray-600'; ?>">
+                                                <?php echo htmlspecialchars($player['club_name']); ?> •
+                                                <?php echo htmlspecialchars($player['position']); ?>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="text-2xl font-bold text-blue-600">
+                                            <?php echo number_format($player['avg_rating'], 1); ?></div>
+                                        <div class="text-xs text-gray-500"><?php echo $player['matches_played']; ?> matches
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php else: ?>
+                        <div class="text-center py-8">
+                            <i data-lucide="star" class="w-12 h-12 text-gray-400 mx-auto mb-4"></i>
+                            <p class="text-gray-600">No player ratings available yet</p>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+
+            <!-- Most Disciplined/Undisciplined -->
+            <div class="grid md:grid-cols-2 gap-6">
+                <!-- Most Yellow Cards -->
+                <div class="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
+                    <div class="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white p-4">
+                        <div class="flex items-center gap-3">
+                            <i data-lucide="square" class="w-6 h-6"></i>
+                            <h3 class="text-lg font-bold">Most Yellow Cards</h3>
+                        </div>
+                    </div>
+                    <div class="p-4">
+                        <?php if (!empty($most_yellow_cards)): ?>
+                            <div class="space-y-3">
+                                <?php foreach ($most_yellow_cards as $index => $player): ?>
+                                    <?php $isUserPlayer = ($player['user_id'] == $user_id); ?>
+                                    <div class="flex items-center justify-between p-2 rounded <?php echo $isUserPlayer ? 'bg-blue-50 border-2 border-blue-200' : 'bg-gray-50'; ?>">
+                                        <div class="flex items-center gap-2">
+                                            <div
+                                                class="w-6 h-6 <?php echo $isUserPlayer ? 'bg-blue-600' : 'bg-yellow-600'; ?> rounded-full flex items-center justify-center text-white font-bold text-xs">
+                                                <?php echo $index + 1; ?>
+                                            </div>
+                                            <div>
+                                                <div class="font-medium text-sm flex items-center gap-2">
+                                                    <?php echo htmlspecialchars($player['player_name']); ?>
+                                                    <?php if ($isUserPlayer): ?>
+                                                        <span class="px-1 py-0.5 bg-blue-600 text-white text-xs rounded">YOUR PLAYER</span>
+                                                    <?php endif; ?>
+                                                </div>
+                                                <div class="text-xs <?php echo $isUserPlayer ? 'text-blue-700' : 'text-gray-600'; ?>">
+                                                    <?php echo htmlspecialchars($player['club_name']); ?></div>
+                                            </div>
+                                        </div>
+                                        <div class="<?php echo $isUserPlayer ? 'text-blue-600' : 'text-yellow-600'; ?> font-bold"><?php echo $player['yellow_cards']; ?></div>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php else: ?>
+                            <div class="text-center py-4">
+                                <p class="text-gray-600 text-sm">No yellow cards yet</p>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+                <!-- Most Red Cards -->
+                <div class="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
+                    <div class="bg-gradient-to-r from-red-500 to-red-600 text-white p-4">
+                        <div class="flex items-center gap-3">
+                            <i data-lucide="square" class="w-6 h-6"></i>
+                            <h3 class="text-lg font-bold">Most Red Cards</h3>
+                        </div>
+                    </div>
+                    <div class="p-4">
+                        <?php if (!empty($most_red_cards)): ?>
+                            <div class="space-y-3">
+                                <?php foreach ($most_red_cards as $index => $player): ?>
+                                    <?php $isUserPlayer = ($player['user_id'] == $user_id); ?>
+                                    <div class="flex items-center justify-between p-2 rounded <?php echo $isUserPlayer ? 'bg-blue-50 border-2 border-blue-200' : 'bg-gray-50'; ?>">
+                                        <div class="flex items-center gap-2">
+                                            <div
+                                                class="w-6 h-6 <?php echo $isUserPlayer ? 'bg-blue-600' : 'bg-red-600'; ?> rounded-full flex items-center justify-center text-white font-bold text-xs">
+                                                <?php echo $index + 1; ?>
+                                            </div>
+                                            <div>
+                                                <div class="font-medium text-sm flex items-center gap-2">
+                                                    <?php echo htmlspecialchars($player['player_name']); ?>
+                                                    <?php if ($isUserPlayer): ?>
+                                                        <span class="px-1 py-0.5 bg-blue-600 text-white text-xs rounded">YOUR PLAYER</span>
+                                                    <?php endif; ?>
+                                                </div>
+                                                <div class="text-xs <?php echo $isUserPlayer ? 'text-blue-700' : 'text-gray-600'; ?>">
+                                                    <?php echo htmlspecialchars($player['club_name']); ?></div>
+                                            </div>
+                                        </div>
+                                        <div class="<?php echo $isUserPlayer ? 'text-blue-600' : 'text-red-600'; ?> font-bold"><?php echo $player['red_cards']; ?></div>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php else: ?>
+                            <div class="text-center py-4">
+                                <p class="text-gray-600 text-sm">No red cards yet</p>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Goalkeeper Stats -->
+            <div class="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
+                <div class="bg-gradient-to-r from-cyan-500 to-cyan-600 text-white p-4">
+                    <div class="flex items-center gap-3">
+                        <i data-lucide="shield" class="w-6 h-6"></i>
+                        <h3 class="text-lg font-bold">Top Goalkeepers</h3>
+                    </div>
+                </div>
+                <div class="p-4">
+                    <?php if (!empty($top_goalkeepers)): ?>
+                        <div class="space-y-3">
+                            <?php foreach ($top_goalkeepers as $index => $gk): ?>
+                                <?php $isUserPlayer = ($gk['user_id'] == $user_id); ?>
+                                <div class="flex items-center justify-between p-3 rounded-lg <?php echo $isUserPlayer ? 'bg-blue-50 border-2 border-blue-200' : 'bg-gray-50'; ?>">
+                                    <div class="flex items-center gap-3">
+                                        <div
+                                            class="w-8 h-8 <?php echo $isUserPlayer ? 'bg-blue-600' : 'bg-cyan-600'; ?> rounded-full flex items-center justify-center text-white font-bold text-sm">
+                                            <?php echo $index + 1; ?>
+                                        </div>
+                                        <div>
+                                            <div class="font-medium flex items-center gap-2">
+                                                <?php echo htmlspecialchars($gk['player_name']); ?>
+                                                <?php if ($isUserPlayer): ?>
+                                                    <span class="px-2 py-1 bg-blue-600 text-white text-xs rounded-full">YOUR PLAYER</span>
+                                                <?php endif; ?>
+                                            </div>
+                                            <div class="text-sm <?php echo $isUserPlayer ? 'text-blue-700' : 'text-gray-600'; ?>"><?php echo htmlspecialchars($gk['club_name']); ?>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="flex gap-4">
+                                            <div class="text-center">
+                                                <div class="text-lg font-bold <?php echo $isUserPlayer ? 'text-blue-600' : 'text-cyan-600'; ?>"><?php echo $gk['clean_sheets']; ?>
+                                                </div>
+                                                <div class="text-xs text-gray-500">clean sheets</div>
+                                            </div>
+                                            <div class="text-center">
+                                                <div class="text-lg font-bold text-blue-600"><?php echo $gk['saves']; ?></div>
+                                                <div class="text-xs text-gray-500">saves</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php else: ?>
+                        <div class="text-center py-8">
+                            <i data-lucide="shield" class="w-12 h-12 text-gray-400 mx-auto mb-4"></i>
+                            <p class="text-gray-600">No goalkeeper stats available yet</p>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats Legend -->
+        <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div class="flex items-center gap-3 mb-2">
+                <i data-lucide="info" class="w-5 h-5 text-blue-600"></i>
+                <h4 class="font-semibold text-blue-900">Stats Legend</h4>
+            </div>
+            <div class="text-sm text-blue-800">
+                <div class="flex items-center gap-2 mb-1">
+                    <div class="w-4 h-4 bg-blue-50 border-2 border-blue-200 rounded"></div>
+                    <span>Players highlighted in blue belong to your club</span>
+                </div>
+                <p class="text-blue-700">Statistics are updated after each match and show league-wide performance across all teams.</p>
             </div>
         </div>
     </div>
