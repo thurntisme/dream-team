@@ -273,18 +273,7 @@ startContent();
     </div>
 </div>
 
-<script>
-    $('#clubForm').submit(function (e) {
-        e.preventDefault();
-        $.post('api/save_club_api.php', $(this).serialize(), function (response) {
-            if (response.redirect) {
-                window.location.href = response.redirect;
-            } else if (response.success) {
-                window.location.href = '/team';
-            }
-        }, 'json');
-    });
-</script>
+<script src="assets/js/welcome.js"></script>
 
 <!-- Floating ad for free users -->
 <?php if (shouldShowAds($_SESSION['user_id'])): ?>

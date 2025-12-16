@@ -245,18 +245,7 @@ startContent();
     <?php endif; ?>
 </div>
 
-<script>
-    function toggleAllCheckboxes() {
-        const checkboxes = document.querySelectorAll('input[name="session_items[]"]');
-        const allChecked = Array.from(checkboxes).every(cb => cb.checked);
-        
-        checkboxes.forEach(cb => {
-            cb.checked = !allChecked;
-        });
-    }
-
-    lucide.createIcons();
-</script>
+<script src="assets/js/clear-session.js"></script>
 
 <?php
 endContent('Session Management - Dream Team', 'settings');

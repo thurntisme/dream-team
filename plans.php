@@ -264,10 +264,7 @@ startContent();
     </div>
 </div>
 
-<script>
-    // Initialize Lucide icons
-    lucide.createIcons();
-</script>
+<script src="assets/js/common.js"></script>
 
 <?php
 endContent('Plans & Pricing', 'plans');

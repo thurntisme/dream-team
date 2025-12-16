@@ -156,7 +156,7 @@ function handle404()
         </div>
     </div>
     <script src="https://unpkg.com/lucide@latest"></script>
-    <script>lucide.createIcons();</script>
+    <script src="assets/js/common.js"></script>
 </body>
 </html>';
     }

@@ -284,40 +284,10 @@ startContent();
 </div>
 
 <script>
-    // Initialize Lucide icons
-    lucide.createIcons();
-
-    function showBidModal(playerId, playerName, playerValue, ownerClub) {
-        document.getElementById('bidPlayerId').value = playerId;
-        document.getElementById('bidPlayerName').textContent = playerName;
-        document.getElementById('bidPlayerOwner').textContent = 'Owned by ' + ownerClub;
-        document.getElementById('bidPlayerValue').textContent = '€' + playerValue.toLocaleString();
-        document.getElementById('bidAmount').value = Math.round(playerValue * 1.1); // Suggest 10% above market value
-        document.getElementById('bidModal').classList.remove('hidden');
-    }
-
-    function hideBidModal() {
-        document.getElementById('bidModal').classList.add('hidden');
-    }
-
-    // Close modal when clicking outside
-    document.getElementById('bidModal').addEventListener('click', function (e) {
-        if (e.target === this) {
-            hideBidModal();
-        }
-    });
-
-    // Validate bid amount
-    document.getElementById('bidForm').addEventListener('submit', function (e) {
-        const bidAmount = parseInt(document.getElementById('bidAmount').value);
-        const userBudget = <?php echo $userBudget; ?>;
-
-        if (bidAmount > userBudget) {
-            e.preventDefault();
-            alert('Bid amount exceeds your available budget!');
-        }
-    });
+    // Set user budget for JavaScript
+    userBudget = <?php echo $userBudget; ?>;
 </script>
+<script src="assets/js/young-player-market.js"></script>
 
 <?php
 endContent('Young Player Market', 'young_player_market');

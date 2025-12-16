@@ -192,10 +192,8 @@ startContent();
     </div>
 </div>
 
+<script src="assets/js/common.js"></script>
 <script>
-    // Initialize Lucide icons
-    lucide.createIcons();
-
     // Confetti animation (optional)
     function createConfetti() {
         const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
