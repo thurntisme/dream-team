@@ -71,7 +71,7 @@ try {
     // Handle relegation processing
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['process_relegation'])) {
         $relegation_result = processRelegationPromotion($db, $current_season);
-        
+
         if ($relegation_result['success']) {
             $_SESSION['relegation_result'] = $relegation_result;
             header('Location: league.php?tab=standings&relegation_processed=1');
@@ -527,7 +527,8 @@ startContent();
 
     <!-- Season End / Relegation Notification -->
     <?php if ($season_status['season_complete'] && $season_status['relegation_pending']): ?>
-        <div class="mb-6 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-lg shadow-lg border border-orange-300 overflow-hidden">
+        <div
+            class="mb-6 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-lg shadow-lg border border-orange-300 overflow-hidden">
             <div class="p-6">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-4">
@@ -535,8 +536,10 @@ startContent();
                             <i data-lucide="trophy" class="w-8 h-8"></i>
                         </div>
                         <div>
-                            <h3 class="text-xl font-bold">Season <?php echo $season_status['current_season']; ?> Complete!</h3>
-                            <p class="text-orange-100">All matches have been played. Relegation and promotion must be processed.</p>
+                            <h3 class="text-xl font-bold">Season <?php echo $season_status['current_season']; ?> Complete!
+                            </h3>
+                            <p class="text-orange-100">All matches have been played. Relegation and promotion must be
+                                processed.</p>
                         </div>
                     </div>
                     <form method="POST" class="inline">
@@ -563,7 +566,8 @@ startContent();
     <!-- Relegation Results Notification -->
     <?php if (isset($_GET['relegation_processed']) && isset($_SESSION['relegation_result'])): ?>
         <?php $relegation = $_SESSION['relegation_result']; ?>
-        <div class="mb-6 bg-gradient-to-r from-green-500 to-blue-600 text-white rounded-lg shadow-lg border border-green-300 overflow-hidden">
+        <div
+            class="mb-6 bg-gradient-to-r from-green-500 to-blue-600 text-white rounded-lg shadow-lg border border-green-300 overflow-hidden">
             <div class="p-6">
                 <div class="flex items-center gap-4 mb-4">
                     <div class="w-16 h-16 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
@@ -574,7 +578,7 @@ startContent();
                         <p class="text-green-100">Relegation and promotion have been processed successfully.</p>
                     </div>
                 </div>
-                
+
                 <div class="grid md:grid-cols-2 gap-4">
                     <!-- Relegated Teams -->
                     <div class="bg-white bg-opacity-10 rounded-lg p-4">
@@ -588,7 +592,7 @@ startContent();
                             <?php endforeach; ?>
                         </ul>
                     </div>
-                    
+
                     <!-- Promoted Teams -->
                     <div class="bg-white bg-opacity-10 rounded-lg p-4">
                         <h4 class="font-semibold mb-2 flex items-center gap-2">
@@ -610,7 +614,8 @@ startContent();
                             <span class="font-semibold text-red-100">Your Club Relegated</span>
                         </div>
                         <p class="text-sm text-red-200">
-                            Your club has been relegated to the Championship. Work hard to get promoted back to the Premier League!
+                            Your club has been relegated to the Championship. Work hard to get promoted back to the Premier
+                            League!
                         </p>
                     </div>
                 <?php endif; ?>
@@ -741,7 +746,7 @@ startContent();
                 <span>Relegation (Bottom 3)</span>
             </div>
         </div>
-        
+
         <!-- League Structure Info -->
         <div class="mt-4 bg-gray-50 rounded-lg p-4">
             <h4 class="font-semibold text-gray-900 mb-2 flex items-center gap-2">
@@ -751,7 +756,8 @@ startContent();
             <div class="text-sm text-gray-700 space-y-1">
                 <p><strong>Premier League:</strong> 20 teams compete for the title and European qualification</p>
                 <p><strong>Championship:</strong> 24 teams compete for promotion to the Premier League</p>
-                <p><strong>Relegation/Promotion:</strong> At season end, bottom 3 Premier League teams are relegated and top 3 Championship teams are promoted</p>
+                <p><strong>Relegation/Promotion:</strong> At season end, bottom 3 Premier League teams are relegated and
+                    top 3 Championship teams are promoted</p>
             </div>
         </div>
     </div>
@@ -957,7 +963,8 @@ startContent();
                                         </div>
                                         <div
                                             class="<?php echo $isUserPlayer ? 'text-blue-600' : 'text-yellow-600'; ?> font-bold">
-                                            <?php echo $player['yellow_cards']; ?></div>
+                                            <?php echo $player['yellow_cards']; ?>
+                                        </div>
                                     </div>
                                 <?php endforeach; ?>
                             </div>
@@ -1004,7 +1011,8 @@ startContent();
                                             </div>
                                         </div>
                                         <div class="<?php echo $isUserPlayer ? 'text-blue-600' : 'text-red-600'; ?> font-bold">
-                                            <?php echo $player['red_cards']; ?></div>
+                                            <?php echo $player['red_cards']; ?>
+                                        </div>
                                     </div>
                                 <?php endforeach; ?>
                             </div>
@@ -1471,7 +1479,7 @@ startContent();
         // Process relegation
         document.querySelector('button[name="process_relegation"]')?.addEventListener('click', function (e) {
             e.preventDefault();
-            
+
             Swal.fire({
                 icon: 'warning',
                 title: 'Process Relegation & Promotion?',
@@ -1516,25 +1524,31 @@ startContent();
                         .then(response => response.json())
                         .then(data => {
                             if (data.success) {
-                                // Show success and reload page
-                                Swal.fire({
-                                    icon: 'success',
-                                    title: 'Season Finalized!',
-                                    html: `
-                                        <div class="text-left">
-                                            <p class="mb-3">Season ${data.next_season} is ready!</p>
-                                            ${data.user_relegated ? 
-                                                '<div class="p-3 bg-red-100 rounded-lg mb-3"><p class="text-red-800 font-medium">Your club has been relegated to the Championship.</p></div>' : 
-                                                '<div class="p-3 bg-green-100 rounded-lg mb-3"><p class="text-green-800 font-medium">Your club remains in the Premier League!</p></div>'
-                                            }
-                                        </div>
-                                    `,
-                                    confirmButtonColor: '#10b981',
-                                    confirmButtonText: 'Continue to New Season'
-                                }).then(() => {
-                                    // Reload page to show new season
-                                    window.location.href = 'league.php?tab=standings&relegation_processed=1';
-                                });
+                                // Store season summary in session and redirect to results page
+                                if (data.season_summary) {
+                                    // Store the season summary for the results page
+                                    fetch('api/store_season_summary.php', {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                        },
+                                        body: JSON.stringify(data.season_summary)
+                                    }).then(() => {
+                                        // Redirect to season results page
+                                        window.location.href = 'season_end_results.php';
+                                    });
+                                } else {
+                                    // Fallback to old behavior
+                                    Swal.fire({
+                                        icon: 'success',
+                                        title: 'Season Finalized!',
+                                        text: `Season ${data.next_season} is ready!`,
+                                        confirmButtonColor: '#10b981',
+                                        confirmButtonText: 'Continue to New Season'
+                                    }).then(() => {
+                                        window.location.href = 'league.php?tab=standings&relegation_processed=1';
+                                    });
+                                }
                             } else {
                                 Swal.fire({
                                     icon: 'error',

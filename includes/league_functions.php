@@ -92,13 +92,6 @@ function createLeagueTables($db)
     )';
     $db->exec($sql);
 
-    // Add division column to existing tables if it doesn't exist
-    try {
-        $db->exec('ALTER TABLE league_teams ADD COLUMN division INTEGER DEFAULT 1');
-    } catch (Exception $e) {
-        // Column already exists
-    }
-
     // League matches table
     $sql = 'CREATE TABLE IF NOT EXISTS league_matches (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1467,7 +1460,7 @@ function processRelegationPromotion($db, $season)
 
     // Get final Premier League standings
     $premier_standings = getLeagueStandings($db, $season);
-    
+
     // Get final Championship standings
     $championship_standings = getChampionshipStandings($db, $season);
 
@@ -1477,21 +1470,44 @@ function processRelegationPromotion($db, $season)
 
     // Teams to be relegated (bottom 3 from Premier League)
     $relegated_teams = array_slice($premier_standings, -3);
-    
+
     // Teams to be promoted (top 3 from Championship)
     $promoted_teams = array_slice($championship_standings, 0, 3);
 
+    // Get season end summary and calculate rewards
+    $season_summary = getSeasonEndSummary($db, $season, null); // Get general summary first
+
     // Check if user's team is relegated
     $user_relegated = false;
+    $user_id = null;
     foreach ($relegated_teams as $team) {
         if ($team['is_user']) {
             $user_relegated = true;
+            $user_id = $team['user_id'];
             break;
+        }
+    }
+
+    // If user not relegated, find user in staying teams
+    if (!$user_relegated) {
+        $staying_teams = array_slice($premier_standings, 0, 17);
+        foreach ($staying_teams as $team) {
+            if ($team['is_user']) {
+                $user_id = $team['user_id'];
+                break;
+            }
         }
     }
 
     try {
         $db->exec('BEGIN TRANSACTION');
+
+        // Apply season end rewards to user if found
+        if ($user_id) {
+            $user_season_summary = getSeasonEndSummary($db, $season, $user_id);
+            applySeasonEndRewards($db, $user_id, $user_season_summary['user_rewards']);
+            $season_summary = $user_season_summary; // Use user-specific summary
+        }
 
         // Create teams for next season
         $next_season = $season + 1;
@@ -1585,10 +1601,15 @@ function processRelegationPromotion($db, $season)
         return [
             'success' => true,
             'message' => 'Relegation and promotion processed successfully',
-            'relegated_teams' => array_map(function($team) { return $team['name']; }, $relegated_teams),
-            'promoted_teams' => array_map(function($team) { return $team['name']; }, $promoted_teams),
+            'relegated_teams' => array_map(function ($team) {
+                return $team['name'];
+            }, $relegated_teams),
+            'promoted_teams' => array_map(function ($team) {
+                return $team['name'];
+            }, $promoted_teams),
             'user_relegated' => $user_relegated,
-            'next_season' => $next_season
+            'next_season' => $next_season,
+            'season_summary' => $season_summary
         ];
 
     } catch (Exception $e) {
@@ -1604,7 +1625,7 @@ function processRelegationPromotion($db, $season)
 function checkSeasonEnd($db, $user_id)
 {
     $current_season = getCurrentSeason($db);
-    
+
     // Check if season is complete and relegation hasn't been processed
     if (isSeasonComplete($db, $current_season)) {
         // Check if next season already exists
@@ -1628,4 +1649,142 @@ function checkSeasonEnd($db, $user_id)
         'relegation_pending' => false,
         'current_season' => $current_season
     ];
+}
+/**
+ * Calculate season end rewards based on league position
+ */
+function calculateSeasonEndRewards($position, $division = 1)
+{
+    $rewards = [];
+
+    if ($division == 1) { // Premier League
+        // Base prize money for Premier League participation
+        $base_prize = 50000000; // €50M base
+
+        // Position-based prize money (higher for better positions)
+        $position_prize = (21 - $position) * 2000000; // €2M per position from bottom
+
+        // Special bonuses
+        if ($position == 1) {
+            $rewards[] = ['type' => 'prize', 'description' => 'Premier League Champions', 'amount' => 100000000];
+            $rewards[] = ['type' => 'prize', 'description' => 'Champions League Qualification', 'amount' => 25000000];
+        } elseif ($position <= 4) {
+            $rewards[] = ['type' => 'prize', 'description' => 'Champions League Qualification', 'amount' => 25000000];
+        } elseif ($position <= 6) {
+            $rewards[] = ['type' => 'prize', 'description' => 'Europa League Qualification', 'amount' => 15000000];
+        }
+
+        // Relegation compensation (if relegated)
+        if ($position >= 18) {
+            $rewards[] = ['type' => 'compensation', 'description' => 'Relegation Compensation', 'amount' => 20000000];
+        }
+
+        $rewards[] = ['type' => 'prize', 'description' => 'Premier League Participation', 'amount' => $base_prize];
+        $rewards[] = ['type' => 'prize', 'description' => "Final Position: {$position}th Place", 'amount' => $position_prize];
+
+    } else { // Championship
+        // Championship rewards (smaller amounts)
+        $base_prize = 10000000; // €10M base
+        $position_prize = (25 - $position) * 500000; // €500K per position from bottom
+
+        if ($position == 1) {
+            $rewards[] = ['type' => 'prize', 'description' => 'Championship Winners', 'amount' => 20000000];
+            $rewards[] = ['type' => 'prize', 'description' => 'Premier League Promotion', 'amount' => 30000000];
+        } elseif ($position <= 3) {
+            $rewards[] = ['type' => 'prize', 'description' => 'Premier League Promotion', 'amount' => 30000000];
+        }
+
+        $rewards[] = ['type' => 'prize', 'description' => 'Championship Participation', 'amount' => $base_prize];
+        $rewards[] = ['type' => 'prize', 'description' => "Final Position: {$position}th Place", 'amount' => $position_prize];
+    }
+
+    return $rewards;
+}
+
+/**
+ * Get season end summary with final standings and rewards
+ */
+function getSeasonEndSummary($db, $season, $user_id)
+{
+    // Get final Premier League standings
+    $premier_standings = getLeagueStandings($db, $season);
+
+    // Get final Championship standings  
+    $championship_standings = getChampionshipStandings($db, $season);
+
+    // Find user's position and division
+    $user_position = null;
+    $user_division = null;
+    $user_team_data = null;
+
+    // Check Premier League first
+    foreach ($premier_standings as $index => $team) {
+        if ($team['user_id'] == $user_id) {
+            $user_position = $index + 1;
+            $user_division = 1;
+            $user_team_data = $team;
+            break;
+        }
+    }
+
+    // If not found in Premier League, check Championship
+    if ($user_position === null) {
+        foreach ($championship_standings as $index => $team) {
+            if ($team['user_id'] == $user_id) {
+                $user_position = $index + 1;
+                $user_division = 2;
+                $user_team_data = $team;
+                break;
+            }
+        }
+    }
+
+    // Calculate user's rewards
+    $user_rewards = [];
+    $total_reward = 0;
+
+    if ($user_position !== null) {
+        $user_rewards = calculateSeasonEndRewards($user_position, $user_division);
+        $total_reward = array_sum(array_column($user_rewards, 'amount'));
+    }
+
+    // Get season statistics
+    $season_stats = [
+        'top_scorer' => getTopScorers($db, $season, 1)[0] ?? null,
+        'top_assists' => getTopAssists($db, $season, 1)[0] ?? null,
+        'best_player' => getTopRatedPlayers($db, $season, 1)[0] ?? null,
+    ];
+
+    return [
+        'season' => $season,
+        'premier_standings' => $premier_standings,
+        'championship_standings' => $championship_standings,
+        'user_position' => $user_position,
+        'user_division' => $user_division,
+        'user_team_data' => $user_team_data,
+        'user_rewards' => $user_rewards,
+        'total_reward' => $total_reward,
+        'season_stats' => $season_stats,
+        'relegated_teams' => array_slice($premier_standings, -3),
+        'promoted_teams' => array_slice($championship_standings, 0, 3)
+    ];
+}
+
+/**
+ * Apply season end rewards to user's budget
+ */
+function applySeasonEndRewards($db, $user_id, $rewards)
+{
+    $total_amount = array_sum(array_column($rewards, 'amount'));
+
+    if ($total_amount > 0) {
+        $stmt = $db->prepare('UPDATE users SET budget = budget + :amount WHERE id = :user_id');
+        $stmt->bindValue(':amount', $total_amount, SQLITE3_INTEGER);
+        $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+        $stmt->execute();
+
+        return true;
+    }
+
+    return false;
 }
