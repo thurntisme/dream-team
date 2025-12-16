@@ -1,7 +1,7 @@
 <?php
 // League system functions
 
-// Fake club names for the league
+// Fake club names for the league (Premier League - 19 teams + user = 20 total)
 define('FAKE_CLUBS', [
     'Thunder Bay United',
     'Golden Eagles FC',
@@ -22,6 +22,34 @@ define('FAKE_CLUBS', [
     'Ice Bears United',
     'Wind Runners FC',
     'Earth Guardians'
+]);
+
+// Additional fake club names for the Championship (Second Division)
+define('CHAMPIONSHIP_CLUBS', [
+    'Titan Rovers',
+    'Mystic United',
+    'Blazing Stars FC',
+    'Ocean Waves',
+    'Mountain Lions',
+    'Desert Eagles',
+    'Forest Rangers FC',
+    'Steel Warriors',
+    'Cosmic Wanderers',
+    'Thunder Wolves',
+    'Glacier FC',
+    'Sunset Strikers',
+    'Neon Knights',
+    'Phantom Raiders',
+    'Solar Flares FC',
+    'Arctic Foxes',
+    'Volcanic United',
+    'Tornado FC',
+    'Lightning Hawks',
+    'Storm Breakers',
+    'Diamond Crusaders',
+    'Emerald City FC',
+    'Ruby Rangers',
+    'Sapphire United'
 ]);
 
 function initializeLeague($db, $user_id)
@@ -45,13 +73,14 @@ function initializeLeague($db, $user_id)
 
 function createLeagueTables($db)
 {
-    // League teams table
+    // League teams table (updated with division support)
     $sql = 'CREATE TABLE IF NOT EXISTS league_teams (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         season INTEGER NOT NULL,
         user_id INTEGER,
         name TEXT NOT NULL,
         is_user BOOLEAN DEFAULT 0,
+        division INTEGER DEFAULT 1,
         matches_played INTEGER DEFAULT 0,
         wins INTEGER DEFAULT 0,
         draws INTEGER DEFAULT 0,
@@ -62,6 +91,13 @@ function createLeagueTables($db)
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )';
     $db->exec($sql);
+
+    // Add division column to existing tables if it doesn't exist
+    try {
+        $db->exec('ALTER TABLE league_teams ADD COLUMN division INTEGER DEFAULT 1');
+    } catch (Exception $e) {
+        // Column already exists
+    }
 
     // League matches table
     $sql = 'CREATE TABLE IF NOT EXISTS league_matches (
@@ -89,16 +125,24 @@ function createLeagueTeams($db, $user_id, $season)
     $result = $stmt->execute();
     $user = $result->fetchArray(SQLITE3_ASSOC);
 
-    // Insert user's team
-    $stmt = $db->prepare('INSERT INTO league_teams (season, user_id, name, is_user) VALUES (:season, :user_id, :name, 1)');
+    // Insert user's team in Premier League (Division 1)
+    $stmt = $db->prepare('INSERT INTO league_teams (season, user_id, name, is_user, division) VALUES (:season, :user_id, :name, 1, 1)');
     $stmt->bindValue(':season', $season, SQLITE3_INTEGER);
     $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
     $stmt->bindValue(':name', $user['club_name'], SQLITE3_TEXT);
     $stmt->execute();
 
-    // Insert fake teams
+    // Insert Premier League fake teams (Division 1) - 19 teams
     foreach (FAKE_CLUBS as $club_name) {
-        $stmt = $db->prepare('INSERT INTO league_teams (season, name, is_user) VALUES (:season, :name, 0)');
+        $stmt = $db->prepare('INSERT INTO league_teams (season, name, is_user, division) VALUES (:season, :name, 0, 1)');
+        $stmt->bindValue(':season', $season, SQLITE3_INTEGER);
+        $stmt->bindValue(':name', $club_name, SQLITE3_TEXT);
+        $stmt->execute();
+    }
+
+    // Insert Championship fake teams (Division 2) - 24 teams
+    foreach (CHAMPIONSHIP_CLUBS as $club_name) {
+        $stmt = $db->prepare('INSERT INTO league_teams (season, name, is_user, division) VALUES (:season, :name, 0, 2)');
         $stmt->bindValue(':season', $season, SQLITE3_INTEGER);
         $stmt->bindValue(':name', $club_name, SQLITE3_TEXT);
         $stmt->execute();
@@ -107,8 +151,8 @@ function createLeagueTeams($db, $user_id, $season)
 
 function generateFixtures($db, $season)
 {
-    // Get all teams for the season
-    $stmt = $db->prepare('SELECT id FROM league_teams WHERE season = :season ORDER BY id');
+    // Get all Premier League teams for the season (Division 1 only)
+    $stmt = $db->prepare('SELECT id FROM league_teams WHERE season = :season AND division = 1 ORDER BY id');
     $stmt->bindValue(':season', $season, SQLITE3_INTEGER);
     $result = $stmt->execute();
 
@@ -212,7 +256,7 @@ function getLeagueStandings($db, $season)
         (lt.wins * 3 + lt.draws) as points,
         (lt.goals_for - lt.goals_against) as goal_difference
     FROM league_teams lt 
-    WHERE lt.season = :season 
+    WHERE lt.season = :season AND lt.division = 1
     ORDER BY points DESC, goal_difference DESC, lt.goals_for DESC, lt.name ASC';
 
     $stmt = $db->prepare($sql);
@@ -1359,4 +1403,229 @@ function getTopGoalkeepers($db, $season, $limit = 3)
     }
 
     return $goalkeepers;
+}
+/**
+ * Check if the season is complete (all matches played)
+ */
+function isSeasonComplete($db, $season)
+{
+    $stmt = $db->prepare('SELECT COUNT(*) as total_matches, 
+                         SUM(CASE WHEN status = "completed" THEN 1 ELSE 0 END) as completed_matches
+                         FROM league_matches 
+                         WHERE season = :season');
+    $stmt->bindValue(':season', $season, SQLITE3_INTEGER);
+    $result = $stmt->execute();
+    $row = $result->fetchArray(SQLITE3_ASSOC);
+
+    return $row['total_matches'] > 0 && $row['total_matches'] == $row['completed_matches'];
+}
+
+/**
+ * Get Championship (Division 2) standings
+ */
+function getChampionshipStandings($db, $season)
+{
+    $sql = 'SELECT 
+        lt.*,
+        (lt.wins * 3 + lt.draws) as points,
+        (lt.goals_for - lt.goals_against) as goal_difference
+    FROM league_teams lt 
+    WHERE lt.season = :season AND lt.division = 2
+    ORDER BY points DESC, goal_difference DESC, lt.goals_for DESC, lt.name ASC';
+
+    $stmt = $db->prepare($sql);
+    $stmt->bindValue(':season', $season, SQLITE3_INTEGER);
+    $result = $stmt->execute();
+
+    $standings = [];
+    while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+        $standings[] = $row;
+    }
+
+    return $standings;
+}
+
+/**
+ * Process relegation and promotion at the end of the season
+ */
+function processRelegationPromotion($db, $season)
+{
+    // Check if season is complete
+    if (!isSeasonComplete($db, $season)) {
+        return ['success' => false, 'message' => 'Season is not yet complete'];
+    }
+
+    // Check if relegation has already been processed for this season
+    $stmt = $db->prepare('SELECT COUNT(*) as count FROM league_teams WHERE season = :next_season');
+    $stmt->bindValue(':next_season', $season + 1, SQLITE3_INTEGER);
+    $result = $stmt->execute();
+    $row = $result->fetchArray(SQLITE3_ASSOC);
+
+    if ($row['count'] > 0) {
+        return ['success' => false, 'message' => 'Relegation already processed for this season'];
+    }
+
+    // Get final Premier League standings
+    $premier_standings = getLeagueStandings($db, $season);
+    
+    // Get final Championship standings
+    $championship_standings = getChampionshipStandings($db, $season);
+
+    if (count($premier_standings) < 20 || count($championship_standings) < 3) {
+        return ['success' => false, 'message' => 'Invalid league structure for relegation'];
+    }
+
+    // Teams to be relegated (bottom 3 from Premier League)
+    $relegated_teams = array_slice($premier_standings, -3);
+    
+    // Teams to be promoted (top 3 from Championship)
+    $promoted_teams = array_slice($championship_standings, 0, 3);
+
+    // Check if user's team is relegated
+    $user_relegated = false;
+    foreach ($relegated_teams as $team) {
+        if ($team['is_user']) {
+            $user_relegated = true;
+            break;
+        }
+    }
+
+    try {
+        $db->exec('BEGIN TRANSACTION');
+
+        // Create teams for next season
+        $next_season = $season + 1;
+
+        // 1. Keep top 17 Premier League teams in Division 1
+        $staying_premier_teams = array_slice($premier_standings, 0, 17);
+        foreach ($staying_premier_teams as $team) {
+            $stmt = $db->prepare('INSERT INTO league_teams (season, user_id, name, is_user, division) VALUES (:season, :user_id, :name, :is_user, 1)');
+            $stmt->bindValue(':season', $next_season, SQLITE3_INTEGER);
+            $stmt->bindValue(':user_id', $team['user_id'], SQLITE3_INTEGER);
+            $stmt->bindValue(':name', $team['name'], SQLITE3_TEXT);
+            $stmt->bindValue(':is_user', $team['is_user'], SQLITE3_INTEGER);
+            $stmt->execute();
+        }
+
+        // 2. Promote top 3 Championship teams to Division 1
+        foreach ($promoted_teams as $team) {
+            $stmt = $db->prepare('INSERT INTO league_teams (season, user_id, name, is_user, division) VALUES (:season, :user_id, :name, :is_user, 1)');
+            $stmt->bindValue(':season', $next_season, SQLITE3_INTEGER);
+            $stmt->bindValue(':user_id', $team['user_id'], SQLITE3_INTEGER);
+            $stmt->bindValue(':name', $team['name'], SQLITE3_TEXT);
+            $stmt->bindValue(':is_user', $team['is_user'], SQLITE3_INTEGER);
+            $stmt->execute();
+        }
+
+        // 3. Handle relegated teams
+        if ($user_relegated) {
+            // If user is relegated, put them in Championship (Division 2)
+            foreach ($relegated_teams as $team) {
+                if ($team['is_user']) {
+                    $stmt = $db->prepare('INSERT INTO league_teams (season, user_id, name, is_user, division) VALUES (:season, :user_id, :name, :is_user, 2)');
+                    $stmt->bindValue(':season', $next_season, SQLITE3_INTEGER);
+                    $stmt->bindValue(':user_id', $team['user_id'], SQLITE3_INTEGER);
+                    $stmt->bindValue(':name', $team['name'], SQLITE3_TEXT);
+                    $stmt->bindValue(':is_user', $team['is_user'], SQLITE3_INTEGER);
+                    $stmt->execute();
+                    break;
+                }
+            }
+
+            // Fill remaining Championship spots with remaining teams and new teams
+            $remaining_championship = array_slice($championship_standings, 3); // Teams 4-24 from Championship
+            foreach ($remaining_championship as $team) {
+                $stmt = $db->prepare('INSERT INTO league_teams (season, user_id, name, is_user, division) VALUES (:season, :user_id, :name, :is_user, 2)');
+                $stmt->bindValue(':season', $next_season, SQLITE3_INTEGER);
+                $stmt->bindValue(':user_id', $team['user_id'], SQLITE3_INTEGER);
+                $stmt->bindValue(':name', $team['name'], SQLITE3_TEXT);
+                $stmt->bindValue(':is_user', $team['is_user'], SQLITE3_INTEGER);
+                $stmt->execute();
+            }
+
+            // Add relegated Premier League teams (non-user) to Championship
+            foreach ($relegated_teams as $team) {
+                if (!$team['is_user']) {
+                    $stmt = $db->prepare('INSERT INTO league_teams (season, user_id, name, is_user, division) VALUES (:season, :user_id, :name, :is_user, 2)');
+                    $stmt->bindValue(':season', $next_season, SQLITE3_INTEGER);
+                    $stmt->bindValue(':user_id', $team['user_id'], SQLITE3_INTEGER);
+                    $stmt->bindValue(':name', $team['name'], SQLITE3_TEXT);
+                    $stmt->bindValue(':is_user', $team['is_user'], SQLITE3_INTEGER);
+                    $stmt->execute();
+                }
+            }
+        } else {
+            // User stays in Premier League, create new Championship with remaining teams
+            $remaining_championship = array_slice($championship_standings, 3); // Teams 4-24 from Championship
+            foreach ($remaining_championship as $team) {
+                $stmt = $db->prepare('INSERT INTO league_teams (season, user_id, name, is_user, division) VALUES (:season, :user_id, :name, :is_user, 2)');
+                $stmt->bindValue(':season', $next_season, SQLITE3_INTEGER);
+                $stmt->bindValue(':user_id', $team['user_id'], SQLITE3_INTEGER);
+                $stmt->bindValue(':name', $team['name'], SQLITE3_TEXT);
+                $stmt->bindValue(':is_user', $team['is_user'], SQLITE3_INTEGER);
+                $stmt->execute();
+            }
+
+            // Add relegated Premier League teams to Championship
+            foreach ($relegated_teams as $team) {
+                $stmt = $db->prepare('INSERT INTO league_teams (season, user_id, name, is_user, division) VALUES (:season, :user_id, :name, :is_user, 2)');
+                $stmt->bindValue(':season', $next_season, SQLITE3_INTEGER);
+                $stmt->bindValue(':user_id', $team['user_id'], SQLITE3_INTEGER);
+                $stmt->bindValue(':name', $team['name'], SQLITE3_TEXT);
+                $stmt->bindValue(':is_user', $team['is_user'], SQLITE3_INTEGER);
+                $stmt->execute();
+            }
+        }
+
+        // Generate fixtures for next season (Premier League only)
+        generateFixtures($db, $next_season);
+
+        $db->exec('COMMIT');
+
+        return [
+            'success' => true,
+            'message' => 'Relegation and promotion processed successfully',
+            'relegated_teams' => array_map(function($team) { return $team['name']; }, $relegated_teams),
+            'promoted_teams' => array_map(function($team) { return $team['name']; }, $promoted_teams),
+            'user_relegated' => $user_relegated,
+            'next_season' => $next_season
+        ];
+
+    } catch (Exception $e) {
+        $db->exec('ROLLBACK');
+        error_log("Relegation processing error: " . $e->getMessage());
+        return ['success' => false, 'message' => 'Failed to process relegation: ' . $e->getMessage()];
+    }
+}
+
+/**
+ * Check if relegation should be processed and show notification
+ */
+function checkSeasonEnd($db, $user_id)
+{
+    $current_season = getCurrentSeason($db);
+    
+    // Check if season is complete and relegation hasn't been processed
+    if (isSeasonComplete($db, $current_season)) {
+        // Check if next season already exists
+        $stmt = $db->prepare('SELECT COUNT(*) as count FROM league_teams WHERE season = :next_season');
+        $stmt->bindValue(':next_season', $current_season + 1, SQLITE3_INTEGER);
+        $result = $stmt->execute();
+        $row = $result->fetchArray(SQLITE3_ASSOC);
+
+        if ($row['count'] == 0) {
+            // Season is complete but relegation not processed
+            return [
+                'season_complete' => true,
+                'relegation_pending' => true,
+                'current_season' => $current_season
+            ];
+        }
+    }
+
+    return [
+        'season_complete' => false,
+        'relegation_pending' => false,
+        'current_season' => $current_season
+    ];
 }

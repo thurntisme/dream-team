@@ -68,6 +68,20 @@ try {
         exit;
     }
 
+    // Handle relegation processing
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['process_relegation'])) {
+        $relegation_result = processRelegationPromotion($db, $current_season);
+        
+        if ($relegation_result['success']) {
+            $_SESSION['relegation_result'] = $relegation_result;
+            header('Location: league.php?tab=standings&relegation_processed=1');
+        } else {
+            $_SESSION['error'] = $relegation_result['message'];
+            header('Location: league.php?tab=standings');
+        }
+        exit;
+    }
+
     // Get league standings
     $standings = getLeagueStandings($db, $current_season);
 
@@ -85,6 +99,9 @@ try {
 
     // Get current validation status for display
     $current_validation = validateClubForLeague($user);
+
+    // Check for season end and relegation
+    $season_status = checkSeasonEnd($db, $user_id);
 
     // Get league statistics
     $top_scorers = getTopScorers($db, $current_season, 3);
@@ -508,6 +525,100 @@ startContent();
         </div>
     <?php endif; ?>
 
+    <!-- Season End / Relegation Notification -->
+    <?php if ($season_status['season_complete'] && $season_status['relegation_pending']): ?>
+        <div class="mb-6 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-lg shadow-lg border border-orange-300 overflow-hidden">
+            <div class="p-6">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-4">
+                        <div class="w-16 h-16 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                            <i data-lucide="trophy" class="w-8 h-8"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold">Season <?php echo $season_status['current_season']; ?> Complete!</h3>
+                            <p class="text-orange-100">All matches have been played. Relegation and promotion must be processed.</p>
+                        </div>
+                    </div>
+                    <form method="POST" class="inline">
+                        <button type="submit" name="process_relegation"
+                            class="bg-white text-orange-600 px-6 py-3 rounded-lg hover:bg-orange-50 font-bold transition-colors flex items-center gap-2">
+                            <i data-lucide="shuffle" class="w-5 h-5"></i>
+                            Process Relegation
+                        </button>
+                    </form>
+                </div>
+                <div class="mt-4 p-4 bg-white bg-opacity-10 rounded-lg">
+                    <h4 class="font-semibold mb-2">What happens next:</h4>
+                    <ul class="text-sm text-orange-100 space-y-1">
+                        <li>• Bottom 3 teams will be relegated to Championship</li>
+                        <li>• Top 3 Championship teams will be promoted to Premier League</li>
+                        <li>• New season fixtures will be generated</li>
+                        <li>• All team statistics will be reset for the new season</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    <?php endif; ?>
+
+    <!-- Relegation Results Notification -->
+    <?php if (isset($_GET['relegation_processed']) && isset($_SESSION['relegation_result'])): ?>
+        <?php $relegation = $_SESSION['relegation_result']; ?>
+        <div class="mb-6 bg-gradient-to-r from-green-500 to-blue-600 text-white rounded-lg shadow-lg border border-green-300 overflow-hidden">
+            <div class="p-6">
+                <div class="flex items-center gap-4 mb-4">
+                    <div class="w-16 h-16 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                        <i data-lucide="shuffle" class="w-8 h-8"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold">Season <?php echo $relegation['next_season']; ?> Ready!</h3>
+                        <p class="text-green-100">Relegation and promotion have been processed successfully.</p>
+                    </div>
+                </div>
+                
+                <div class="grid md:grid-cols-2 gap-4">
+                    <!-- Relegated Teams -->
+                    <div class="bg-white bg-opacity-10 rounded-lg p-4">
+                        <h4 class="font-semibold mb-2 flex items-center gap-2">
+                            <i data-lucide="arrow-down" class="w-4 h-4 text-red-300"></i>
+                            Relegated to Championship
+                        </h4>
+                        <ul class="text-sm space-y-1">
+                            <?php foreach ($relegation['relegated_teams'] as $team): ?>
+                                <li class="text-red-200">• <?php echo htmlspecialchars($team); ?></li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </div>
+                    
+                    <!-- Promoted Teams -->
+                    <div class="bg-white bg-opacity-10 rounded-lg p-4">
+                        <h4 class="font-semibold mb-2 flex items-center gap-2">
+                            <i data-lucide="arrow-up" class="w-4 h-4 text-green-300"></i>
+                            Promoted to Premier League
+                        </h4>
+                        <ul class="text-sm space-y-1">
+                            <?php foreach ($relegation['promoted_teams'] as $team): ?>
+                                <li class="text-green-200">• <?php echo htmlspecialchars($team); ?></li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </div>
+                </div>
+
+                <?php if ($relegation['user_relegated']): ?>
+                    <div class="mt-4 p-4 bg-red-500 bg-opacity-30 rounded-lg border border-red-400">
+                        <div class="flex items-center gap-2 mb-2">
+                            <i data-lucide="alert-triangle" class="w-5 h-5 text-red-200"></i>
+                            <span class="font-semibold text-red-100">Your Club Relegated</span>
+                        </div>
+                        <p class="text-sm text-red-200">
+                            Your club has been relegated to the Championship. Work hard to get promoted back to the Premier League!
+                        </p>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </div>
+        <?php unset($_SESSION['relegation_result']); ?>
+    <?php endif; ?>
+
     <!-- Tabs -->
     <div class="border-b border-gray-200 mb-6">
         <nav class="-mb-px flex space-x-8">
@@ -619,15 +730,28 @@ startContent();
         <div class="mt-4 flex flex-wrap gap-4 text-sm">
             <div class="flex items-center gap-1">
                 <div class="w-3 h-3 bg-green-600 rounded"></div>
-                <span>Champions League</span>
+                <span>Champions League (Top 4)</span>
             </div>
             <div class="flex items-center gap-1">
                 <div class="w-3 h-3 bg-blue-600 rounded"></div>
-                <span>Europa League</span>
+                <span>Europa League (5th-6th)</span>
             </div>
             <div class="flex items-center gap-1">
                 <div class="w-3 h-3 bg-red-600 rounded"></div>
-                <span>Relegation</span>
+                <span>Relegation (Bottom 3)</span>
+            </div>
+        </div>
+        
+        <!-- League Structure Info -->
+        <div class="mt-4 bg-gray-50 rounded-lg p-4">
+            <h4 class="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                <i data-lucide="info" class="w-4 h-4"></i>
+                League Structure
+            </h4>
+            <div class="text-sm text-gray-700 space-y-1">
+                <p><strong>Premier League:</strong> 20 teams compete for the title and European qualification</p>
+                <p><strong>Championship:</strong> 24 teams compete for promotion to the Premier League</p>
+                <p><strong>Relegation/Promotion:</strong> At season end, bottom 3 Premier League teams are relegated and top 3 Championship teams are promoted</p>
             </div>
         </div>
     </div>
@@ -665,13 +789,15 @@ startContent();
                                             </div>
                                             <div
                                                 class="text-sm <?php echo $isUserPlayer ? 'text-blue-700' : 'text-gray-600'; ?>">
-                                                <?php echo htmlspecialchars($scorer['club_name']); ?></div>
+                                                <?php echo htmlspecialchars($scorer['club_name']); ?>
+                                            </div>
                                         </div>
                                     </div>
                                     <div class="text-right">
                                         <div
                                             class="text-2xl font-bold <?php echo $isUserPlayer ? 'text-blue-600' : 'text-green-600'; ?>">
-                                            <?php echo $scorer['goals']; ?></div>
+                                            <?php echo $scorer['goals']; ?>
+                                        </div>
                                         <div class="text-xs text-gray-500">goals</div>
                                     </div>
                                 </div>
@@ -699,7 +825,8 @@ startContent();
                         <div class="space-y-3">
                             <?php foreach ($top_assists as $index => $assister): ?>
                                 <?php $isUserPlayer = ($assister['user_id'] == $user_id); ?>
-                                <div class="flex items-center justify-between p-3 rounded-lg <?php echo $isUserPlayer ? 'bg-blue-50 border-2 border-blue-200' : 'bg-gray-50'; ?>">
+                                <div
+                                    class="flex items-center justify-between p-3 rounded-lg <?php echo $isUserPlayer ? 'bg-blue-50 border-2 border-blue-200' : 'bg-gray-50'; ?>">
                                     <div class="flex items-center gap-3">
                                         <div
                                             class="w-8 h-8 <?php echo $isUserPlayer ? 'bg-blue-600' : 'bg-purple-600'; ?> rounded-full flex items-center justify-center text-white font-bold text-sm">
@@ -709,15 +836,20 @@ startContent();
                                             <div class="font-medium flex items-center gap-2">
                                                 <?php echo htmlspecialchars($assister['player_name']); ?>
                                                 <?php if ($isUserPlayer): ?>
-                                                    <span class="px-2 py-1 bg-blue-600 text-white text-xs rounded-full">YOUR PLAYER</span>
+                                                    <span class="px-2 py-1 bg-blue-600 text-white text-xs rounded-full">YOUR
+                                                        PLAYER</span>
                                                 <?php endif; ?>
                                             </div>
-                                            <div class="text-sm <?php echo $isUserPlayer ? 'text-blue-700' : 'text-gray-600'; ?>">
-                                                <?php echo htmlspecialchars($assister['club_name']); ?></div>
+                                            <div
+                                                class="text-sm <?php echo $isUserPlayer ? 'text-blue-700' : 'text-gray-600'; ?>">
+                                                <?php echo htmlspecialchars($assister['club_name']); ?>
+                                            </div>
                                         </div>
                                     </div>
                                     <div class="text-right">
-                                        <div class="text-2xl font-bold <?php echo $isUserPlayer ? 'text-blue-600' : 'text-purple-600'; ?>"><?php echo $assister['assists']; ?>
+                                        <div
+                                            class="text-2xl font-bold <?php echo $isUserPlayer ? 'text-blue-600' : 'text-purple-600'; ?>">
+                                            <?php echo $assister['assists']; ?>
                                         </div>
                                         <div class="text-xs text-gray-500">assists</div>
                                     </div>
@@ -746,7 +878,8 @@ startContent();
                         <div class="space-y-3">
                             <?php foreach ($top_rated as $index => $player): ?>
                                 <?php $isUserPlayer = ($player['user_id'] == $user_id); ?>
-                                <div class="flex items-center justify-between p-3 rounded-lg <?php echo $isUserPlayer ? 'bg-blue-50 border-2 border-blue-200' : 'bg-gray-50'; ?>">
+                                <div
+                                    class="flex items-center justify-between p-3 rounded-lg <?php echo $isUserPlayer ? 'bg-blue-50 border-2 border-blue-200' : 'bg-gray-50'; ?>">
                                     <div class="flex items-center gap-3">
                                         <div
                                             class="w-8 h-8 <?php echo $isUserPlayer ? 'bg-blue-600' : 'bg-blue-600'; ?> rounded-full flex items-center justify-center text-white font-bold text-sm">
@@ -756,10 +889,12 @@ startContent();
                                             <div class="font-medium flex items-center gap-2">
                                                 <?php echo htmlspecialchars($player['player_name']); ?>
                                                 <?php if ($isUserPlayer): ?>
-                                                    <span class="px-2 py-1 bg-blue-600 text-white text-xs rounded-full">YOUR PLAYER</span>
+                                                    <span class="px-2 py-1 bg-blue-600 text-white text-xs rounded-full">YOUR
+                                                        PLAYER</span>
                                                 <?php endif; ?>
                                             </div>
-                                            <div class="text-sm <?php echo $isUserPlayer ? 'text-blue-700' : 'text-gray-600'; ?>">
+                                            <div
+                                                class="text-sm <?php echo $isUserPlayer ? 'text-blue-700' : 'text-gray-600'; ?>">
                                                 <?php echo htmlspecialchars($player['club_name']); ?> •
                                                 <?php echo htmlspecialchars($player['position']); ?>
                                             </div>
@@ -767,7 +902,8 @@ startContent();
                                     </div>
                                     <div class="text-right">
                                         <div class="text-2xl font-bold text-blue-600">
-                                            <?php echo number_format($player['avg_rating'], 1); ?></div>
+                                            <?php echo number_format($player['avg_rating'], 1); ?>
+                                        </div>
                                         <div class="text-xs text-gray-500"><?php echo $player['matches_played']; ?> matches
                                         </div>
                                     </div>
@@ -798,7 +934,8 @@ startContent();
                             <div class="space-y-3">
                                 <?php foreach ($most_yellow_cards as $index => $player): ?>
                                     <?php $isUserPlayer = ($player['user_id'] == $user_id); ?>
-                                    <div class="flex items-center justify-between p-2 rounded <?php echo $isUserPlayer ? 'bg-blue-50 border-2 border-blue-200' : 'bg-gray-50'; ?>">
+                                    <div
+                                        class="flex items-center justify-between p-2 rounded <?php echo $isUserPlayer ? 'bg-blue-50 border-2 border-blue-200' : 'bg-gray-50'; ?>">
                                         <div class="flex items-center gap-2">
                                             <div
                                                 class="w-6 h-6 <?php echo $isUserPlayer ? 'bg-blue-600' : 'bg-yellow-600'; ?> rounded-full flex items-center justify-center text-white font-bold text-xs">
@@ -808,14 +945,19 @@ startContent();
                                                 <div class="font-medium text-sm flex items-center gap-2">
                                                     <?php echo htmlspecialchars($player['player_name']); ?>
                                                     <?php if ($isUserPlayer): ?>
-                                                        <span class="px-1 py-0.5 bg-blue-600 text-white text-xs rounded">YOUR PLAYER</span>
+                                                        <span class="px-1 py-0.5 bg-blue-600 text-white text-xs rounded">YOUR
+                                                            PLAYER</span>
                                                     <?php endif; ?>
                                                 </div>
-                                                <div class="text-xs <?php echo $isUserPlayer ? 'text-blue-700' : 'text-gray-600'; ?>">
-                                                    <?php echo htmlspecialchars($player['club_name']); ?></div>
+                                                <div
+                                                    class="text-xs <?php echo $isUserPlayer ? 'text-blue-700' : 'text-gray-600'; ?>">
+                                                    <?php echo htmlspecialchars($player['club_name']); ?>
+                                                </div>
                                             </div>
                                         </div>
-                                        <div class="<?php echo $isUserPlayer ? 'text-blue-600' : 'text-yellow-600'; ?> font-bold"><?php echo $player['yellow_cards']; ?></div>
+                                        <div
+                                            class="<?php echo $isUserPlayer ? 'text-blue-600' : 'text-yellow-600'; ?> font-bold">
+                                            <?php echo $player['yellow_cards']; ?></div>
                                     </div>
                                 <?php endforeach; ?>
                             </div>
@@ -840,7 +982,8 @@ startContent();
                             <div class="space-y-3">
                                 <?php foreach ($most_red_cards as $index => $player): ?>
                                     <?php $isUserPlayer = ($player['user_id'] == $user_id); ?>
-                                    <div class="flex items-center justify-between p-2 rounded <?php echo $isUserPlayer ? 'bg-blue-50 border-2 border-blue-200' : 'bg-gray-50'; ?>">
+                                    <div
+                                        class="flex items-center justify-between p-2 rounded <?php echo $isUserPlayer ? 'bg-blue-50 border-2 border-blue-200' : 'bg-gray-50'; ?>">
                                         <div class="flex items-center gap-2">
                                             <div
                                                 class="w-6 h-6 <?php echo $isUserPlayer ? 'bg-blue-600' : 'bg-red-600'; ?> rounded-full flex items-center justify-center text-white font-bold text-xs">
@@ -850,14 +993,18 @@ startContent();
                                                 <div class="font-medium text-sm flex items-center gap-2">
                                                     <?php echo htmlspecialchars($player['player_name']); ?>
                                                     <?php if ($isUserPlayer): ?>
-                                                        <span class="px-1 py-0.5 bg-blue-600 text-white text-xs rounded">YOUR PLAYER</span>
+                                                        <span class="px-1 py-0.5 bg-blue-600 text-white text-xs rounded">YOUR
+                                                            PLAYER</span>
                                                     <?php endif; ?>
                                                 </div>
-                                                <div class="text-xs <?php echo $isUserPlayer ? 'text-blue-700' : 'text-gray-600'; ?>">
-                                                    <?php echo htmlspecialchars($player['club_name']); ?></div>
+                                                <div
+                                                    class="text-xs <?php echo $isUserPlayer ? 'text-blue-700' : 'text-gray-600'; ?>">
+                                                    <?php echo htmlspecialchars($player['club_name']); ?>
+                                                </div>
                                             </div>
                                         </div>
-                                        <div class="<?php echo $isUserPlayer ? 'text-blue-600' : 'text-red-600'; ?> font-bold"><?php echo $player['red_cards']; ?></div>
+                                        <div class="<?php echo $isUserPlayer ? 'text-blue-600' : 'text-red-600'; ?> font-bold">
+                                            <?php echo $player['red_cards']; ?></div>
                                     </div>
                                 <?php endforeach; ?>
                             </div>
@@ -883,7 +1030,8 @@ startContent();
                         <div class="space-y-3">
                             <?php foreach ($top_goalkeepers as $index => $gk): ?>
                                 <?php $isUserPlayer = ($gk['user_id'] == $user_id); ?>
-                                <div class="flex items-center justify-between p-3 rounded-lg <?php echo $isUserPlayer ? 'bg-blue-50 border-2 border-blue-200' : 'bg-gray-50'; ?>">
+                                <div
+                                    class="flex items-center justify-between p-3 rounded-lg <?php echo $isUserPlayer ? 'bg-blue-50 border-2 border-blue-200' : 'bg-gray-50'; ?>">
                                     <div class="flex items-center gap-3">
                                         <div
                                             class="w-8 h-8 <?php echo $isUserPlayer ? 'bg-blue-600' : 'bg-cyan-600'; ?> rounded-full flex items-center justify-center text-white font-bold text-sm">
@@ -893,17 +1041,22 @@ startContent();
                                             <div class="font-medium flex items-center gap-2">
                                                 <?php echo htmlspecialchars($gk['player_name']); ?>
                                                 <?php if ($isUserPlayer): ?>
-                                                    <span class="px-2 py-1 bg-blue-600 text-white text-xs rounded-full">YOUR PLAYER</span>
+                                                    <span class="px-2 py-1 bg-blue-600 text-white text-xs rounded-full">YOUR
+                                                        PLAYER</span>
                                                 <?php endif; ?>
                                             </div>
-                                            <div class="text-sm <?php echo $isUserPlayer ? 'text-blue-700' : 'text-gray-600'; ?>"><?php echo htmlspecialchars($gk['club_name']); ?>
+                                            <div
+                                                class="text-sm <?php echo $isUserPlayer ? 'text-blue-700' : 'text-gray-600'; ?>">
+                                                <?php echo htmlspecialchars($gk['club_name']); ?>
                                             </div>
                                         </div>
                                     </div>
                                     <div class="text-right">
                                         <div class="flex gap-4">
                                             <div class="text-center">
-                                                <div class="text-lg font-bold <?php echo $isUserPlayer ? 'text-blue-600' : 'text-cyan-600'; ?>"><?php echo $gk['clean_sheets']; ?>
+                                                <div
+                                                    class="text-lg font-bold <?php echo $isUserPlayer ? 'text-blue-600' : 'text-cyan-600'; ?>">
+                                                    <?php echo $gk['clean_sheets']; ?>
                                                 </div>
                                                 <div class="text-xs text-gray-500">clean sheets</div>
                                             </div>
@@ -937,7 +1090,8 @@ startContent();
                     <div class="w-4 h-4 bg-blue-50 border-2 border-blue-200 rounded"></div>
                     <span>Players highlighted in blue belong to your club</span>
                 </div>
-                <p class="text-blue-700">Statistics are updated after each match and show league-wide performance across all teams.</p>
+                <p class="text-blue-700">Statistics are updated after each match and show league-wide performance across
+                    all teams.</p>
             </div>
         </div>
     </div>
@@ -1307,6 +1461,95 @@ startContent();
                                 icon: 'error',
                                 title: 'Error',
                                 text: 'Failed to process nation call. Please try again.',
+                                confirmButtonColor: '#ef4444'
+                            });
+                        });
+                }
+            });
+        });
+
+        // Process relegation
+        document.querySelector('button[name="process_relegation"]')?.addEventListener('click', function (e) {
+            e.preventDefault();
+            
+            Swal.fire({
+                icon: 'warning',
+                title: 'Process Relegation & Promotion?',
+                html: `
+                    <div class="text-left">
+                        <p class="mb-3">This will finalize the current season and:</p>
+                        <ul class="text-sm space-y-1 mb-3">
+                            <li>• Relegate bottom 3 Premier League teams</li>
+                            <li>• Promote top 3 Championship teams</li>
+                            <li>• Start a new season with fresh fixtures</li>
+                            <li>• Reset all team statistics</li>
+                        </ul>
+                        <p class="text-red-600 font-medium">This action cannot be undone!</p>
+                    </div>
+                `,
+                showCancelButton: true,
+                confirmButtonColor: '#dc2626',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: 'Process Relegation',
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Show loading
+                    Swal.fire({
+                        title: 'Processing Relegation...',
+                        text: 'Finalizing season and creating new fixtures',
+                        allowOutsideClick: false,
+                        allowEscapeKey: false,
+                        showConfirmButton: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+
+                    // Process relegation
+                    fetch('api/process_relegation_api.php', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                // Show success and reload page
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Season Finalized!',
+                                    html: `
+                                        <div class="text-left">
+                                            <p class="mb-3">Season ${data.next_season} is ready!</p>
+                                            ${data.user_relegated ? 
+                                                '<div class="p-3 bg-red-100 rounded-lg mb-3"><p class="text-red-800 font-medium">Your club has been relegated to the Championship.</p></div>' : 
+                                                '<div class="p-3 bg-green-100 rounded-lg mb-3"><p class="text-green-800 font-medium">Your club remains in the Premier League!</p></div>'
+                                            }
+                                        </div>
+                                    `,
+                                    confirmButtonColor: '#10b981',
+                                    confirmButtonText: 'Continue to New Season'
+                                }).then(() => {
+                                    // Reload page to show new season
+                                    window.location.href = 'league.php?tab=standings&relegation_processed=1';
+                                });
+                            } else {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Error',
+                                    text: data.message || 'Failed to process relegation. Please try again.',
+                                    confirmButtonColor: '#ef4444'
+                                });
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Connection Error',
+                                text: 'Failed to process relegation. Please check your connection and try again.',
                                 confirmButtonColor: '#ef4444'
                             });
                         });
