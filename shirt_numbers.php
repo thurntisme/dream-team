@@ -36,6 +36,7 @@ try {
         $player_uuid = $_POST['player_uuid'];
         $shirt_number = (int) $_POST['shirt_number'];
         $position = $_POST['position']; // 'team' or 'substitute'
+        $is_reassign = isset($_POST['is_reassign']) && $_POST['is_reassign'] === '1';
 
         // Validate shirt number (1-99)
         if ($shirt_number < 1 || $shirt_number > 99) {
@@ -45,13 +46,37 @@ try {
             $team = json_decode($user['team'], true) ?: [];
             $substitutes = json_decode($user['substitutes'], true) ?: [];
 
-            // Check if shirt number is already taken
+            // Get current player's shirt number if reassigning
+            $current_player_number = null;
+            if ($is_reassign) {
+                if ($position === 'team') {
+                    foreach ($team as $player) {
+                        if ($player && $player['uuid'] === $player_uuid && isset($player['shirt_number'])) {
+                            $current_player_number = $player['shirt_number'];
+                            break;
+                        }
+                    }
+                } else {
+                    foreach ($substitutes as $player) {
+                        if ($player && $player['uuid'] === $player_uuid && isset($player['shirt_number'])) {
+                            $current_player_number = $player['shirt_number'];
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // Check if shirt number is already taken (excluding current player's number if reassigning)
             $number_taken = false;
             $taken_by = '';
 
             // Check in team
             foreach ($team as $player) {
                 if ($player && isset($player['shirt_number']) && $player['shirt_number'] == $shirt_number) {
+                    // Skip if this is the current player's number during reassignment
+                    if ($is_reassign && $player['uuid'] === $player_uuid) {
+                        continue;
+                    }
                     $number_taken = true;
                     $taken_by = $player['name'];
                     break;
@@ -62,6 +87,10 @@ try {
             if (!$number_taken) {
                 foreach ($substitutes as $player) {
                     if ($player && isset($player['shirt_number']) && $player['shirt_number'] == $shirt_number) {
+                        // Skip if this is the current player's number during reassignment
+                        if ($is_reassign && $player['uuid'] === $player_uuid) {
+                            continue;
+                        }
                         $number_taken = true;
                         $taken_by = $player['name'];
                         break;
@@ -101,7 +130,11 @@ try {
                     $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
                     $stmt->execute();
 
-                    $_SESSION['success'] = 'Shirt number assigned successfully!';
+                    if ($is_reassign) {
+                        $_SESSION['success'] = 'Shirt number reassigned successfully!';
+                    } else {
+                        $_SESSION['success'] = 'Shirt number assigned successfully!';
+                    }
                 } else {
                     $_SESSION['error'] = 'Player not found in your squad';
                 }
@@ -158,11 +191,13 @@ try {
     $team = json_decode($user['team'], true) ?: [];
     $substitutes = json_decode($user['substitutes'], true) ?: [];
 
-    // Get all used shirt numbers
+    // Get all used shirt numbers and create mapping to player names
     $used_numbers = [];
+    $number_to_player = [];
     foreach (array_merge($team, $substitutes) as $player) {
         if ($player && isset($player['shirt_number'])) {
             $used_numbers[] = $player['shirt_number'];
+            $number_to_player[$player['shirt_number']] = $player['name'];
         }
     }
 
@@ -217,21 +252,35 @@ startContent();
     <!-- Number Usage Overview -->
     <div class="mb-6 bg-white rounded-lg shadow p-6">
         <h3 class="text-lg font-semibold mb-4">Number Usage Overview</h3>
-        <div class="grid grid-cols-10 gap-2">
+        <div class="grid grid-cols-8 gap-3">
             <?php for ($i = 1; $i <= 99; $i++): ?>
-                <div class="w-8 h-8 rounded flex items-center justify-center text-xs font-medium <?php echo in_array($i, $used_numbers) ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'; ?>"
-                    title="<?php echo in_array($i, $used_numbers) ? 'Taken' : 'Available'; ?>">
-                    <?php echo $i; ?>
+                <?php 
+                $is_taken = in_array($i, $used_numbers);
+                $player_name = $is_taken ? $number_to_player[$i] : '';
+                $tooltip = $is_taken ? "Taken by " . htmlspecialchars($player_name) : 'Available';
+                ?>
+                <div class="relative group">
+                    <div class="w-full h-16 rounded-lg border-2 flex flex-col items-center justify-center text-xs font-medium transition-all duration-200 <?php echo $is_taken ? 'bg-red-50 border-red-200 text-red-800 hover:bg-red-100' : 'bg-green-50 border-green-200 text-green-800 hover:bg-green-100'; ?>"
+                        title="<?php echo $tooltip; ?>">
+                        <div class="text-sm font-bold"><?php echo $i; ?></div>
+                        <?php if ($is_taken): ?>
+                            <div class="text-xs text-center leading-tight mt-1 px-1 truncate w-full" style="font-size: 10px;">
+                                <?php echo htmlspecialchars($player_name); ?>
+                            </div>
+                        <?php else: ?>
+                            <div class="text-xs text-gray-500 mt-1">Free</div>
+                        <?php endif; ?>
+                    </div>
                 </div>
             <?php endfor; ?>
         </div>
         <div class="flex items-center gap-4 mt-4 text-sm">
             <div class="flex items-center gap-2">
-                <div class="w-4 h-4 bg-green-100 rounded"></div>
+                <div class="w-4 h-4 bg-green-50 border border-green-200 rounded"></div>
                 <span class="text-gray-600">Available</span>
             </div>
             <div class="flex items-center gap-2">
-                <div class="w-4 h-4 bg-red-100 rounded"></div>
+                <div class="w-4 h-4 bg-red-50 border border-red-200 rounded"></div>
                 <span class="text-gray-600">Taken</span>
             </div>
         </div>
@@ -274,6 +323,11 @@ startContent();
                                 </div>
                                 <div class="flex items-center gap-2">
                                     <?php if (isset($player['shirt_number'])): ?>
+                                        <button
+                                            onclick="showReassignModal('<?php echo htmlspecialchars($player['uuid']); ?>', '<?php echo htmlspecialchars($player['name']); ?>', 'team', <?php echo $player['shirt_number']; ?>)"
+                                            class="bg-yellow-600 text-white px-3 py-1 rounded text-sm hover:bg-yellow-700">
+                                            Reassign
+                                        </button>
                                         <form method="POST" class="inline">
                                             <input type="hidden" name="player_uuid"
                                                 value="<?php echo htmlspecialchars($player['uuid']); ?>">
@@ -336,6 +390,11 @@ startContent();
                                 </div>
                                 <div class="flex items-center gap-2">
                                     <?php if (isset($player['shirt_number'])): ?>
+                                        <button
+                                            onclick="showReassignModal('<?php echo htmlspecialchars($player['uuid']); ?>', '<?php echo htmlspecialchars($player['name']); ?>', 'substitute', <?php echo $player['shirt_number']; ?>)"
+                                            class="bg-yellow-600 text-white px-3 py-1 rounded text-sm hover:bg-yellow-700">
+                                            Reassign
+                                        </button>
                                         <form method="POST" class="inline">
                                             <input type="hidden" name="player_uuid"
                                                 value="<?php echo htmlspecialchars($player['uuid']); ?>">
@@ -376,18 +435,21 @@ startContent();
             <form method="POST" id="assignForm">
                 <input type="hidden" name="player_uuid" id="modalPlayerUuid">
                 <input type="hidden" name="position" id="modalPosition">
+                <input type="hidden" name="is_reassign" id="modalIsReassign" value="0">
 
                 <div class="mb-4">
                     <label class="block text-sm font-medium text-gray-700 mb-2">Player</label>
                     <p id="modalPlayerName" class="text-gray-900 font-medium"></p>
+                    <p id="modalCurrentNumber" class="text-sm text-gray-600 hidden">Current number: <span class="font-medium"></span></p>
                 </div>
 
                 <div class="mb-6">
-                    <label for="shirt_number" class="block text-sm font-medium text-gray-700 mb-2">Shirt Number
-                        (1-99)</label>
-                    <input type="number" name="shirt_number" id="shirt_number" min="1" max="99" required
+                    <label for="shirt_number" class="block text-sm font-medium text-gray-700 mb-2" id="shirtNumberLabel">Available Shirt Numbers</label>
+                    <select name="shirt_number" id="shirt_number" required
                         class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                    <p class="text-xs text-gray-500 mt-1">Choose an available number from the overview above</p>
+                        <option value="">Select an available number...</option>
+                    </select>
+                    <p class="text-xs text-gray-500 mt-1" id="shirtNumberHelp">Only available numbers are shown</p>
                 </div>
 
                 <div class="flex justify-end gap-3">
@@ -395,7 +457,7 @@ startContent();
                         class="px-4 py-2 text-gray-600 hover:text-gray-800">
                         Cancel
                     </button>
-                    <button type="submit" name="assign_number"
+                    <button type="submit" name="assign_number" id="submitButton"
                         class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
                         Assign Number
                     </button>
@@ -406,11 +468,63 @@ startContent();
 </div>
 
 <script>
+    // Available numbers from PHP
+    const usedNumbers = <?php echo json_encode($used_numbers); ?>;
+    
+    function populateAvailableNumbers(currentNumber = null) {
+        const select = document.getElementById('shirt_number');
+        select.innerHTML = '<option value="">Select an available number...</option>';
+        
+        for (let i = 1; i <= 99; i++) {
+            // Include number if it's available OR if it's the current player's number
+            if (!usedNumbers.includes(i) || i === currentNumber) {
+                const option = document.createElement('option');
+                option.value = i;
+                option.textContent = i;
+                if (i === currentNumber) {
+                    option.textContent += ' (current)';
+                }
+                select.appendChild(option);
+            }
+        }
+    }
+
     function showAssignModal(playerUuid, playerName, position) {
         document.getElementById('modalPlayerUuid').value = playerUuid;
         document.getElementById('modalPlayerName').textContent = playerName;
         document.getElementById('modalPosition').value = position;
-        document.getElementById('shirt_number').value = '';
+        document.getElementById('modalIsReassign').value = '0';
+        
+        // Update modal for assignment
+        document.querySelector('#assignModal h3').textContent = 'Assign Shirt Number';
+        document.getElementById('shirtNumberLabel').textContent = 'Available Shirt Numbers';
+        document.getElementById('shirtNumberHelp').textContent = 'Only available numbers are shown';
+        document.getElementById('submitButton').textContent = 'Assign Number';
+        document.getElementById('modalCurrentNumber').classList.add('hidden');
+        
+        populateAvailableNumbers();
+        document.getElementById('assignModal').classList.remove('hidden');
+        document.getElementById('shirt_number').focus();
+    }
+
+    function showReassignModal(playerUuid, playerName, position, currentNumber) {
+        document.getElementById('modalPlayerUuid').value = playerUuid;
+        document.getElementById('modalPlayerName').textContent = playerName;
+        document.getElementById('modalPosition').value = position;
+        document.getElementById('modalIsReassign').value = '1';
+        
+        // Update modal for reassignment
+        document.querySelector('#assignModal h3').textContent = 'Reassign Shirt Number';
+        document.getElementById('shirtNumberLabel').textContent = 'Available Shirt Numbers';
+        document.getElementById('shirtNumberHelp').textContent = 'Available numbers plus your current number';
+        document.getElementById('submitButton').textContent = 'Reassign Number';
+        
+        // Show current number
+        const currentNumberElement = document.getElementById('modalCurrentNumber');
+        currentNumberElement.querySelector('span').textContent = currentNumber;
+        currentNumberElement.classList.remove('hidden');
+        
+        populateAvailableNumbers(currentNumber);
         document.getElementById('assignModal').classList.remove('hidden');
         document.getElementById('shirt_number').focus();
     }
