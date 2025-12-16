@@ -4,139 +4,30 @@ session_start();
 require_once 'config/config.php';
 require_once 'config/constants.php';
 require_once 'partials/layout.php';
-
-
+require_once 'controllers/team-controller.php';
 
 try {
-    $db = getDbConnection();
-
-    // Get comprehensive user data
-    $stmt = $db->prepare('SELECT name, email, club_name, formation, team, substitutes, budget, max_players, created_at FROM users WHERE id = :id');
-    $stmt->bindValue(':id', $_SESSION['user_id'], SQLITE3_INTEGER);
-    $result = $stmt->execute();
-    $user = $result->fetchArray(SQLITE3_ASSOC);
-    $saved_formation = $user['formation'] ?? '4-4-2';
-    $saved_team = $user['team'] ?? '[]';
-    $saved_substitutes = $user['substitutes'] ?? '[]';
-    $user_budget = $user['budget'] ?? DEFAULT_BUDGET;
-    $max_players = $user['max_players'] ?? DEFAULT_MAX_PLAYERS;
-
-    // Ensure max_players is set for existing users
-    if ($max_players === null) {
-        $max_players = DEFAULT_MAX_PLAYERS;
-        $stmt = $db->prepare('UPDATE users SET max_players = :max_players WHERE id = :user_id');
-        $stmt->bindValue(':max_players', $max_players, SQLITE3_INTEGER);
-        $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
-        $stmt->execute();
-    }
-
-    // Get ranking among all clubs
-    $stmt = $db->prepare('SELECT COUNT(*) as total_clubs FROM users WHERE club_name IS NOT NULL AND club_name != ""');
-    $result = $stmt->execute();
-    $total_clubs = $result->fetchArray(SQLITE3_ASSOC)['total_clubs'];
-
-    // Initialize and update player conditions (fitness and form)
-    $team_data = json_decode($saved_team, true);
-    $substitutes_data = json_decode($saved_substitutes, true);
-    $team_updated = false;
-    $subs_updated = false;
-
-    // Initialize fitness and form for main team
-    if (is_array($team_data)) {
-        for ($i = 0; $i < count($team_data); $i++) {
-            if ($team_data[$i]) {
-                $original_player = $team_data[$i];
-                $team_data[$i] = initializePlayerCondition($team_data[$i]);
-                if ($team_data[$i] !== $original_player) {
-                    $team_updated = true;
-                }
-            }
-        }
-    }
-
-    // Initialize fitness and form for substitutes
-    if (is_array($substitutes_data)) {
-        for ($i = 0; $i < count($substitutes_data); $i++) {
-            if ($substitutes_data[$i]) {
-                $original_player = $substitutes_data[$i];
-                $substitutes_data[$i] = initializePlayerCondition($substitutes_data[$i]);
-                if ($substitutes_data[$i] !== $original_player) {
-                    $subs_updated = true;
-                }
-            }
-        }
-    }
-
-    // Get user's staff and apply bonuses
-    $user_staff = getUserStaff($db, $_SESSION['user_id']);
-    if (!empty($user_staff)) {
-        $team_data = applyStaffBonuses($team_data, $user_staff);
-        $substitutes_data = applyStaffBonuses($substitutes_data, $user_staff);
-        $team_updated = true; // Mark as updated to include staff bonuses
-    }
-
-    // Update database if players were modified
-    if ($team_updated || $subs_updated) {
-        $stmt = $db->prepare('UPDATE users SET team = :team, substitutes = :substitutes WHERE id = :user_id');
-        $stmt->bindValue(':team', json_encode($team_data), SQLITE3_TEXT);
-        $stmt->bindValue(':substitutes', json_encode($substitutes_data), SQLITE3_TEXT);
-        $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
-        $stmt->execute();
-
-        // Update saved data
-        $saved_team = json_encode($team_data);
-        $saved_substitutes = json_encode($substitutes_data);
-    }
-
-    // Calculate team value for ranking
-    $team_value = 0;
-    if (is_array($team_data)) {
-        foreach ($team_data as $player) {
-            if ($player && isset($player['value'])) {
-                $team_value += $player['value'];
-            }
-        }
-    }
-
-    // Get clubs with higher team value for ranking
-    $stmt = $db->prepare('SELECT COUNT(*) as higher_clubs FROM users WHERE club_name IS NOT NULL AND club_name != "" AND id != :user_id');
-    $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
-    $result = $stmt->execute();
-    $all_clubs = $result->fetchArray(SQLITE3_ASSOC)['higher_clubs'];
-
-    // Count clubs with higher team value
-    $higher_clubs = 0;
-    $stmt = $db->prepare('SELECT team FROM users WHERE club_name IS NOT NULL AND club_name != "" AND id != :user_id');
-    $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
-    $result = $stmt->execute();
-
-    while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
-        $other_team = json_decode($row['team'], true);
-        $other_value = 0;
-        if (is_array($other_team)) {
-            foreach ($other_team as $player) {
-                if ($player && isset($player['value'])) {
-                    $other_value += $player['value'];
-                }
-            }
-        }
-        if ($other_value > $team_value) {
-            $higher_clubs++;
-        }
-    }
-
-    $club_ranking = $higher_clubs + 1;
-
-    // Get club level from database
-    $stmt = $db->prepare('SELECT club_level, club_exp FROM users WHERE id = :user_id');
-    $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
-    $result = $stmt->execute();
-    $clubData = $result->fetchArray(SQLITE3_ASSOC);
-    $club_level = $clubData['club_level'] ?? 1;
-    $club_exp = $clubData['club_exp'] ?? 0;
-    $level_name = getClubLevelName($club_level);
-
-    $db->close();
+    // Initialize team controller
+    $teamController = new TeamController($_SESSION['user_id']);
+    
+    // Process all team data using the controller
+    $teamData = $teamController->processTeamData();
+    
+    // Extract variables for backward compatibility
+    $user = $teamData['user'];
+    $saved_formation = $teamData['saved_formation'];
+    $saved_team = $teamData['saved_team'];
+    $saved_substitutes = $teamData['saved_substitutes'];
+    $user_budget = $teamData['user_budget'];
+    $max_players = $teamData['max_players'];
+    $team_data = $teamData['team_data'];
+    $substitutes_data = $teamData['substitutes_data'];
+    $team_value = $teamData['team_value'];
+    $club_ranking = $teamData['ranking'];
+    $total_clubs = $teamData['total_clubs'];
+    $club_level = $teamData['club_level'];
+    $club_exp = $teamData['club_exp'];
+    $level_name = $teamData['level_name'];
 } catch (Exception $e) {
     header('Location: install.php');
     exit;
@@ -148,49 +39,6 @@ $substitute_data = json_decode($saved_substitutes, true) ?: [];
 $substitute_players = count(array_filter($substitute_data, fn($p) => $p !== null));
 $total_players = $starting_players + $substitute_players;
 
-
-
-function getClubLevelName($level)
-{
-    if ($level >= 40)
-        return 'Legendary';
-    if ($level >= 35)
-        return 'Mythical';
-    if ($level >= 30)
-        return 'Elite Master';
-    if ($level >= 25)
-        return 'Elite';
-    if ($level >= 20)
-        return 'Professional Master';
-    if ($level >= 15)
-        return 'Professional';
-    if ($level >= 10)
-        return 'Semi-Professional';
-    if ($level >= 5)
-        return 'Amateur';
-    return 'Beginner';
-}
-
-function getLevelColor($level)
-{
-    if ($level >= 40)
-        return 'bg-gradient-to-r from-yellow-400 to-orange-500 text-white border-yellow-500';
-    if ($level >= 35)
-        return 'bg-gradient-to-r from-purple-500 to-pink-500 text-white border-purple-500';
-    if ($level >= 30)
-        return 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white border-indigo-500';
-    if ($level >= 25)
-        return 'bg-purple-100 text-purple-800 border-purple-200';
-    if ($level >= 20)
-        return 'bg-indigo-100 text-indigo-800 border-indigo-200';
-    if ($level >= 15)
-        return 'bg-blue-100 text-blue-800 border-blue-200';
-    if ($level >= 10)
-        return 'bg-green-100 text-green-800 border-green-200';
-    if ($level >= 5)
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-    return 'bg-gray-100 text-gray-800 border-gray-200';
-}
 
 // Start content capture
 startContent();
