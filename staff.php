@@ -428,7 +428,7 @@ function getContractStatusColor($weeks_remaining)
 startContent();
 ?>
 
-<div class="container mx-auto p-4 max-w-6xl">
+<div class="container mx-auto p-4">
     <!-- Messages -->
     <?php if ($message): ?>
         <div

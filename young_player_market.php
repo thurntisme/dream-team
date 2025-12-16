@@ -69,7 +69,7 @@ $db->close();
 startContent();
 ?>
 
-<div class="container mx-auto px-4 max-w-6xl py-8">
+<div class="container mx-auto px-4 py-8">
     <!-- Header -->
     <div class="mb-8">
         <div class="flex items-center justify-between">

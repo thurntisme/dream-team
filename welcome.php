@@ -82,7 +82,7 @@ try {
 startContent();
 ?>
 
-<div class="container mx-auto max-w-6xl">
+<div class="container mx-auto">
     <!-- Ads for free users -->
     <?php if (shouldShowAds($_SESSION['user_id'])): ?>
         <div class="pt-6">

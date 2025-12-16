@@ -2,7 +2,8 @@
 // Footer Component
 // Requires: $isLoggedIn, $clubName, $userName, $userBudget, $userFans, $clubLevel variables
 
-function renderFooter($isLoggedIn, $clubName, $userName, $userBudget, $userFans, $clubLevel) {
+function renderFooter($isLoggedIn, $clubName, $userName, $userBudget, $userFans, $clubLevel)
+{
     ob_start();
     ?>
     <!-- Footer -->
@@ -10,13 +11,13 @@ function renderFooter($isLoggedIn, $clubName, $userName, $userBudget, $userFans,
         <?php if ($isLoggedIn): ?>
             <!-- Ads for free users -->
             <?php if (shouldShowAds($_SESSION['user_id'])): ?>
-                <div class="container mx-auto px-4 max-w-6xl py-4">
+                <div class="container mx-auto px-4 py-4">
                     <?php renderBannerAd('footer', $_SESSION['user_id']); ?>
                 </div>
             <?php endif; ?>
 
             <!-- Logged-in User Footer -->
-            <div class="container mx-auto px-4 max-w-6xl py-6">
+            <div class="container mx-auto px-4 py-6">
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <!-- Club Status -->
                     <div class="bg-white rounded-lg p-4 border border-gray-200">
@@ -128,7 +129,7 @@ function renderFooter($isLoggedIn, $clubName, $userName, $userBudget, $userFans,
             </div>
         <?php else: ?>
             <!-- Guest User Footer -->
-            <div class="container mx-auto px-4 max-w-6xl py-8">
+            <div class="container mx-auto px-4 py-8">
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
                     <!-- Brand -->
                     <div class="md:col-span-2">
@@ -152,7 +153,8 @@ function renderFooter($isLoggedIn, $clubName, $userName, $userBudget, $userFans,
                         <h3 class="font-semibold text-gray-900 mb-3">Get Started</h3>
                         <div class="space-y-2 text-sm">
                             <a href="index.php" class="block text-gray-600 hover:text-blue-600 transition-colors">Login</a>
-                            <a href="install.php" class="block text-gray-600 hover:text-blue-600 transition-colors">Setup Game</a>
+                            <a href="install.php" class="block text-gray-600 hover:text-blue-600 transition-colors">Setup
+                                Game</a>
                         </div>
                     </div>
 

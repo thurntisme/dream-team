@@ -11,6 +11,9 @@ require_once __DIR__ . '/../includes/helpers.php';
 define('DEFAULT_BUDGET', 500000000); // €500M default budget - optimal for competitive lineups
 define('DEFAULT_MAX_PLAYERS', 23); // Default maximum players in squad
 
+// Academy scouting cost
+define('ACADEMY_SCOUT_COST', 500000); // €500K to scout a new academy player
+
 // User Plan/Package Configuration
 define('USER_PLANS', [
     'free' => [

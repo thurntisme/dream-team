@@ -693,8 +693,17 @@ startContent();
             const gameweekResults = document.getElementById('gameweekResults');
             if (gameweekResults) {
                 gameweekResults.style.display = 'none';
-                // Clear session data
-                fetch('clear_gameweek_results.php', { method: 'POST' });
+
+                // Clear gameweek completed state from URL
+                const urlParams = new URLSearchParams(window.location.search);
+                if (urlParams.get('gameweek_completed') === '1') {
+                    urlParams.delete('gameweek_completed');
+                    const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
+                    window.history.replaceState({}, '', newUrl);
+                }
+
+                // Clear session data and post-match rewards
+                fetch('api/clear_gameweek_results_api.php', { method: 'POST' });
             }
         }
 
@@ -705,12 +714,46 @@ startContent();
         tabBtns.forEach(btn => {
             btn.addEventListener('click', () => {
                 showTab(btn.dataset.tab);
+
+                // Clear gameweek completed state and post-match rewards when switching tabs
+                const urlParams = new URLSearchParams(window.location.search);
+                if (urlParams.get('gameweek_completed') === '1') {
+                    urlParams.delete('gameweek_completed');
+                    const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
+                    window.history.replaceState({}, '', newUrl);
+
+                    // Clear post-match rewards
+                    fetch('api/clear_gameweek_results_api.php', { method: 'POST' })
+                        .catch(error => console.log('Error clearing post-match rewards:', error));
+                }
             });
         });
 
         // Close gameweek results handler
         document.getElementById('closeGameweekResults')?.addEventListener('click', function () {
             hideGameweekResults();
+        });
+
+        // Clear post-match rewards when user navigates away from gameweek completed state
+        function clearPostMatchRewardsIfIgnored() {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('gameweek_completed') !== '1') {
+                // User navigated away from gameweek completed state, clear rewards
+                fetch('api/clear_gameweek_results_api.php', { method: 'POST' })
+                    .catch(error => console.log('Error clearing post-match rewards:', error));
+            }
+        }
+
+        // Listen for URL changes (back/forward navigation)
+        window.addEventListener('popstate', clearPostMatchRewardsIfIgnored);
+
+        // Listen for page unload (user navigating to different page)
+        window.addEventListener('beforeunload', function () {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('gameweek_completed') === '1') {
+                // User is leaving the gameweek completed page, clear rewards
+                navigator.sendBeacon('api/clear_gameweek_results_api.php');
+            }
         });
 
         // Simulate gameweek
@@ -732,8 +775,11 @@ startContent();
         });
     });
 
-    // Check for post-match player selection on page load
-    checkPostMatchPlayers();
+    // Check for post-match player selection on page load only if gameweek was completed
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('gameweek_completed') === '1') {
+        checkPostMatchPlayers();
+    }
 
     function checkPostMatchPlayers() {
         fetch('api/get_post_match_players_api.php')
@@ -749,6 +795,12 @@ startContent();
     }
 
     function showPostMatchNotification(players, timeRemaining) {
+        // Only show notification if gameweek was completed
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('gameweek_completed') !== '1') {
+            return;
+        }
+
         const notification = document.getElementById('postMatchNotification');
         if (notification) {
             notification.style.display = 'block';
@@ -778,10 +830,7 @@ startContent();
                                     <p class="text-green-100">Choose 1 of 3 mystery boxes to reveal your reward</p>
                                 </div>
                             </div>
-                            <div class="text-right">
-                                <div class="text-sm text-green-100">Expires in</div>
-                                <div id="timeRemaining" class="font-bold">${formatTimeRemaining(timeRemaining)}</div>
-                            </div>
+
                         </div>
                     </div>
                     
@@ -820,10 +869,7 @@ startContent();
                         </div>
                         
                         <div class="flex justify-between items-center">
-                            <div class="text-sm text-gray-600">
-                                <i data-lucide="clock" class="w-4 h-4 inline mr-1"></i>
-                                Mystery boxes expire in <span id="timeRemainingText">${formatTimeRemaining(timeRemaining)}</span>
-                            </div>
+
                             <div class="flex gap-3">
                                 <button id="skipSelection" class="px-4 py-2 text-gray-600 hover:text-gray-800">
                                     Skip for now
@@ -913,9 +959,6 @@ startContent();
                     text: 'The post-match player selection has expired.',
                     confirmButtonColor: '#3b82f6'
                 });
-            } else {
-                document.getElementById('timeRemaining').textContent = formatTimeRemaining(timeRemaining);
-                document.getElementById('timeRemainingText').textContent = formatTimeRemaining(timeRemaining);
             }
         }, 1000);
 
@@ -1122,12 +1165,12 @@ startContent();
             const confirmBtn = document.getElementById('confirmSelection');
             const playerAdded = confirmBtn && confirmBtn.dataset.playerAdded === 'true';
             const playerName = confirmBtn && confirmBtn.dataset.playerName;
-            
+
             if (modal.timer) {
                 clearInterval(modal.timer);
             }
             modal.remove();
-            
+
             // Show success notification after modal is closed
             if (playerAdded && playerName) {
                 setTimeout(() => {

@@ -248,7 +248,7 @@ startContent();
         <h3 class="text-lg font-semibold mb-4">Number Usage Overview</h3>
         <div class="grid grid-cols-8 gap-3">
             <?php for ($i = 1; $i <= 99; $i++): ?>
-                <?php 
+                <?php
                 $is_taken = in_array($i, $used_numbers);
                 $player_name = $is_taken ? $number_to_player[$i] : '';
                 $tooltip = $is_taken ? "Taken by " . htmlspecialchars($player_name) : 'Available';
@@ -301,7 +301,8 @@ startContent();
                         <?php if ($player): ?>
                             <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
                                 <div class="flex items-center gap-4">
-                                    <div class="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
+                                    <div
+                                        class="w-12 h-12 <?php echo isset($player['shirt_number']) ? 'bg-blue-600' : 'bg-gray-400 border-2 border-dashed border-gray-500'; ?> rounded-full flex items-center justify-center">
                                         <span class="text-white font-bold">
                                             <?php echo isset($player['shirt_number']) ? $player['shirt_number'] : '?'; ?>
                                         </span>
@@ -368,7 +369,8 @@ startContent();
                         <?php if ($player): ?>
                             <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
                                 <div class="flex items-center gap-4">
-                                    <div class="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center">
+                                    <div
+                                        class="w-12 h-12 <?php echo isset($player['shirt_number']) ? 'bg-green-600' : 'bg-gray-400 border-2 border-dashed border-gray-500'; ?> rounded-full flex items-center justify-center">
                                         <span class="text-white font-bold">
                                             <?php echo isset($player['shirt_number']) ? $player['shirt_number'] : '?'; ?>
                                         </span>
@@ -434,11 +436,13 @@ startContent();
                 <div class="mb-4">
                     <label class="block text-sm font-medium text-gray-700 mb-2">Player</label>
                     <p id="modalPlayerName" class="text-gray-900 font-medium"></p>
-                    <p id="modalCurrentNumber" class="text-sm text-gray-600 hidden">Current number: <span class="font-medium"></span></p>
+                    <p id="modalCurrentNumber" class="text-sm text-gray-600 hidden">Current number: <span
+                            class="font-medium"></span></p>
                 </div>
 
                 <div class="mb-6">
-                    <label for="shirt_number" class="block text-sm font-medium text-gray-700 mb-2" id="shirtNumberLabel">Available Shirt Numbers</label>
+                    <label for="shirt_number" class="block text-sm font-medium text-gray-700 mb-2"
+                        id="shirtNumberLabel">Available Shirt Numbers</label>
                     <select name="shirt_number" id="shirt_number" required
                         class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                         <option value="">Select an available number...</option>
@@ -464,11 +468,11 @@ startContent();
 <script>
     // Available numbers from PHP
     const usedNumbers = <?php echo json_encode($used_numbers); ?>;
-    
+
     function populateAvailableNumbers(currentNumber = null) {
         const select = document.getElementById('shirt_number');
         select.innerHTML = '<option value="">Select an available number...</option>';
-        
+
         for (let i = 1; i <= 99; i++) {
             // Include number if it's available OR if it's the current player's number
             if (!usedNumbers.includes(i) || i === currentNumber) {
@@ -488,14 +492,14 @@ startContent();
         document.getElementById('modalPlayerName').textContent = playerName;
         document.getElementById('modalPosition').value = position;
         document.getElementById('modalIsReassign').value = '0';
-        
+
         // Update modal for assignment
         document.querySelector('#assignModal h3').textContent = 'Assign Shirt Number';
         document.getElementById('shirtNumberLabel').textContent = 'Available Shirt Numbers';
         document.getElementById('shirtNumberHelp').textContent = 'Only available numbers are shown';
         document.getElementById('submitButton').textContent = 'Assign Number';
         document.getElementById('modalCurrentNumber').classList.add('hidden');
-        
+
         populateAvailableNumbers();
         document.getElementById('assignModal').classList.remove('hidden');
         document.getElementById('shirt_number').focus();
@@ -506,18 +510,18 @@ startContent();
         document.getElementById('modalPlayerName').textContent = playerName;
         document.getElementById('modalPosition').value = position;
         document.getElementById('modalIsReassign').value = '1';
-        
+
         // Update modal for reassignment
         document.querySelector('#assignModal h3').textContent = 'Reassign Shirt Number';
         document.getElementById('shirtNumberLabel').textContent = 'Available Shirt Numbers';
         document.getElementById('shirtNumberHelp').textContent = 'Available numbers plus your current number';
         document.getElementById('submitButton').textContent = 'Reassign Number';
-        
+
         // Show current number
         const currentNumberElement = document.getElementById('modalCurrentNumber');
         currentNumberElement.querySelector('span').textContent = currentNumber;
         currentNumberElement.classList.remove('hidden');
-        
+
         populateAvailableNumbers(currentNumber);
         document.getElementById('assignModal').classList.remove('hidden');
         document.getElementById('shirt_number').focus();

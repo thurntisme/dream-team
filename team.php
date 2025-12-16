@@ -9,10 +9,10 @@ require_once 'controllers/team-controller.php';
 try {
     // Initialize team controller
     $teamController = new TeamController($_SESSION['user_id']);
-    
+
     // Process all team data using the controller
     $teamData = $teamController->processTeamData();
-    
+
     // Extract variables for backward compatibility
     $user = $teamData['user'];
     $saved_formation = $teamData['saved_formation'];
@@ -44,7 +44,7 @@ $total_players = $starting_players + $substitute_players;
 startContent();
 ?>
 
-<div class="container mx-auto p-4 max-w-6xl">
+<div class="container mx-auto p-4">
     <?php include 'components/league-validation-errors.php'; ?>
     <?php include 'components/club-overview-section.php'; ?>
     <?php include 'components/training-center.php'; ?>
@@ -3128,25 +3128,25 @@ startContent();
                     .done(function (response) {
                         if (response.success) {
                             let resultHtml = '<div class="text-left">';
-                            
+
                             if (response.recovery_count > 0) {
                                 resultHtml += `<p class="mb-2 text-green-600"><strong>${response.recovery_count} player(s) fully recovered!</strong></p>`;
                                 response.recoveries.forEach(recovery => {
                                     resultHtml += `<div class="text-sm text-green-700">• ${recovery.player_name} is back to full health</div>`;
                                 });
                             }
-                            
+
                             if (response.fitness_improvement_count > 0) {
                                 resultHtml += `<p class="mb-2 mt-3 text-blue-600"><strong>${response.fitness_improvement_count} player(s) improved fitness:</strong></p>`;
                                 response.fitness_improvements.forEach(improvement => {
                                     resultHtml += `<div class="text-sm text-blue-700">• ${improvement.player_name}: +${improvement.fitness_gain} fitness (${improvement.new_fitness}%)</div>`;
                                 });
                             }
-                            
+
                             if (response.recovery_count === 0 && response.fitness_improvement_count === 0) {
                                 resultHtml += '<p class="text-gray-600">No significant changes today. All players are in good condition!</p>';
                             }
-                            
+
                             resultHtml += '</div>';
 
                             Swal.fire({
@@ -3163,7 +3163,7 @@ startContent();
                             if (response.already_processed) {
                                 errorMessage = 'Daily recovery has already been processed today. Try again tomorrow!';
                             }
-                            
+
                             Swal.fire({
                                 icon: 'info',
                                 title: 'Recovery Not Processed',

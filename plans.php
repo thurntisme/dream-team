@@ -41,7 +41,7 @@ $allPlans = getAllPlans();
 startContent();
 ?>
 
-<div class="container mx-auto px-4 max-w-6xl py-8">
+<div class="container mx-auto px-4 py-8">
     <!-- Header -->
     <div class="mb-8 text-center">
         <div class="flex items-center justify-center gap-3 mb-4">

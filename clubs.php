@@ -104,7 +104,7 @@ function getLevelColorPHP($level)
 startContent();
 ?>
 
-<div class="container mx-auto p-4 max-w-6xl">
+<div class="container mx-auto p-4">
     <!-- Challenge Messages -->
     <?php if (isset($_SESSION['challenge_error'])): ?>
         <div class="mb-6 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg">

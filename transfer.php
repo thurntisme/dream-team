@@ -175,7 +175,7 @@ try {
 startContent();
 ?>
 
-<div class="container mx-auto p-4 max-w-6xl">
+<div class="container mx-auto p-4">
     <div class="bg-white rounded-lg p-6 mb-6">
         <div class="text-center mb-8">
             <h1 class="text-3xl font-bold text-gray-900 mb-2">Transfer Market</h1>
@@ -1186,6 +1186,6 @@ startContent();
 </script>
 
 <link rel="stylesheet" href="assets/css/player-modal.css"> <?php
- // End content capture and render layout
- endContent('Transfer Market - Dream Team', 'transfer', true, false, true);
- ?>
+// End content capture and render layout
+endContent('Transfer Market - Dream Team', 'transfer', true, false, true);
+?>

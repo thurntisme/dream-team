@@ -145,7 +145,7 @@ function getRecommendedPlayers($players_data, $user_team, $user_formation, $user
                 }
             }
         }
-        
+
         if ($is_in_team || isset($scouted_players[$player_uuid])) {
             continue;
         }
@@ -213,7 +213,7 @@ $scouting_costs = [
 startContent();
 ?>
 
-<div class="container mx-auto p-4 max-w-6xl">
+<div class="container mx-auto p-4">
     <!-- Scouting Header -->
     <div class="mb-6">
         <div class="bg-white rounded-lg shadow p-6">

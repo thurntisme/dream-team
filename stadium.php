@@ -122,7 +122,7 @@ $next_level = $current_level < 5 ? $stadium_levels[$current_level + 1] : null;
 startContent();
 ?>
 
-<div class="container mx-auto p-4 max-w-6xl">
+<div class="container mx-auto p-4">
     <!-- Stadium Header -->
     <div class="mb-6">
         <div class="bg-white rounded-lg shadow p-6">

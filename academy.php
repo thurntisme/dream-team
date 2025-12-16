@@ -32,27 +32,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $message = 'You have reached the maximum number of academy players for your plan. Upgrade to add more players.';
             $messageType = 'error';
         } else {
-            // Generate a new young player for the academy
-            $youngPlayer = generateYoungPlayer($userId);
+            // Check if user has enough budget for scouting
+            $stmt = $db->prepare('SELECT budget FROM users WHERE id = :id');
+            $stmt->bindValue(':id', $userId, SQLITE3_INTEGER);
+            $result = $stmt->execute();
+            $userData = $result->fetchArray(SQLITE3_ASSOC);
+            $currentBudget = $userData['budget'] ?? 0;
 
-            $stmt = $db->prepare('INSERT INTO young_players (club_id, name, age, position, potential_rating, current_rating, development_stage, contract_years, value, training_focus) VALUES (:club_id, :name, :age, :position, :potential_rating, :current_rating, :development_stage, :contract_years, :value, :training_focus)');
-            $stmt->bindValue(':club_id', $youngPlayer['club_id'], SQLITE3_INTEGER);
-            $stmt->bindValue(':name', $youngPlayer['name'], SQLITE3_TEXT);
-            $stmt->bindValue(':age', $youngPlayer['age'], SQLITE3_INTEGER);
-            $stmt->bindValue(':position', $youngPlayer['position'], SQLITE3_TEXT);
-            $stmt->bindValue(':potential_rating', $youngPlayer['potential_rating'], SQLITE3_INTEGER);
-            $stmt->bindValue(':current_rating', $youngPlayer['current_rating'], SQLITE3_INTEGER);
-            $stmt->bindValue(':development_stage', $youngPlayer['development_stage'], SQLITE3_TEXT);
-            $stmt->bindValue(':contract_years', $youngPlayer['contract_years'], SQLITE3_INTEGER);
-            $stmt->bindValue(':value', $youngPlayer['value'], SQLITE3_INTEGER);
-            $stmt->bindValue(':training_focus', $youngPlayer['training_focus'], SQLITE3_TEXT);
-
-            if ($stmt->execute()) {
-                $message = 'New young player added to academy!';
-                $messageType = 'success';
-            } else {
-                $message = 'Failed to add young player to academy.';
+            if ($currentBudget < ACADEMY_SCOUT_COST) {
+                $message = 'Insufficient budget to scout a new player. You need ' . formatMarketValue(ACADEMY_SCOUT_COST) . '.';
                 $messageType = 'error';
+            } else {
+                // Deduct scouting cost from budget
+                $stmt = $db->prepare('UPDATE users SET budget = budget - :cost WHERE id = :id');
+                $stmt->bindValue(':cost', ACADEMY_SCOUT_COST, SQLITE3_INTEGER);
+                $stmt->bindValue(':id', $userId, SQLITE3_INTEGER);
+                $stmt->execute();
+
+                // Generate a new young player for the academy
+                $youngPlayer = generateYoungPlayer($userId);
+
+                $stmt = $db->prepare('INSERT INTO young_players (club_id, name, age, position, potential_rating, current_rating, development_stage, contract_years, value, training_focus) VALUES (:club_id, :name, :age, :position, :potential_rating, :current_rating, :development_stage, :contract_years, :value, :training_focus)');
+                $stmt->bindValue(':club_id', $youngPlayer['club_id'], SQLITE3_INTEGER);
+                $stmt->bindValue(':name', $youngPlayer['name'], SQLITE3_TEXT);
+                $stmt->bindValue(':age', $youngPlayer['age'], SQLITE3_INTEGER);
+                $stmt->bindValue(':position', $youngPlayer['position'], SQLITE3_TEXT);
+                $stmt->bindValue(':potential_rating', $youngPlayer['potential_rating'], SQLITE3_INTEGER);
+                $stmt->bindValue(':current_rating', $youngPlayer['current_rating'], SQLITE3_INTEGER);
+                $stmt->bindValue(':development_stage', $youngPlayer['development_stage'], SQLITE3_TEXT);
+                $stmt->bindValue(':contract_years', $youngPlayer['contract_years'], SQLITE3_INTEGER);
+                $stmt->bindValue(':value', $youngPlayer['value'], SQLITE3_INTEGER);
+                $stmt->bindValue(':training_focus', $youngPlayer['training_focus'], SQLITE3_TEXT);
+
+                if ($stmt->execute()) {
+                    $message = 'New young player added to academy for ' . formatMarketValue(ACADEMY_SCOUT_COST) . '!';
+                    $messageType = 'success';
+                } else {
+                    // Refund the cost if player creation failed
+                    $stmt = $db->prepare('UPDATE users SET budget = budget + :cost WHERE id = :id');
+                    $stmt->bindValue(':cost', ACADEMY_SCOUT_COST, SQLITE3_INTEGER);
+                    $stmt->bindValue(':id', $userId, SQLITE3_INTEGER);
+                    $stmt->execute();
+
+                    $message = 'Failed to add young player to academy.';
+                    $messageType = 'error';
+                }
             }
         }
     } elseif ($action === 'promote_player') {
@@ -149,7 +173,7 @@ $db->close();
 startContent();
 ?>
 
-<div class="container mx-auto px-4 max-w-6xl py-8">
+<div class="container mx-auto px-4 py-8">
     <!-- Header -->
     <div class="mb-8">
         <div class="flex items-center justify-between">
@@ -253,16 +277,16 @@ startContent();
                             <h3 class="text-lg font-semibold text-gray-900">Scout New Talent</h3>
                         </div>
                         <p class="text-gray-600 mb-4">Add a promising young player to your academy</p>
-                        <form method="POST" class="inline">
-                            <input type="hidden" name="action" value="generate_player">
-                            <button type="submit"
-                                class="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                                <div class="flex items-center justify-center gap-2">
-                                    <i data-lucide="search" class="w-4 h-4"></i>
-                                    <span>Scout Player</span>
-                                </div>
-                            </button>
-                        </form>
+                        <button onclick="confirmScoutPlayer()"
+                            class="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                            <div class="flex items-center justify-center gap-2">
+                                <i data-lucide="search" class="w-4 h-4"></i>
+                                <span>Scout Player</span>
+                            </div>
+                        </button>
+                        <p class="text-xs text-gray-500 mt-2 text-center">Cost:
+                            <?php echo formatMarketValue(ACADEMY_SCOUT_COST); ?>
+                        </p>
                     </div>
 
                     <div class="bg-gray-50 rounded-lg p-6">
@@ -270,11 +294,13 @@ startContent();
                             <i data-lucide="users" class="w-6 h-6 text-green-600"></i>
                             <h3 class="text-lg font-semibold text-gray-900">Academy Players</h3>
                         </div>
-                        <div class="text-3xl font-bold text-green-600 mb-2"><?php echo count($academyPlayers); ?></div>
+                        <div class="text-3xl font-bold text-green-600 mb-2">
+                            <?php echo count($academyPlayers); ?>
+                        </div>
                         <p class="text-gray-600 mb-3">Players in development</p>
                         <?php if (count($academyPlayers) > 0): ?>
-                            <button onclick="switchTab('academy')"
-                                class="text-sm text-blue-600 hover:text-blue-800 font-medium">
+                            <button onclick="switchTab('academy')" class="text-sm text-blue-600 hover:text-blue-800
+                            font-medium">
                                 View Players →
                             </button>
                         <?php endif; ?>
@@ -285,11 +311,13 @@ startContent();
                             <i data-lucide="mail" class="w-6 h-6 text-orange-600"></i>
                             <h3 class="text-lg font-semibold text-gray-900">Pending Bids</h3>
                         </div>
-                        <div class="text-3xl font-bold text-orange-600 mb-2"><?php echo count($pendingBids); ?></div>
+                        <div class="text-3xl font-bold text-orange-600 mb-2">
+                            <?php echo count($pendingBids); ?>
+                        </div>
                         <p class="text-gray-600 mb-3">Offers from other clubs</p>
                         <?php if (count($pendingBids) > 0): ?>
-                            <button onclick="switchTab('bids')"
-                                class="text-sm text-orange-600 hover:text-orange-800 font-medium">
+                            <button onclick="switchTab('bids')" class="text-sm text-orange-600 hover:text-orange-800
+                            font-medium">
                                 Review Bids →
                             </button>
                         <?php endif; ?>
@@ -324,49 +352,61 @@ startContent();
                         <i data-lucide="users" class="w-12 h-12 text-gray-400 mx-auto mb-4"></i>
                         <h3 class="text-lg font-medium text-gray-900 mb-2">No Academy Players</h3>
                         <p class="text-gray-600 mb-4">Start building your academy by scouting young talent</p>
-                        <form method="POST" class="inline">
-                            <input type="hidden" name="action" value="generate_player">
-                            <button type="submit"
-                                class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                                <div class="flex items-center gap-2">
-                                    <i data-lucide="search" class="w-4 h-4"></i>
-                                    <span>Scout First Player</span>
-                                </div>
-                            </button>
-                        </form>
+                        <button onclick="confirmScoutPlayer()"
+                            class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                            <div class="flex items-center gap-2">
+                                <i data-lucide="search" class="w-4 h-4"></i>
+                                <span>Scout First Player</span>
+                            </div>
+                        </button>
+                        <p class="text-xs text-gray-500 mt-2 text-center">Cost:
+                            <?php echo formatMarketValue(ACADEMY_SCOUT_COST); ?>
+                        </p>
                     </div>
                 <?php else: ?>
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
                         <?php foreach ($academyPlayers as $player): ?>
                             <div class="border border-gray-200 rounded-lg p-4">
                                 <div class="flex items-center justify-between mb-3">
-                                    <h4 class="font-semibold text-gray-900"><?php echo htmlspecialchars($player['name']); ?>
+                                    <h4 class="font-semibold text-gray-900">
+                                        <?php echo htmlspecialchars($player['name']); ?>
                                     </h4>
-                                    <span
-                                        class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded"><?php echo htmlspecialchars($player['position']); ?></span>
+                                    <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
+                                        <?php echo htmlspecialchars($player['position']); ?>
+                                    </span>
                                 </div>
 
                                 <div class="space-y-2 mb-4">
                                     <div class="flex justify-between text-sm">
                                         <span class="text-gray-600">Age:</span>
-                                        <span class="font-medium"><?php echo $player['age']; ?></span>
+                                        <span class="font-medium">
+                                            <?php echo $player['age']; ?>
+                                        </span>
                                     </div>
                                     <div class="flex justify-between text-sm">
-                                        <span class="text-gray-600">Current Rating:</span>
-                                        <span class="font-medium"><?php echo $player['current_rating']; ?></span>
+                                        <span class=" text-gray-600">Current Rating:</span>
+                                        <span class="font-medium">
+                                            <?php echo $player['current_rating']; ?>
+                                        </span>
                                     </div>
                                     <div class="flex justify-between text-sm">
-                                        <span class="text-gray-600">Potential:</span>
-                                        <span
-                                            class="font-medium text-green-600"><?php echo $player['potential_rating']; ?></span>
+                                        <span class=" text-gray-600">Potential:</span>
+                                        <span class="font-medium text-green-600">
+                                            <?php echo $player['potential_rating']; ?>
+                                        </span>
                                     </div>
                                     <div class="flex justify-between text-sm">
                                         <span class="text-gray-600">Value:</span>
-                                        <span class="font-medium"><?php echo formatMarketValue($player['value']); ?></span>
+                                        <span class="font-medium">
+                                            <?php echo formatMarketValue($player['value']); ?>
+                                        </span>
                                     </div>
                                     <div class="flex justify-between text-sm">
-                                        <span class="text-gray-600">Contract:</span>
-                                        <span class="font-medium"><?php echo $player['contract_years']; ?> years</span>
+                                        <span class=" text-gray-600">Contract:</span>
+                                        <span class="font-medium">
+                                            <?php echo $player['contract_years']; ?> years
+                                        </span>
                                     </div>
                                 </div>
 
@@ -378,7 +418,7 @@ startContent();
                                         <input type="hidden" name="player_id" value="<?php echo $player['id']; ?>">
                                         <select name="training_focus" onchange="this.form.submit()"
                                             class="w-full text-xs px-2 py-1 border border-gray-300 rounded">
-                                            <option value="balanced" <?php echo $player['training_focus'] === 'balanced' ? 'selected' : ''; ?>>Balanced</option>
+                                            <option value=" balanced" <?php echo $player['training_focus'] === 'balanced' ? 'selected' : ''; ?>>Balanced</option>
                                             <option value="technical" <?php echo $player['training_focus'] === 'technical' ? 'selected' : ''; ?>>Technical</option>
                                             <option value="physical" <?php echo $player['training_focus'] === 'physical' ? 'selected' : ''; ?>>Physical</option>
                                             <option value="mental" <?php echo $player['training_focus'] === 'mental' ? 'selected' : ''; ?>>Mental</option>
@@ -412,15 +452,17 @@ startContent();
             </div>
 
             <!-- Pending Bids Tab -->
-            <div id="content-bids" class="tab-content hidden">
+            <div id=" content-bids" class="tab-content hidden">
                 <?php if (empty($pendingBids)): ?>
                     <div class="text-center py-8">
-                        <i data-lucide="mail" class="w-12 h-12 text-gray-400 mx-auto mb-4"></i>
+                        <i data-lucide="mail" class="w-12 h-12 text-gray-400 mx-auto mb-4">
+                        </i>
                         <h3 class="text-lg font-medium text-gray-900 mb-2">No Pending Bids</h3>
                         <p class="text-gray-600">You don't have any pending bids from other clubs at the moment.</p>
                     </div>
                 <?php else: ?>
                     <div class="space-y-4">
+
                         <?php foreach ($pendingBids as $bid): ?>
                             <div class="border border-gray-200 rounded-lg p-4">
                                 <div class="flex items-center justify-between">
@@ -429,7 +471,8 @@ startContent();
                                             <?php echo htmlspecialchars($bid['player_name']); ?>
                                         </h4>
                                         <p class="text-sm text-gray-600"><?php echo htmlspecialchars($bid['position']); ?> • Age
-                                            <?php echo $bid['age']; ?> • Potential <?php echo $bid['potential_rating']; ?>
+                                            <?php echo $bid['age']; ?> • Potential
+                                            <?php echo $bid['potential_rating']; ?>
                                         </p>
                                         <p class="text-sm text-gray-500">Bid from
                                             <?php echo htmlspecialchars($bid['bidder_club_name']); ?>
@@ -471,14 +514,17 @@ startContent();
                     </div>
                 <?php else: ?>
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
                         <?php foreach ($promotedPlayers as $player): ?>
                             <div class="border border-gray-200 rounded-lg p-4 bg-green-50">
                                 <div class="flex items-center justify-between mb-3">
-                                    <h4 class="font-semibold text-gray-900"><?php echo htmlspecialchars($player['name']); ?>
+                                    <h4 class="font-semibold text-gray-900">
+                                        <?php echo htmlspecialchars($player['name']); ?>
                                     </h4>
                                     <div class="flex items-center gap-2">
-                                        <span
-                                            class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded"><?php echo htmlspecialchars($player['position']); ?></span>
+                                        <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
+                                            <?php echo htmlspecialchars($player['position']); ?>
+                                        </span>
                                         <i data-lucide="trophy" class="w-4 h-4 text-green-600"
                                             title="Promoted to main team"></i>
                                     </div>
@@ -487,21 +533,27 @@ startContent();
                                 <div class="space-y-2 mb-4">
                                     <div class="flex justify-between text-sm">
                                         <span class="text-gray-600">Age:</span>
-                                        <span class="font-medium"><?php echo $player['age']; ?></span>
+                                        <span class="font-medium">
+                                            <?php echo $player['age']; ?>
+                                        </span>
                                     </div>
                                     <div class="flex justify-between text-sm">
-                                        <span class="text-gray-600">Final Rating:</span>
-                                        <span class="font-medium"><?php echo $player['current_rating']; ?></span>
+                                        <span class=" text-gray-600">Final Rating:</span>
+                                        <span class="font-medium">
+                                            <?php echo $player['current_rating']; ?>
+                                        </span>
                                     </div>
                                     <div class="flex justify-between text-sm">
-                                        <span class="text-gray-600">Potential:</span>
-                                        <span
-                                            class="font-medium text-green-600"><?php echo $player['potential_rating']; ?></span>
+                                        <span class=" text-gray-600">Potential:</span>
+                                        <span class="font-medium text-green-600">
+                                            <?php echo $player['potential_rating']; ?>
+                                        </span>
                                     </div>
                                     <div class="flex justify-between text-sm">
                                         <span class="text-gray-600">Promoted:</span>
-                                        <span
-                                            class="font-medium"><?php echo date('M j, Y', strtotime($player['promoted_at'])); ?></span>
+                                        <span class="font-medium">
+                                            <?php echo date('M j, Y', strtotime($player['promoted_at'])); ?>
+                                        </span>
                                     </div>
                                 </div>
 
@@ -552,6 +604,11 @@ startContent();
         </form>
     </div>
 </div>
+
+<!-- Hidden Scout Player Form -->
+<form method="POST" id="scoutPlayerForm" style="display: none;">
+    <input type="hidden" name="action" value="generate_player">
+</form>
 
 <script>
     // Initialize Lucide icons
@@ -627,10 +684,83 @@ startContent();
             switchTab(tabParam);
         });
     }
+
+    // Scout player confirmation
+    function confirmScoutPlayer() {
+        const scoutCost = <?php echo ACADEMY_SCOUT_COST; ?>;
+        const userBudget = <?php echo $userBudget; ?>;
+        const formattedCost = '<?php echo formatMarketValue(ACADEMY_SCOUT_COST); ?>';
+        const formattedBudget = '<?php echo formatMarketValue($userBudget); ?>';
+
+        if (userBudget < scoutCost) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Insufficient Budget',
+                html: `
+                    <div class="text-left">
+                        <p class="mb-3">You don't have enough budget to scout a new player.</p>
+                        <div class="bg-gray-50 p-3 rounded-lg">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-gray-600">Scout Cost:</span>
+                                <span class="font-medium text-red-600">${formattedCost}</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-600">Your Budget:</span>
+                                <span class="font-medium text-gray-900">${formattedBudget}</span>
+                            </div>
+                        </div>
+                    </div>
+                `,
+                confirmButtonColor: '#ef4444',
+                confirmButtonText: 'OK'
+            });
+            return;
+        }
+
+        Swal.fire({
+            title: 'Scout New Player?',
+            html: `
+                <div class="text-left">
+                    <p class="mb-4">Are you sure you want to scout a new young player for your academy?</p>
+                    <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-blue-700">Scout Cost:</span>
+                            <span class="font-bold text-blue-900">${formattedCost}</span>
+                        </div>
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-blue-700">Current Budget:</span>
+                            <span class="font-medium text-blue-900">${formattedBudget}</span>
+                        </div>
+                        <div class="border-t border-blue-200 pt-2 mt-2">
+                            <div class="flex justify-between items-center">
+                                <span class="text-blue-700">Remaining Budget:</span>
+                                <span class="font-bold text-green-600"><?php echo formatMarketValue($userBudget - ACADEMY_SCOUT_COST); ?></span>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="text-sm text-gray-600 mt-3">
+                        ℹ️ You'll get a randomly generated young player (age 16-19) with development potential.
+                    </p>
+                </div>
+            `,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#3b82f6',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Yes, Scout Player',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Submit the form
+                document.getElementById('scoutPlayerForm').submit();
+            }
+        });
+    }
 </script>
 
 <!-- Floating ad for free users -->
 <?php if (shouldShowAds($userId)): ?>
+      
     <?php renderFloatingAd($userId); ?>
 <?php endif; ?>
 
