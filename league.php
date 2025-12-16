@@ -11,6 +11,16 @@ require_once 'includes/league_functions.php';
 try {
     $db = getDbConnection();
 
+    // Create nation_calls table if it doesn't exist
+    $db->exec('CREATE TABLE IF NOT EXISTS nation_calls (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        called_players TEXT NOT NULL,
+        total_reward INTEGER NOT NULL,
+        call_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id)
+    )');
+
     // Get current user
     $user_id = $_SESSION['user_id'];
     $stmt = $db->prepare('SELECT * FROM users WHERE id = :id');
@@ -75,6 +85,25 @@ try {
 
     // Get current validation status for display
     $current_validation = validateClubForLeague($user);
+
+    // Calculate nation call availability
+    $matchesPlayed = $user['matches_played'] ?? 0;
+    $matchesUntilNext = 8 - ($matchesPlayed % 8);
+    if ($matchesUntilNext === 8)
+        $matchesUntilNext = 0; // Just had a nation call
+
+    // Check if nation call is available (every 8 matches, but not if already processed)
+    $canProcessNationCall = false;
+    if ($matchesPlayed > 0 && $matchesPlayed % 8 === 0) {
+        // Check if nation call was already processed for this milestone
+        $stmt = $db->prepare('SELECT COUNT(*) as count FROM nation_calls WHERE user_id = :user_id AND call_date > datetime("now", "-1 day")');
+        $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+        $result = $stmt->execute();
+        $recentCalls = $result->fetchArray(SQLITE3_ASSOC);
+
+        // Only allow if no recent nation call in the last 24 hours
+        $canProcessNationCall = $recentCalls['count'] == 0;
+    }
 
     $db->close();
 } catch (Exception $e) {
@@ -371,6 +400,105 @@ startContent();
             </div>
         </div>
     </div>
+
+    <!-- Nation Call Notification -->
+    <?php if (isset($_SESSION['nation_call_notification'])): ?>
+        <?php $nationCall = $_SESSION['nation_call_notification']; ?>
+        <div
+            class="mb-6 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg shadow-lg border border-blue-300 overflow-hidden">
+            <div class="p-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                            <i data-lucide="flag" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-bold">Nation Call Success!</h3>
+                            <p class="text-blue-100">
+                                <?php echo count($nationCall['called_players']); ?>
+                                player<?php echo count($nationCall['called_players']) > 1 ? 's' : ''; ?> called up for
+                                international duty
+                            </p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-2xl font-bold">+<?php echo formatMarketValue($nationCall['total_reward']); ?></div>
+                        <div class="text-blue-100 text-sm">Earnings</div>
+                    </div>
+                </div>
+                <div class="mt-4 pt-4 border-t border-blue-400 border-opacity-30">
+                    <div class="flex flex-wrap gap-2">
+                        <?php foreach ($nationCall['called_players'] as $player): ?>
+                            <div class="bg-white bg-opacity-20 rounded-lg px-3 py-1 text-sm">
+                                <span class="font-medium"><?php echo htmlspecialchars($player['name']); ?></span>
+                                <span class="text-blue-200">(<?php echo $player['position']; ?>)</span>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+                <div class="mt-3 flex justify-end">
+                    <a href="nation_calls.php"
+                        class="bg-white text-blue-600 px-4 py-2 rounded-lg hover:bg-blue-50 font-medium transition-colors">
+                        View Details
+                    </a>
+                </div>
+            </div>
+        </div>
+        <?php unset($_SESSION['nation_call_notification']); ?>
+    <?php endif; ?>
+
+    <!-- Nation Call Processing Box -->
+
+    <?php if ($canProcessNationCall): ?>
+        <div class="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
+                        <i data-lucide="flag" class="w-6 h-6 text-white"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-semibold text-blue-900">Nation Call Available!</h3>
+                        <p class="text-blue-700">
+                            You've played <?php echo $matchesPlayed; ?> matches. Your best players may be called up for
+                            international duty.
+                        </p>
+                    </div>
+                </div>
+                <div class="flex gap-3">
+                    <a href="nation_calls.php"
+                        class="bg-blue-100 text-blue-700 px-4 py-2 rounded-lg hover:bg-blue-200 font-medium transition-colors">
+                        View History
+                    </a>
+                    <button id="processNationCallBtn"
+                        class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 font-medium transition-colors flex items-center gap-2">
+                        <i data-lucide="play" class="w-4 h-4"></i>
+                        Process Nation Call
+                    </button>
+                </div>
+            </div>
+        </div>
+    <?php elseif ($matchesPlayed > 0): ?>
+        <div class="mb-6 bg-gray-50 border border-gray-200 rounded-lg p-6">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 bg-gray-400 rounded-full flex items-center justify-center">
+                        <i data-lucide="flag" class="w-6 h-6 text-white"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-700">Next Nation Call</h3>
+                        <p class="text-gray-600">
+                            <?php echo $matchesUntilNext; ?> more match<?php echo $matchesUntilNext > 1 ? 'es' : ''; ?>
+                            until next nation call opportunity
+                        </p>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <div class="text-2xl font-bold text-gray-600"><?php echo $matchesUntilNext; ?></div>
+                    <div class="text-sm text-gray-500">matches left</div>
+                </div>
+            </div>
+        </div>
+    <?php endif; ?>
 
     <!-- Tabs -->
     <div class="border-b border-gray-200 mb-6">
@@ -770,6 +898,96 @@ startContent();
             }).then((result) => {
                 if (result.isConfirmed) {
                     window.location.href = 'simulate_league.php';
+                }
+            });
+        });
+
+        // Process nation call
+        document.getElementById('processNationCallBtn')?.addEventListener('click', function () {
+            Swal.fire({
+                icon: 'question',
+                title: 'Process Nation Call?',
+                text: 'This will evaluate your best players for international duty and award budget rewards.',
+                showCancelButton: true,
+                confirmButtonColor: '#3b82f6',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: 'Process Nation Call',
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Show loading
+                    Swal.fire({
+                        title: 'Processing Nation Call...',
+                        text: 'Evaluating players for international duty',
+                        allowOutsideClick: false,
+                        allowEscapeKey: false,
+                        showConfirmButton: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+
+                    // Process nation call
+                    fetch('api/process_nation_call_api.php', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                // Show success with details
+                                let playersHtml = '';
+                                if (data.called_players && data.called_players.length > 0) {
+                                    playersHtml = '<div class="mt-4 p-3 bg-blue-50 rounded-lg"><h4 class="font-semibold text-blue-900 mb-2">Called Players:</h4>';
+                                    data.called_players.forEach(player => {
+                                        playersHtml += `<div class="flex justify-between items-center py-1">
+                                        <span class="font-medium">${player.name} (${player.position})</span>
+                                        <span class="text-green-600">+€${(player.reward || 50000).toLocaleString()}</span>
+                                    </div>`;
+                                    });
+                                    playersHtml += '</div>';
+                                }
+
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Nation Call Processed!',
+                                    html: `
+                                    <div class="text-center">
+                                        <div class="text-2xl font-bold text-green-600 mb-2">
+                                            +€${data.total_reward.toLocaleString()}
+                                        </div>
+                                        <p class="text-gray-600 mb-2">
+                                            ${data.called_players.length} player${data.called_players.length > 1 ? 's' : ''} called up for international duty
+                                        </p>
+                                        ${playersHtml}
+                                    </div>
+                                `,
+                                    confirmButtonColor: '#3b82f6',
+                                    confirmButtonText: 'Great!'
+                                }).then(() => {
+                                    // Reload page to update the display
+                                    window.location.reload();
+                                });
+                            } else {
+                                Swal.fire({
+                                    icon: 'info',
+                                    title: 'No Nation Call',
+                                    text: data.message || 'No players were selected for international duty at this time.',
+                                    confirmButtonColor: '#3b82f6'
+                                });
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: 'Failed to process nation call. Please try again.',
+                                confirmButtonColor: '#ef4444'
+                            });
+                        });
                 }
             });
         });

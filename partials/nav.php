@@ -129,6 +129,13 @@ function renderNavigation($isLoggedIn, $showAuth, $currentPage, $clubName, $user
                             <span class="font-medium">News</span>
                         </a>
 
+                        <a href="nation_calls.php"
+                            class="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors
+                    <?php echo $currentPage === 'nation_calls' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100'; ?>">
+                            <i data-lucide="flag" class="w-4 h-4"></i>
+                            <span class="font-medium">Nation Calls</span>
+                        </a>
+
                         <a href="shop.php"
                             class="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors
                     <?php echo $currentPage === 'shop' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100'; ?>">
@@ -274,6 +281,12 @@ function renderNavigation($isLoggedIn, $showAuth, $currentPage, $clubName, $user
                             class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors <?php echo $currentPage === 'news' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100'; ?>">
                             <i data-lucide="newspaper" class="w-5 h-5"></i>
                             <span class="font-medium">News</span>
+                        </a>
+
+                        <a href="nation_calls.php"
+                            class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors <?php echo $currentPage === 'nation_calls' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100'; ?>">
+                            <i data-lucide="flag" class="w-5 h-5"></i>
+                            <span class="font-medium">Nation Calls</span>
                         </a>
 
                         <a href="shop.php"

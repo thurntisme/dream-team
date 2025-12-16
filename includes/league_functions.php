@@ -1057,6 +1057,18 @@ function updatePlayerConditions($db, $user_id, $wins, $draws, $losses, $goals_fo
         $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
         $stmt->execute();
     }
+
+    // Update user's matches played counter and check for nation calls
+    $stmt = $db->prepare('UPDATE users SET matches_played = matches_played + 1 WHERE id = :user_id');
+    $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+    $stmt->execute();
+
+    // Process nation calls if conditions are met
+    $nationCallResult = processNationCalls($db, $user_id);
+    if ($nationCallResult['success']) {
+        // Store nation call notification in session for display
+        $_SESSION['nation_call_notification'] = $nationCallResult;
+    }
 }
 /**
  * Generate 3 random players (young or standard) for post-match selection
