@@ -85,6 +85,17 @@ try {
     // Simulate the match
     $match_result = simulateMatch($user_team, $opponent_team, $user_team_value, $opponent_team_value);
 
+    // Apply match injuries to user team
+    if (!empty($match_result['injuries'])) {
+        $user_team = applyMatchInjuries($user_team, $match_result['injuries']);
+        
+        // Update user team in database with injuries
+        $stmt = $db->prepare('UPDATE users SET team = :team WHERE id = :user_id');
+        $stmt->bindValue(':team', json_encode($user_team), SQLITE3_TEXT);
+        $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+        $stmt->execute();
+    }
+
     // Process match result and calculate rewards (but don't apply yet)
     $financial_result = calculateMatchRewards($_SESSION['user_id'], $match_result, $challenge_cost, $potential_reward);
 
@@ -268,8 +279,11 @@ function simulateMatch($user_team, $opponent_team, $user_team_value, $opponent_t
         $result = 'draw';
     }
 
+    // Check for match injuries
+    $match_injuries = checkMatchInjuries($user_team);
+
     // Generate match events
-    $events = generateMatchEvents($user_team, $opponent_team, $user_goals, $opponent_goals);
+    $events = generateMatchEvents($user_team, $opponent_team, $user_goals, $opponent_goals, $match_injuries);
 
     return [
         'userGoals' => $user_goals,
@@ -277,7 +291,8 @@ function simulateMatch($user_team, $opponent_team, $user_team_value, $opponent_t
         'result' => $result,
         'userStrength' => round($user_strength, 1),
         'opponentStrength' => round($opponent_strength, 1),
-        'events' => $events
+        'events' => $events,
+        'injuries' => $match_injuries
     ];
 }
 
@@ -317,8 +332,120 @@ function calculateTeamStrength($team, $team_value)
     return max(10, min(100, $final_strength)); // Clamp between 10-100
 }
 
+// Check for match injuries
+function checkMatchInjuries($user_team) {
+    $injuries = [];
+    
+    foreach ($user_team as $player) {
+        if ($player && !isPlayerInjured($player)) {
+            $injury_result = checkForMatchInjury($player);
+            if ($injury_result['injured']) {
+                $injuries[] = [
+                    'player_uuid' => $player['uuid'],
+                    'player_name' => $player['name'],
+                    'injury_type' => $injury_result['injury_type'],
+                    'minute' => mt_rand(1, 90)
+                ];
+            }
+        }
+    }
+    
+    return $injuries;
+}
+
+function checkForMatchInjury($player) {
+    $base_injury_chance = 0.03; // 3% base chance during match
+    $fitness = $player['fitness'] ?? 100;
+    
+    // Significantly increase injury chance for low fitness players
+    if ($fitness < 40) {
+        $base_injury_chance *= 4; // 12% chance for very low fitness
+    } elseif ($fitness < 60) {
+        $base_injury_chance *= 2.5; // 7.5% chance for low fitness
+    } elseif ($fitness < 80) {
+        $base_injury_chance *= 1.5; // 4.5% chance for moderate fitness
+    }
+    
+    // Random check
+    if (mt_rand(1, 10000) / 10000 <= $base_injury_chance) {
+        // Determine injury type (more severe injuries for low fitness)
+        $rand = mt_rand(1, 100) / 100;
+        if ($fitness < 40) {
+            // Low fitness players get more serious injuries
+            if ($rand <= 0.5) {
+                $injury_type = 'minor_strain';
+            } elseif ($rand <= 0.8) {
+                $injury_type = 'muscle_injury';
+            } else {
+                $injury_type = 'serious_injury';
+            }
+        } else {
+            // Normal injury distribution
+            if ($rand <= 0.8) {
+                $injury_type = 'minor_strain';
+            } elseif ($rand <= 0.95) {
+                $injury_type = 'muscle_injury';
+            } else {
+                $injury_type = 'serious_injury';
+            }
+        }
+        
+        return ['injured' => true, 'injury_type' => $injury_type];
+    }
+    
+    return ['injured' => false];
+}
+
+function isPlayerInjured($player) {
+    return isset($player['injury']) && $player['injury']['days_remaining'] > 0;
+}
+
+function applyMatchInjuries($user_team, $match_injuries) {
+    $injury_types = [
+        'minor_strain' => [
+            'name' => 'Minor Muscle Strain',
+            'duration_days' => rand(3, 7),
+            'fitness_penalty' => rand(10, 20)
+        ],
+        'muscle_injury' => [
+            'name' => 'Muscle Injury',
+            'duration_days' => rand(7, 14),
+            'fitness_penalty' => rand(20, 35)
+        ],
+        'serious_injury' => [
+            'name' => 'Serious Injury',
+            'duration_days' => rand(14, 28),
+            'fitness_penalty' => rand(35, 50)
+        ]
+    ];
+    
+    foreach ($match_injuries as $injury) {
+        // Find the player in the team
+        for ($i = 0; $i < count($user_team); $i++) {
+            if ($user_team[$i] && $user_team[$i]['uuid'] === $injury['player_uuid']) {
+                $injury_data = $injury_types[$injury['injury_type']];
+                
+                $user_team[$i]['injury'] = [
+                    'type' => $injury['injury_type'],
+                    'name' => $injury_data['name'],
+                    'duration_days' => $injury_data['duration_days'],
+                    'days_remaining' => $injury_data['duration_days'],
+                    'fitness_penalty' => $injury_data['fitness_penalty'],
+                    'injury_date' => date('Y-m-d H:i:s')
+                ];
+                
+                // Apply immediate fitness penalty
+                $user_team[$i]['fitness'] = max(0, ($user_team[$i]['fitness'] ?? 100) - $injury_data['fitness_penalty']);
+                break;
+            }
+        }
+    }
+    
+    return $user_team;
+}
+
 // Generate match events for display
-function generateMatchEvents($user_team, $opponent_team, $user_goals, $opponent_goals)
+function generateMatchEvents($user_team, $opponent_team, $user_goals, $opponent_goals, $match_injuries = [])
 {
     $events = [];
     $total_goals = $user_goals + $opponent_goals;
@@ -345,6 +472,24 @@ function generateMatchEvents($user_team, $opponent_team, $user_goals, $opponent_
             'team' => 'opponent',
             'player' => $scorer,
             'description' => "Goal for the opposition. {$scorer} scores."
+        ];
+    }
+
+    // Add injury events
+    foreach ($match_injuries as $injury) {
+        $injury_names = [
+            'minor_strain' => 'Minor Muscle Strain',
+            'muscle_injury' => 'Muscle Injury',
+            'serious_injury' => 'Serious Injury'
+        ];
+        
+        $injury_name = $injury_names[$injury['injury_type']] ?? 'Injury';
+        $events[] = [
+            'minute' => $injury['minute'],
+            'type' => 'injury',
+            'team' => 'user',
+            'player' => $injury['player_name'],
+            'description' => "⚕️ {$injury['player_name']} suffers a {$injury_name} and may be out for several days."
         ];
     }
 

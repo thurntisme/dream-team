@@ -4,6 +4,7 @@ session_start();
 
 require_once 'config/config.php';
 require_once 'config/constants.php';
+require_once 'includes/staff_functions.php';
 
 // Check if database is available
 if (!isDatabaseAvailable()) {
@@ -47,6 +48,9 @@ try {
         // For now, we'll just include it in the response
     }
 
+    // Process daily injury recovery for all players
+    $injury_results = processDailyInjuryRecovery($db, $_SESSION['user_id']);
+
     // Process young player development
     $young_player_results = processWeeklyYoungPlayerDevelopment($db, $_SESSION['user_id']);
 
@@ -56,7 +60,8 @@ try {
     echo json_encode([
         'success' => true,
         'results' => $staff_results,
-        'young_player_development' => $young_player_results
+        'young_player_development' => $young_player_results,
+        'injury_recovery' => $injury_results
     ]);
 
 } catch (Exception $e) {

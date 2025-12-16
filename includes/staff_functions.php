@@ -473,3 +473,130 @@ if (!function_exists('getStaffRecommendations')) {
         return $recommendations;
     }
 }
+
+/**
+ * Process daily injury recovery for all players
+ * @param SQLite3 $db Database connection
+ * @param int $user_id User ID
+ * @return array Results of injury recovery processing
+ */
+if (!function_exists('processDailyInjuryRecovery')) {
+    function processDailyInjuryRecovery($db, $user_id)
+    {
+        // Get user data
+        $stmt = $db->prepare('SELECT team, substitutes FROM users WHERE id = :user_id');
+        $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+        $result = $stmt->execute();
+        $user = $result->fetchArray(SQLITE3_ASSOC);
+
+        if (!$user) {
+            return ['success' => false, 'message' => 'User not found'];
+        }
+
+        $team = json_decode($user['team'], true) ?: [];
+        $substitutes = json_decode($user['substitutes'], true) ?: [];
+        $recoveries = [];
+        $fitness_improvements = [];
+
+        // Process recovery for main team
+        for ($i = 0; $i < count($team); $i++) {
+            if ($team[$i]) {
+                if (isPlayerInjuredStaff($team[$i])) {
+                    $recovery_result = processPlayerRecoveryStaff($team[$i]);
+                    $team[$i] = $recovery_result['player'];
+                    if ($recovery_result['recovered']) {
+                        $recoveries[] = [
+                            'player_name' => $team[$i]['name'],
+                            'position' => 'team'
+                        ];
+                    }
+                } else {
+                    // Natural fitness recovery for non-injured players
+                    $fitness_gain = rand(1, 3);
+                    $old_fitness = $team[$i]['fitness'] ?? 100;
+                    $team[$i]['fitness'] = min(100, $old_fitness + $fitness_gain);
+                    
+                    if ($team[$i]['fitness'] > $old_fitness) {
+                        $fitness_improvements[] = [
+                            'player_name' => $team[$i]['name'],
+                            'fitness_gain' => $fitness_gain,
+                            'new_fitness' => $team[$i]['fitness']
+                        ];
+                    }
+                }
+            }
+        }
+
+        // Process recovery for substitutes
+        for ($i = 0; $i < count($substitutes); $i++) {
+            if ($substitutes[$i]) {
+                if (isPlayerInjuredStaff($substitutes[$i])) {
+                    $recovery_result = processPlayerRecoveryStaff($substitutes[$i]);
+                    $substitutes[$i] = $recovery_result['player'];
+                    if ($recovery_result['recovered']) {
+                        $recoveries[] = [
+                            'player_name' => $substitutes[$i]['name'],
+                            'position' => 'substitute'
+                        ];
+                    }
+                } else {
+                    // Natural fitness recovery for non-injured players
+                    $fitness_gain = rand(1, 3);
+                    $old_fitness = $substitutes[$i]['fitness'] ?? 100;
+                    $substitutes[$i]['fitness'] = min(100, $old_fitness + $fitness_gain);
+                    
+                    if ($substitutes[$i]['fitness'] > $old_fitness) {
+                        $fitness_improvements[] = [
+                            'player_name' => $substitutes[$i]['name'],
+                            'fitness_gain' => $fitness_gain,
+                            'new_fitness' => $substitutes[$i]['fitness']
+                        ];
+                    }
+                }
+            }
+        }
+
+        // Update database
+        $stmt = $db->prepare('UPDATE users SET team = :team, substitutes = :substitutes WHERE id = :user_id');
+        $stmt->bindValue(':team', json_encode($team), SQLITE3_TEXT);
+        $stmt->bindValue(':substitutes', json_encode($substitutes), SQLITE3_TEXT);
+        $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+        $stmt->execute();
+
+        return [
+            'success' => true,
+            'recoveries' => $recoveries,
+            'fitness_improvements' => $fitness_improvements,
+            'recovery_count' => count($recoveries),
+            'fitness_improvement_count' => count($fitness_improvements)
+        ];
+    }
+
+    function isPlayerInjuredStaff($player) {
+        return isset($player['injury']) && $player['injury']['days_remaining'] > 0;
+    }
+
+    function processPlayerRecoveryStaff($player) {
+        if (!isPlayerInjuredStaff($player)) {
+            return ['player' => $player, 'recovered' => false];
+        }
+        
+        $player['injury']['days_remaining']--;
+        
+        // Check if player has recovered
+        if ($player['injury']['days_remaining'] <= 0) {
+            // Remove injury
+            unset($player['injury']);
+            
+            // Gradual fitness recovery (not full recovery immediately)
+            $player['fitness'] = min(100, ($player['fitness'] ?? 50) + rand(10, 20));
+            
+            return ['player' => $player, 'recovered' => true];
+        }
+        
+        // Gradual fitness improvement during recovery
+        $player['fitness'] = min(100, ($player['fitness'] ?? 50) + rand(1, 3));
+        
+        return ['player' => $player, 'recovered' => false];
+    }
+}

@@ -474,15 +474,20 @@ startContent();
         <!-- Training Center Section -->
         <div class="mb-6">
             <div class="bg-white rounded-lg p-6">
-                <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center justify-between mb-4 gap-2">
                     <h2 class="text-xl font-bold text-gray-900 flex items-center gap-2">
                         <i data-lucide="dumbbell" class="w-6 h-6 text-green-600"></i>
                         Training Center
                     </h2>
                     <button id="trainAllBtn"
-                        class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center gap-2">
+                        class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center gap-2 ml-auto">
                         <i data-lucide="play" class="w-4 h-4"></i>
                         Train All Players
+                    </button>
+                    <button id="dailyRecoveryBtn"
+                        class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2">
+                        <i data-lucide="heart" class="w-4 h-4"></i>
+                        Daily Recovery
                     </button>
                 </div>
 
@@ -839,6 +844,24 @@ startContent();
         if (fitness >= 60) return 'bg-yellow-500';
         if (fitness >= 40) return 'bg-orange-500';
         return 'bg-red-500';
+    }
+
+    // Check if player is injured
+    function isPlayerInjured(player) {
+        return player.injury && player.injury.days_remaining > 0;
+    }
+
+    // Get injury status text
+    function getInjuryStatusText(player) {
+        if (!isPlayerInjured(player)) return '';
+        const injury = player.injury;
+        return `${injury.name} (${injury.days_remaining} days)`;
+    }
+
+    // Get injury status badge
+    function getInjuryBadge(player) {
+        if (!isPlayerInjured(player)) return '';
+        return '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 ml-2">⚕️ Injured</span>';
     }
 
     // Get form badge color
@@ -1638,9 +1661,12 @@ startContent();
                 playersHtml += `
                     <div class="flex items-center justify-between p-3 border rounded hover:bg-gray-50 cursor-pointer" onclick="performPlayerSwitch(${idx}, ${subIdx})">
                         <div>
-                            <div class="${nameClass}">${player.name}${customBadge}</div>
+                            <div class="${nameClass}">${player.name}${customBadge}${getInjuryBadge(player)}</div>
                             <div class="text-sm text-gray-600">${position} • ★${getEffectiveRating(player)} • Lv.${player.level || 1}</div>
-                            <div class="text-xs text-gray-500">Fitness: ${player.fitness || 100}% • Form: ${(player.form || 7).toFixed(1)}</div>
+                            <div class="text-xs text-gray-500">
+                                Fitness: ${player.fitness || 100}% • Form: ${(player.form || 7).toFixed(1)}
+                                ${isPlayerInjured(player) ? `<br><span class="text-red-600">⚕️ ${getInjuryStatusText(player)}</span>` : ''}
+                            </div>
                         </div>
                         <div class="text-sm text-green-600 font-semibold">${formatMarketValue(player.value || 0)}</div>
                     </div>
@@ -3694,9 +3720,103 @@ startContent();
         });
     });
 
+    // Daily Recovery functionality
+    $('#dailyRecoveryBtn').click(function () {
+        Swal.fire({
+            icon: 'question',
+            title: 'Process Daily Recovery?',
+            html: `
+                <div class="text-left">
+                    <p class="mb-3">This will process daily recovery for all players:</p>
+                    <div class="bg-gray-50 p-3 rounded">
+                        <div class="text-sm text-gray-700">
+                            <div class="mb-2">• Injured players recover 1 day</div>
+                            <div class="mb-2">• Healthy players gain 1-3 fitness</div>
+                            <div class="mb-2">• Fully recovered players return to action</div>
+                            <div class="text-blue-600 font-medium">• Can only be used once per day</div>
+                        </div>
+                    </div>
+                </div>
+            `,
+            showCancelButton: true,
+            confirmButtonColor: '#2563eb',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Process Recovery',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Show loading
+                Swal.fire({
+                    title: 'Processing Recovery...',
+                    html: 'Updating player conditions',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
 
+                // Send recovery request
+                $.post('api/daily_recovery_api.php', {
+                    action: 'process_daily_recovery'
+                })
+                    .done(function (response) {
+                        if (response.success) {
+                            let resultHtml = '<div class="text-left">';
+                            
+                            if (response.recovery_count > 0) {
+                                resultHtml += `<p class="mb-2 text-green-600"><strong>${response.recovery_count} player(s) fully recovered!</strong></p>`;
+                                response.recoveries.forEach(recovery => {
+                                    resultHtml += `<div class="text-sm text-green-700">• ${recovery.player_name} is back to full health</div>`;
+                                });
+                            }
+                            
+                            if (response.fitness_improvement_count > 0) {
+                                resultHtml += `<p class="mb-2 mt-3 text-blue-600"><strong>${response.fitness_improvement_count} player(s) improved fitness:</strong></p>`;
+                                response.fitness_improvements.forEach(improvement => {
+                                    resultHtml += `<div class="text-sm text-blue-700">• ${improvement.player_name}: +${improvement.fitness_gain} fitness (${improvement.new_fitness}%)</div>`;
+                                });
+                            }
+                            
+                            if (response.recovery_count === 0 && response.fitness_improvement_count === 0) {
+                                resultHtml += '<p class="text-gray-600">No significant changes today. All players are in good condition!</p>';
+                            }
+                            
+                            resultHtml += '</div>';
 
-
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Daily Recovery Complete!',
+                                html: resultHtml,
+                                confirmButtonColor: '#2563eb'
+                            }).then(() => {
+                                // Reload page to show updated player conditions
+                                window.location.reload();
+                            });
+                        } else {
+                            let errorMessage = response.message || 'Unable to process daily recovery';
+                            if (response.already_processed) {
+                                errorMessage = 'Daily recovery has already been processed today. Try again tomorrow!';
+                            }
+                            
+                            Swal.fire({
+                                icon: 'info',
+                                title: 'Recovery Not Processed',
+                                text: errorMessage,
+                                confirmButtonColor: '#2563eb'
+                            });
+                        }
+                    })
+                    .fail(function () {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Recovery Failed',
+                            text: 'Network error occurred during recovery processing',
+                            confirmButtonColor: '#ef4444'
+                        });
+                    });
+            }
+        });
+    });
 
     // Helper function to generate player stats based on position and rating
     function generatePlayerStats(position, rating) {
