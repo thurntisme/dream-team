@@ -11,13 +11,13 @@ function renderFooter($isLoggedIn, $clubName, $userName, $userBudget, $userFans,
         <?php if ($isLoggedIn): ?>
             <!-- Ads for free users -->
             <?php if (shouldShowAds($_SESSION['user_id'])): ?>
-                <div class="container mx-auto px-4 py-4">
+                <div class="container mx-auto py-4">
                     <?php renderBannerAd('footer', $_SESSION['user_id']); ?>
                 </div>
             <?php endif; ?>
 
             <!-- Logged-in User Footer -->
-            <div class="container mx-auto px-4 py-6">
+            <div class="container mx-auto py-6">
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <!-- Club Status -->
                     <div class="bg-white rounded-lg p-4 border border-gray-200">
@@ -119,7 +119,7 @@ function renderFooter($isLoggedIn, $clubName, $userName, $userBudget, $userFans,
                 <!-- Copyright -->
                 <div class="border-t border-gray-200 mt-6 pt-4 text-center">
                     <div class="flex items-center justify-center gap-4 text-sm text-gray-500">
-                        <span>© 2024 Dream Team</span>
+                        <span>© <?php echo date('Y'); ?> Dream Team</span>
                         <span>•</span>
                         <span>Football Manager Game</span>
                         <span>•</span>
@@ -129,7 +129,7 @@ function renderFooter($isLoggedIn, $clubName, $userName, $userBudget, $userFans,
             </div>
         <?php else: ?>
             <!-- Guest User Footer -->
-            <div class="container mx-auto px-4 py-8">
+            <div class="container mx-auto py-8">
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
                     <!-- Brand -->
                     <div class="md:col-span-2">
