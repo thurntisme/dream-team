@@ -74,7 +74,7 @@ if (!function_exists('validateSession')) {
     function validateSession($current_page = '')
     {
         // Don't validate on login/install pages
-        if ($current_page === 'index' || $current_page === 'install') {
+        if ($current_page === 'index'  || $current_page === 'login' || $current_page === 'install') {
             return;
         }
 
@@ -104,7 +104,7 @@ if (!function_exists('requireAuth')) {
         validateSession($current_page);
 
         // Don't redirect if we're already on login/install pages
-        if ($current_page === 'index' || $current_page === 'install') {
+        if ($current_page === 'index' || $current_page === 'login' || $current_page === 'install') {
             return;
         }
 

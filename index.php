@@ -84,5 +84,5 @@ startContent();
 
 <?php
 // End content capture and render layout
-endContent('Login', '', false);
+endContent('Login', 'index', false);
 ?>
