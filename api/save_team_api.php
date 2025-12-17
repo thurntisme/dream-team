@@ -11,10 +11,7 @@ if (!isDatabaseAvailable()) {
     exit;
 }
 
-if (!isset($_SESSION['user_id'])) {
-    echo json_encode(['success' => false]);
-    exit;
-}
+
 
 $formation = $_POST['formation'] ?? '';
 $team = $_POST['team'] ?? '';

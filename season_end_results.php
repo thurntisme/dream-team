@@ -6,11 +6,7 @@ require_once 'partials/layout.php';
 require_once 'includes/league_functions.php';
 require_once 'includes/helpers.php';
 
-// Check if user is logged in
-if (!isset($_SESSION['user_id'])) {
-    header('Location: index.php');
-    exit;
-}
+
 
 // Check if season summary exists in session
 if (!isset($_SESSION['season_end_summary'])) {

@@ -6,11 +6,7 @@ require_once '../config/constants.php';
 
 header('Content-Type: application/json');
 
-// Check if user is logged in and has pending reward
-if (!isset($_SESSION['user_id'])) {
-    echo json_encode(['success' => false, 'message' => 'User not logged in']);
-    exit;
-}
+// Check if user has pending reward
 
 if (!isset($_SESSION['pending_reward'])) {
     echo json_encode(['success' => false, 'message' => 'No pending reward found']);

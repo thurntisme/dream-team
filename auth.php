@@ -160,11 +160,7 @@ if ($action === 'register') {
         echo json_encode(['success' => false, 'message' => 'Invalid credentials']);
     }
 } elseif ($action === 'extend_session') {
-    // Check if user is logged in
-    if (!isset($_SESSION['user_id'])) {
-        echo json_encode(['success' => false, 'message' => 'Not logged in']);
-        exit;
-    }
+
 
     // Extend session by 24 hours from now
     $new_expire_time = time() + (24 * 60 * 60);

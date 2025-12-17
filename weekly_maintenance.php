@@ -13,12 +13,7 @@ if (!isDatabaseAvailable()) {
     exit;
 }
 
-// Check if user is logged in
-if (!isset($_SESSION['user_id'])) {
-    http_response_code(401);
-    echo json_encode(['error' => 'Not authenticated']);
-    exit;
-}
+
 
 try {
     $db = getDbConnection();

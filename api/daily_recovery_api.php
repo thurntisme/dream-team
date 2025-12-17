@@ -6,11 +6,7 @@ require_once '../config/config.php';
 require_once '../config/constants.php';
 require_once '../includes/helpers.php';
 
-// Check authentication
-if (!isset($_SESSION['user_id'])) {
-    echo json_encode(['success' => false, 'message' => 'Not authenticated']);
-    exit;
-}
+
 
 // Check if database is available
 if (!isDatabaseAvailable()) {

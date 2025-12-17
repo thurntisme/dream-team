@@ -6,12 +6,7 @@ require_once '../config/constants.php';
 
 header('Content-Type: application/json');
 
-// Check if user is logged in
-if (!isset($_SESSION['user_id'])) {
-    http_response_code(401);
-    echo json_encode(['success' => false, 'message' => 'User not logged in']);
-    exit;
-}
+
 
 if (!hasClubName()) {
     http_response_code(400);

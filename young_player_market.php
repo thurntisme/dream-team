@@ -6,11 +6,7 @@ require_once 'includes/helpers.php';
 require_once 'partials/layout.php';
 require_once 'includes/ads.php';
 
-// Check if user is logged in
-if (!isset($_SESSION['user_id'])) {
-    header('Location: index.php');
-    exit;
-}
+
 
 
 

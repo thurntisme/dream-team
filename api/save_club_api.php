@@ -10,10 +10,7 @@ if (!isDatabaseAvailable()) {
     exit;
 }
 
-if (!isset($_SESSION['user_id'])) {
-    echo json_encode(['success' => false]);
-    exit;
-}
+
 
 $club_name = $_POST['club_name'] ?? '';
 

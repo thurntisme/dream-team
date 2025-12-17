@@ -5,11 +5,7 @@ header('Content-Type: application/json');
 require_once '../config/config.php';
 require_once '../config/constants.php';
 
-// Check if user is logged in
-if (!isset($_SESSION['user_id'])) {
-    echo json_encode(['success' => false, 'message' => 'Not logged in']);
-    exit;
-}
+
 
 // Check if database is available
 if (!isDatabaseAvailable()) {
