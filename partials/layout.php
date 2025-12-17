@@ -2,13 +2,14 @@
 // Dream Team Layout Template
 // Provides consistent navigation and footer across all pages
 
-function renderLayout($title, $content, $currentPage = '', $showAuth = true, $skipDbCheck = false, $requireClub = false)
+function renderLayout($title, $content, $currentPage = '', $showAuth = true, $skipDbCheck = false, $requireClub = false, $requireAuth = true)
 {
     // Ensure constants and helpers are available
     require_once __DIR__ . '/../config/constants.php';
     require_once __DIR__ . '/../includes/helpers.php';
     require_once __DIR__ . '/../includes/ads.php';
     require_once __DIR__ . '/../includes/routing.php';
+    require_once __DIR__ . '/../includes/auth_functions.php';
     require_once __DIR__ . '/nav.php';
     require_once __DIR__ . '/footer.php';
 
@@ -16,6 +17,11 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true, $sk
     if (!$skipDbCheck && !isDatabaseAvailable()) {
         header('Location: install.php');
         exit;
+    }
+
+    // Require authentication if specified (default: true)
+    if ($requireAuth) {
+        requireAuth($currentPage);
     }
 
     // Require club name if specified
@@ -330,9 +336,9 @@ function startContent()
 }
 
 // Helper function to end content capture and render layout
-function endContent($title, $currentPage = '', $showAuth = true, $skipDbCheck = false, $requireClub = false)
+function endContent($title, $currentPage = '', $showAuth = true, $skipDbCheck = false, $requireClub = false, $requireAuth = true)
 {
     $content = ob_get_clean();
-    echo renderLayout($title, $content, $currentPage, $showAuth, $skipDbCheck, $requireClub);
+    echo renderLayout($title, $content, $currentPage, $showAuth, $skipDbCheck, $requireClub, $requireAuth);
 }
 ?>
