@@ -107,27 +107,9 @@ try {
     exit;
 }
 
-// Support categories
-$categories = [
-    'account' => 'Account Issues',
-    'payment' => 'Payment Problems',
-    'billing' => 'Billing Questions',
-    'technical' => 'Technical Issues',
-    'gameplay' => 'Gameplay Problems',
-    'purchase' => 'Purchase Issues',
-    'refund' => 'Refund Request',
-    'subscription' => 'Subscription Issues',
-    'data_loss' => 'Data Loss/Recovery',
-    'other' => 'Other Support Request'
-];
-
-// Priority levels
-$priorities = [
-    'low' => 'Low Priority',
-    'medium' => 'Medium Priority',
-    'high' => 'High Priority',
-    'urgent' => 'Urgent'
-];
+// Support categories and priorities are now defined in config/constants.php
+$categories = getSupportCategories();
+$priorities = getSupportPriorities();
 
 // Start content capture
 startContent();

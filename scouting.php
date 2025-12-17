@@ -59,29 +59,7 @@ if (file_exists('assets/json/players.json')) {
 // Function to map specific positions to general categories
 function mapPositionToCategory($position)
 {
-    $position_mapping = [
-        'GK' => 'GK',
-        'CB' => 'DEF',
-        'LB' => 'DEF',
-        'RB' => 'DEF',
-        'LWB' => 'DEF',
-        'RWB' => 'DEF',
-        'DEF' => 'DEF',
-        'CDM' => 'MID',
-        'CM' => 'MID',
-        'CAM' => 'MID',
-        'LM' => 'MID',
-        'RM' => 'MID',
-        'LW' => 'MID',
-        'RW' => 'MID',
-        'MID' => 'MID',
-        'CF' => 'FWD',
-        'ST' => 'FWD',
-        'LF' => 'FWD',
-        'RF' => 'FWD',
-        'FWD' => 'FWD'
-    ];
-
+    $position_mapping = getPositionMapping();
     return $position_mapping[$position] ?? 'MID'; // Default to MID if position not found
 }
 
@@ -112,18 +90,7 @@ function getRecommendedPlayers($players_data, $user_team, $user_formation, $user
     }
 
     // Determine formation requirements
-    $formation_requirements = [
-        '4-4-2' => ['GK' => 1, 'DEF' => 4, 'MID' => 4, 'FWD' => 2],
-        '4-3-3' => ['GK' => 1, 'DEF' => 4, 'MID' => 3, 'FWD' => 3],
-        '3-5-2' => ['GK' => 1, 'DEF' => 3, 'MID' => 5, 'FWD' => 2],
-        '4-5-1' => ['GK' => 1, 'DEF' => 4, 'MID' => 5, 'FWD' => 1],
-        '5-3-2' => ['GK' => 1, 'DEF' => 5, 'MID' => 3, 'FWD' => 2],
-        '3-4-3' => ['GK' => 1, 'DEF' => 3, 'MID' => 4, 'FWD' => 3],
-        '4-2-3-1' => ['GK' => 1, 'DEF' => 4, 'MID' => 5, 'FWD' => 1],
-        '5-4-1' => ['GK' => 1, 'DEF' => 5, 'MID' => 4, 'FWD' => 1],
-        '3-5-1-1' => ['GK' => 1, 'DEF' => 3, 'MID' => 6, 'FWD' => 1]
-    ];
-
+    $formation_requirements = getFormationRequirements();
     $required_positions = $formation_requirements[$user_formation] ?? $formation_requirements['4-4-2'];
     $avg_team_rating = !empty($team_ratings) ? array_sum($team_ratings) / count($team_ratings) : 70;
 
@@ -202,12 +169,8 @@ foreach ($recommended_player_ids as $player_uuid) {
     }
 }
 
-// Scouting costs
-$scouting_costs = [
-    'basic' => 100000,    // €100K - Basic report
-    'detailed' => 250000, // €250K - Detailed report
-    'premium' => 500000   // €500K - Premium report
-];
+// Scouting costs are now defined in config/constants.php
+$scouting_costs = getScoutingCosts();
 
 // Start content capture
 startContent();
@@ -506,7 +469,7 @@ startContent();
                                         <div class="text-gray-600">Report Quality</div>
                                         <div class="font-medium">
                                             <?php
-                                            $quality_names = [1 => 'Basic', 2 => 'Detailed', 3 => 'Premium'];
+                                            $quality_names = SCOUTING_QUALITY_NAMES;
                                             echo $quality_names[$scout_data['report_quality']] ?? 'Unknown';
                                             ?>
                                         </div>

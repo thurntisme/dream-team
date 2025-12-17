@@ -422,3 +422,343 @@ function getDemoClubs()
     return DEMO_CLUBS;
 }
 
+// League System Constants
+define('FAKE_CLUBS', [
+    'Thunder Bay United',
+    'Golden Eagles FC',
+    'Crystal Wolves',
+    'Phoenix Rising',
+    'Midnight Strikers',
+    'Velocity FC',
+    'Storm City FC',
+    'Iron Lions',
+    'Silver Hawks United',
+    'Crimson Tigers',
+    'Azure Dragons',
+    'Emerald Panthers',
+    'Royal Falcons',
+    'Shadow Wolves',
+    'Lightning Bolts',
+    'Fire Phoenixes',
+    'Ice Bears United',
+    'Wind Runners FC',
+    'Earth Guardians'
+]);
+
+define('CHAMPIONSHIP_CLUBS', [
+    'Titan Rovers',
+    'Mystic United',
+    'Blazing Stars FC',
+    'Ocean Waves',
+    'Mountain Lions',
+    'Desert Eagles',
+    'Forest Rangers FC',
+    'Steel Warriors',
+    'Cosmic Wanderers',
+    'Thunder Wolves',
+    'Glacier FC',
+    'Sunset Strikers',
+    'Neon Knights',
+    'Phantom Raiders',
+    'Solar Flares FC',
+    'Arctic Foxes',
+    'Volcanic United',
+    'Tornado FC',
+    'Lightning Hawks',
+    'Storm Breakers',
+    'Diamond Crusaders',
+    'Emerald City FC',
+    'Ruby Rangers',
+    'Sapphire United'
+]);
+
+// Staff System Constants
+define('STAFF_COSTS', [
+    'head_coach' => [
+        'name' => 'Head Coach',
+        'description' => 'Improves team performance and player development',
+        'icon' => 'user-check',
+        'candidates' => [
+            ['name' => 'Marcus Rodriguez', 'specialty' => 'Defensive tactics', 'experience' => 'Elite'],
+            ['name' => 'Alessandro Fontana', 'specialty' => 'Possession football', 'experience' => 'Elite'],
+            ['name' => 'Viktor Petrov', 'specialty' => 'High-intensity pressing', 'experience' => 'Elite'],
+            ['name' => 'Giovanni Rossi', 'specialty' => 'Man management', 'experience' => 'Elite'],
+            ['name' => 'Diego Martinez', 'specialty' => 'Tactical discipline', 'experience' => 'Elite'],
+            ['name' => 'Carlos Mendoza', 'specialty' => 'Counter-attacking', 'experience' => 'Elite'],
+            ['name' => 'Stefan Mueller', 'specialty' => 'Flexible formations', 'experience' => 'Elite'],
+            ['name' => 'Laurent Dubois', 'specialty' => 'Player motivation', 'experience' => 'Elite']
+        ],
+        'levels' => [
+            1 => ['cost' => 5000000, 'salary' => 100000, 'bonus' => 'Team gets +2 overall rating'],
+            2 => ['cost' => 15000000, 'salary' => 250000, 'bonus' => 'Team gets +4 overall rating'],
+            3 => ['cost' => 35000000, 'salary' => 500000, 'bonus' => 'Team gets +6 overall rating'],
+            4 => ['cost' => 75000000, 'salary' => 1000000, 'bonus' => 'Team gets +8 overall rating'],
+            5 => ['cost' => 150000000, 'salary' => 2000000, 'bonus' => 'Team gets +10 overall rating']
+        ]
+    ],
+    'fitness_coach' => [
+        'name' => 'Fitness Coach',
+        'description' => 'Reduces player fatigue and injury risk',
+        'icon' => 'dumbbell',
+        'candidates' => [
+            ['name' => 'Roberto Silva', 'specialty' => 'Injury prevention', 'experience' => 'Elite'],
+            ['name' => 'Michael Thompson', 'specialty' => 'High-intensity training', 'experience' => 'Elite'],
+            ['name' => 'Hans Bergmann', 'specialty' => 'Periodization', 'experience' => 'Elite'],
+            ['name' => 'Paulo Santos', 'specialty' => 'Recovery methods', 'experience' => 'Elite'],
+            ['name' => 'Andrea Bianchi', 'specialty' => 'Strength conditioning', 'experience' => 'Elite'],
+            ['name' => 'Fernando Lopez', 'specialty' => 'Endurance training', 'experience' => 'Elite']
+        ],
+        'levels' => [
+            1 => ['cost' => 3000000, 'salary' => 75000, 'bonus' => 'Players lose 20% less fitness'],
+            2 => ['cost' => 8000000, 'salary' => 150000, 'bonus' => 'Players lose 35% less fitness'],
+            3 => ['cost' => 20000000, 'salary' => 300000, 'bonus' => 'Players lose 50% less fitness'],
+            4 => ['cost' => 45000000, 'salary' => 600000, 'bonus' => 'Players lose 65% less fitness'],
+            5 => ['cost' => 100000000, 'salary' => 1200000, 'bonus' => 'Players lose 80% less fitness']
+        ]
+    ],
+    'scout' => [
+        'name' => 'Scout',
+        'description' => 'Discovers better players and provides detailed reports',
+        'icon' => 'search',
+        'candidates' => [
+            ['name' => 'Eduardo Campos', 'specialty' => 'Young talent identification', 'experience' => 'Elite'],
+            ['name' => 'James Mitchell', 'specialty' => 'Data-driven scouting', 'experience' => 'Elite'],
+            ['name' => 'Antonio Benitez', 'specialty' => 'Technical players', 'experience' => 'Elite'],
+            ['name' => 'Ricardo Montes', 'specialty' => 'Value signings', 'experience' => 'Elite'],
+            ['name' => 'David Edwards', 'specialty' => 'Market analysis', 'experience' => 'Elite'],
+            ['name' => 'Marco Bertoli', 'specialty' => 'South American talent', 'experience' => 'Elite']
+        ],
+        'levels' => [
+            1 => ['cost' => 2000000, 'salary' => 50000, 'bonus' => 'Reveals basic player stats'],
+            2 => ['cost' => 6000000, 'salary' => 100000, 'bonus' => 'Reveals detailed player stats'],
+            3 => ['cost' => 15000000, 'salary' => 200000, 'bonus' => 'Finds hidden gem players'],
+            4 => ['cost' => 35000000, 'salary' => 400000, 'bonus' => 'Predicts player potential'],
+            5 => ['cost' => 80000000, 'salary' => 800000, 'bonus' => 'Discovers world-class talents']
+        ]
+    ],
+    'youth_coach' => [
+        'name' => 'Youth Coach',
+        'description' => 'Develops young players and academy prospects',
+        'icon' => 'graduation-cap',
+        'candidates' => [
+            ['name' => 'Xavier Hernandez', 'specialty' => 'Technical development', 'experience' => 'Elite'],
+            ['name' => 'Frank Lambert', 'specialty' => 'Youth integration', 'experience' => 'Elite'],
+            ['name' => 'Miguel Arteta', 'specialty' => 'Tactical education', 'experience' => 'Elite'],
+            ['name' => 'Patrick Vieira', 'specialty' => 'Leadership training', 'experience' => 'Elite'],
+            ['name' => 'Thierry Henri', 'specialty' => 'Attacking play', 'experience' => 'Elite'],
+            ['name' => 'Andrea Pirelli', 'specialty' => 'Vision and creativity', 'experience' => 'Elite']
+        ],
+        'levels' => [
+            1 => ['cost' => 4000000, 'salary' => 80000, 'bonus' => 'Young players develop 25% faster'],
+            2 => ['cost' => 10000000, 'salary' => 175000, 'bonus' => 'Young players develop 50% faster'],
+            3 => ['cost' => 25000000, 'salary' => 350000, 'bonus' => 'Young players develop 75% faster'],
+            4 => ['cost' => 55000000, 'salary' => 700000, 'bonus' => 'Young players develop 100% faster'],
+            5 => ['cost' => 120000000, 'salary' => 1400000, 'bonus' => 'Generates academy prospects']
+        ]
+    ],
+    'medical_staff' => [
+        'name' => 'Medical Staff',
+        'description' => 'Treats injuries and maintains player health',
+        'icon' => 'heart',
+        'candidates' => [
+            ['name' => 'Dr. Ricardo Pruna', 'specialty' => 'Injury prevention', 'experience' => 'Elite'],
+            ['name' => 'Dr. Hans Mueller', 'specialty' => 'Sports medicine', 'experience' => 'Elite'],
+            ['name' => 'Dr. Eva Carneiro', 'specialty' => 'Match-day medicine', 'experience' => 'Elite'],
+            ['name' => 'Dr. Francesco Escola', 'specialty' => 'Rehabilitation', 'experience' => 'Elite'],
+            ['name' => 'Dr. Bruno Mazzini', 'specialty' => 'Muscle injuries', 'experience' => 'Elite'],
+            ['name' => 'Dr. Jorge Ardevol', 'specialty' => 'Recovery protocols', 'experience' => 'Elite']
+        ],
+        'levels' => [
+            1 => ['cost' => 3500000, 'salary' => 70000, 'bonus' => 'Reduces injury duration by 25%'],
+            2 => ['cost' => 9000000, 'salary' => 140000, 'bonus' => 'Reduces injury duration by 40%'],
+            3 => ['cost' => 22000000, 'salary' => 280000, 'bonus' => 'Reduces injury duration by 55%'],
+            4 => ['cost' => 50000000, 'salary' => 560000, 'bonus' => 'Reduces injury duration by 70%'],
+            5 => ['cost' => 110000000, 'salary' => 1120000, 'bonus' => 'Prevents most injuries']
+        ]
+    ]
+]);
+
+// Stadium System Constants
+define('STADIUM_LEVELS', [
+    1 => [
+        'name' => 'Basic Stadium',
+        'capacity' => 10000,
+        'upgrade_cost' => 5000000, // 5M to upgrade to level 2
+        'revenue_multiplier' => 1.0,
+        'description' => 'A modest stadium with basic facilities'
+    ],
+    2 => [
+        'name' => 'Community Stadium',
+        'capacity' => 20000,
+        'upgrade_cost' => 15000000, // 15M to upgrade to level 3
+        'revenue_multiplier' => 1.2,
+        'description' => 'Improved facilities with better seating and amenities'
+    ],
+    3 => [
+        'name' => 'Professional Stadium',
+        'capacity' => 35000,
+        'upgrade_cost' => 30000000, // 30M to upgrade to level 4
+        'revenue_multiplier' => 1.5,
+        'description' => 'Modern stadium with premium facilities and corporate boxes'
+    ],
+    4 => [
+        'name' => 'Elite Stadium',
+        'capacity' => 50000,
+        'upgrade_cost' => 60000000, // 60M to upgrade to level 5
+        'revenue_multiplier' => 1.8,
+        'description' => 'State-of-the-art stadium with luxury amenities'
+    ],
+    5 => [
+        'name' => 'Legendary Stadium',
+        'capacity' => 75000,
+        'upgrade_cost' => null, // Max level
+        'revenue_multiplier' => 2.2,
+        'description' => 'Iconic stadium that attracts fans from around the world'
+    ]
+]);
+
+define('STADIUM_FEATURES', [
+    1 => ['Basic Seating', 'Concession Stands'],
+    2 => ['Improved Seating', 'Food Courts', 'Parking'],
+    3 => ['Premium Seating', 'Corporate Boxes', 'VIP Lounges'],
+    4 => ['Luxury Suites', 'Media Center', 'Player Facilities'],
+    5 => ['World-Class Amenities', 'Museum', 'Training Complex']
+]);
+
+// Injury System Constants
+define('INJURY_TYPES', [
+    'minor_strain' => [
+        'name' => 'Minor Muscle Strain',
+        'duration_days' => [3, 7], // min, max range
+        'fitness_penalty' => [10, 20], // min, max range
+        'probability' => 0.8 // 80% of injuries are minor
+    ],
+    'muscle_injury' => [
+        'name' => 'Muscle Injury',
+        'duration_days' => [7, 14],
+        'fitness_penalty' => [20, 35],
+        'probability' => 0.15 // 15% of injuries
+    ],
+    'serious_injury' => [
+        'name' => 'Serious Injury',
+        'duration_days' => [14, 28],
+        'fitness_penalty' => [35, 50],
+        'probability' => 0.05 // 5% of injuries are serious
+    ]
+]);
+
+// Scouting System Constants
+define('SCOUTING_COSTS', [
+    'basic' => 100000,    // €100K - Basic report
+    'detailed' => 250000, // €250K - Detailed report
+    'premium' => 500000   // €500K - Premium report
+]);
+
+define('SCOUTING_QUALITY_NAMES', [
+    1 => 'Basic',
+    2 => 'Detailed', 
+    3 => 'Premium'
+]);
+
+define('POSITION_MAPPING', [
+    'GK' => 'GK',
+    'CB' => 'DEF',
+    'LB' => 'DEF',
+    'RB' => 'DEF',
+    'LWB' => 'DEF',
+    'RWB' => 'DEF',
+    'DEF' => 'DEF',
+    'CDM' => 'MID',
+    'CM' => 'MID',
+    'CAM' => 'MID',
+    'LM' => 'MID',
+    'RM' => 'MID',
+    'LW' => 'MID',
+    'RW' => 'MID',
+    'MID' => 'MID',
+    'CF' => 'FWD',
+    'ST' => 'FWD',
+    'LF' => 'FWD',
+    'RF' => 'FWD',
+    'FWD' => 'FWD'
+]);
+
+define('FORMATION_REQUIREMENTS', [
+    '4-4-2' => ['GK' => 1, 'DEF' => 4, 'MID' => 4, 'FWD' => 2],
+    '4-3-3' => ['GK' => 1, 'DEF' => 4, 'MID' => 3, 'FWD' => 3],
+    '3-5-2' => ['GK' => 1, 'DEF' => 3, 'MID' => 5, 'FWD' => 2],
+    '4-5-1' => ['GK' => 1, 'DEF' => 4, 'MID' => 5, 'FWD' => 1],
+    '5-3-2' => ['GK' => 1, 'DEF' => 5, 'MID' => 3, 'FWD' => 2],
+    '3-4-3' => ['GK' => 1, 'DEF' => 3, 'MID' => 4, 'FWD' => 3],
+    '4-2-3-1' => ['GK' => 1, 'DEF' => 4, 'MID' => 5, 'FWD' => 1],
+    '5-4-1' => ['GK' => 1, 'DEF' => 5, 'MID' => 4, 'FWD' => 1],
+    '3-5-1-1' => ['GK' => 1, 'DEF' => 3, 'MID' => 6, 'FWD' => 1]
+]);
+
+// Support System Constants
+define('SUPPORT_CATEGORIES', [
+    'account' => 'Account Issues',
+    'payment' => 'Payment Problems',
+    'billing' => 'Billing Questions',
+    'technical' => 'Technical Issues',
+    'gameplay' => 'Gameplay Problems',
+    'purchase' => 'Purchase Issues',
+    'refund' => 'Refund Request',
+    'subscription' => 'Subscription Issues',
+    'data_loss' => 'Data Loss/Recovery',
+    'other' => 'Other Support Request'
+]);
+
+define('SUPPORT_PRIORITIES', [
+    'low' => 'Low Priority',
+    'medium' => 'Medium Priority',
+    'high' => 'High Priority',
+    'urgent' => 'Urgent'
+]);
+
+// Helper functions for accessing constants
+function getStaffCosts()
+{
+    return STAFF_COSTS;
+}
+
+function getStadiumLevels()
+{
+    return STADIUM_LEVELS;
+}
+
+function getStadiumFeatures()
+{
+    return STADIUM_FEATURES;
+}
+
+function getInjuryTypes()
+{
+    return INJURY_TYPES;
+}
+
+function getScoutingCosts()
+{
+    return SCOUTING_COSTS;
+}
+
+function getPositionMapping()
+{
+    return POSITION_MAPPING;
+}
+
+function getFormationRequirements()
+{
+    return FORMATION_REQUIREMENTS;
+}
+
+function getSupportCategories()
+{
+    return SUPPORT_CATEGORIES;
+}
+
+function getSupportPriorities()
+{
+    return SUPPORT_PRIORITIES;
+}
+

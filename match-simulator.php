@@ -394,23 +394,18 @@ function isPlayerInjured($player) {
 }
 
 function applyMatchInjuries($user_team, $match_injuries) {
-    $injury_types = [
-        'minor_strain' => [
-            'name' => 'Minor Muscle Strain',
-            'duration_days' => rand(3, 7),
-            'fitness_penalty' => rand(10, 20)
-        ],
-        'muscle_injury' => [
-            'name' => 'Muscle Injury',
-            'duration_days' => rand(7, 14),
-            'fitness_penalty' => rand(20, 35)
-        ],
-        'serious_injury' => [
-            'name' => 'Serious Injury',
-            'duration_days' => rand(14, 28),
-            'fitness_penalty' => rand(35, 50)
-        ]
-    ];
+    // Injury types are now defined in config/constants.php
+    $injury_types_config = getInjuryTypes();
+    $injury_types = [];
+    
+    // Convert range arrays to random values for this execution
+    foreach ($injury_types_config as $type => $config) {
+        $injury_types[$type] = [
+            'name' => $config['name'],
+            'duration_days' => rand($config['duration_days'][0], $config['duration_days'][1]),
+            'fitness_penalty' => rand($config['fitness_penalty'][0], $config['fitness_penalty'][1])
+        ];
+    }
     
     foreach ($match_injuries as $injury) {
         // Find the player in the team
@@ -470,11 +465,11 @@ function generateMatchEvents($user_team, $opponent_team, $user_goals, $opponent_
 
     // Add injury events
     foreach ($match_injuries as $injury) {
-        $injury_names = [
-            'minor_strain' => 'Minor Muscle Strain',
-            'muscle_injury' => 'Muscle Injury',
-            'serious_injury' => 'Serious Injury'
-        ];
+        $injury_types_config = getInjuryTypes();
+        $injury_names = [];
+        foreach ($injury_types_config as $type => $config) {
+            $injury_names[$type] = $config['name'];
+        }
         
         $injury_name = $injury_names[$injury['injury_type']] ?? 'Injury';
         $events[] = [

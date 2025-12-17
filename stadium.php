@@ -75,44 +75,8 @@ try {
     exit;
 }
 
-// Stadium upgrade costs and benefits
-$stadium_levels = [
-    1 => [
-        'name' => 'Basic Stadium',
-        'capacity' => 10000,
-        'upgrade_cost' => 5000000, // 5M to upgrade to level 2
-        'revenue_multiplier' => 1.0,
-        'description' => 'A modest stadium with basic facilities'
-    ],
-    2 => [
-        'name' => 'Community Stadium',
-        'capacity' => 20000,
-        'upgrade_cost' => 15000000, // 15M to upgrade to level 3
-        'revenue_multiplier' => 1.2,
-        'description' => 'Improved facilities with better seating and amenities'
-    ],
-    3 => [
-        'name' => 'Professional Stadium',
-        'capacity' => 35000,
-        'upgrade_cost' => 30000000, // 30M to upgrade to level 4
-        'revenue_multiplier' => 1.5,
-        'description' => 'Modern stadium with premium facilities and corporate boxes'
-    ],
-    4 => [
-        'name' => 'Elite Stadium',
-        'capacity' => 50000,
-        'upgrade_cost' => 60000000, // 60M to upgrade to level 5
-        'revenue_multiplier' => 1.8,
-        'description' => 'State-of-the-art stadium with luxury amenities'
-    ],
-    5 => [
-        'name' => 'Legendary Stadium',
-        'capacity' => 75000,
-        'upgrade_cost' => null, // Max level
-        'revenue_multiplier' => 2.2,
-        'description' => 'Iconic stadium that attracts fans from around the world'
-    ]
-];
+// Stadium upgrade costs and benefits are now defined in config/constants.php
+$stadium_levels = getStadiumLevels();
 
 $current_level = $stadium_data['level'];
 $current_stadium = $stadium_levels[$current_level];
@@ -220,13 +184,7 @@ startContent();
                     <h4 class="font-semibold text-gray-900 mb-2">Stadium Features</h4>
                     <div class="grid grid-cols-2 gap-2 text-sm">
                         <?php
-                        $features = [
-                            1 => ['Basic Seating', 'Concession Stands'],
-                            2 => ['Improved Seating', 'Food Courts', 'Parking'],
-                            3 => ['Premium Seating', 'Corporate Boxes', 'VIP Lounges'],
-                            4 => ['Luxury Suites', 'Media Center', 'Player Facilities'],
-                            5 => ['World-Class Amenities', 'Museum', 'Training Complex']
-                        ];
+                        $features = getStadiumFeatures();
 
                         for ($i = 1; $i <= $current_level; $i++) {
                             foreach ($features[$i] as $feature) {
@@ -280,7 +238,7 @@ startContent();
                         <h4 class="font-semibold text-green-900 mb-2">New Features</h4>
                         <div class="space-y-1">
                             <?php
-                            $new_features = $features[$current_level + 1] ?? [];
+                            $new_features = getStadiumFeatures()[$current_level + 1] ?? [];
                             foreach ($new_features as $feature) {
                                 echo '<div class="flex items-center gap-2 text-green-700">';
                                 echo '<i data-lucide="plus" class="w-3 h-3"></i>';

@@ -22,27 +22,19 @@ try {
     $db = getDbConnection();
     $user_id = $_SESSION['user_id'];
 
-    // Injury types and their properties
-    $injury_types = [
-        'minor_strain' => [
-            'name' => 'Minor Muscle Strain',
-            'duration_days' => rand(3, 7),
-            'fitness_penalty' => rand(10, 20),
-            'probability' => 0.8 // 80% of injuries are minor
-        ],
-        'muscle_injury' => [
-            'name' => 'Muscle Injury',
-            'duration_days' => rand(7, 14),
-            'fitness_penalty' => rand(20, 35),
-            'probability' => 0.15 // 15% of injuries
-        ],
-        'serious_injury' => [
-            'name' => 'Serious Injury',
-            'duration_days' => rand(14, 28),
-            'fitness_penalty' => rand(35, 50),
-            'probability' => 0.05 // 5% of injuries are serious
-        ]
-    ];
+    // Injury types and their properties are now defined in config/constants.php
+    $injury_types_config = getInjuryTypes();
+    $injury_types = [];
+    
+    // Convert range arrays to random values for this execution
+    foreach ($injury_types_config as $type => $config) {
+        $injury_types[$type] = [
+            'name' => $config['name'],
+            'duration_days' => rand($config['duration_days'][0], $config['duration_days'][1]),
+            'fitness_penalty' => rand($config['fitness_penalty'][0], $config['fitness_penalty'][1]),
+            'probability' => $config['probability']
+        ];
+    }
 
     if ($_POST['action'] === 'check_random_injuries') {
         // Get user data

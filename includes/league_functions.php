@@ -1,56 +1,7 @@
 <?php
 // League system functions
 
-// Fake club names for the league (Premier League - 19 teams + user = 20 total)
-define('FAKE_CLUBS', [
-    'Thunder Bay United',
-    'Golden Eagles FC',
-    'Crystal Wolves',
-    'Phoenix Rising',
-    'Midnight Strikers',
-    'Velocity FC',
-    'Storm City FC',
-    'Iron Lions',
-    'Silver Hawks United',
-    'Crimson Tigers',
-    'Azure Dragons',
-    'Emerald Panthers',
-    'Royal Falcons',
-    'Shadow Wolves',
-    'Lightning Bolts',
-    'Fire Phoenixes',
-    'Ice Bears United',
-    'Wind Runners FC',
-    'Earth Guardians'
-]);
-
-// Additional fake club names for the Championship (Second Division)
-define('CHAMPIONSHIP_CLUBS', [
-    'Titan Rovers',
-    'Mystic United',
-    'Blazing Stars FC',
-    'Ocean Waves',
-    'Mountain Lions',
-    'Desert Eagles',
-    'Forest Rangers FC',
-    'Steel Warriors',
-    'Cosmic Wanderers',
-    'Thunder Wolves',
-    'Glacier FC',
-    'Sunset Strikers',
-    'Neon Knights',
-    'Phantom Raiders',
-    'Solar Flares FC',
-    'Arctic Foxes',
-    'Volcanic United',
-    'Tornado FC',
-    'Lightning Hawks',
-    'Storm Breakers',
-    'Diamond Crusaders',
-    'Emerald City FC',
-    'Ruby Rangers',
-    'Sapphire United'
-]);
+// League club names are now defined in config/constants.php
 
 function initializeLeague($db, $user_id)
 {
