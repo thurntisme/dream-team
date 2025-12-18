@@ -8,7 +8,7 @@ define('FLOATING_AD_AUTO_HIDE_DELAY', 30000); // 30 seconds auto-hide
 define('FLOATING_AD_SLIDE_DELAY', 500);       // 0.5 seconds slide animation
 
 // Floating Ad CSS Classes
-define('FLOATING_AD_CONTAINER_CLASSES', 'fixed bottom-4 right-4 z-50 max-w-sm bg-white border border-gray-200 rounded-lg shadow-xl p-4 transform translate-x-full transition-all duration-500 hover:shadow-2xl');
+define('FLOATING_AD_CONTAINER_CLASSES', 'fixed bottom-4 right-4 z-50 max-w-sm bg-white border border-gray-200 rounded-lg shadow-xl p-4 transform translate-x-full opacity-0 transition-all duration-500 hover:shadow-2xl');
 define('FLOATING_AD_CLOSE_BUTTON_CLASSES', 'absolute top-2 right-2 text-gray-400 hover:text-gray-600 transition-colors');
 define('FLOATING_AD_CTA_BASE_CLASSES', 'block w-full text-center px-4 py-2 text-white text-sm rounded-lg hover:opacity-90 transition-all duration-200 font-medium');
 
@@ -327,6 +327,7 @@ function renderFloatingAdScript()
             const ad = getAdElement();
             if (ad && ad.classList.contains(config.hiddenClass)) {
                 ad.classList.remove(config.hiddenClass);
+                ad.classList.remove('opacity-0')
                 
                 // Ensure Lucide icons are rendered
                 if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') {
