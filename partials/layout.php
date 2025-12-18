@@ -14,9 +14,9 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true, $sk
     require_once __DIR__ . '/footer.php';
 
     // Require authentication if specified (default: true)
-    if ($requireAuth) {
-        requireAuth($currentPage);
-    }
+    // if ($requireAuth) {
+    //     requireAuth($currentPage);
+    // }
 
     // Require club name if specified
     if ($requireClub) {

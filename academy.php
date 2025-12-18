@@ -748,5 +748,5 @@ startContent();
 
 
 <?php
-endContent('Young Player Academy', 'academy');
+endContent('Young Player Academy', 'academy', true, false, true);
 ?>

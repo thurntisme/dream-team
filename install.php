@@ -416,27 +416,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install'])) {
             $db->exec('CREATE TABLE IF NOT EXISTS young_players (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 club_id INTEGER NOT NULL,
-                player_name TEXT NOT NULL,
-                position TEXT NOT NULL,
+                name TEXT NOT NULL,
                 age INTEGER NOT NULL,
-                rating INTEGER NOT NULL,
-                price INTEGER NOT NULL,
-                nationality TEXT NOT NULL,
+                position TEXT NOT NULL,
+                potential_rating INTEGER NOT NULL,
+                current_rating INTEGER NOT NULL,
+                development_stage TEXT DEFAULT "academy",
+                contract_years INTEGER DEFAULT 3,
+                value INTEGER NOT NULL,
+                training_focus TEXT DEFAULT "balanced",
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                expires_at DATETIME NOT NULL,
-                FOREIGN KEY (club_id) REFERENCES users(id)
+                promoted_at DATETIME,
+                FOREIGN KEY (club_id) REFERENCES users (id) ON DELETE CASCADE
             )');
 
             // Young player bids table
             $db->exec('CREATE TABLE IF NOT EXISTS young_player_bids (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 young_player_id INTEGER NOT NULL,
-                bidder_id INTEGER NOT NULL,
+                bidder_club_id INTEGER NOT NULL,
+                owner_club_id INTEGER NOT NULL,
                 bid_amount INTEGER NOT NULL,
                 status TEXT DEFAULT "pending",
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (young_player_id) REFERENCES young_players(id),
-                FOREIGN KEY (bidder_id) REFERENCES users(id)
+                expires_at DATETIME NOT NULL,
+                FOREIGN KEY (young_player_id) REFERENCES young_players (id) ON DELETE CASCADE,
+                FOREIGN KEY (bidder_club_id) REFERENCES users (id) ON DELETE CASCADE,
+                FOREIGN KEY (owner_club_id) REFERENCES users (id) ON DELETE CASCADE
             )');
 
             // Nation calls table
