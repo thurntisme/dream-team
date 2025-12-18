@@ -276,6 +276,9 @@ class TeamController
      */
     public function processTeamData()
     {
+        $startTime = microtime(true);
+        debug_info("Starting team data processing", ['user_id' => $this->userId]);
+        
         // Get user data
         $userData = $this->getUserTeamData();
         $userData['max_players'] = $this->ensureMaxPlayersSet($userData['max_players']);
@@ -310,7 +313,7 @@ class TeamController
         // Get club level data
         $clubLevelData = $this->getClubLevelData();
 
-        return array_merge($userData, [
+        $result = array_merge($userData, [
             'team_data' => $teamData,
             'substitutes_data' => $substitutesData,
             'team_value' => $teamValue,
@@ -321,5 +324,14 @@ class TeamController
             'club_exp' => $clubLevelData['club_exp'],
             'level_name' => $clubLevelData['level_name']
         ]);
+        
+        debug_performance("Team data processing", $startTime, [
+            'user_id' => $this->userId,
+            'team_value' => $teamValue,
+            'player_count' => count(array_filter($teamData ?: [], fn($p) => $p !== null)),
+            'ranking' => $ranking
+        ]);
+        
+        return $result;
     }
 }

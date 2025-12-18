@@ -109,6 +109,11 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true, $sk
         
         <?php echo renderFooter($isLoggedIn, $clubName, $userName, $userBudget, $userFans, $clubLevel); ?>
 
+        <!-- Floating Ad for Free Users -->
+        <?php if ($isLoggedIn && shouldShowAds($_SESSION['user_id'])): ?>
+            <?php renderFloatingAd($_SESSION['user_id']); ?>
+        <?php endif; ?>
+
         <!-- JavaScript -->
         <script>
             // Initialize Lucide icons

@@ -2,6 +2,16 @@
 // Ads Component for Free Users
 // This file contains ad display functions and components
 
+// Floating Ad Configuration
+define('FLOATING_AD_SHOW_DELAY', 3000);      // 3 seconds delay before showing
+define('FLOATING_AD_AUTO_HIDE_DELAY', 30000); // 30 seconds auto-hide
+define('FLOATING_AD_SLIDE_DELAY', 500);       // 0.5 seconds slide animation
+
+// Floating Ad CSS Classes
+define('FLOATING_AD_CONTAINER_CLASSES', 'fixed bottom-4 right-4 z-50 max-w-sm bg-white border border-gray-200 rounded-lg shadow-xl p-4 transform translate-x-full transition-all duration-500 hover:shadow-2xl');
+define('FLOATING_AD_CLOSE_BUTTON_CLASSES', 'absolute top-2 right-2 text-gray-400 hover:text-gray-600 transition-colors');
+define('FLOATING_AD_CTA_BASE_CLASSES', 'block w-full text-center px-4 py-2 text-white text-sm rounded-lg hover:opacity-90 transition-all duration-200 font-medium');
+
 /**
  * Render banner ad
  * 
@@ -145,7 +155,7 @@ function getAdsByPosition($position)
 }
 
 /**
- * Render floating ad for mobile
+ * Render floating ad for mobile and desktop
  * 
  * @param int $user_id User ID
  */
@@ -155,27 +165,223 @@ function renderFloatingAd($user_id)
         return;
     }
 
-    echo '<div id="floatingAd" class="fixed bottom-4 right-4 z-50 max-w-sm bg-white border border-gray-200 rounded-lg shadow-lg p-4 transform translate-x-full transition-transform duration-300">';
-    echo '<button onclick="closeFloatingAd()" class="absolute top-2 right-2 text-gray-400 hover:text-gray-600">';
-    echo '<i data-lucide="x" class="w-4 h-4"></i>';
-    echo '</button>';
-    echo '<div class="text-sm font-semibold text-gray-900 mb-2">Upgrade to Premium</div>';
-    echo '<div class="text-xs text-gray-600 mb-3">Remove ads and unlock all features</div>';
-    echo '<a href="plans.php" class="inline-block px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors">';
-    echo 'View Plans';
-    echo '</a>';
-    echo '</div>';
+    // Get a random ad variant
+    $ad = getFloatingAdVariant();
 
-    echo '<script>';
-    echo 'setTimeout(() => {';
-    echo '  const ad = document.getElementById("floatingAd");';
-    echo '  if (ad) ad.classList.remove("translate-x-full");';
-    echo '}, 3000);';
-    echo 'function closeFloatingAd() {';
-    echo '  const ad = document.getElementById("floatingAd");';
-    echo '  if (ad) ad.classList.add("translate-x-full");';
-    echo '}';
-    echo '</script>';
+    // Render the floating ad HTML
+    renderFloatingAdHtml($ad);
+    
+    // Render the floating ad JavaScript
+    renderFloatingAdScript();
+}
+
+/**
+ * Get floating ad variants configuration
+ * 
+ * @return array Array of ad variants
+ */
+function getFloatingAdVariants()
+{
+    return [
+        'premium_upgrade' => [
+            'title' => 'Upgrade to Premium',
+            'description' => 'Remove ads and unlock all features',
+            'cta' => 'View Plans',
+            'icon' => 'crown',
+            'gradient' => 'from-blue-500 to-purple-600',
+            'weight' => 40 // Higher weight = more likely to show
+        ],
+        'ad_free' => [
+            'title' => 'Go Ad-Free',
+            'description' => 'Enjoy uninterrupted gameplay',
+            'cta' => 'Upgrade Now',
+            'icon' => 'zap',
+            'gradient' => 'from-green-500 to-blue-600',
+            'weight' => 35
+        ],
+        'unlock_features' => [
+            'title' => 'Unlock Premium',
+            'description' => 'Advanced features await',
+            'cta' => 'See Plans',
+            'icon' => 'star',
+            'gradient' => 'from-purple-500 to-pink-600',
+            'weight' => 25
+        ]
+    ];
+}
+
+/**
+ * Get a random floating ad variant based on weights
+ * 
+ * @return array Selected ad variant
+ */
+function getFloatingAdVariant()
+{
+    $variants = getFloatingAdVariants();
+    
+    // Calculate total weight
+    $totalWeight = array_sum(array_column($variants, 'weight'));
+    
+    // Generate random number
+    $random = mt_rand(1, $totalWeight);
+    
+    // Select variant based on weight
+    $currentWeight = 0;
+    foreach ($variants as $key => $variant) {
+        $currentWeight += $variant['weight'];
+        if ($random <= $currentWeight) {
+            return $variant;
+        }
+    }
+    
+    // Fallback to first variant
+    return reset($variants);
+}
+
+/**
+ * Render floating ad HTML structure
+ * 
+ * @param array $ad Ad configuration array
+ */
+function renderFloatingAdHtml($ad)
+{
+    $adId = 'floatingAd';
+    $containerClasses = FLOATING_AD_CONTAINER_CLASSES;
+    $closeButtonClasses = FLOATING_AD_CLOSE_BUTTON_CLASSES;
+    $iconContainerClasses = 'w-10 h-10 bg-gradient-to-r ' . $ad['gradient'] . ' rounded-full flex items-center justify-center';
+    $ctaClasses = FLOATING_AD_CTA_BASE_CLASSES . ' bg-gradient-to-r ' . $ad['gradient'];
+    
+    ?>
+    <div id="<?php echo $adId; ?>" class="<?php echo $containerClasses; ?>">
+        <!-- Close Button -->
+        <button onclick="closeFloatingAd()" class="<?php echo $closeButtonClasses; ?>" aria-label="Close advertisement">
+            <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+        
+        <!-- Ad Content -->
+        <div class="flex items-center gap-3 mb-3">
+            <!-- Icon -->
+            <div class="<?php echo $iconContainerClasses; ?>">
+                <i data-lucide="<?php echo htmlspecialchars($ad['icon']); ?>" class="w-5 h-5 text-white"></i>
+            </div>
+            
+            <!-- Text Content -->
+            <div class="flex-1">
+                <div class="text-sm font-semibold text-gray-900">
+                    <?php echo htmlspecialchars($ad['title']); ?>
+                </div>
+                <div class="text-xs text-gray-600">
+                    <?php echo htmlspecialchars($ad['description']); ?>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Call to Action Button -->
+        <a href="plans.php" class="<?php echo $ctaClasses; ?>" role="button">
+            <?php echo htmlspecialchars($ad['cta']); ?>
+        </a>
+        
+        <!-- Advertisement Label -->
+        <div class="text-xs text-gray-400 text-center mt-2">Advertisement</div>
+    </div>
+    <?php
+}
+
+/**
+ * Render floating ad JavaScript functionality
+ */
+function renderFloatingAdScript()
+{
+    $showDelay = FLOATING_AD_SHOW_DELAY;
+    $autoHideDelay = FLOATING_AD_AUTO_HIDE_DELAY;
+    $slideOutDelay = FLOATING_AD_SLIDE_DELAY;
+    
+    ?>
+    <script>
+    (function() {
+        'use strict';
+        
+        // Prevent multiple initializations
+        if (typeof window.floatingAdInitialized !== 'undefined') {
+            return;
+        }
+        
+        window.floatingAdInitialized = true;
+        
+        // Configuration
+        const config = {
+            adId: 'floatingAd',
+            showDelay: <?php echo $showDelay; ?>,
+            autoHideDelay: <?php echo $autoHideDelay; ?>,
+            slideOutDelay: <?php echo $slideOutDelay; ?>,
+            hiddenClass: 'translate-x-full'
+        };
+        
+        // Get ad element
+        function getAdElement() {
+            return document.getElementById(config.adId);
+        }
+        
+        // Show the floating ad
+        function showFloatingAd() {
+            const ad = getAdElement();
+            if (ad && ad.classList.contains(config.hiddenClass)) {
+                ad.classList.remove(config.hiddenClass);
+                
+                // Ensure Lucide icons are rendered
+                if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') {
+                    lucide.createIcons();
+                }
+                
+                // Set up auto-hide timer
+                setTimeout(autoHideFloatingAd, config.autoHideDelay);
+            }
+        }
+        
+        // Hide the floating ad
+        function hideFloatingAd() {
+            const ad = getAdElement();
+            if (ad && !ad.classList.contains(config.hiddenClass)) {
+                ad.classList.add(config.hiddenClass);
+                
+                // Remove from DOM after animation completes
+                setTimeout(() => {
+                    if (ad && ad.parentNode) {
+                        ad.parentNode.removeChild(ad);
+                    }
+                }, config.slideOutDelay);
+            }
+        }
+        
+        // Auto-hide the ad if user hasn't interacted
+        function autoHideFloatingAd() {
+            const ad = getAdElement();
+            if (ad && !ad.classList.contains(config.hiddenClass)) {
+                hideFloatingAd();
+            }
+        }
+        
+        // Global close function for onclick handler
+        window.closeFloatingAd = function() {
+            hideFloatingAd();
+        };
+        
+        // Initialize the floating ad
+        function initFloatingAd() {
+            // Show ad after delay
+            setTimeout(showFloatingAd, config.showDelay);
+        }
+        
+        // Start initialization when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initFloatingAd);
+        } else {
+            initFloatingAd();
+        }
+        
+    })();
+    </script>
+    <?php
 }
 
 /**

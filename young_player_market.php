@@ -95,11 +95,6 @@ startContent();
         </div>
     <?php endif; ?>
 
-    <!-- Ads for free users -->
-    <?php if (shouldShowAds($userId)): ?>
-        <?php renderBannerAd('content', $userId); ?>
-    <?php endif; ?>
-
     <!-- Navigation -->
     <div class="mb-6">
         <div class="flex gap-4">

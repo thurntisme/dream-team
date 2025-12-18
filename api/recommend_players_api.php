@@ -19,10 +19,14 @@ $db = getDbConnection();
 $userId = $_SESSION['user_id'];
 
 try {
+    $startTime = microtime(true);
+    debug_info("Player recommendation request started", ['user_id' => $userId]);
+    
     // Check if this is a cost inquiry or actual recommendation request
     $action = $_POST['action'] ?? 'get_recommendations';
     
     if ($action === 'get_cost') {
+        debug_info("Cost inquiry request", ['user_id' => $userId, 'cost' => RECOMMENDATION_COST]);
         // Return just the cost for confirmation
         echo json_encode([
             'success' => true,
@@ -197,7 +201,7 @@ try {
     // This simulates the time needed for complex AI analysis
     usleep(500000); // 0.5 second delay
 
-    echo json_encode([
+    $response = [
         'success' => true,
         'recommendations' => $recommendations,
         'budget' => $newBudget, // Return updated budget
@@ -210,7 +214,23 @@ try {
                 round(array_sum($avgPositionRatings) / count($avgPositionRatings), 1) : 0,
             'positionCounts' => $positionCounts
         ]
+    ];
+    
+    debug_performance("Player recommendation generation", $startTime, [
+        'user_id' => $userId,
+        'recommendations_count' => count($recommendations),
+        'empty_positions' => count($emptyPositions),
+        'weak_positions' => count($weakPositions),
+        'cost_paid' => RECOMMENDATION_COST,
+        'new_budget' => $newBudget
     ]);
+    
+    debug_user_action($userId, "Generated player recommendations", [
+        'cost' => RECOMMENDATION_COST,
+        'recommendations' => count($recommendations)
+    ]);
+    
+    echo json_encode($response);
 
 } catch (Exception $e) {
     echo json_encode([

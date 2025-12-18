@@ -208,6 +208,18 @@ function renderNavigation($isLoggedIn, $showAuth, $currentPage, $clubName, $user
                                     <span>Settings</span>
                                 </a>
 
+                                <?php
+                                // Show debug logs link if debug logging is enabled
+                                require_once __DIR__ . '/../includes/debug_logger.php';
+                                if (DebugLogger::getInstance()->isEnabled()): ?>
+                                    <a href="debug_logs.php"
+                                        class="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                                        <i data-lucide="file-text" class="w-4 h-4"></i>
+                                        <span>Debug Logs</span>
+                                        <span class="ml-auto text-xs bg-orange-100 text-orange-600 px-2 py-1 rounded-full">DEV</span>
+                                    </a>
+                                <?php endif; ?>
+
                                 <a href="feedback.php"
                                     class="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
                                     <i data-lucide="message-circle" class="w-4 h-4"></i>

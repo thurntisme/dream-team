@@ -3,6 +3,10 @@ dreamteam.db
 # Environment configuration
 .env
 
+# Log files
+logs/
+*.log
+
 # IDE files
 .vscode/
 .idea/

@@ -195,11 +195,6 @@ startContent();
         </div>
     <?php endif; ?>
 
-    <!-- Ads for free users -->
-    <?php if (shouldShowAds($userId)): ?>
-        <?php renderBannerAd('content', $userId); ?>
-    <?php endif; ?>
-
     <!-- Plan upgrade prompt if user hit limits -->
     <?php
     $currentAcademyCount = count($academyPlayers);
@@ -750,11 +745,7 @@ startContent();
     }
 </script>
 
-<!-- Floating ad for free users -->
-<?php if (shouldShowAds($userId)): ?>
-      
-    <?php renderFloatingAd($userId); ?>
-<?php endif; ?>
+
 
 <?php
 endContent('Young Player Academy', 'academy');

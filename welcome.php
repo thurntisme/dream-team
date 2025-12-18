@@ -275,10 +275,7 @@ startContent();
 
 <script src="assets/js/welcome.js"></script>
 
-<!-- Floating ad for free users -->
-<?php if (shouldShowAds($_SESSION['user_id'])): ?>
-    <?php renderFloatingAd($_SESSION['user_id']); ?>
-<?php endif; ?>
+
 
 <?php
 // End content capture and render layout
