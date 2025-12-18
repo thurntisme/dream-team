@@ -77,6 +77,8 @@ startContent();
 
 <?php include 'components/player-info-modal.php'; ?>
 
+<?php include 'components/player-recommendations-modal.php'; ?>
+
 <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
 <script>
     const players = <?php echo json_encode(getDefaultPlayers()); ?>;
@@ -3226,6 +3228,638 @@ startContent();
         }
     });
 
+    // Player Recommendations Functionality
+    let currentRecommendations = [];
+
+    // Open recommendations modal with cost confirmation
+    $('#recommendPlayersBtn').click(function() {
+        // First get the cost
+        $.post('api/recommend_players_api.php', { action: 'get_cost' }, function(response) {
+            if (response.success) {
+                showRecommendationCostConfirmation(response.cost, response.formatted_cost);
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Service Unavailable',
+                    text: 'Unable to load recommendation service. Please try again.',
+                    confirmButtonColor: '#ef4444'
+                });
+            }
+        }, 'json').fail(function() {
+            Swal.fire({
+                icon: 'error',
+                title: 'Connection Error',
+                text: 'Unable to connect to recommendation service. Please check your connection.',
+                confirmButtonColor: '#ef4444'
+            });
+        });
+    });
+
+    // Show cost confirmation dialog
+    function showRecommendationCostConfirmation(cost, formattedCost) {
+        const currentBudget = maxBudget;
+        const remainingAfter = currentBudget - cost;
+        
+        if (currentBudget < cost) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Insufficient Budget',
+                html: `
+                    <div class="text-left space-y-3">
+                        <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+                            <h4 class="font-semibold text-red-900 mb-2">Budget Required:</h4>
+                            <div class="space-y-1 text-sm">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">Service Cost:</span>
+                                    <span class="font-medium text-red-600">${formattedCost}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">Your Budget:</span>
+                                    <span class="font-medium">${formatMarketValue(currentBudget)}</span>
+                                </div>
+                                <div class="flex justify-between border-t pt-1">
+                                    <span class="text-gray-600">Shortage:</span>
+                                    <span class="font-medium text-red-600">${formatMarketValue(cost - currentBudget)}</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                            <div class="text-sm text-blue-800">
+                                <i data-lucide="lightbulb" class="w-4 h-4 inline mr-1"></i>
+                                Earn more budget by winning matches or selling players
+                            </div>
+                        </div>
+                    </div>
+                `,
+                confirmButtonText: 'Understood',
+                confirmButtonColor: '#3b82f6',
+                customClass: {
+                    popup: 'swal-wide'
+                },
+                didOpen: () => {
+                    lucide.createIcons();
+                }
+            });
+            return;
+        }
+
+        Swal.fire({
+            title: 'AI Player Recommendations',
+            html: `
+                <div class="text-left space-y-4">
+                    <div class="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-200">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
+                                <i data-lucide="brain" class="w-6 h-6 text-white"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-blue-900">Premium AI Analysis</h4>
+                                <p class="text-sm text-blue-700">Get personalized player recommendations</p>
+                            </div>
+                        </div>
+                        
+                        <div class="space-y-2 text-sm text-blue-800">
+                            <div class="flex items-center gap-2">
+                                <i data-lucide="check" class="w-4 h-4 text-green-600"></i>
+                                <span>Analyze your team composition</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <i data-lucide="check" class="w-4 h-4 text-green-600"></i>
+                                <span>Identify weak positions and gaps</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <i data-lucide="check" class="w-4 h-4 text-green-600"></i>
+                                <span>Recommend best value players</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <i data-lucide="check" class="w-4 h-4 text-green-600"></i>
+                                <span>Prioritize by formation needs</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-gray-50 p-4 rounded-lg border">
+                        <h4 class="font-semibold text-gray-900 mb-3">Service Cost:</h4>
+                        <div class="space-y-2 text-sm">
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">AI Analysis Fee:</span>
+                                <span class="font-bold text-red-600">${formattedCost}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Current Budget:</span>
+                                <span class="font-medium">${formatMarketValue(currentBudget)}</span>
+                            </div>
+                            <div class="flex justify-between border-t pt-2">
+                                <span class="text-gray-600">After Payment:</span>
+                                <span class="font-medium ${remainingAfter >= 0 ? 'text-green-600' : 'text-red-600'}">${formatMarketValue(remainingAfter)}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                        <div class="flex items-start gap-2">
+                            <i data-lucide="info" class="w-4 h-4 text-yellow-600 mt-0.5"></i>
+                            <div class="text-sm text-yellow-800">
+                                <strong>One-time fee:</strong> This analysis will provide up to 10 personalized player recommendations based on your current team needs and budget.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#10b981',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: `<i data-lucide="credit-card" class="w-4 h-4 inline mr-2"></i>Pay ${formattedCost} & Get Recommendations`,
+            cancelButtonText: 'Cancel',
+            customClass: {
+                popup: 'swal-wide'
+            },
+            didOpen: () => {
+                lucide.createIcons();
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $('#recommendationsModal').removeClass('hidden');
+                loadRecommendations();
+            }
+        });
+    }
+
+    // Close recommendations modal
+    $('#closeRecommendationsModal, #closeRecommendationsModalFooter').click(function() {
+        $('#recommendationsModal').addClass('hidden');
+    });
+
+    // Close modal when clicking outside
+    $('#recommendationsModal').click(function(e) {
+        if (e.target === this) {
+            $(this).addClass('hidden');
+        }
+    });
+
+    // Retry button
+    $('#retryRecommendations').click(function() {
+        loadRecommendations();
+    });
+
+    // Filter recommendations
+    $('.recommendation-filter').click(function() {
+        $('.recommendation-filter').removeClass('active bg-blue-600 text-white').addClass('bg-gray-200 text-gray-700');
+        $(this).removeClass('bg-gray-200 text-gray-700').addClass('active bg-blue-600 text-white');
+        
+        const filter = $(this).data('filter');
+        filterRecommendations(filter);
+    });
+
+    // Load recommendations from API with progress animation
+    function loadRecommendations() {
+        // Show progress animation
+        showAIAnalysisProgress();
+    }
+
+    // Show AI analysis progress with realistic steps
+    function showAIAnalysisProgress() {
+        let progress = 0;
+        let currentStep = 0;
+        let progressInterval = null;
+
+        const analysisSteps = [
+            { text: 'Initializing AI analysis engine...', duration: 800 },
+            { text: 'Scanning current team composition...', duration: 1200 },
+            { text: 'Analyzing formation requirements...', duration: 1000 },
+            { text: 'Evaluating player ratings and positions...', duration: 1500 },
+            { text: 'Identifying team weaknesses...', duration: 1000 },
+            { text: 'Searching player database...', duration: 1800 },
+            { text: 'Calculating compatibility scores...', duration: 1200 },
+            { text: 'Applying budget constraints...', duration: 800 },
+            { text: 'Ranking recommendations by priority...', duration: 1000 },
+            { text: 'Finalizing analysis results...', duration: 600 }
+        ];
+
+        // Update loading content with progress bar
+        $('#recommendationsLoading').html(`
+            <div class="text-center py-8">
+                <div class="mb-6">
+                    <div class="w-16 h-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i data-lucide="brain" class="w-8 h-8 text-white animate-pulse"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-800 mb-2">AI Analysis in Progress</h3>
+                    <p class="text-gray-600">Our advanced AI is analyzing your team...</p>
+                </div>
+                
+                <div class="max-w-md mx-auto">
+                    <div class="mb-4">
+                        <div id="analysisStep" class="text-sm text-blue-600 font-medium mb-2">${analysisSteps[0].text}</div>
+                        <div class="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                            <div id="analysisProgress" class="bg-gradient-to-r from-blue-500 via-purple-500 to-blue-600 h-3 rounded-full transition-all duration-500 relative" style="width: 0%">
+                                <div class="absolute inset-0 bg-white opacity-30 animate-pulse"></div>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center mt-2">
+                            <span id="analysisPercentage" class="text-xs text-gray-500">0%</span>
+                            <span class="text-xs text-gray-500">Processing...</span>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-3 gap-2 mt-4">
+                        <div class="bg-blue-50 p-2 rounded text-center">
+                            <div class="text-xs text-blue-600 font-medium">Team Scan</div>
+                            <div id="teamScanStatus" class="text-xs text-gray-500">Pending</div>
+                        </div>
+                        <div class="bg-purple-50 p-2 rounded text-center">
+                            <div class="text-xs text-purple-600 font-medium">AI Analysis</div>
+                            <div id="aiAnalysisStatus" class="text-xs text-gray-500">Pending</div>
+                        </div>
+                        <div class="bg-green-50 p-2 rounded text-center">
+                            <div class="text-xs text-green-600 font-medium">Results</div>
+                            <div id="resultsStatus" class="text-xs text-gray-500">Pending</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `);
+
+        $('#recommendationsLoading').removeClass('hidden');
+        $('#teamAnalysisSection, #recommendationsSection, #recommendationsError').addClass('hidden');
+
+        // Recreate icons after HTML update
+        lucide.createIcons();
+
+        let stepIndex = 0;
+        let stepProgress = 0;
+
+        function updateProgress() {
+            const currentStepData = analysisSteps[stepIndex];
+            const stepDuration = currentStepData.duration;
+            const progressIncrement = (100 / analysisSteps.length) / (stepDuration / 50);
+
+            stepProgress += progressIncrement;
+            progress = (stepIndex * (100 / analysisSteps.length)) + (stepProgress * (100 / analysisSteps.length) / 100);
+
+            // Update progress bar
+            $('#analysisProgress').css('width', Math.min(progress, 100) + '%');
+            $('#analysisPercentage').text(Math.floor(Math.min(progress, 100)) + '%');
+
+            // Update status indicators
+            if (progress >= 30 && $('#teamScanStatus').text() === 'Pending') {
+                $('#teamScanStatus').text('Complete').removeClass('text-gray-500').addClass('text-blue-600');
+            }
+            if (progress >= 70 && $('#aiAnalysisStatus').text() === 'Pending') {
+                $('#aiAnalysisStatus').text('Complete').removeClass('text-gray-500').addClass('text-purple-600');
+            }
+            if (progress >= 95 && $('#resultsStatus').text() === 'Pending') {
+                $('#resultsStatus').text('Complete').removeClass('text-gray-500').addClass('text-green-600');
+            }
+
+            // Check if current step is complete
+            if (stepProgress >= 100) {
+                stepIndex++;
+                stepProgress = 0;
+
+                if (stepIndex < analysisSteps.length) {
+                    $('#analysisStep').text(analysisSteps[stepIndex].text);
+                } else {
+                    // All steps complete, make API call
+                    clearInterval(progressInterval);
+                    
+                    // Show final completion step
+                    $('#analysisStep').text('Analysis complete! Loading results...');
+                    $('#analysisProgress').css('width', '100%');
+                    $('#analysisPercentage').text('100%');
+                    
+                    // Wait a moment then load actual results
+                    setTimeout(() => {
+                        loadActualRecommendations();
+                    }, 500);
+                    return;
+                }
+            }
+        }
+
+        // Start progress animation
+        progressInterval = setInterval(updateProgress, 50);
+
+        // Safety timeout (max 15 seconds)
+        setTimeout(() => {
+            if (progressInterval) {
+                clearInterval(progressInterval);
+                loadActualRecommendations();
+            }
+        }, 15000);
+    }
+
+    // Load actual recommendations from API
+    function loadActualRecommendations() {
+        $.post('api/recommend_players_api.php', { action: 'get_recommendations' }, function(response) {
+            $('#recommendationsLoading').addClass('hidden');
+            
+            if (response.success) {
+                // Update local budget after payment
+                if (response.cost_paid) {
+                    maxBudget = response.budget;
+                    $('#clubBudget').text(formatMarketValue(response.budget));
+                    
+                    // Show payment success toast
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Analysis Complete!',
+                        html: `
+                            <div class="text-center">
+                                <p class="mb-2">AI analysis completed successfully!</p>
+                                <p class="text-sm text-gray-600">Cost: ${formatMarketValue(response.cost_paid)}</p>
+                                <p class="text-sm text-blue-600">Remaining Budget: ${formatMarketValue(response.budget)}</p>
+                            </div>
+                        `,
+                        timer: 3000,
+                        showConfirmButton: false,
+                        toast: true,
+                        position: 'top-end'
+                    });
+                }
+                
+                currentRecommendations = response.recommendations;
+                displayTeamAnalysis(response);
+                displayRecommendations(response.recommendations);
+                $('#teamAnalysisSection, #recommendationsSection').removeClass('hidden');
+            } else {
+                if (response.error_type === 'insufficient_budget') {
+                    $('#recommendationsModal').addClass('hidden');
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Insufficient Budget',
+                        html: `
+                            <div class="text-left">
+                                <p class="mb-3">You don't have enough budget for AI recommendations.</p>
+                                <div class="bg-gray-50 p-3 rounded">
+                                    <div class="flex justify-between mb-2">
+                                        <span>Required:</span>
+                                        <span class="font-bold text-red-600">${formatMarketValue(response.required)}</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span>Your Budget:</span>
+                                        <span class="font-bold">${formatMarketValue(response.current)}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        `,
+                        confirmButtonColor: '#3b82f6'
+                    });
+                } else {
+                    $('#recommendationsError').removeClass('hidden');
+                }
+            }
+        }, 'json').fail(function() {
+            $('#recommendationsLoading').addClass('hidden');
+            $('#recommendationsError').removeClass('hidden');
+        });
+    }
+
+    // Display team analysis
+    function displayTeamAnalysis(data) {
+        $('#totalPlayersCount').text(data.teamAnalysis.totalPlayers + '/11');
+        $('#avgTeamRating').text('★' + data.teamAnalysis.avgRating);
+        $('#availableBudget').text(formatMarketValue(data.budget));
+
+        // Show issues if any
+        if (data.emptyPositions.length > 0 || data.weakPositions.length > 0) {
+            $('#issuesFound').removeClass('hidden');
+            
+            if (data.emptyPositions.length > 0) {
+                $('#emptyPositionsList').removeClass('hidden');
+                $('#emptyPositionsText').text(data.emptyPositions.join(', '));
+            }
+            
+            if (data.weakPositions.length > 0) {
+                $('#weakPositionsList').removeClass('hidden');
+                $('#weakPositionsText').text(data.weakPositions.join(', '));
+            }
+        }
+    }
+
+    // Display recommendations
+    function displayRecommendations(recommendations) {
+        const $list = $('#recommendationsList');
+        $list.empty();
+
+        if (recommendations.length === 0) {
+            $('#noRecommendations').removeClass('hidden');
+            return;
+        }
+
+        recommendations.forEach((rec, index) => {
+            const player = rec.player;
+            const priorityColors = {
+                'high': 'border-red-200 bg-red-50',
+                'medium': 'border-orange-200 bg-orange-50', 
+                'low': 'border-blue-200 bg-blue-50'
+            };
+            
+            const priorityLabels = {
+                'high': 'High Priority',
+                'medium': 'Medium Priority',
+                'low': 'Squad Depth'
+            };
+
+            const priorityTextColors = {
+                'high': 'text-red-700',
+                'medium': 'text-orange-700',
+                'low': 'text-blue-700'
+            };
+
+            $list.append(`
+                <div class="recommendation-item border rounded-lg p-4 ${priorityColors[rec.priority]} transition-all duration-200 hover:shadow-md" data-priority="${rec.priority}">
+                    <div class="flex items-center justify-between">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-3 mb-2">
+                                <div class="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm">
+                                    <i data-lucide="user" class="w-6 h-6 text-gray-600"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-lg">${player.name}</h4>
+                                    <div class="flex items-center gap-2 text-sm text-gray-600">
+                                        <span class="bg-white px-2 py-1 rounded font-medium">${player.position}</span>
+                                        <span class="flex items-center gap-1">
+                                            <i data-lucide="star" class="w-3 h-3 text-yellow-500"></i>
+                                            ${player.rating}
+                                        </span>
+                                        <span class="text-green-600 font-semibold">${formatMarketValue(player.value)}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="px-2 py-1 rounded-full text-xs font-medium ${priorityTextColors[rec.priority]} bg-white">
+                                        ${priorityLabels[rec.priority]}
+                                    </span>
+                                </div>
+                                <p class="text-sm text-gray-700">${rec.reason}</p>
+                            </div>
+
+                            <div class="flex items-center gap-4 text-xs text-gray-600">
+                                <div class="flex items-center gap-1">
+                                    <i data-lucide="trending-up" class="w-3 h-3"></i>
+                                    Match Score: ${Math.round(rec.score)}
+                                </div>
+                                <div class="flex items-center gap-1">
+                                    <i data-lucide="dollar-sign" class="w-3 h-3"></i>
+                                    Value Rating: ${(player.rating / (player.value / 1000000)).toFixed(1)}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex flex-col gap-2 ml-4">
+                            <button onclick="showPlayerInfo(${JSON.stringify(player).replace(/"/g, '&quot;')})" 
+                                class="px-3 py-2 bg-white text-gray-700 rounded hover:bg-gray-50 border flex items-center gap-2 text-sm">
+                                <i data-lucide="info" class="w-4 h-4"></i>
+                                View Details
+                            </button>
+                            <button onclick="selectRecommendedPlayer(${JSON.stringify(player).replace(/"/g, '&quot;')})" 
+                                class="px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700 flex items-center gap-2 text-sm font-medium">
+                                <i data-lucide="plus" class="w-4 h-4"></i>
+                                Add Player
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `);
+        });
+
+        lucide.createIcons();
+    }
+
+    // Filter recommendations by priority
+    function filterRecommendations(filter) {
+        $('.recommendation-item').each(function() {
+            const priority = $(this).data('priority');
+            if (filter === 'all' || priority === filter) {
+                $(this).removeClass('hidden');
+            } else {
+                $(this).addClass('hidden');
+            }
+        });
+    }
+
+    // Select recommended player
+    window.selectRecommendedPlayer = function(player) {
+        // Close recommendations modal
+        $('#recommendationsModal').addClass('hidden');
+        
+        // Find empty slot or ask user to choose position
+        const emptySlot = selectedPlayers.findIndex(p => p === null);
+        
+        if (emptySlot !== -1) {
+            // Direct assignment to empty slot
+            currentSlotIdx = emptySlot;
+            isSelectingSubstitute = false;
+            
+            // Show confirmation before adding
+            Swal.fire({
+                title: 'Add Recommended Player?',
+                html: `
+                    <div class="text-left space-y-3">
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <h4 class="font-semibold text-gray-900 mb-2">Player Details:</h4>
+                            <div class="space-y-1 text-sm">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">Name:</span>
+                                    <span class="font-medium">${player.name}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">Position:</span>
+                                    <span class="font-medium">${player.position}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">Rating:</span>
+                                    <span class="font-medium">★${player.rating}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">Cost:</span>
+                                    <span class="font-medium text-red-600">${formatMarketValue(player.value)}</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                            <div class="text-sm text-blue-800">
+                                <i data-lucide="lightbulb" class="w-4 h-4 inline mr-1"></i>
+                                This player was recommended based on your team's needs
+                            </div>
+                        </div>
+                    </div>
+                `,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#10b981',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: '<i data-lucide="plus" class="w-4 h-4 inline mr-1"></i> Add Player',
+                cancelButtonText: 'Cancel',
+                customClass: {
+                    popup: 'swal-wide'
+                },
+                didOpen: () => {
+                    lucide.createIcons();
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Add the player using existing logic
+                    if (window.selectModalPlayer) {
+                        // Find player index in the players array
+                        const playerIndex = players.findIndex(p => p.name === player.name);
+                        if (playerIndex !== -1) {
+                            window.selectModalPlayer(playerIndex);
+                        }
+                    }
+                }
+            });
+        } else {
+            // Team is full, ask user to choose position to replace
+            Swal.fire({
+                title: 'Team is Full',
+                text: 'Your starting XI is complete. Would you like to add this player as a substitute or replace an existing player?',
+                icon: 'question',
+                showCancelButton: true,
+                showDenyButton: true,
+                confirmButtonText: 'Add as Substitute',
+                denyButtonText: 'Replace Player',
+                cancelButtonText: 'Cancel',
+                confirmButtonColor: '#3b82f6',
+                denyButtonColor: '#f59e0b',
+                cancelButtonColor: '#6b7280'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Add as substitute
+                    const emptySubSlot = substitutePlayers.findIndex(p => p === null);
+                    if (emptySubSlot !== -1) {
+                        currentSlotIdx = emptySubSlot;
+                        isSelectingSubstitute = true;
+                        const playerIndex = players.findIndex(p => p.name === player.name);
+                        if (playerIndex !== -1 && window.selectModalPlayer) {
+                            window.selectModalPlayer(playerIndex);
+                        }
+                    } else {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Substitutes Full',
+                            text: 'Your substitute bench is also full. Please remove a player first.',
+                            confirmButtonColor: '#3b82f6'
+                        });
+                    }
+                } else if (result.isDenied) {
+                    // Show player selection for replacement
+                    Swal.fire({
+                        icon: 'info',
+                        title: 'Choose Position',
+                        text: 'Click on a field position to replace that player with the recommended player.',
+                        confirmButtonColor: '#3b82f6'
+                    });
+                }
+            });
+        }
+    };
+
     // Make substitute functions globally available
     window.removeSubstitute = removeSubstitute;
     window.promoteSubstitute = promoteSubstitute;
@@ -3238,6 +3872,7 @@ startContent();
 
 <link rel="stylesheet" href="assets/css/swal-custom.css">
 <link rel="stylesheet" href="assets/css/player-modal.css">
+<link rel="stylesheet" href="assets/css/recommendations-modal.css">
 <?php
 // End content capture and render layout
 endContent($_SESSION['club_name'], 'team', true, false, true);

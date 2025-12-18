@@ -12,7 +12,15 @@
                 </option>
             <?php endforeach; ?>
         </select>
-        <h2 class="text-xl font-bold mt-6 mb-2">Your Players</h2>
+        <div class="flex items-center justify-between mt-6 mb-2">
+            <h2 class="text-xl font-bold">Your Players</h2>
+            <button id="recommendPlayersBtn" 
+                class="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-2 rounded-lg hover:from-blue-700 hover:to-blue-800 flex items-center gap-2 text-sm font-medium transition-all duration-200 shadow-md hover:shadow-lg relative">
+                <i data-lucide="brain" class="w-4 h-4"></i>
+                AI Recommendations
+                <span class="absolute -top-1 -right-1 bg-yellow-400 text-yellow-900 text-xs px-1.5 py-0.5 rounded-full font-bold">€2M</span>
+            </button>
+        </div>
         <p class=" text-xs text-gray-500 mb-4">Click to select • <i data-lucide="user-plus"
                 class="w-3 h-3 inline"></i> Choose • <i data-lucide="arrow-left-right"
                 class="w-3 h-3 inline"></i>
