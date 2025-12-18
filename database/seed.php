@@ -258,19 +258,7 @@ function seedShopItems()
             return false;
         }
 
-        // Create shop_items table if it doesn't exist
-        $db->exec('CREATE TABLE IF NOT EXISTS shop_items (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            description TEXT NOT NULL,
-            price INTEGER NOT NULL,
-            effect_type TEXT NOT NULL,
-            effect_value TEXT NOT NULL,
-            category TEXT NOT NULL,
-            icon TEXT DEFAULT "package",
-            duration INTEGER DEFAULT 0,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )');
+        // Database tables are now created in install.php
 
         $default_items = [
             // Training Items

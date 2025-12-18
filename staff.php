@@ -17,20 +17,7 @@ try {
     $user = $result->fetchArray(SQLITE3_ASSOC);
     $user_budget = $user['budget'] ?? DEFAULT_BUDGET;
 
-    // Create staff table if it doesn't exist
-    $db->exec('CREATE TABLE IF NOT EXISTS club_staff (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        staff_type TEXT NOT NULL,
-        name TEXT NOT NULL,
-        level INTEGER DEFAULT 1,
-        salary INTEGER NOT NULL,
-        contract_weeks INTEGER DEFAULT 52,
-        contract_weeks_remaining INTEGER DEFAULT 52,
-        hired_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-        bonus_applied_this_week BOOLEAN DEFAULT 0,
-        FOREIGN KEY (user_id) REFERENCES users(id)
-    )');
+    // Database tables are now created in install.php
 
     // Handle staff actions
     $message = '';

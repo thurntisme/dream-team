@@ -10,20 +10,7 @@ require_once 'partials/layout.php';
 $db = getDbConnection();
 $userId = $_SESSION['user_id'];
 
-// Create news table if it doesn't exist
-$db->exec('CREATE TABLE IF NOT EXISTS news (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
-    category TEXT NOT NULL,
-    priority TEXT NOT NULL DEFAULT "normal",
-    title TEXT NOT NULL,
-    content TEXT NOT NULL,
-    player_data TEXT,
-    actions TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    expires_at DATETIME NOT NULL,
-    FOREIGN KEY (user_id) REFERENCES users (id)
-)');
+// Database tables are now created in install.php
 
 // Get user data
 $stmt = $db->prepare('SELECT * FROM users WHERE id = :id');
@@ -276,5 +263,5 @@ startContent();
 </script>
 
 <?php
-endContent('Football News', 'news');
+endContent('Football News', 'news', true, false, true);
 ?>

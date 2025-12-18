@@ -13,15 +13,7 @@ if (!isset($_SESSION['user_id']) || !isset($_SESSION['club_name'])) {
 try {
     $db = getDbConnection();
 
-    // Create scouting table if it doesn't exist
-    $db->exec('CREATE TABLE IF NOT EXISTS scouting_reports (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        player_uuid TEXT NOT NULL,
-        scouted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        report_quality INTEGER DEFAULT 1,
-        FOREIGN KEY (user_id) REFERENCES users (id)
-    )');
+    // Database tables are now created in install.php
 
     // Get user's current data including team
     $stmt = $db->prepare('SELECT budget, club_name, team, formation FROM users WHERE id = :user_id');

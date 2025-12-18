@@ -7,10 +7,8 @@ require_once 'partials/layout.php';
 require_once 'includes/ads.php';
 require_once 'includes/routing.php';
 
-
-
 // Validate session but allow access to welcome page
-validateSession('welcome');
+// validateSession('welcome');
 
 try {
     $db = getDbConnection();
@@ -72,11 +70,10 @@ try {
 
     $db->close();
 } catch (Exception $e) {
+    var_dump(''. $e->getMessage());
     header('Location: /install');
     exit;
 }
-
-
 
 // Start content capture
 startContent();

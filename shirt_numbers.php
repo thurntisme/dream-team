@@ -545,5 +545,5 @@ startContent();
 </script>
 
 <?php
-endContent('Shirt Numbers - Dream Team', 'shirt_numbers');
+endContent('Shirt Numbers - Dream Team', 'shirt_numbers', true, false, true);
 ?>

@@ -24,17 +24,7 @@ try {
     if ($stmt->execute()) {
         $_SESSION['club_name'] = $club_name;
         
-        // Create stadiums table if it doesn't exist
-        $db->exec('CREATE TABLE IF NOT EXISTS stadiums (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            name TEXT DEFAULT "Home Stadium",
-            capacity INTEGER DEFAULT 10000,
-            level INTEGER DEFAULT 1,
-            facilities TEXT DEFAULT "{}",
-            last_upgrade DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users (id)
-        )');
+        // Database tables are now created in install.php
         
         // Check if stadium already exists for this user
         $stmt = $db->prepare('SELECT COUNT(*) as count FROM stadiums WHERE user_id = :user_id');

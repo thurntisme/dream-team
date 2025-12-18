@@ -18,65 +18,6 @@ try {
     exit;
 }
 
-$db->exec('CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    email TEXT UNIQUE NOT NULL,
-    password TEXT NOT NULL,
-    club_name TEXT,
-    formation TEXT,
-    team TEXT,
-    budget INTEGER DEFAULT ' . DEFAULT_BUDGET . ',
-    club_exp INTEGER DEFAULT 0,
-    club_level INTEGER DEFAULT 1,
-    user_plan TEXT DEFAULT "' . DEFAULT_USER_PLAN . '",
-    plan_expires_at DATETIME,
-    last_login DATETIME,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-)');
-
-$db->exec('CREATE TABLE IF NOT EXISTS user_settings (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
-    setting_key TEXT NOT NULL,
-    setting_value TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
-    UNIQUE(user_id, setting_key)
-)');
-
-$db->exec('CREATE TABLE IF NOT EXISTS young_players (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    club_id INTEGER NOT NULL,
-    name TEXT NOT NULL,
-    age INTEGER NOT NULL,
-    position TEXT NOT NULL,
-    potential_rating INTEGER NOT NULL,
-    current_rating INTEGER NOT NULL,
-    development_stage TEXT DEFAULT "academy",
-    contract_years INTEGER DEFAULT 3,
-    value INTEGER NOT NULL,
-    training_focus TEXT DEFAULT "balanced",
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    promoted_at DATETIME,
-    FOREIGN KEY (club_id) REFERENCES users (id) ON DELETE CASCADE
-)');
-
-$db->exec('CREATE TABLE IF NOT EXISTS young_player_bids (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    young_player_id INTEGER NOT NULL,
-    bidder_club_id INTEGER NOT NULL,
-    owner_club_id INTEGER NOT NULL,
-    bid_amount INTEGER NOT NULL,
-    status TEXT DEFAULT "pending",
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    expires_at DATETIME NOT NULL,
-    FOREIGN KEY (young_player_id) REFERENCES young_players (id) ON DELETE CASCADE,
-    FOREIGN KEY (bidder_club_id) REFERENCES users (id) ON DELETE CASCADE,
-    FOREIGN KEY (owner_club_id) REFERENCES users (id) ON DELETE CASCADE
-)');
-
 $action = $_POST['action'] ?? '';
 
 if ($action === 'register') {

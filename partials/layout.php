@@ -13,12 +13,6 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true, $sk
     require_once __DIR__ . '/nav.php';
     require_once __DIR__ . '/footer.php';
 
-    // Check if database is available, redirect to install if not (unless explicitly skipped)
-    if (!$skipDbCheck && !isDatabaseAvailable()) {
-        header('Location: install.php');
-        exit;
-    }
-
     // Require authentication if specified (default: true)
     if ($requireAuth) {
         requireAuth($currentPage);
@@ -32,8 +26,6 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true, $sk
     $isLoggedIn = isset($_SESSION['user_id']);
     $clubName = $_SESSION['club_name'] ?? '';
     $userName = $_SESSION['user_name'] ?? '';
-
-
 
     // Get user budget, fans, and club level if logged in
     $userBudget = 0;

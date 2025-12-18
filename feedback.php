@@ -10,21 +10,7 @@ require_once 'partials/layout.php';
 try {
     $db = getDbConnection();
 
-    // Create feedback table if it doesn't exist
-    $db->exec('CREATE TABLE IF NOT EXISTS user_feedback (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        category TEXT NOT NULL,
-        subject TEXT NOT NULL,
-        message TEXT NOT NULL,
-        status TEXT DEFAULT "pending",
-        reward_amount INTEGER DEFAULT 140,
-        reward_paid BOOLEAN DEFAULT 0,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        admin_response TEXT,
-        FOREIGN KEY (user_id) REFERENCES users(id)
-    )');
+    // Database tables are now created in install.php
 
     // Get user data
     $stmt = $db->prepare('SELECT name, email, club_name, budget FROM users WHERE id = :id');

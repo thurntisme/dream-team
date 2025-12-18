@@ -123,21 +123,7 @@ try {
         exit;
     }
 
-    // Create transfer_bids table if it doesn't exist
-    $db->exec('CREATE TABLE IF NOT EXISTS transfer_bids (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        bidder_id INTEGER NOT NULL,
-        owner_id INTEGER NOT NULL,
-        player_uuid TEXT NOT NULL,
-        player_data TEXT NOT NULL,
-        player_index INTEGER NOT NULL,
-        bid_amount INTEGER NOT NULL,
-        status TEXT DEFAULT "pending",
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        response_time DATETIME NULL,
-        FOREIGN KEY (bidder_id) REFERENCES users (id),
-        FOREIGN KEY (owner_id) REFERENCES users (id)
-    )');
+    // Database tables are now created in install.php
 
     // Insert the bid
     $stmt = $db->prepare('INSERT INTO transfer_bids (bidder_id, owner_id, player_uuid, player_data, player_index, bid_amount, status) 

@@ -6,8 +6,6 @@ require_once 'partials/layout.php';
 require_once 'partials/meta.php';
 require_once 'partials/analytics.php';
 
-
-
 // If user is already logged in, redirect to welcome page
 if (isset($_SESSION['user_id'])) {
     header('Location: welcome.php');

@@ -629,5 +629,5 @@ startContent();
 </script>
 
 <?php
-endContent('Player Contracts - Dream Team', 'contracts');
+endContent('Player Contracts - Dream Team', 'contracts', true, false, true);
 ?>

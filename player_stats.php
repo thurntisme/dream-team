@@ -11,27 +11,7 @@ requireClubName('player_stats');
 $db = getDbConnection();
 $userId = $_SESSION['user_id'];
 
-// Create player_stats table if it doesn't exist
-$db->exec('CREATE TABLE IF NOT EXISTS player_stats (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
-    player_id TEXT NOT NULL,
-    player_name TEXT NOT NULL,
-    position TEXT NOT NULL,
-    matches_played INTEGER DEFAULT 0,
-    goals INTEGER DEFAULT 0,
-    assists INTEGER DEFAULT 0,
-    yellow_cards INTEGER DEFAULT 0,
-    red_cards INTEGER DEFAULT 0,
-    total_rating REAL DEFAULT 0,
-    avg_rating REAL DEFAULT 0,
-    clean_sheets INTEGER DEFAULT 0,
-    saves INTEGER DEFAULT 0,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users (id),
-    UNIQUE(user_id, player_id)
-)');
+// Database tables are now created in install.php
 
 // Migrate existing table to use REAL for total_rating if needed
 try {

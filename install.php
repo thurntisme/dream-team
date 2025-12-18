@@ -398,6 +398,140 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install'])) {
             require_once 'includes/league_functions.php';
             createLeagueTables($db);
 
+            // Additional system tables
+            
+            // User settings table
+            $db->exec('CREATE TABLE IF NOT EXISTS user_settings (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                setting_key TEXT NOT NULL,
+                setting_value TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+                UNIQUE(user_id, setting_key)
+            )');
+
+            // Young players table
+            $db->exec('CREATE TABLE IF NOT EXISTS young_players (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                club_id INTEGER NOT NULL,
+                player_name TEXT NOT NULL,
+                position TEXT NOT NULL,
+                age INTEGER NOT NULL,
+                rating INTEGER NOT NULL,
+                price INTEGER NOT NULL,
+                nationality TEXT NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                expires_at DATETIME NOT NULL,
+                FOREIGN KEY (club_id) REFERENCES users(id)
+            )');
+
+            // Young player bids table
+            $db->exec('CREATE TABLE IF NOT EXISTS young_player_bids (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                young_player_id INTEGER NOT NULL,
+                bidder_id INTEGER NOT NULL,
+                bid_amount INTEGER NOT NULL,
+                status TEXT DEFAULT "pending",
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (young_player_id) REFERENCES young_players(id),
+                FOREIGN KEY (bidder_id) REFERENCES users(id)
+            )');
+
+            // Nation calls table
+            $db->exec('CREATE TABLE IF NOT EXISTS nation_calls (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                called_players TEXT NOT NULL,
+                total_reward INTEGER NOT NULL,
+                call_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (id)
+            )');
+
+            // Stadiums table
+            $db->exec('CREATE TABLE IF NOT EXISTS stadiums (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                name TEXT DEFAULT "Home Stadium",
+                capacity INTEGER DEFAULT 10000,
+                level INTEGER DEFAULT 1,
+                facilities TEXT DEFAULT "{}",
+                last_upgrade DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (id)
+            )');
+
+            // User feedback table
+            $db->exec('CREATE TABLE IF NOT EXISTS user_feedback (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                category TEXT NOT NULL,
+                subject TEXT NOT NULL,
+                message TEXT NOT NULL,
+                status TEXT DEFAULT "pending",
+                reward_amount INTEGER DEFAULT 140,
+                reward_paid BOOLEAN DEFAULT 0,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                admin_response TEXT,
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            )');
+
+            // News table
+            $db->exec('CREATE TABLE IF NOT EXISTS news (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                category TEXT NOT NULL,
+                priority TEXT NOT NULL DEFAULT "normal",
+                title TEXT NOT NULL,
+                content TEXT NOT NULL,
+                player_data TEXT,
+                actions TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                expires_at DATETIME NOT NULL,
+                FOREIGN KEY (user_id) REFERENCES users (id)
+            )');
+
+            // Player stats table
+            $db->exec('CREATE TABLE IF NOT EXISTS player_stats (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                player_id TEXT NOT NULL,
+                player_name TEXT NOT NULL,
+                position TEXT NOT NULL,
+                matches_played INTEGER DEFAULT 0,
+                goals INTEGER DEFAULT 0,
+                assists INTEGER DEFAULT 0,
+                yellow_cards INTEGER DEFAULT 0,
+                red_cards INTEGER DEFAULT 0,
+                total_rating REAL DEFAULT 0,
+                avg_rating REAL DEFAULT 0,
+                clean_sheets INTEGER DEFAULT 0,
+                saves INTEGER DEFAULT 0,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (id),
+                UNIQUE(user_id, player_id)
+            )');
+
+            // Support tickets table
+            $db->exec('CREATE TABLE IF NOT EXISTS support_tickets (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                ticket_number TEXT UNIQUE NOT NULL,
+                priority TEXT DEFAULT "medium",
+                category TEXT NOT NULL,
+                subject TEXT NOT NULL,
+                message TEXT NOT NULL,
+                status TEXT DEFAULT "open",
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                last_response_at DATETIME,
+                admin_response TEXT,
+                resolution_notes TEXT,
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            )');
+
             $success[] = 'All database tables created successfully';
 
             // Create admin user if requested

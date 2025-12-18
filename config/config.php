@@ -32,6 +32,20 @@ define('APP_NAME', $config['app_name'] ?? 'Dream Team');
 function getDbConnection()
 {
     try {
+        // Check if database is available first
+        if (!isDatabaseAvailable()) {
+            // Only redirect if we're not already on install.php or in an API call
+            $current_script = basename($_SERVER['SCRIPT_NAME']);
+            $is_api_call = strpos($_SERVER['REQUEST_URI'], '/api/') !== false;
+            
+            if ($current_script !== 'install.php' && !$is_api_call) {
+                header('Location: install.php');
+                exit;
+            } else if ($is_api_call) {
+                throw new Exception("Database not initialized");
+            }
+        }
+        
         $db = new SQLite3(DB_FILE);
         $db->exec('PRAGMA foreign_keys = ON');
         return $db;

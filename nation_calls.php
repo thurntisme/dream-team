@@ -11,15 +11,7 @@ requireClubName('nation_calls');
 $db = getDbConnection();
 $userId = $_SESSION['user_id'];
 
-// Create nation_calls table if it doesn't exist
-$db->exec('CREATE TABLE IF NOT EXISTS nation_calls (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
-    called_players TEXT NOT NULL,
-    total_reward INTEGER NOT NULL,
-    call_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users (id)
-)');
+// Database tables are now created in install.php
 
 // Get user data
 $stmt = $db->prepare('SELECT * FROM users WHERE id = :id');

@@ -10,23 +10,7 @@ require_once 'partials/layout.php';
 try {
     $db = getDbConnection();
 
-    // Create support tickets table if it doesn't exist
-    $db->exec('CREATE TABLE IF NOT EXISTS support_tickets (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        ticket_number TEXT UNIQUE NOT NULL,
-        priority TEXT DEFAULT "medium",
-        category TEXT NOT NULL,
-        subject TEXT NOT NULL,
-        message TEXT NOT NULL,
-        status TEXT DEFAULT "open",
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        last_response_at DATETIME,
-        admin_response TEXT,
-        resolution_notes TEXT,
-        FOREIGN KEY (user_id) REFERENCES users(id)
-    )');
+    // Database tables are now created in install.php
 
     // Get user data
     $stmt = $db->prepare('SELECT name, email, club_name, budget FROM users WHERE id = :id');

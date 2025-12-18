@@ -16,33 +16,7 @@ try {
     $result = $stmt->execute();
     $user_data = $result->fetchArray(SQLITE3_ASSOC);
 
-    // Create transfer_bids table if it doesn't exist
-    $db->exec('CREATE TABLE IF NOT EXISTS transfer_bids (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        bidder_id INTEGER NOT NULL,
-        owner_id INTEGER NOT NULL,
-        player_uuid TEXT NOT NULL,
-        player_data TEXT NOT NULL,
-        player_index INTEGER NOT NULL,
-        bid_amount INTEGER NOT NULL,
-        status TEXT DEFAULT "pending",
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        response_time DATETIME NULL,
-        FOREIGN KEY (bidder_id) REFERENCES users (id),
-        FOREIGN KEY (owner_id) REFERENCES users (id)
-    )');
-
-    // Create player_inventory table for purchased players
-    $db->exec('CREATE TABLE IF NOT EXISTS player_inventory (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        player_uuid TEXT NOT NULL,
-        player_data TEXT NOT NULL,
-        purchase_price INTEGER NOT NULL,
-        purchase_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-        status TEXT DEFAULT "available",
-        FOREIGN KEY (user_id) REFERENCES users (id)
-    )');
+    // Database tables are now created in install.php
 
     // Migration: Handle column changes and add missing columns
     try {
