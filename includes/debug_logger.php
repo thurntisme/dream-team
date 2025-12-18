@@ -34,25 +34,41 @@ class DebugLogger
     {
         $envFile = __DIR__ . '/../.env';
         
-        if (file_exists($envFile)) {
-            $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        // Default to disabled
+        $this->isEnabled = false;
+        
+        if (!file_exists($envFile)) {
+            return; // No .env file, keep disabled
+        }
+        
+        $content = file_get_contents($envFile);
+        if ($content === false) {
+            return; // Can't read file, keep disabled
+        }
+        
+        $lines = explode("\n", $content);
+        
+        foreach ($lines as $line) {
+            $line = trim($line);
             
-            foreach ($lines as $line) {
-                if (strpos(trim($line), '#') === 0) {
-                    continue; // Skip comments
-                }
+            // Skip empty lines and comments
+            if (empty($line) || strpos($line, '#') === 0) {
+                continue;
+            }
+            
+            // Parse key=value pairs
+            if (strpos($line, '=') !== false) {
+                list($key, $value) = explode('=', $line, 2);
+                $key = trim($key);
+                $value = trim($value);
                 
-                if (strpos($line, '=') !== false) {
-                    list($key, $value) = explode('=', $line, 2);
-                    $key = trim($key);
-                    $value = trim($value);
-                    
-                    // Remove quotes if present
-                    $value = trim($value, '"\'');
-                    
-                    if ($key === 'DEBUG_LOG') {
-                        $this->isEnabled = strtolower($value) === 'true';
-                    }
+                // Remove quotes if present
+                $value = trim($value, '"\'');
+                
+                if ($key === 'DEBUG_LOG') {
+                    // Only enable if explicitly set to 'true' (case insensitive)
+                    $this->isEnabled = strtolower($value) === 'true';
+                    break; // Found what we need, stop processing
                 }
             }
         }

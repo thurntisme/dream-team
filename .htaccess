@@ -58,6 +58,9 @@ RewriteRule ^ /%1%2 [R=301,L]
     Header always set Referrer-Policy "strict-origin-when-cross-origin"
 </IfModule>
 
+# Custom Error Pages
+ErrorDocument 404 /404.php
+
 # Prevent access to sensitive files
 <Files "config.php">
     Order allow,deny
@@ -78,3 +81,14 @@ RewriteRule ^ /%1%2 [R=301,L]
     Order allow,deny
     Deny from all
 </Files>
+
+<Files ".env">
+    Order allow,deny
+    Deny from all
+</Files>
+
+# Protect log files
+<FilesMatch "\.log$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>

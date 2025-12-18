@@ -53,6 +53,8 @@ Edit your `.env` file:
 DEBUG_LOG=true
 ```
 
+**Important**: When `DEBUG_LOG` is `false`, empty, or the `.env` file doesn't exist, the debug logs page (`/debug_logs.php`) will show a 404 error to prevent unauthorized access in production environments.
+
 ### 2. Ensure Logs Directory Exists
 The system automatically creates the `logs/` directory, but you can create it manually:
 ```bash
@@ -310,7 +312,16 @@ logs/
 
 ## Security Considerations
 
-### 1. Protect Log Files
+### 1. Automatic 404 Protection
+The debug logs page automatically shows a 404 error when:
+- `DEBUG_LOG=false` in `.env`
+- `DEBUG_LOG` is empty or not set
+- `.env` file doesn't exist
+- `.env` file is unreadable
+
+This prevents unauthorized access in production environments.
+
+### 2. Protect Log Files
 Add to `.htaccess`:
 ```apache
 <FilesMatch "\.log$">
@@ -319,21 +330,21 @@ Add to `.htaccess`:
 </FilesMatch>
 ```
 
-### 2. Restrict Log Viewer Access
-Add authentication check to `debug_logs.php`:
-```php
-// Check if user is admin
-if (!isset($_SESSION['is_admin']) || !$_SESSION['is_admin']) {
-    header('Location: index.php');
-    exit;
-}
-```
+### 3. Navigation Link Hidden
+The debug logs navigation link only appears when `DEBUG_LOG=true`, providing additional security through obscurity.
 
-### 3. Disable in Production
+### 4. Disable in Production
 Always set in production `.env`:
 ```env
 DEBUG_LOG=false
 ```
+
+### 5. Access Logging
+When debug logging is enabled, all access to the debug logs page is logged with:
+- User ID
+- IP address  
+- User agent
+- Timestamp
 
 ### 4. Sanitize Log Data
 ```php
@@ -347,6 +358,16 @@ debug_info("User action", $safeContext);
 ```
 
 ## Troubleshooting
+
+### Debug Logs Page Shows 404
+
+This is **expected behavior** when:
+1. `DEBUG_LOG=false` in `.env` file
+2. `DEBUG_LOG` is empty or not set
+3. `.env` file doesn't exist
+4. `.env` file is unreadable
+
+**Solution**: Set `DEBUG_LOG=true` in your `.env` file.
 
 ### Logs Not Appearing
 

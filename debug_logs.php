@@ -5,6 +5,14 @@ require_once 'config/config.php';
 require_once 'includes/debug_logger.php';
 require_once 'partials/layout.php';
 
+require_once 'includes/error_handlers.php';
+
+// Check if debug logging is enabled - show 404 if disabled
+$logger = DebugLogger::getInstance();
+if (!$logger->isEnabled()) {
+    showFeatureDisabledError('Debug Logs');
+}
+
 // Check if user is admin or has permission to view logs
 // For now, just check if logged in
 if (!isset($_SESSION['user_id'])) {
@@ -12,7 +20,11 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
-$logger = DebugLogger::getInstance();
+// Log access to debug logs (if logging is enabled)
+debug_user_action($_SESSION['user_id'], "Accessed debug logs", [
+    'ip_address' => $_SERVER['REMOTE_ADDR'] ?? 'unknown',
+    'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? 'unknown'
+]);
 
 // Handle actions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
