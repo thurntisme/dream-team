@@ -397,6 +397,11 @@ function formatMarketValue($value) {
                     <i data-lucide="clock" class="w-5 h-5"></i>
                     <span id="timerDisplay">0'</span>
                 </div>
+                <div id="halfIndicator"
+                    class="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-full text-sm font-semibold">
+                    <i data-lucide="circle" class="w-4 h-4"></i>
+                    <span id="halfDisplay">Pre-Match</span>
+                </div>
                 <button id="startMatch"
                     class="inline-flex items-center gap-2 bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors">
                     <i data-lucide="play" class="w-5 h-5"></i>
@@ -420,15 +425,16 @@ function formatMarketValue($value) {
             </div>
 
             <div class="relative flex justify-between items-center">
-                <!-- User Team -->
+                <!-- Home Team -->
                 <div class="text-center flex-1">
                     <div
                         class="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-3 shadow-lg">
-                        <i data-lucide="shield" class="w-8 h-8 text-white"></i>
+                        <i data-lucide="home" class="w-8 h-8 text-white"></i>
                     </div>
                     <h3 class="text-lg font-bold text-gray-900"><?php echo htmlspecialchars($user_data['club_name']); ?>
                     </h3>
                     <p class="text-sm text-gray-600"><?php echo htmlspecialchars($user_data['name']); ?></p>
+                    <p class="text-xs text-blue-600 font-semibold">HOME</p>
                     <p class="text-xs text-gray-500 mt-1"><?php echo formatMarketValue($user_team_value); ?></p>
                 </div>
 
@@ -444,16 +450,17 @@ function formatMarketValue($value) {
                     </div>
                 </div>
 
-                <!-- Opponent Team -->
+                <!-- Away Team -->
                 <div class="text-center flex-1">
                     <div
                         class="w-16 h-16 bg-red-600 rounded-full flex items-center justify-center mx-auto mb-3 shadow-lg">
-                        <i data-lucide="shield" class="w-8 h-8 text-white"></i>
+                        <i data-lucide="plane" class="w-8 h-8 text-white"></i>
                     </div>
                     <h3 class="text-lg font-bold text-gray-900">
                         <?php echo htmlspecialchars($opponent_data['club_name']); ?>
                     </h3>
                     <p class="text-sm text-gray-600"><?php echo htmlspecialchars($opponent_data['name']); ?></p>
+                    <p class="text-xs text-red-600 font-semibold">AWAY</p>
                     <p class="text-xs text-gray-500 mt-1"><?php echo formatMarketValue($opponent_team_value); ?></p>
                 </div>
             </div>
@@ -540,7 +547,10 @@ function formatMarketValue($value) {
         <!-- Match Statistics -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div class="bg-gray-50 rounded-lg p-4">
-                <h4 class="font-semibold text-gray-900 mb-3">Your Team</h4>
+                <h4 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                    <i data-lucide="home" class="w-4 h-4 text-blue-600"></i>
+                    Your Team (Home)
+                </h4>
                 <div class="space-y-2 text-sm">
                     <div class="flex justify-between">
                         <span class="text-gray-600">Formation:</span>
@@ -560,7 +570,10 @@ function formatMarketValue($value) {
             </div>
 
             <div class="bg-gray-50 rounded-lg p-4">
-                <h4 class="font-semibold text-gray-900 mb-3">Opponent</h4>
+                <h4 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                    <i data-lucide="plane" class="w-4 h-4 text-red-600"></i>
+                    Opponent (Away)
+                </h4>
                 <div class="space-y-2 text-sm">
                     <div class="flex justify-between">
                         <span class="text-gray-600">Formation:</span>
@@ -637,13 +650,43 @@ function formatMarketValue($value) {
         userFormation: '<?php echo $user_data['formation']; ?>',
         opponentFormation: '<?php echo $opponent_data['formation']; ?>',
         matchResult: <?php echo json_encode($match_result); ?>,
-        formations: <?php echo json_encode(FORMATIONS); ?>
+        formations: <?php echo json_encode(FORMATIONS); ?>,
+        // Home/Away team details
+        homeTeam: {
+            name: '<?php echo htmlspecialchars($user_data['club_name']); ?>',
+            manager: '<?php echo htmlspecialchars($user_data['name']); ?>',
+            formation: '<?php echo $user_data['formation']; ?>',
+            value: <?php echo $user_team_value; ?>,
+            players: <?php echo json_encode($user_team); ?>,
+            type: 'home'
+        },
+        awayTeam: {
+            name: '<?php echo htmlspecialchars($opponent_data['club_name']); ?>',
+            manager: '<?php echo htmlspecialchars($opponent_data['name']); ?>',
+            formation: '<?php echo $opponent_data['formation']; ?>',
+            value: <?php echo $opponent_team_value; ?>,
+            players: <?php echo json_encode($opponent_team); ?>,
+            type: 'away'
+        }
     };
+
+    // Debug logging
+    console.log('=== MATCH SIMULATOR DEBUG ===');
+    console.log('Home Team Details:', matchData.homeTeam);
+    console.log('Away Team Details:', matchData.awayTeam);
+    console.log('Match Result Data:', matchData.matchResult);
+    console.log('============================');
 
     let matchTimer = 0;
     let matchInterval = null;
     let isMatchRunning = false;
     let currentEventIndex = 0;
+    let currentHalf = 1; // Track current half (1 or 2)
+    let halfTimeBreak = false; // Track if we're in half-time break
+    let firstHalfBonusTime = 0; // Bonus time for first half
+    let secondHalfBonusTime = 0; // Bonus time for second half
+    let inBonusTime = false; // Track if we're in bonus time
+    let bonusTimeMinutes = 0; // Current bonus time minute
 
     // Initialize icons
     lucide.createIcons();
@@ -712,36 +755,206 @@ function formatMarketValue($value) {
     function startMatch() {
         if (isMatchRunning) return;
 
+        console.log('=== MATCH START DEBUG ===');
+        console.log('Starting match between:', matchData.homeTeam.name, 'vs', matchData.awayTeam.name);
+        console.log('Home team formation:', matchData.homeTeam.formation);
+        console.log('Away team formation:', matchData.awayTeam.formation);
+
         isMatchRunning = true;
         matchTimer = 0;
         currentEventIndex = 0;
+        currentHalf = 1;
+        halfTimeBreak = false;
+        inBonusTime = false;
+        bonusTimeMinutes = 0;
+        
+        // Generate random bonus time for each half (1-5 minutes)
+        firstHalfBonusTime = Math.floor(Math.random() * 5) + 1;
+        secondHalfBonusTime = Math.floor(Math.random() * 5) + 1;
+        
+        console.log('Bonus time generated:');
+        console.log('- First half bonus time:', firstHalfBonusTime, 'minutes');
+        console.log('- Second half bonus time:', secondHalfBonusTime, 'minutes');
 
         $('#startMatch').addClass('hidden');
         $('#pauseMatch').removeClass('hidden');
-        $('#matchStatusText').text('Processing - Match in Progress');
+        updateMatchStatus('1st Half - Match in Progress');
 
         // Reset scores
         $('#userScore').text('0');
         $('#opponentScore').text('0');
 
-        // Clear events
-        $('#liveEvents').html('<div class="text-center text-gray-500 py-4">Match starting...</div>');
+        // Clear events and add kick-off
+        $('#liveEvents').html('');
+        displayEvent({
+            minute: 0,
+            type: 'kickoff',
+            description: `Kick-off! ${matchData.homeTeam.name} (Home) vs ${matchData.awayTeam.name} (Away) - 1st Half begins!`
+        });
+
+        console.log('Match events to simulate:', matchData.matchResult.events);
 
         // Start timer
         matchInterval = setInterval(() => {
             matchTimer++;
-            $('#timerDisplay').text(matchTimer + "'");
+            updateTimer();
 
-            // Check for events at this minute
-            checkForEvents(matchTimer);
+            // First half logic
+            if (currentHalf === 1) {
+                // Regular first half (1-45 minutes)
+                if (matchTimer === 45 && !inBonusTime) {
+                    startBonusTime(1);
+                }
+                // First half bonus time
+                else if (matchTimer > 45 && !halfTimeBreak) {
+                    bonusTimeMinutes = matchTimer - 45;
+                    if (bonusTimeMinutes >= firstHalfBonusTime) {
+                        handleHalfTime();
+                    }
+                }
+                // Resume second half
+                else if (matchTimer === 46 + firstHalfBonusTime && halfTimeBreak) {
+                    resumeSecondHalf();
+                }
+            }
+            // Second half logic
+            else if (currentHalf === 2) {
+                const secondHalfStart = 46 + firstHalfBonusTime;
+                const secondHalfMinute = matchTimer - secondHalfStart + 1;
+                
+                // Regular second half (46-90 minutes equivalent)
+                if (secondHalfMinute === 45 && !inBonusTime) {
+                    startBonusTime(2);
+                }
+                // Second half bonus time
+                else if (secondHalfMinute > 45) {
+                    bonusTimeMinutes = secondHalfMinute - 45;
+                    if (bonusTimeMinutes >= secondHalfBonusTime) {
+                        endMatch();
+                    }
+                }
+            }
 
-            // End match at 90 minutes
-            if (matchTimer >= 90) {
-                endMatch();
+            // Check for events at this minute (not during half-time break)
+            if (!halfTimeBreak) {
+                checkForEvents(matchTimer);
             }
         }, 100); // Fast simulation - 100ms per minute
 
         lucide.createIcons();
+    }
+
+    function updateTimer() {
+        let displayText = '';
+        let halfText = '';
+        
+        if (halfTimeBreak) {
+            displayText = "HT";
+            halfText = 'Half-Time';
+        } else if (currentHalf === 1) {
+            if (inBonusTime && bonusTimeMinutes > 0) {
+                displayText = `45+${bonusTimeMinutes}'`;
+                halfText = '1st Half +' + bonusTimeMinutes;
+            } else {
+                displayText = matchTimer + "'";
+                halfText = '1st Half';
+            }
+        } else if (currentHalf === 2) {
+            const secondHalfStart = 46 + firstHalfBonusTime;
+            const secondHalfMinute = matchTimer - secondHalfStart + 1;
+            
+            if (inBonusTime && bonusTimeMinutes > 0) {
+                displayText = `90+${bonusTimeMinutes}'`;
+                halfText = '2nd Half +' + bonusTimeMinutes;
+            } else {
+                const displayMinute = Math.min(secondHalfMinute + 45, 90);
+                displayText = displayMinute + "'";
+                halfText = '2nd Half';
+            }
+        }
+        
+        $('#timerDisplay').text(displayText);
+        
+        // Update half indicator
+        if (halfTimeBreak) {
+            $('#halfDisplay').text('Half-Time');
+            $('#halfIndicator').removeClass('bg-blue-600 bg-green-600 bg-purple-600').addClass('bg-orange-600');
+        } else if (inBonusTime) {
+            $('#halfDisplay').text(halfText);
+            $('#halfIndicator').removeClass('bg-blue-600 bg-green-600 bg-orange-600').addClass('bg-purple-600');
+        } else {
+            $('#halfDisplay').text(halfText);
+            $('#halfIndicator').removeClass('bg-orange-600 bg-purple-600').addClass(currentHalf === 1 ? 'bg-blue-600' : 'bg-green-600');
+        }
+        
+        console.log(`Timer Update: ${displayText} ${halfText} (Total: ${matchTimer})`);
+    }
+
+    function updateMatchStatus(status) {
+        $('#matchStatusText').text(status);
+        console.log('Match Status:', status);
+    }
+
+    function startBonusTime(half) {
+        console.log(`=== BONUS TIME ${half === 1 ? 'FIRST' : 'SECOND'} HALF DEBUG ===`);
+        
+        inBonusTime = true;
+        bonusTimeMinutes = 0;
+        
+        const bonusMinutes = half === 1 ? firstHalfBonusTime : secondHalfBonusTime;
+        const halfName = half === 1 ? '1st Half' : '2nd Half';
+        
+        console.log(`${halfName} bonus time: ${bonusMinutes} minutes`);
+        
+        updateMatchStatus(`${halfName} - Bonus Time (+${bonusMinutes} min)`);
+        
+        displayEvent({
+            minute: half === 1 ? 45 : 90,
+            type: 'bonus_time',
+            description: `${halfName} - The referee indicates ${bonusMinutes} minute${bonusMinutes > 1 ? 's' : ''} of added time`
+        });
+
+        console.log('===============================');
+    }
+
+    function handleHalfTime() {
+        console.log('=== HALF-TIME DEBUG ===');
+        console.log(`45+${firstHalfBonusTime} minutes completed - Half-time break`);
+        
+        halfTimeBreak = true;
+        inBonusTime = false;
+        bonusTimeMinutes = 0;
+        updateMatchStatus('Half-Time Break');
+        
+        displayEvent({
+            minute: 45 + firstHalfBonusTime,
+            type: 'halftime',
+            description: `Half-Time! ${matchData.homeTeam.name} ${$('#userScore').text()} - ${$('#opponentScore').text()} ${matchData.awayTeam.name} (After ${firstHalfBonusTime} min bonus time)`
+        });
+
+        console.log('Half-time score:', $('#userScore').text(), '-', $('#opponentScore').text());
+        console.log('First half bonus time used:', firstHalfBonusTime, 'minutes');
+        console.log('======================');
+    }
+
+    function resumeSecondHalf() {
+        console.log('=== SECOND HALF DEBUG ===');
+        console.log('Second half starting...');
+        
+        currentHalf = 2;
+        halfTimeBreak = false;
+        inBonusTime = false;
+        bonusTimeMinutes = 0;
+        updateMatchStatus('2nd Half - Match in Progress');
+        
+        displayEvent({
+            minute: 46 + firstHalfBonusTime,
+            type: 'secondhalf',
+            description: `Second Half begins! ${matchData.awayTeam.name} kicks off the 2nd half`
+        });
+
+        console.log('Second half will have', secondHalfBonusTime, 'minutes of bonus time');
+        console.log('========================');
     }
 
     function checkForEvents(minute) {
@@ -749,9 +962,25 @@ function formatMarketValue($value) {
 
         events.forEach((event, index) => {
             if (event.minute === minute && index >= currentEventIndex) {
-                displayEvent(event);
+                console.log(`Event at ${minute}':`, event);
+                
+                // Add half information to event
+                const halfInfo = minute <= 45 ? '1st Half' : '2nd Half';
+                const teamInfo = event.team === 'user' ? 
+                    `${matchData.homeTeam.name} (Home)` : 
+                    `${matchData.awayTeam.name} (Away)`;
+                
+                // Enhanced event description with team details
+                const enhancedEvent = {
+                    ...event,
+                    description: `[${halfInfo}] ${event.description} - ${teamInfo}`
+                };
+                
+                displayEvent(enhancedEvent);
 
                 if (event.type === 'goal') {
+                    console.log(`GOAL! ${event.player} scores for ${teamInfo} in ${halfInfo}`);
+                    
                     if (event.team === 'user') {
                         const currentScore = parseInt($('#userScore').text());
                         $('#userScore').text(currentScore + 1);
@@ -795,6 +1024,16 @@ function formatMarketValue($value) {
                 return '<div class="w-4 h-4 bg-yellow-400 rounded-sm inline-block mr-2"></div>';
             case 'red_card':
                 return '<div class="w-4 h-4 bg-red-500 rounded-sm inline-block mr-2"></div>';
+            case 'kickoff':
+                return '<i data-lucide="play-circle" class="w-4 h-4 text-blue-600 inline mr-2"></i>';
+            case 'halftime':
+                return '<i data-lucide="coffee" class="w-4 h-4 text-orange-600 inline mr-2"></i>';
+            case 'secondhalf':
+                return '<i data-lucide="rotate-ccw" class="w-4 h-4 text-blue-600 inline mr-2"></i>';
+            case 'bonus_time':
+                return '<i data-lucide="clock" class="w-4 h-4 text-purple-600 inline mr-2"></i>';
+            case 'whistle':
+                return '<i data-lucide="flag" class="w-4 h-4 text-gray-600 inline mr-2"></i>';
             default:
                 return '<i data-lucide="info" class="w-4 h-4 text-blue-600 inline mr-2"></i>';
         }
@@ -814,8 +1053,11 @@ function formatMarketValue($value) {
     }
 
     function endMatch() {
+        console.log('=== MATCH END DEBUG ===');
+        
         clearInterval(matchInterval);
         isMatchRunning = false;
+        inBonusTime = false;
 
         $('#startMatch').addClass('hidden');
         $('#pauseMatch').addClass('hidden');
@@ -823,29 +1065,44 @@ function formatMarketValue($value) {
         const userGoals = parseInt($('#userScore').text());
         const opponentGoals = parseInt($('#opponentScore').text());
 
+        console.log('Final Score:', `${matchData.homeTeam.name} ${userGoals} - ${opponentGoals} ${matchData.awayTeam.name}`);
+
         let resultText = '';
         let resultClass = '';
 
         if (userGoals > opponentGoals) {
             resultText = '<i data-lucide="trophy" class="w-5 h-5"></i> VICTORY!';
             resultClass = 'text-green-600';
+            console.log('Result: HOME TEAM WINS!');
         } else if (userGoals < opponentGoals) {
             resultText = '<i data-lucide="frown" class="w-5 h-5"></i> DEFEAT!';
             resultClass = 'text-red-600';
+            console.log('Result: AWAY TEAM WINS!');
         } else {
             resultText = '<i data-lucide="equal" class="w-5 h-5"></i> DRAW!';
             resultClass = 'text-yellow-600';
+            console.log('Result: DRAW!');
         }
 
-        $('#matchStatus').html(resultText + ' <span id="matchStatusText">Ended - Match Complete</span>').removeClass('text-gray-600').addClass(resultClass);
-        $('#timerDisplay').text("90' FT");
+        $('#matchStatus').html(resultText + ' <span id="matchStatusText">Full Time - Match Complete</span>').removeClass('text-gray-600').addClass(resultClass);
+        $('#timerDisplay').text(`90+${secondHalfBonusTime}' FT`);
 
-        // Add final whistle event
+        // Add final whistle event with detailed result including bonus time
+        const totalMatchTime = 90 + firstHalfBonusTime + secondHalfBonusTime;
         displayEvent({
-            minute: 90,
+            minute: totalMatchTime,
             type: 'whistle',
-            description: 'Full Time! Match finished.'
+            description: `Full Time! ${matchData.homeTeam.name} (Home) ${userGoals} - ${opponentGoals} ${matchData.awayTeam.name} (Away) - After ${secondHalfBonusTime} min bonus time`
         });
+
+        console.log('Match Statistics:');
+        console.log('- Home Team Strength:', matchData.matchResult.userStrength);
+        console.log('- Away Team Strength:', matchData.matchResult.opponentStrength);
+        console.log('- Total Events:', matchData.matchResult.events.length);
+        console.log('- First Half Bonus Time:', firstHalfBonusTime, 'minutes');
+        console.log('- Second Half Bonus Time:', secondHalfBonusTime, 'minutes');
+        console.log('- Total Match Duration:', totalMatchTime, 'minutes');
+        console.log('======================');
 
         lucide.createIcons();
     }
