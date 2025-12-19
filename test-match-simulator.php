@@ -839,7 +839,7 @@ function formatMarketValue($value) {
             if (!halfTimeBreak) {
                 checkForEvents(matchTimer);
             }
-        }, 100); // Fast simulation - 100ms per minute
+        }, 2000); // Longer simulation - 2000ms per minute (3 minute total match)
 
         lucide.createIcons();
     }
