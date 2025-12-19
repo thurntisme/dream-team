@@ -467,7 +467,7 @@ function formatMarketValue($value) {
                     Live Field View
                 </h3>
                 <div class="bg-gradient-to-b from-green-500 to-green-600 rounded-lg shadow-lg relative"
-                    style="min-height: 600px; height: 600px;">
+                    style="min-height: 600px; height: 600px;" id="flat-field">
                     <!-- Field Lines -->
                     <div class="absolute inset-8 border-2 border-white border-opacity-40 rounded overflow-hidden">
                         <!-- Center Line -->
@@ -509,6 +509,11 @@ function formatMarketValue($value) {
                         <div
                             class="absolute bottom-0 right-0 w-8 h-8 border-2 border-b-0 border-r-0 border-white border-opacity-40 rounded-tl-full">
                         </div>
+                    </div>
+
+                    <!-- Ball -->
+                    <div id="ball" class="absolute w-4 h-4 bg-white rounded-full shadow-lg border border-gray-300 transition-all duration-300"
+                            style="top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10;">
                     </div>
 
                     <!-- Players will be rendered here -->
