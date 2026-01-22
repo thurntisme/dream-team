@@ -92,14 +92,18 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true, $sk
     </head>
 
     <body class="bg-gray-50 min-h-screen flex flex-col">
-        <?php echo renderNavigation($isLoggedIn, $showAuth, $currentPage, $clubName, $userName, $userBudget, $userFans, $clubLevel); ?>
+        <?php if (isDatabaseAvailable()): ?>
+            <?php echo renderNavigation($isLoggedIn, $showAuth, $currentPage, $clubName, $userName, $userBudget, $userFans, $clubLevel); ?>
+        <?php endif; ?>
 
         <!-- Main Content -->
         <main class="flex-1">
             <?php echo $content; ?>
         </main>
         
-        <?php echo renderFooter($isLoggedIn, $clubName, $userName, $userBudget, $userFans, $clubLevel); ?>
+        <?php if (isDatabaseAvailable()): ?>
+            <?php echo renderFooter($isLoggedIn, $clubName, $userName, $userBudget, $userFans, $clubLevel); ?>
+        <?php endif; ?>
 
         <!-- Floating Ad for Free Users -->
         <?php if ($isLoggedIn && shouldShowAds($_SESSION['user_id'])): ?>
