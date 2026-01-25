@@ -317,8 +317,16 @@ startContent();
                         <div class="bg-blue-50 rounded-lg p-4 border border-blue-200">
                             <div class="flex items-center justify-between">
                                 <div class="flex items-center gap-4">
-                                    <div class="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
-                                        <i data-lucide="user" class="w-6 h-6 text-white"></i>
+                                    <div
+                                        class="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center overflow-hidden">
+                                        <?php if (!empty($player['avatar'])): ?>
+                                            <img src="<?php echo htmlspecialchars($player['avatar']); ?>"
+                                                alt="<?php echo htmlspecialchars($player['name']); ?>"
+                                                class="w-full h-full object-cover"
+                                                onerror="this.onerror=null; this.parentElement.innerHTML='<i data-lucide=\'user\' class=\'w-6 h-6 text-white\'></i>'; lucide.createIcons();">
+                                        <?php else: ?>
+                                            <i data-lucide="user" class="w-6 h-6 text-white"></i>
+                                        <?php endif; ?>
                                     </div>
                                     <div>
                                         <h4 class="font-semibold text-gray-900"><?php echo htmlspecialchars($player['name']); ?>
@@ -532,8 +540,11 @@ startContent();
                 <tr class="hover:bg-gray-50">
                     <td class="px-6 py-4 whitespace-nowrap">
                         <div class="flex items-center">
-                            <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center mr-3">
-                                <i data-lucide="user" class="w-5 h-5 text-white"></i>
+                            <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center mr-3 overflow-hidden">
+                                ${player.avatar ?
+                    `<img src="${player.avatar}" alt="${player.name}" class="w-full h-full object-cover" onerror="this.onerror=null; this.parentElement.innerHTML='<i data-lucide=\\'user\\' class=\\'w-5 h-5 text-white\\'></i>'; lucide.createIcons();">` :
+                    `<i data-lucide="user" class="w-5 h-5 text-white"></i>`
+                }
                             </div>
                             <div class="flex-1">
                                 <div class="text-sm font-medium text-gray-900">${player.name}</div>
@@ -850,10 +861,10 @@ startContent();
                 <div class="lg:col-span-2 bg-gradient-to-r from-blue-600 to-blue-800 text-white rounded-lg p-6">
                     <div class="flex items-center gap-6">
                         <div class="w-24 h-24 bg-white bg-opacity-20 rounded-full flex items-center justify-center overflow-hidden">
-                            ${player.avatar ? 
-                                `<img src="${player.avatar}" alt="${player.name}" class="w-full h-full object-cover" onerror="this.onerror=null; this.parentElement.innerHTML='<i data-lucide=\\'user\\' class=\\'w-12 h-12\\'></i>';">` :
-                                `<i data-lucide="user" class="w-12 h-12"></i>`
-                            }
+                            ${player.avatar ?
+                `<img src="${player.avatar}" alt="${player.name}" class="w-full h-full object-cover" onerror="this.onerror=null; this.parentElement.innerHTML='<i data-lucide=\\'user\\' class=\\'w-12 h-12\\'></i>';">` :
+                `<i data-lucide="user" class="w-12 h-12"></i>`
+            }
                         </div>
                         <div class="flex-1">
                             <h2 class="text-3xl font-bold mb-2">${player.name}</h2>
@@ -949,8 +960,8 @@ startContent();
                             <span class="text-gray-600 text-sm">Playable Positions:</span>
                             <div class="flex flex-wrap gap-2 mt-2">
                                 ${(player.playablePositions || [player.position]).map(pos =>
-            `<span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm font-medium">${pos}</span>`
-        ).join('')}
+                `<span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm font-medium">${pos}</span>`
+            ).join('')}
                             </div>
                         </div>
                         <div>
