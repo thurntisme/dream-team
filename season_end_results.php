@@ -140,58 +140,63 @@ startContent();
                 <!-- Top Scorer -->
                 <?php if ($season_summary['season_stats']['top_scorer']): ?>
                     <div class="text-center">
-                        <div class="w-16 h-16 bg-green-600 rounded-full flex items-center justify-center mx-auto mb-3">
-                            <i data-lucide="target" class="w-8 h-8 text-white"></i>
+                        <?php echo getPlayerAvatar($season_summary['season_stats']['top_scorer']['player_name'], 'lg', 'mx-auto mb-3 shadow-lg'); ?>
+                        <div class="mt-2 inline-flex items-center justify-center px-3 py-1 bg-green-100 rounded-full">
+                            <i data-lucide="target" class="w-4 h-4 text-green-600 mr-1"></i>
+                            <span class="text-xs font-semibold text-green-800">Top Scorer</span>
                         </div>
-                        <h4 class="font-semibold text-gray-900">Top Scorer</h4>
-                        <p class="font-medium">
+                        <h4 class="font-bold text-lg text-gray-900 mt-2">
                             <?php echo htmlspecialchars($season_summary['season_stats']['top_scorer']['player_name']); ?>
-                        </p>
+                        </h4>
                         <p class="text-sm text-gray-600">
                             <?php echo htmlspecialchars($season_summary['season_stats']['top_scorer']['club_name']); ?>
                         </p>
-                        <p class="text-lg font-bold text-green-600">
-                            <?php echo $season_summary['season_stats']['top_scorer']['goals']; ?> goals
+                        <p class="text-2xl font-bold text-green-600 mt-2">
+                            <?php echo $season_summary['season_stats']['top_scorer']['goals']; ?>
                         </p>
+                        <p class="text-xs text-gray-500">goals</p>
                     </div>
                 <?php endif; ?>
 
                 <!-- Top Assists -->
                 <?php if ($season_summary['season_stats']['top_assists']): ?>
                     <div class="text-center">
-                        <div class="w-16 h-16 bg-purple-600 rounded-full flex items-center justify-center mx-auto mb-3">
-                            <i data-lucide="users" class="w-8 h-8 text-white"></i>
+                        <?php echo getPlayerAvatar($season_summary['season_stats']['top_assists']['player_name'], 'lg', 'mx-auto mb-3 shadow-lg'); ?>
+                        <div class="mt-2 inline-flex items-center justify-center px-3 py-1 bg-purple-100 rounded-full">
+                            <i data-lucide="users" class="w-4 h-4 text-purple-600 mr-1"></i>
+                            <span class="text-xs font-semibold text-purple-800">Most Assists</span>
                         </div>
-                        <h4 class="font-semibold text-gray-900">Most Assists</h4>
-                        <p class="font-medium">
+                        <h4 class="font-bold text-lg text-gray-900 mt-2">
                             <?php echo htmlspecialchars($season_summary['season_stats']['top_assists']['player_name']); ?>
-                        </p>
+                        </h4>
                         <p class="text-sm text-gray-600">
                             <?php echo htmlspecialchars($season_summary['season_stats']['top_assists']['club_name']); ?>
                         </p>
-                        <p class="text-lg font-bold text-purple-600">
-                            <?php echo $season_summary['season_stats']['top_assists']['assists']; ?> assists
+                        <p class="text-2xl font-bold text-purple-600 mt-2">
+                            <?php echo $season_summary['season_stats']['top_assists']['assists']; ?>
                         </p>
+                        <p class="text-xs text-gray-500">assists</p>
                     </div>
                 <?php endif; ?>
 
                 <!-- Best Player -->
                 <?php if ($season_summary['season_stats']['best_player']): ?>
                     <div class="text-center">
-                        <div class="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-3">
-                            <i data-lucide="star" class="w-8 h-8 text-white"></i>
+                        <?php echo getPlayerAvatar($season_summary['season_stats']['best_player']['player_name'], 'lg', 'mx-auto mb-3 shadow-lg'); ?>
+                        <div class="mt-2 inline-flex items-center justify-center px-3 py-1 bg-blue-100 rounded-full">
+                            <i data-lucide="star" class="w-4 h-4 text-blue-600 mr-1"></i>
+                            <span class="text-xs font-semibold text-blue-800">Best Player</span>
                         </div>
-                        <h4 class="font-semibold text-gray-900">Best Player</h4>
-                        <p class="font-medium">
+                        <h4 class="font-bold text-lg text-gray-900 mt-2">
                             <?php echo htmlspecialchars($season_summary['season_stats']['best_player']['player_name']); ?>
-                        </p>
+                        </h4>
                         <p class="text-sm text-gray-600">
                             <?php echo htmlspecialchars($season_summary['season_stats']['best_player']['club_name']); ?>
                         </p>
-                        <p class="text-lg font-bold text-blue-600">
+                        <p class="text-2xl font-bold text-blue-600 mt-2">
                             <?php echo number_format($season_summary['season_stats']['best_player']['avg_rating'], 1); ?>
-                            rating
                         </p>
+                        <p class="text-xs text-gray-500">average rating</p>
                     </div>
                 <?php endif; ?>
             </div>

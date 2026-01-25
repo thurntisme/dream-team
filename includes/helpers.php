@@ -35,3 +35,89 @@ require_once __DIR__ . '/nation_calls_functions.php';
 require_once __DIR__ . '/debug_logger.php';
 require_once __DIR__ . '/error_handlers.php';
 require_once __DIR__ . '/player_stats_functions.php';
+/**
+ * Generate player avatar HTML with initials
+ */
+if (!function_exists('getPlayerAvatar')) {
+    function getPlayerAvatar($playerName, $size = 'md', $customClass = '')
+    {
+        // Get initials from player name
+        $nameParts = explode(' ', trim($playerName));
+        $initials = '';
+
+        if (count($nameParts) >= 2) {
+            $initials = strtoupper(substr($nameParts[0], 0, 1) . substr($nameParts[count($nameParts) - 1], 0, 1));
+        } else {
+            $initials = strtoupper(substr($playerName, 0, 2));
+        }
+
+        // Generate consistent color based on name
+        $colors = [
+            ['bg' => 'bg-blue-600', 'text' => 'text-white'],
+            ['bg' => 'bg-green-600', 'text' => 'text-white'],
+            ['bg' => 'bg-purple-600', 'text' => 'text-white'],
+            ['bg' => 'bg-red-600', 'text' => 'text-white'],
+            ['bg' => 'bg-yellow-600', 'text' => 'text-white'],
+            ['bg' => 'bg-indigo-600', 'text' => 'text-white'],
+            ['bg' => 'bg-pink-600', 'text' => 'text-white'],
+            ['bg' => 'bg-teal-600', 'text' => 'text-white'],
+            ['bg' => 'bg-orange-600', 'text' => 'text-white'],
+            ['bg' => 'bg-cyan-600', 'text' => 'text-white'],
+        ];
+
+        $colorIndex = abs(crc32($playerName)) % count($colors);
+        $color = $colors[$colorIndex];
+
+        // Size classes
+        $sizeClasses = [
+            'xs' => 'w-8 h-8 text-xs',
+            'sm' => 'w-10 h-10 text-sm',
+            'md' => 'w-16 h-16 text-lg',
+            'lg' => 'w-20 h-20 text-xl',
+            'xl' => 'w-24 h-24 text-2xl',
+        ];
+
+        $sizeClass = $sizeClasses[$size] ?? $sizeClasses['md'];
+
+        return sprintf(
+            '<div class="%s %s %s rounded-full flex items-center justify-center font-bold %s">%s</div>',
+            $sizeClass,
+            $color['bg'],
+            $color['text'],
+            $customClass,
+            htmlspecialchars($initials)
+        );
+    }
+}
+
+/**
+ * Generate player avatar with image fallback to initials
+ */
+if (!function_exists('getPlayerAvatarWithImage')) {
+    function getPlayerAvatarWithImage($playerName, $imageUrl = null, $size = 'md', $customClass = '')
+    {
+        if ($imageUrl && file_exists($imageUrl)) {
+            // Size classes
+            $sizeClasses = [
+                'xs' => 'w-8 h-8',
+                'sm' => 'w-10 h-10',
+                'md' => 'w-16 h-16',
+                'lg' => 'w-20 h-20',
+                'xl' => 'w-24 h-24',
+            ];
+
+            $sizeClass = $sizeClasses[$size] ?? $sizeClasses['md'];
+
+            return sprintf(
+                '<img src="%s" alt="%s" class="%s rounded-full object-cover %s" />',
+                htmlspecialchars($imageUrl),
+                htmlspecialchars($playerName),
+                $sizeClass,
+                $customClass
+            );
+        }
+
+        // Fallback to initials avatar
+        return getPlayerAvatar($playerName, $size, $customClass);
+    }
+}
