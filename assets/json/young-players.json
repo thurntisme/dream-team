@@ -7,6 +7,7 @@
         "age": 19,
         "uuid": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
         "nation": "England",
+        "avatar": "https://ui-avatars.com/api/?name=Marcus+Thompson&background=0D8ABC&color=fff&size=128",
         "playablePositions": [
             "GK"
         ],
@@ -26,6 +27,7 @@
         "age": 18,
         "uuid": "b2c3d4e5-f6g7-8901-bcde-f23456789012",
         "nation": "Brazil",
+        "avatar": "https://ui-avatars.com/api/?name=Diego+Santos&background=10B981&color=fff&size=128",
         "playablePositions": [
             "GK"
         ],
@@ -45,6 +47,7 @@
         "age": 20,
         "uuid": "c3d4e5f6-g7h8-9012-cdef-345678901234",
         "nation": "Italy",
+        "avatar": "https://ui-avatars.com/api/?name=Alessandro+Rossi&background=3B82F6&color=fff&size=128",
         "playablePositions": [
             "CB",
             "CDM"
@@ -65,6 +68,7 @@
         "age": 19,
         "uuid": "d4e5f6g7-h8i9-0123-defg-456789012345",
         "nation": "Germany",
+        "avatar": "https://ui-avatars.com/api/?name=Lucas+Mueller&background=EF4444&color=fff&size=128",
         "playablePositions": [
             "CB",
             "CDM"
@@ -85,6 +89,7 @@
         "age": 20,
         "uuid": "e5f6g7h8-i9j0-1234-efgh-567890123456",
         "nation": "Japan",
+        "avatar": "https://ui-avatars.com/api/?name=Kai+Nakamura&background=8B5CF6&color=fff&size=128",
         "playablePositions": [
             "CB"
         ],
@@ -104,6 +109,7 @@
         "age": 18,
         "uuid": "f6g7h8i9-j0k1-2345-fghi-678901234567",
         "nation": "France",
+        "avatar": "https://ui-avatars.com/api/?name=Pierre+Dubois&background=F59E0B&color=fff&size=128",
         "playablePositions": [
             "CB"
         ],
@@ -135,7 +141,8 @@
             "defending": 77,
             "stamina": 76,
             "dribbling": 74
-        }
+        },
+        "avatar": "https://ui-avatars.com/api/?name=Erik+Johansson&background=EC4899&color=fff&size=128"
     },
     {
         "name": "Carlos Mendoza",
@@ -156,7 +163,8 @@
             "defending": 73,
             "stamina": 72,
             "dribbling": 70
-        }
+        },
+        "avatar": "https://ui-avatars.com/api/?name=Carlos+Mendoza&background=14B8A6&color=fff&size=128"
     },
     {
         "name": "Liam O'Connor",
@@ -176,7 +184,8 @@
             "defending": 74,
             "stamina": 73,
             "dribbling": 71
-        }
+        },
+        "avatar": "https://ui-avatars.com/api/?name=Liam+O'Connor&background=6366F1&color=fff&size=128"
     },
     {
         "name": "Rafael Silva",
@@ -198,7 +207,8 @@
             "defending": 76,
             "stamina": 75,
             "dribbling": 73
-        }
+        },
+        "avatar": "https://ui-avatars.com/api/?name=Rafael+Silva&background=F97316&color=fff&size=128"
     },
     {
         "name": "Ahmed Hassan",
@@ -218,7 +228,8 @@
             "defending": 72,
             "stamina": 71,
             "dribbling": 69
-        }
+        },
+        "avatar": "https://ui-avatars.com/api/?name=Ahmed+Hassan&background=0D8ABC&color=fff&size=128"
     },
     {
         "name": "Viktor Petrov",
@@ -239,7 +250,8 @@
             "defending": 75,
             "stamina": 74,
             "dribbling": 72
-        }
+        },
+        "avatar": "https://ui-avatars.com/api/?name=Viktor+Petrov&background=10B981&color=fff&size=128"
     },
     {
         "name": "Marco Fernandez",
@@ -260,7 +272,8 @@
             "positioning": 77,
             "strength": 76,
             "vision": 75
-        }
+        },
+        "avatar": "https://ui-avatars.com/api/?name=Marco+Fernandez&background=3B82F6&color=fff&size=128"
     },
     {
         "name": "Jamal Williams",
@@ -280,7 +293,8 @@
             "positioning": 73,
             "strength": 72,
             "vision": 71
-        }
+        },
+        "avatar": "https://ui-avatars.com/api/?name=Jamal+Williams&background=EF4444&color=fff&size=128"
     },
     {
         "name": "Matteo Bianchi",
@@ -301,7 +315,8 @@
             "vision": 78,
             "stamina": 76,
             "shooting": 74
-        }
+        },
+        "avatar": "https://ui-avatars.com/api/?name=Matteo+Bianchi&background=8B5CF6&color=fff&size=128"
     },
     {
         "name": "Noah Anderson",
@@ -322,7 +337,8 @@
             "vision": 76,
             "stamina": 74,
             "shooting": 72
-        }
+        },
+        "avatar": "https://ui-avatars.com/api/?name=Noah+Anderson&background=F59E0B&color=fff&size=128"
     },
     {
         "name": "Gabriel Costa",
@@ -343,7 +359,8 @@
             "vision": 77,
             "stamina": 75,
             "shooting": 73
-        }
+        },
+        "avatar": "https://ui-avatars.com/api/?name=Gabriel+Costa&background=EC4899&color=fff&size=128"
     },
     {
         "name": "Felix Wagner",
@@ -363,7 +380,8 @@
             "vision": 74,
             "stamina": 72,
             "shooting": 70
-        }
+        },
+        "avatar": "https://ui-avatars.com/api/?name=Felix+Wagner&background=14B8A6&color=fff&size=128"
     },
     {
         "name": "Theo Laurent",
@@ -385,7 +403,8 @@
             "vision": 78,
             "shooting": 77,
             "creativity": 81
-        }
+        },
+        "avatar": "https://ui-avatars.com/api/?name=Theo+Laurent&background=6366F1&color=fff&size=128"
     },
     {
         "name": "Emilio Rodriguez",
@@ -406,7 +425,8 @@
             "vision": 75,
             "shooting": 74,
             "creativity": 78
-        }
+        },
+        "avatar": "https://ui-avatars.com/api/?name=Emilio+Rodriguez&background=F97316&color=fff&size=128"
     },
     {
         "name": "Oliver Smith",
@@ -426,7 +446,8 @@
             "vision": 73,
             "shooting": 72,
             "creativity": 76
-        }
+        },
+        "avatar": "https://ui-avatars.com/api/?name=Oliver+Smith&background=0D8ABC&color=fff&size=128"
     },
     {
         "name": "Hiroshi Tanaka",
@@ -447,7 +468,8 @@
             "vision": 74,
             "shooting": 73,
             "creativity": 77
-        }
+        },
+        "avatar": "https://ui-avatars.com/api/?name=Hiroshi+Tanaka&background=10B981&color=fff&size=128"
     },
     {
         "name": "Sebastian Keller",
@@ -469,7 +491,8 @@
             "dribbling": 76,
             "stamina": 75,
             "passing": 74
-        }
+        },
+        "avatar": "https://ui-avatars.com/api/?name=Sebastian+Keller&background=3B82F6&color=fff&size=128"
     },
     {
         "name": "Matias Gonzalez",
@@ -491,7 +514,8 @@
             "dribbling": 74,
             "stamina": 73,
             "passing": 72
-        }
+        },
+        "avatar": "https://ui-avatars.com/api/?name=Matias+Gonzalez&background=EF4444&color=fff&size=128"
     },
     {
         "name": "Ryan Mitchell",
@@ -513,7 +537,8 @@
             "crossing": 76,
             "shooting": 77,
             "agility": 79
-        }
+        },
+        "avatar": "https://ui-avatars.com/api/?name=Ryan+Mitchell&background=8B5CF6&color=fff&size=128"
     },
     {
         "name": "Lorenzo Conti",
@@ -534,7 +559,8 @@
             "crossing": 74,
             "shooting": 75,
             "agility": 78
-        }
+        },
+        "avatar": "https://ui-avatars.com/api/?name=Lorenzo+Conti&background=F59E0B&color=fff&size=128"
     },
     {
         "name": "Kai Jensen",
@@ -554,7 +580,8 @@
             "crossing": 72,
             "shooting": 73,
             "agility": 76
-        }
+        },
+        "avatar": "https://ui-avatars.com/api/?name=Kai+Jensen&background=EC4899&color=fff&size=128"
     },
     {
         "name": "Andre Moreau",
@@ -576,7 +603,8 @@
             "crossing": 75,
             "shooting": 76,
             "agility": 78
-        }
+        },
+        "avatar": "https://ui-avatars.com/api/?name=Andre+Moreau&background=14B8A6&color=fff&size=128"
     },
     {
         "name": "Davi Oliveira",
@@ -597,7 +625,8 @@
             "crossing": 73,
             "shooting": 74,
             "agility": 77
-        }
+        },
+        "avatar": "https://ui-avatars.com/api/?name=Davi+Oliveira&background=6366F1&color=fff&size=128"
     },
     {
         "name": "Mason Taylor",
@@ -617,7 +646,8 @@
             "crossing": 71,
             "shooting": 72,
             "agility": 75
-        }
+        },
+        "avatar": "https://ui-avatars.com/api/?name=Mason+Taylor&background=F97316&color=fff&size=128"
     },
     {
         "name": "Aleksandr Volkov",
@@ -639,7 +669,8 @@
             "passing": 78,
             "positioning": 80,
             "creativity": 76
-        }
+        },
+        "avatar": "https://ui-avatars.com/api/?name=Aleksandr+Volkov&background=0D8ABC&color=fff&size=128"
     },
     {
         "name": "Luca Romano",
@@ -660,7 +691,8 @@
             "passing": 75,
             "positioning": 77,
             "creativity": 73
-        }
+        },
+        "avatar": "https://ui-avatars.com/api/?name=Luca+Romano&background=10B981&color=fff&size=128"
     },
     {
         "name": "Ethan Davis",
@@ -682,7 +714,8 @@
             "positioning": 79,
             "strength": 77,
             "heading": 78
-        }
+        },
+        "avatar": "https://ui-avatars.com/api/?name=Ethan+Davis&background=3B82F6&color=fff&size=128"
     },
     {
         "name": "Miguel Torres",
@@ -703,7 +736,8 @@
             "positioning": 76,
             "strength": 74,
             "heading": 75
-        }
+        },
+        "avatar": "https://ui-avatars.com/api/?name=Miguel+Torres&background=EF4444&color=fff&size=128"
     },
     {
         "name": "Finn Nielsen",
@@ -723,7 +757,8 @@
             "positioning": 74,
             "strength": 72,
             "heading": 73
-        }
+        },
+        "avatar": "https://ui-avatars.com/api/?name=Finn+Nielsen&background=8B5CF6&color=fff&size=128"
     },
     {
         "name": "Yuki Yamamoto",
@@ -744,7 +779,8 @@
             "positioning": 73,
             "strength": 70,
             "heading": 71
-        }
+        },
+        "avatar": "https://ui-avatars.com/api/?name=Yuki+Yamamoto&background=F59E0B&color=fff&size=128"
     },
     {
         "name": "Leon Schneider",
@@ -765,7 +801,8 @@
             "positioning": 75,
             "strength": 73,
             "heading": 74
-        }
+        },
+        "avatar": "https://ui-avatars.com/api/?name=Leon+Schneider&background=EC4899&color=fff&size=128"
     },
     {
         "name": "Enzo Moretti",
@@ -787,7 +824,8 @@
             "positioning": 77,
             "strength": 75,
             "heading": 76
-        }
+        },
+        "avatar": "https://ui-avatars.com/api/?name=Enzo+Moretti&background=14B8A6&color=fff&size=128"
     },
     {
         "name": "Jayden Brown",
@@ -807,7 +845,8 @@
             "positioning": 72,
             "strength": 70,
             "heading": 71
-        }
+        },
+        "avatar": "https://ui-avatars.com/api/?name=Jayden+Brown&background=6366F1&color=fff&size=128"
     },
     {
         "name": "Axel Lindqvist",
@@ -828,6 +867,7 @@
             "positioning": 74,
             "strength": 72,
             "heading": 73
-        }
+        },
+        "avatar": "https://ui-avatars.com/api/?name=Axel+Lindqvist&background=F97316&color=fff&size=128"
     }
 ]

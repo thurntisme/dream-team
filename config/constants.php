@@ -373,6 +373,7 @@ function loadPlayersFromJson()
                 'weight' => $player['weight'] ?? 'Unknown',
                 'foot' => $player['foot'] ?? 'Right',
                 'nation' => $player['nation'] ?? null,
+                'avatar' => $player['avatar'] ?? null,
                 'playablePositions' => $player['playablePositions'] ?? [$player['position']],
                 'attributes' => $player['attributes'] ?? null,
                 'club' => $player['club'] ?? 'Free Agent',

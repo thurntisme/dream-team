@@ -849,8 +849,11 @@ startContent();
                 <!-- Player Header -->
                 <div class="lg:col-span-2 bg-gradient-to-r from-blue-600 to-blue-800 text-white rounded-lg p-6">
                     <div class="flex items-center gap-6">
-                        <div class="w-24 h-24 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
-                            <i data-lucide="user" class="w-12 h-12"></i>
+                        <div class="w-24 h-24 bg-white bg-opacity-20 rounded-full flex items-center justify-center overflow-hidden">
+                            ${player.avatar ? 
+                                `<img src="${player.avatar}" alt="${player.name}" class="w-full h-full object-cover" onerror="this.onerror=null; this.parentElement.innerHTML='<i data-lucide=\\'user\\' class=\\'w-12 h-12\\'></i>';">` :
+                                `<i data-lucide="user" class="w-12 h-12"></i>`
+                            }
                         </div>
                         <div class="flex-1">
                             <h2 class="text-3xl font-bold mb-2">${player.name}</h2>
