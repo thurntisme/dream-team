@@ -830,8 +830,19 @@ startContent();
         const contractMatches = player.contract_matches || Math.floor(Math.random() * 36) + 15; // 15-50 matches
         const contractRemaining = player.contract_matches_remaining || contractMatches;
 
-        // Generate some stats (random for demo)
-        const stats = generatePlayerStats(player.position, player.rating);
+        // Use player's actual attributes if available, otherwise generate them
+        let stats = player.attributes || generatePlayerStats(player.position, player.rating);
+
+        // Capitalize first letter of attribute names
+        const formatAttributeName = (name) => {
+            return name.charAt(0).toUpperCase() + name.slice(1);
+        };
+
+        // Normalize stats object to have capitalized keys for display
+        const normalizedStats = {};
+        Object.entries(stats).forEach(([key, value]) => {
+            normalizedStats[formatAttributeName(key)] = value;
+        });
 
         const playerInfoHtml = `
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -845,6 +856,18 @@ startContent();
                             <h2 class="text-3xl font-bold mb-2">${player.name}</h2>
                             <div class="flex items-center gap-4 text-blue-100">
                                 <span class="bg-blue-500 px-2 py-1 rounded text-sm font-semibold">${player.position}</span>
+                                ${player.nation ? `
+                                <span class="flex items-center gap-1">
+                                    <i data-lucide="flag" class="w-4 h-4"></i>
+                                    ${player.nation}
+                                </span>
+                                ` : ''}
+                                ${player.age ? `
+                                <span class="flex items-center gap-1">
+                                    <i data-lucide="calendar" class="w-4 h-4"></i>
+                                    ${player.age} years
+                                </span>
+                                ` : ''}
                             </div>
                         </div>
                         <div class="text-right">
@@ -861,6 +884,21 @@ startContent();
                         Career Information
                     </h3>
                     <div class="space-y-3">
+                        ${player.nation ? `
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Nationality:</span>
+                            <span class="font-medium flex items-center gap-1">
+                                <i data-lucide="flag" class="w-4 h-4"></i>
+                                ${player.nation}
+                            </span>
+                        </div>
+                        ` : ''}
+                        ${player.age ? `
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Age:</span>
+                            <span class="font-medium">${player.age} years old</span>
+                        </div>
+                        ` : ''}
                         <div class="flex justify-between">
                             <span class="text-gray-600">Current Club:</span>
                             <span class="font-medium">${player.club || 'Free Agent'}</span>
@@ -915,7 +953,7 @@ startContent();
                         <div>
                             <span class="text-gray-600 text-sm">Key Attributes:</span>
                             <div class="mt-2 space-y-2">
-                                ${Object.entries(stats).map(([stat, value]) => `
+                                ${Object.entries(normalizedStats).map(([stat, value]) => `
                                     <div class="flex justify-between items-center">
                                         <span class="text-sm">${stat}</span>
                                         <div class="flex items-center gap-2">
@@ -1159,7 +1197,8 @@ startContent();
     });
 </script>
 
-<link rel="stylesheet" href="assets/css/player-modal.css"> <?php
+<link rel="stylesheet" href="assets/css/player-modal.css">
+<?php
 // End content capture and render layout
 endContent('Transfer Market - Dream Team', 'transfer', true, false, true);
 ?>

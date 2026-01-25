@@ -372,7 +372,9 @@ function loadPlayersFromJson()
                 'height' => $player['height'] ?? 'Unknown',
                 'weight' => $player['weight'] ?? 'Unknown',
                 'foot' => $player['foot'] ?? 'Right',
+                'nation' => $player['nation'] ?? null,
                 'playablePositions' => $player['playablePositions'] ?? [$player['position']],
+                'attributes' => $player['attributes'] ?? null,
                 'club' => $player['club'] ?? 'Free Agent',
                 'description' => $player['description'] ?? 'Professional football player.',
                 'category' => $category,
@@ -656,7 +658,7 @@ define('SCOUTING_COSTS', [
 
 define('SCOUTING_QUALITY_NAMES', [
     1 => 'Basic',
-    2 => 'Detailed', 
+    2 => 'Detailed',
     3 => 'Premium'
 ]);
 
