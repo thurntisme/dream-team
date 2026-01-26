@@ -1459,6 +1459,8 @@ startContent();
 
                 if (player) {
                     const isSelected = selectedPlayerIdx === idx;
+                    const fitness = player.fitness || 100;
+                    const fitnessColor = fitness >= 80 ? 'bg-green-500' : fitness >= 50 ? 'bg-yellow-500' : 'bg-red-500';
 
                     $field.append(`
                             <div class="absolute cursor-pointer player-slot transition-all duration-200" 
@@ -1467,7 +1469,15 @@ startContent();
                                     <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-lg border-2 ${colors.border} transition-all duration-200 player-circle ${isSelected ? 'ring-4 ring-yellow-400 ring-opacity-80' : ''} overflow-hidden">
                                         ${getPlayerAvatarHtml(player.name, player.avatar)}
                                     </div>
-                                    <div class="absolute top-full left-1/2 transform -translate-x-1/2 mt-1 whitespace-nowrap">
+                                    
+                                    <!-- Fitness progress bar -->
+                                    <div class="absolute top-full left-1/2 transform -translate-x-1/2 mt-1 w-16">
+                                        <div class="bg-gray-700 bg-opacity-80 rounded-full h-1.5 overflow-hidden shadow-md border border-white border-opacity-30">
+                                            <div class="${fitnessColor} h-full transition-all duration-300" style="width: ${fitness}%"></div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="absolute top-full left-1/2 transform -translate-x-1/2 mt-3 whitespace-nowrap">
                                         <div class="text-white text-xs font-bold bg-black bg-opacity-70 px-2 py-1 rounded">${player.name}</div>
                                     </div>
                                     

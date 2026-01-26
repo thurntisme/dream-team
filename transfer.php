@@ -222,6 +222,8 @@ startContent();
                         <option value="CDM">Defensive Midfielder</option>
                         <option value="CM">Central Midfielder</option>
                         <option value="CAM">Attacking Midfielder</option>
+                        <option value="LM">Left Midfielder</option>
+                        <option value="RM">Right Midfielder</option>
                         <option value="LW">Left Winger</option>
                         <option value="RW">Right Winger</option>
                         <option value="ST">Striker</option>
