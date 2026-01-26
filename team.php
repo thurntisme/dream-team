@@ -1277,6 +1277,48 @@ startContent();
         return 'GK';
     }
 
+    // Generate player avatar HTML
+    function getPlayerAvatarHtml(playerName, imageUrl = null) {
+        const colors = [
+            { bg: 'bg-blue-600', text: 'text-white' },
+            { bg: 'bg-green-600', text: 'text-white' },
+            { bg: 'bg-purple-600', text: 'text-white' },
+            { bg: 'bg-red-600', text: 'text-white' },
+            { bg: 'bg-yellow-600', text: 'text-white' },
+            { bg: 'bg-indigo-600', text: 'text-white' },
+            { bg: 'bg-pink-600', text: 'text-white' },
+            { bg: 'bg-teal-600', text: 'text-white' },
+            { bg: 'bg-orange-600', text: 'text-white' },
+            { bg: 'bg-cyan-600', text: 'text-white' }
+        ];
+
+        // Get initials from player name
+        const nameParts = playerName.trim().split(' ');
+        let initials = '';
+        if (nameParts.length >= 2) {
+            initials = (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase();
+        } else {
+            initials = playerName.substring(0, 2).toUpperCase();
+        }
+
+        // Generate consistent color based on name hash
+        let hash = 0;
+        for (let i = 0; i < playerName.length; i++) {
+            hash = ((hash << 5) - hash) + playerName.charCodeAt(i);
+            hash = hash & hash;
+        }
+        const colorIndex = Math.abs(hash) % colors.length;
+        const color = colors[colorIndex];
+
+        // If we have a valid image URL, return image tag
+        if (imageUrl) {
+            return `<img src="${imageUrl}" alt="${playerName}" class="w-full h-full object-cover rounded-full" onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\\'w-full h-full ${color.bg} ${color.text} rounded-full flex items-center justify-center font-bold text-lg\\'>${initials}</div>';">`;
+        }
+
+        // Return initials avatar
+        return `<div class="w-full h-full ${color.bg} ${color.text} rounded-full flex items-center justify-center font-bold text-lg">${initials}</div>`;
+    }
+
     function getPositionColors(position) {
         const colorMap = {
             // Goalkeeper - Yellow/Orange
@@ -1402,6 +1444,7 @@ startContent();
         positions.forEach((line, lineIdx) => {
             line.forEach(xPos => {
                 const player = selectedPlayers[playerIdx];
+            console.log(player)
                 const yPos = 100 - ((lineIdx + 1) * (100 / (positions.length + 1)));
                 const idx = playerIdx;
 
@@ -1415,9 +1458,8 @@ startContent();
                             <div class="absolute cursor-pointer player-slot transition-all duration-200" 
                                  style="left: ${xPos}%; top: ${yPos}%; transform: translate(-50%, -50%);" data-idx="${idx}">
                                 <div class="relative">
-                                    <div class="w-16 h-16 bg-white rounded-full flex flex-col items-center justify-center shadow-lg border-2 ${colors.border} transition-all duration-200 player-circle ${isSelected ? 'ring-4 ring-yellow-400 ring-opacity-80' : ''}">
-                                        <i data-lucide="user" class="w-5 h-5 text-gray-600"></i>
-                                        <span class="text-xs font-bold text-gray-700">${requiredPosition}</span>
+                                    <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-lg border-2 ${colors.border} transition-all duration-200 player-circle ${isSelected ? 'ring-4 ring-yellow-400 ring-opacity-80' : ''} overflow-hidden">
+                                        ${getPlayerAvatarHtml(player.name, player.avatar)}
                                     </div>
                                     <div class="absolute top-full left-1/2 transform -translate-x-1/2 mt-1 whitespace-nowrap">
                                         <div class="text-white text-xs font-bold bg-black bg-opacity-70 px-2 py-1 rounded">${player.name}</div>
@@ -2307,8 +2349,8 @@ startContent();
                 <!-- Player Header -->
                 <div class="lg:col-span-2 bg-gradient-to-r from-blue-600 to-blue-800 text-white rounded-lg p-6">
                     <div class="flex items-center gap-6">
-                        <div class="w-24 h-24 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
-                            <i data-lucide="user" class="w-12 h-12"></i>
+                        <div class="w-24 h-24 bg-white bg-opacity-20 rounded-full flex items-center justify-center overflow-hidden">
+                            ${getPlayerAvatarHtml(player.name, player.avatar)}
                         </div>
                         <div class="flex-1">
                             <h2 class="text-3xl font-bold mb-2">${player.name}</h2>

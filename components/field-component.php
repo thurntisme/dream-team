@@ -137,6 +137,7 @@ function renderFieldPlayers($team, $positions, $roles, $options, $size)
             $isSelected = $options['selected_player'] === $playerIdx;
 
             if ($player) {
+                var_dump('player info: '.$player);
                 $isCustom = $player['isCustom'] ?? false;
                 $customBadge = $isCustom ? '<div class="absolute -top-1 -right-1 w-2 h-2 bg-purple-500 rounded-full"></div>' : '';
                 $selectedClass = $isSelected ? 'ring-4 ring-yellow-400 ring-opacity-80' : '';
@@ -145,9 +146,8 @@ function renderFieldPlayers($team, $positions, $roles, $options, $size)
                     <div class="absolute cursor-pointer player-slot transition-all duration-200" 
                          style="left: ' . $xPos . '%; top: ' . $yPos . '%; transform: translate(-50%, -50%);" data-idx="' . $playerIdx . '">
                         <div class="relative">
-                            <div class="' . $size['player_size'] . ' bg-white rounded-full flex flex-col items-center justify-center shadow-lg border-2 ' . $colors['border'] . ' transition-all duration-200 player-circle ' . $selectedClass . '">
-                                <i data-lucide="user" class="' . $size['icon_size'] . ' text-gray-600"></i>
-                                <span class="' . $size['text_size'] . ' font-bold text-gray-700">' . htmlspecialchars($requiredPosition) . '</span>
+                            <div class="' . $size['player_size'] . ' bg-white rounded-full flex flex-col items-center justify-center shadow-lg border-2 ' . $colors['border'] . ' transition-all duration-200 player-circle ' . $selectedClass . ' overflow-hidden">
+                                ' . getPlayerAvatarWithImage($player['name'], $player['avatar'] ?? null, 'md') . '
                                 ' . $customBadge . '
                             </div>';
 
