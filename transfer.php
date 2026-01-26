@@ -317,16 +317,8 @@ startContent();
                         <div class="bg-blue-50 rounded-lg p-4 border border-blue-200">
                             <div class="flex items-center justify-between">
                                 <div class="flex items-center gap-4">
-                                    <div
-                                        class="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center overflow-hidden">
-                                        <?php if (!empty($player['avatar'])): ?>
-                                            <img src="<?php echo htmlspecialchars($player['avatar']); ?>"
-                                                alt="<?php echo htmlspecialchars($player['name']); ?>"
-                                                class="w-full h-full object-cover"
-                                                onerror="this.onerror=null; this.parentElement.innerHTML='<i data-lucide=\'user\' class=\'w-6 h-6 text-white\'></i>'; lucide.createIcons();">
-                                        <?php else: ?>
-                                            <i data-lucide="user" class="w-6 h-6 text-white"></i>
-                                        <?php endif; ?>
+                                    <div class="w-12 h-12 flex items-center justify-center">
+                                        <?php echo getPlayerAvatarWithImage($player['name'], $player['avatar'] ?? null, 'sm'); ?>
                                     </div>
                                     <div>
                                         <h4 class="font-semibold text-gray-900"><?php echo htmlspecialchars($player['name']); ?>
