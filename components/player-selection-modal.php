@@ -16,23 +16,7 @@
             </button>
         </div>
 
-        <div class="mb-4">
-            <label id="customPlayerLabel" class="block text-sm font-medium mb-2">Custom Player Name</label>
-            <div class="flex gap-2">
-                <input type="text" 
-                       id="customPlayerName" 
-                       placeholder="Enter custom name..."
-                       aria-labelledby="customPlayerLabel"
-                       class="flex-1 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <button id="addCustomPlayer" 
-                        class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
-                        aria-label="Add custom player">
-                    Add
-                </button>
-            </div>
-        </div>
-
-        <div class="border-t pt-4">
+        <div>
             <input type="text" 
                    id="playerSearch" 
                    placeholder="Search player..." 
