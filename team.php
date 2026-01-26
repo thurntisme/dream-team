@@ -511,35 +511,29 @@ startContent();
                 const isCustom = player.isCustom || false;
                 const isSelected = selectedPlayerIdx === idx;
 
-                // Base styling
-                let bgClass = isCustom ? 'bg-purple-50 border-purple-200' : 'bg-blue-50';
+                // Base styling - gray background by default, soft blue when selected
+                let bgClass = 'bg-gray-50 border-gray-200';
                 const nameClass = isCustom ? 'font-medium text-purple-700' : 'font-medium';
                 const valueClass = isCustom ? 'text-sm text-purple-600 font-semibold' : 'text-sm text-green-600 font-semibold';
                 const customBadge = isCustom ? '<span class="text-xs text-purple-600 bg-purple-100 px-1 py-0.5 rounded ml-1">CUSTOM</span>' : '';
 
-                // Selected styling
+                // Selected styling - soft blue background
                 if (isSelected) {
-                    bgClass = isCustom ? 'bg-purple-100 border-purple-400' : 'bg-blue-100 border-blue-400';
+                    bgClass = 'bg-blue-100 border-blue-300';
                 }
 
                 $list.append(`
-                        <div class="flex items-center justify-between p-2 border rounded ${bgClass} cursor-pointer transition-all duration-200 player-list-item" data-idx="${idx}">
+                        <div class="flex items-center justify-between p-2 border rounded ${bgClass} cursor-pointer transition-all duration-200 player-list-item hover:bg-blue-50" data-idx="${idx}">
                             <div class="flex-1" onclick="selectPlayer(${idx})">
                                 <div class="${nameClass}">${player.name}${customBadge}</div>
                                 <div class="${valueClass}">${formatMarketValue(player.value || 0)}</div>
-                                <div class="text-xs text-gray-500 mt-1">${player.position} • ★${getEffectiveRating(player)} • Lv.${player.level || 1} • Card Lv.${player.card_level || 1} • ${(player.contract_matches_remaining || player.contract_matches || 25)} matches left</div>
+                                <div class="text-xs text-gray-500 mt-1">${player.position} • ★${getEffectiveRating(player)}</div>
                                 <div class="flex gap-2 mt-1 items-center">
                                     <div class="flex-1">
                                         <div class="text-xs text-gray-500 mb-1">Fitness</div>
                                         <div class="w-full bg-gray-200 rounded-full h-2">
                                             <div class="h-2 rounded-full transition-all duration-300 ${getFitnessProgressColor(player.fitness || 100)}" style="width: ${player.fitness || 100}%"></div>
                                         </div>
-                                    </div>
-                                    <div class="flex items-center gap-1">
-                                        <span class="text-xs px-2 py-1 rounded-full ${getFormBadgeColor(player.form || 7)} flex items-center gap-1">
-                                            ${getFormArrowIcon(player.form || 7)}
-                                            ${(player.form || 7).toFixed(1)}
-                                        </span>
                                     </div>
                                 </div>
                             </div>
@@ -601,29 +595,23 @@ startContent();
         substitutePlayers.forEach((player, idx) => {
             if (player) {
                 const isCustom = player.isCustom || false;
-                const bgClass = isCustom ? 'bg-purple-50 border-purple-200' : 'bg-gray-50';
+                const bgClass = 'bg-gray-50 border-gray-200';
                 const nameClass = isCustom ? 'font-medium text-purple-700' : 'font-medium';
                 const valueClass = isCustom ? 'text-sm text-purple-600 font-semibold' : 'text-sm text-green-600 font-semibold';
                 const customBadge = isCustom ? '<span class="text-xs text-purple-600 bg-purple-100 px-1 py-0.5 rounded ml-1">CUSTOM</span>' : '';
 
                 $list.append(`
-                    <div class="flex items-center justify-between p-2 border rounded ${bgClass}">
+                    <div class="flex items-center justify-between p-2 border rounded ${bgClass} hover:bg-blue-50 transition-all duration-200">
                         <div class="flex-1">
                             <div class="${nameClass}">${player.name}${customBadge}</div>
                             <div class="${valueClass}">${formatMarketValue(player.value || 0)}</div>
-                            <div class="text-xs text-gray-500 mt-1">${player.position} • ★${getEffectiveRating(player)} • Lv.${player.level || 1} • Card Lv.${player.card_level || 1} • ${(player.contract_matches_remaining || player.contract_matches || 25)} matches left</div>
+                            <div class="text-xs text-gray-500 mt-1">${player.position} • ★${getEffectiveRating(player)}</div>
                             <div class="flex gap-2 mt-1 items-center">
                                 <div class="flex-1">
                                     <div class="text-xs text-gray-500 mb-1">Fitness</div>
                                     <div class="w-full bg-gray-200 rounded-full h-2">
                                         <div class="h-2 rounded-full transition-all duration-300 ${getFitnessProgressColor(player.fitness || 100)}" style="width: ${player.fitness || 100}%"></div>
                                     </div>
-                                </div>
-                                <div class="flex items-center gap-1">
-                                    <span class="text-xs px-2 py-1 rounded-full ${getFormBadgeColor(player.form || 7)} flex items-center gap-1">
-                                        ${getFormArrowIcon(player.form || 7)}
-                                        ${(player.form || 7).toFixed(1)}
-                                    </span>
                                 </div>
                             </div>
                         </div>
@@ -638,8 +626,6 @@ startContent();
                 `);
             }
         });
-
-
 
         if ($list.children().length === 0) {
             $list.append('<div class="text-center text-gray-500 py-4">No substitutes selected<br><small class="text-xs">Substitutes will appear here when added</small></div>');
@@ -1175,6 +1161,12 @@ startContent();
         // Update value
         $('#selectedPlayerValue').text(formatMarketValue(player.value || 0));
 
+        // Update level
+        $('#selectedPlayerLevel').text(player.level || 1);
+
+        // Update card level
+        $('#selectedPlayerCardLevel').text(player.card_level || 1);
+
         // Update fitness
         const fitness = player.fitness || 100;
         const fitnessColor = fitness >= 80 ? 'bg-green-500' : fitness >= 50 ? 'bg-yellow-500' : 'bg-red-500';
@@ -1185,17 +1177,28 @@ startContent();
             </div>
         `);
 
+        // Update form
+        const form = player.form || 7;
+        const formBadgeColor = getFormBadgeColor(form);
+        const formArrowIcon = getFormArrowIcon(form);
+        $('#selectedPlayerForm').html(`
+            <span class="px-2 py-1 rounded-full ${formBadgeColor} flex items-center gap-1 text-sm">
+                ${formArrowIcon}
+                ${form.toFixed(1)}
+            </span>
+        `);
+
         // Update nationality
         $('#selectedPlayerNationality').text(player.nationality || 'Unknown');
+
+        // Update contract (remaining matches)
+        const remainingMatches = player.contract_remaining || player.contract_matches_remaining || player.contract_matches || 0;
+        const contractColor = remainingMatches <= 5 ? 'text-red-600' : remainingMatches <= 10 ? 'text-yellow-600' : 'text-gray-900';
+        $('#selectedPlayerContract').html(`<span class="${contractColor}">${remainingMatches} matches</span>`);
 
         // Update salary
         const salary = player.salary || 0;
         $('#selectedPlayerSalary').text(formatMarketValue(salary) + '/week');
-
-        // Update contract (remaining matches)
-        const remainingMatches = player.contract_remaining || 0;
-        const contractColor = remainingMatches <= 5 ? 'text-red-600' : remainingMatches <= 10 ? 'text-yellow-600' : 'text-gray-900';
-        $('#selectedPlayerContract').html(`<span class="${contractColor}">${remainingMatches} matches</span>`);
 
         // Update action buttons
         $('#playerInfoBtn').off('click').on('click', function() {

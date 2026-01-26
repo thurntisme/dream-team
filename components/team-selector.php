@@ -74,6 +74,14 @@
                     <div id="selectedPlayerValue" class="text-lg font-bold text-green-600">€0.0M</div>
                 </div>
                 <div class="bg-gray-50 rounded-lg p-3">
+                    <div class="text-xs text-gray-500 mb-1">Level</div>
+                    <div id="selectedPlayerLevel" class="text-lg font-bold text-blue-600">1</div>
+                </div>
+                <div class="bg-gray-50 rounded-lg p-3">
+                    <div class="text-xs text-gray-500 mb-1">Card Level</div>
+                    <div id="selectedPlayerCardLevel" class="text-lg font-bold text-purple-600">1</div>
+                </div>
+                <div class="bg-gray-50 rounded-lg p-3">
                     <div class="text-xs text-gray-500 mb-1">Fitness</div>
                     <div id="selectedPlayerFitness" class="space-y-1">
                         <div class="text-sm font-bold text-gray-900">100%</div>
@@ -83,16 +91,22 @@
                     </div>
                 </div>
                 <div class="bg-gray-50 rounded-lg p-3">
+                    <div class="text-xs text-gray-500 mb-1">Form</div>
+                    <div id="selectedPlayerForm" class="flex items-center gap-1">
+                        <span class="text-sm font-bold text-gray-900">7.0</span>
+                    </div>
+                </div>
+                <div class="bg-gray-50 rounded-lg p-3">
                     <div class="text-xs text-gray-500 mb-1">Nationality</div>
                     <div id="selectedPlayerNationality" class="text-sm font-medium text-gray-900">--</div>
                 </div>
                 <div class="bg-gray-50 rounded-lg p-3">
-                    <div class="text-xs text-gray-500 mb-1">Salary</div>
-                    <div id="selectedPlayerSalary" class="text-sm font-bold text-blue-600">€0.0M/week</div>
-                </div>
-                <div class="bg-gray-50 rounded-lg p-3">
                     <div class="text-xs text-gray-500 mb-1">Contract</div>
                     <div id="selectedPlayerContract" class="text-sm font-bold text-gray-900">-- matches</div>
+                </div>
+                <div class="bg-gray-50 rounded-lg p-3">
+                    <div class="text-xs text-gray-500 mb-1">Salary</div>
+                    <div id="selectedPlayerSalary" class="text-sm font-bold text-blue-600">€0.0M/week</div>
                 </div>
             </div>
             
