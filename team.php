@@ -543,14 +543,6 @@ startContent();
                                     </div>
                                 </div>
                             </div>
-                            <div class="flex items-center gap-1 ml-2">
-                                ${!isCustom ? `<button onclick="showPlayerInfo(${JSON.stringify(player).replace(/"/g, '&quot;')})" class="p-1 text-blue-600 hover:bg-blue-100 rounded transition-colors" title="Player Info">
-                                    <i data-lucide="info" class="w-4 h-4"></i>
-                                </button>` : ''}
-                                <button onclick="removePlayer(${idx})" class="p-1 text-red-600 hover:bg-red-100 rounded transition-colors" title="Remove Player">
-                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
-                                </button>
-                            </div>
                         </div>
                     `);
             }
@@ -636,17 +628,11 @@ startContent();
                             </div>
                         </div>
                         <div class="flex items-center gap-1 ml-2">
-                            ${!isCustom ? `<button onclick="showPlayerInfo(${JSON.stringify(player).replace(/"/g, '&quot;')})" class="p-1 text-gray-600 hover:bg-gray-100 rounded transition-colors" title="Player Info">
-                                <i data-lucide="info" class="w-4 h-4"></i>
-                            </button>` : ''}
                             ${selectedPlayers.findIndex(p => p === null) !== -1 ? `<button onclick="promoteSubstitute(${idx})" class="p-1 text-blue-600 hover:bg-blue-100 rounded transition-colors" title="Promote to Starting XI">
                                 <i data-lucide="arrow-up" class="w-4 h-4"></i>
                             </button>` : `<button onclick="switchWithStartingPlayer(${idx})" class="p-1 text-orange-600 hover:bg-orange-100 rounded transition-colors" title="Switch with Starting Player">
                                 <i data-lucide="repeat" class="w-4 h-4"></i>
                             </button>`}
-                            <button onclick="removeSubstitute(${idx})" class="p-1 text-red-600 hover:bg-red-100 rounded transition-colors" title="Remove Substitute">
-                                <i data-lucide="trash-2" class="w-4 h-4"></i>
-                            </button>
                         </div>
                     </div>
                 `);
@@ -1151,6 +1137,199 @@ startContent();
         selectedPlayerIdx = selectedPlayerIdx === idx ? null : idx; // Toggle selection
         renderPlayers();
         renderField(); // Update field to show selection
+        updateSelectedPlayerInfo(); // Update selected player info box
+    }
+
+    // Function to update selected player info box
+    function updateSelectedPlayerInfo() {
+        const $infoBox = $('#selectedPlayerInfo');
+        
+        if (selectedPlayerIdx === null) {
+            // No player selected, hide the info box
+            $infoBox.addClass('hidden');
+            return;
+        }
+
+        const player = selectedPlayers[selectedPlayerIdx];
+        
+        if (!player) {
+            // Empty slot selected, hide the info box
+            $infoBox.addClass('hidden');
+            return;
+        }
+
+        // Show the info box
+        $infoBox.removeClass('hidden');
+
+        // Update avatar
+        const avatarHtml = getPlayerAvatarHtml(player.name, player.avatar);
+        $('#selectedPlayerAvatar').html(avatarHtml);
+
+        // Update basic info
+        $('#selectedPlayerName').text(player.name);
+        $('#selectedPlayerPosition').text(player.position || 'Unknown');
+
+        // Update rating
+        $('#selectedPlayerRating span').text(player.rating || 'N/A');
+
+        // Update value
+        $('#selectedPlayerValue').text(formatMarketValue(player.value || 0));
+
+        // Update fitness
+        const fitness = player.fitness || 100;
+        const fitnessColor = fitness >= 80 ? 'bg-green-500' : fitness >= 50 ? 'bg-yellow-500' : 'bg-red-500';
+        $('#selectedPlayerFitness').html(`
+            <div class="text-sm font-bold text-gray-900">${fitness}%</div>
+            <div class="w-full bg-gray-200 rounded-full h-1.5">
+                <div class="${fitnessColor} h-full rounded-full transition-all duration-300" style="width: ${fitness}%"></div>
+            </div>
+        `);
+
+        // Update nationality
+        $('#selectedPlayerNationality').text(player.nationality || 'Unknown');
+
+        // Update salary
+        const salary = player.salary || 0;
+        $('#selectedPlayerSalary').text(formatMarketValue(salary) + '/week');
+
+        // Update contract (remaining matches)
+        const remainingMatches = player.contract_remaining || 0;
+        const contractColor = remainingMatches <= 5 ? 'text-red-600' : remainingMatches <= 10 ? 'text-yellow-600' : 'text-gray-900';
+        $('#selectedPlayerContract').html(`<span class="${contractColor}">${remainingMatches} matches</span>`);
+
+        // Update action buttons
+        $('#playerInfoBtn').off('click').on('click', function() {
+            showPlayerInfo(player);
+        });
+
+        $('#changePlayerBtn').off('click').on('click', function() {
+            choosePlayer(selectedPlayerIdx);
+        });
+
+        $('#removePlayerBtn').off('click').on('click', function() {
+            removePlayer(selectedPlayerIdx);
+        });
+
+        // Update renew contract button
+        $('#renewContractBtn').off('click').on('click', function() {
+            renewPlayerContract(player, selectedPlayerIdx);
+        });
+
+        // Reinitialize lucide icons
+        lucide.createIcons();
+    }
+
+    // Function to renew player contract
+    function renewPlayerContract(player, playerIdx) {
+        const renewalCost = Math.floor((player.value || 0) * 0.1); // 10% of player value
+        const contractExtension = 20; // Add 20 matches
+
+        Swal.fire({
+            title: 'Renew Contract?',
+            html: `
+                <div class="text-left space-y-3">
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <h4 class="font-semibold text-gray-900 mb-2">Player:</h4>
+                        <div class="text-sm">
+                            <div class="flex justify-between mb-1">
+                                <span class="text-gray-600">Name:</span>
+                                <span class="font-medium">${player.name}</span>
+                            </div>
+                            <div class="flex justify-between mb-1">
+                                <span class="text-gray-600">Current Contract:</span>
+                                <span class="font-medium">${player.contract_remaining || 0} matches</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">After Renewal:</span>
+                                <span class="font-medium text-green-600">${(player.contract_remaining || 0) + contractExtension} matches</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                        <h4 class="font-semibold text-blue-900 mb-2">Cost:</h4>
+                        <div class="text-2xl font-bold text-blue-600">${formatMarketValue(renewalCost)}</div>
+                        <p class="text-xs text-gray-600 mt-1">Contract extension: +${contractExtension} matches</p>
+                    </div>
+                </div>
+            `,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#10b981',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: '<i data-lucide="file-signature" class="w-4 h-4 inline mr-1"></i> Renew Contract',
+            cancelButtonText: 'Cancel',
+            didOpen: () => {
+                lucide.createIcons();
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Show loading
+                Swal.fire({
+                    title: 'Processing...',
+                    text: 'Renewing contract',
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    showConfirmButton: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
+                // Call API to renew contract
+                $.post('api/renew_contract_api.php', {
+                    player_uuid: player.uuid,
+                    renewal_cost: renewalCost,
+                    contract_extension: contractExtension
+                }, function(response) {
+                    if (response.success) {
+                        // Update local player data
+                        player.contract_remaining = (player.contract_remaining || 0) + contractExtension;
+                        selectedPlayers[playerIdx] = player;
+
+                        // Update budget
+                        maxBudget = response.new_budget;
+                        $('#clubBudget').text(formatMarketValue(response.new_budget));
+
+                        // Refresh displays
+                        updateSelectedPlayerInfo();
+                        renderPlayers();
+                        updateClubStats();
+
+                        // Show success message
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Contract Renewed!',
+                            html: `
+                                <div class="text-center">
+                                    <p class="mb-2">${player.name}'s contract has been extended!</p>
+                                    <p class="text-sm text-gray-600">New contract: ${player.contract_remaining} matches</p>
+                                    <p class="text-sm text-blue-600">Remaining Budget: ${formatMarketValue(response.new_budget)}</p>
+                                </div>
+                            `,
+                            timer: 3000,
+                            showConfirmButton: false,
+                            toast: true,
+                            position: 'top-end'
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Renewal Failed',
+                            text: response.message || 'Could not renew contract',
+                            confirmButtonColor: '#3b82f6'
+                        });
+                    }
+                }).fail(function() {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Failed to renew contract. Please try again.',
+                        confirmButtonColor: '#3b82f6'
+                    });
+                });
+            }
+        });
     }
 
     // Function to choose a player (open modal to select any player)

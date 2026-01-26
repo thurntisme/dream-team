@@ -1,5 +1,5 @@
 <!-- Team Selector -->
-<div class="flex flex-col">
+<div class="flex flex-col gap-4">
     <!-- Formation Selector -->
     <div class="bg-white rounded-lg shadow p-4">
         <h2 class="text-xl font-bold mb-4">Formation</h2>
@@ -40,6 +40,78 @@
                     style="width: 0%"></div>
             </div>
             <div id="playerCount" class="text-xs text-gray-500">0/11 players selected</div>
+        </div>
+    </div>
+    <!-- Selected Player -->
+    <div id="selectedPlayerInfo" class="bg-white rounded-lg shadow p-4 hidden">
+        <h2 class="text-xl font-bold mb-4">Selected Player</h2>
+        <div id="selectedPlayerContent" class="space-y-3">
+            <!-- Player avatar and basic info -->
+            <div class="flex items-center gap-3 pb-3 border-b">
+                <div id="selectedPlayerAvatar" class="w-16 h-16 flex-shrink-0">
+                    <!-- Avatar will be inserted here -->
+                </div>
+                <div class="flex-1">
+                    <div id="selectedPlayerName" class="font-bold text-lg text-gray-900"></div>
+                    <div id="selectedPlayerPosition" class="text-sm text-gray-600"></div>
+                </div>
+                <button id="playerInfoBtn" class="p-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors flex-shrink-0" title="Player Info">
+                    <i data-lucide="info" class="w-5 h-5"></i>
+                </button>
+            </div>
+            
+            <!-- Player stats -->
+            <div class="grid grid-cols-2 gap-3">
+                <div class="bg-gray-50 rounded-lg p-3">
+                    <div class="text-xs text-gray-500 mb-1">Rating</div>
+                    <div id="selectedPlayerRating" class="text-lg font-bold text-yellow-600 flex items-center gap-1">
+                        <i data-lucide="star" class="w-4 h-4"></i>
+                        <span>--</span>
+                    </div>
+                </div>
+                <div class="bg-gray-50 rounded-lg p-3">
+                    <div class="text-xs text-gray-500 mb-1">Value</div>
+                    <div id="selectedPlayerValue" class="text-lg font-bold text-green-600">€0.0M</div>
+                </div>
+                <div class="bg-gray-50 rounded-lg p-3">
+                    <div class="text-xs text-gray-500 mb-1">Fitness</div>
+                    <div id="selectedPlayerFitness" class="space-y-1">
+                        <div class="text-sm font-bold text-gray-900">100%</div>
+                        <div class="w-full bg-gray-200 rounded-full h-1.5">
+                            <div class="bg-green-500 h-full rounded-full transition-all duration-300" style="width: 100%"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-gray-50 rounded-lg p-3">
+                    <div class="text-xs text-gray-500 mb-1">Nationality</div>
+                    <div id="selectedPlayerNationality" class="text-sm font-medium text-gray-900">--</div>
+                </div>
+                <div class="bg-gray-50 rounded-lg p-3">
+                    <div class="text-xs text-gray-500 mb-1">Salary</div>
+                    <div id="selectedPlayerSalary" class="text-sm font-bold text-blue-600">€0.0M/week</div>
+                </div>
+                <div class="bg-gray-50 rounded-lg p-3">
+                    <div class="text-xs text-gray-500 mb-1">Contract</div>
+                    <div id="selectedPlayerContract" class="text-sm font-bold text-gray-900">-- matches</div>
+                </div>
+            </div>
+            
+            <!-- Action buttons -->
+            <div class="flex gap-2 pt-2">
+                <button id="changePlayerBtn" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 transition-colors">
+                    <i data-lucide="user-plus" class="w-4 h-4"></i>
+                    Change
+                </button>
+                <button id="removePlayerBtn" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg flex items-center justify-center transition-colors">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                </button>
+            </div>
+            
+            <!-- Renew Contract Button -->
+            <button id="renewContractBtn" class="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 transition-all duration-200 shadow-md hover:shadow-lg">
+                <i data-lucide="file-signature" class="w-4 h-4"></i>
+                Renew Contract
+            </button>
         </div>
     </div>
 </div>
