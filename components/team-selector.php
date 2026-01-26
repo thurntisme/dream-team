@@ -1,5 +1,5 @@
 <!-- Team Selector -->
-<div class="gap-4 flex flex-col">
+<div class="flex flex-col">
     <!-- Formation Selector -->
     <div class="bg-white rounded-lg shadow p-4">
         <h2 class="text-xl font-bold mb-4">Formation</h2>
@@ -41,19 +41,5 @@
             </div>
             <div id="playerCount" class="text-xs text-gray-500">0/11 players selected</div>
         </div>
-        <div id="playerList" class="space-y-2 max-h-80 overflow-y-auto"></div>
-    </div>
-
-    <!-- Substitutes Section -->
-    <div class="bg-white rounded-lg shadow p-4">
-        <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
-            <i data-lucide="users" class="w-5 h-5"></i>
-            Substitutes
-        </h2>
-        <p class="text-xs text-gray-500 mb-4">Backup players for your squad • Max
-            <?php echo $max_players - 11; ?>
-            substitutes
-        </p>
-        <div id="substitutesList" class="space-y-2 max-h-60 overflow-y-auto"></div>
     </div>
 </div>

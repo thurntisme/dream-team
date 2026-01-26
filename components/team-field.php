@@ -1,6 +1,6 @@
 <!-- Field -->
-<div class="lg:col-span-2 bg-gradient-to-b from-green-500 to-green-600 rounded-lg shadow p-8 relative"
-    style="min-height: 700px;">
+<div class="bg-gradient-to-b from-green-500 to-green-600 rounded-lg shadow p-8 relative aspect-[2/3]"
+    style="min-height: 700px;" id="field-wrapper">
     <!-- Field Lines -->
     <div class="absolute inset-8 border-2 border-white border-opacity-40 rounded overflow-hidden">
         <!-- Center Line -->

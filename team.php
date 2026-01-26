@@ -49,15 +49,21 @@ startContent();
     <?php include 'components/club-overview-section.php'; ?>
     <?php include 'components/training-center.php'; ?>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <!-- Team Selector -->
-        <?php include 'components/team-selector.php'; ?>
+    <div class="grid grid-cols-1 lg:grid-cols-7 gap-4">
+        <div class="lg:col-span-2 gap-4">
+            <?php include 'components/team-selector.php'; ?>
+        </div>   
 
-        <?php include 'components/team-field.php'; ?>
+        <div class="lg:col-span-3">
+            <?php include 'components/team-field.php'; ?>
+        </div>
+
+        <div class="lg:col-span-2">
+            <?php include 'components/player-selector.php'; ?>
+        </div>   
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div class="lg:block"></div>
+    <div class="flex justify-center gap-4">
         <div class="lg:col-span-2 mt-4 flex justify-center gap-3">
             <button id="resetTeam"
                 class="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 flex items-center gap-2">
