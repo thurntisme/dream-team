@@ -7,7 +7,7 @@
         "age": 19,
         "uuid": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
         "nation": "England",
-        "avatar": "https://ui-avatars.com/api/?name=Marcus+Thompson&background=0D8ABC&color=fff&size=128",
+        "avatar": "marcus-thompson.jpeg",
         "playablePositions": [
             "GK"
         ],
@@ -109,7 +109,7 @@
         "age": 18,
         "uuid": "f6g7h8i9-j0k1-2345-fghi-678901234567",
         "nation": "France",
-        "avatar": "https://ui-avatars.com/api/?name=Pierre+Dubois&background=F59E0B&color=fff&size=128",
+        "avatar": "pierre-dubois.jpeg",
         "playablePositions": [
             "CB"
         ],
@@ -142,7 +142,7 @@
             "stamina": 76,
             "dribbling": 74
         },
-        "avatar": "https://ui-avatars.com/api/?name=Erik+Johansson&background=EC4899&color=fff&size=128"
+        "avatar": "erik-johansson.jpeg"
     },
     {
         "name": "Carlos Mendoza",
@@ -185,7 +185,7 @@
             "stamina": 73,
             "dribbling": 71
         },
-        "avatar": "https://ui-avatars.com/api/?name=Liam+O'Connor&background=6366F1&color=fff&size=128"
+        "avatar": "liam-OConnor.jpeg"
     },
     {
         "name": "Rafael Silva",
@@ -208,7 +208,7 @@
             "stamina": 75,
             "dribbling": 73
         },
-        "avatar": "https://ui-avatars.com/api/?name=Rafael+Silva&background=F97316&color=fff&size=128"
+        "avatar": "rafael-silva.jpeg"
     },
     {
         "name": "Ahmed Hassan",
@@ -229,7 +229,7 @@
             "stamina": 71,
             "dribbling": 69
         },
-        "avatar": "https://ui-avatars.com/api/?name=Ahmed+Hassan&background=0D8ABC&color=fff&size=128"
+        "avatar": "ahmed-hassan.jpeg"
     },
     {
         "name": "Viktor Petrov",
@@ -273,7 +273,7 @@
             "strength": 76,
             "vision": 75
         },
-        "avatar": "https://ui-avatars.com/api/?name=Marco+Fernandez&background=3B82F6&color=fff&size=128"
+        "avatar": "marco-fernandez.jpeg"
     },
     {
         "name": "Jamal Williams",
@@ -360,7 +360,7 @@
             "stamina": 75,
             "shooting": 73
         },
-        "avatar": "https://ui-avatars.com/api/?name=Gabriel+Costa&background=EC4899&color=fff&size=128"
+        "avatar": "gabriel-costa.jpeg"
     },
     {
         "name": "Felix Wagner",
@@ -381,7 +381,7 @@
             "stamina": 72,
             "shooting": 70
         },
-        "avatar": "https://ui-avatars.com/api/?name=Felix+Wagner&background=14B8A6&color=fff&size=128"
+        "avatar": "felix-wagner.jpeg"
     },
     {
         "name": "Theo Laurent",
@@ -404,7 +404,7 @@
             "shooting": 77,
             "creativity": 81
         },
-        "avatar": "https://ui-avatars.com/api/?name=Theo+Laurent&background=6366F1&color=fff&size=128"
+        "avatar": "theo-laurent.jpeg"
     },
     {
         "name": "Emilio Rodriguez",
@@ -426,7 +426,7 @@
             "shooting": 74,
             "creativity": 78
         },
-        "avatar": "https://ui-avatars.com/api/?name=Emilio+Rodriguez&background=F97316&color=fff&size=128"
+        "avatar": "emilio-rodriguez.jpeg"
     },
     {
         "name": "Oliver Smith",
@@ -492,7 +492,7 @@
             "stamina": 75,
             "passing": 74
         },
-        "avatar": "assets/images/players/sebastian-keller.jpeg"
+        "avatar": "sebastian-keller.jpeg"
     },
     {
         "name": "Matias Gonzalez",
@@ -515,7 +515,7 @@
             "stamina": 73,
             "passing": 72
         },
-        "avatar": "https://ui-avatars.com/api/?name=Matias+Gonzalez&background=EF4444&color=fff&size=128"
+        "avatar": "matias-gonzalez.jpeg"
     },
     {
         "name": "Ryan Mitchell",
@@ -604,7 +604,7 @@
             "shooting": 76,
             "agility": 78
         },
-        "avatar": "https://ui-avatars.com/api/?name=Andre+Moreau&background=14B8A6&color=fff&size=128"
+        "avatar": "andre-moreau.jpeg"
     },
     {
         "name": "Davi Oliveira",
@@ -626,7 +626,7 @@
             "shooting": 74,
             "agility": 77
         },
-        "avatar": "https://ui-avatars.com/api/?name=Davi+Oliveira&background=6366F1&color=fff&size=128"
+        "avatar": "davi-oliveira.jpeg"
     },
     {
         "name": "Mason Taylor",
@@ -868,6 +868,6 @@
             "strength": 72,
             "heading": 73
         },
-        "avatar": "https://ui-avatars.com/api/?name=Axel+Lindqvist&background=F97316&color=fff&size=128"
+        "avatar": "axel-lindqvist.jpeg"
     }
 ]

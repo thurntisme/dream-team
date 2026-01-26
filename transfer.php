@@ -535,6 +535,7 @@ startContent();
             };
 
             const categoryInfo = getCategoryInfo(player.category);
+            const imageBaseUrl = '<?= PLAYER_IMAGES_BASE_PATH ?>';
 
             return `
                 <tr class="hover:bg-gray-50">
@@ -542,7 +543,7 @@ startContent();
                         <div class="flex items-center">
                             <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center mr-3 overflow-hidden">
                                 ${player.avatar ?
-                    `<img src="${player.avatar}" alt="${player.name}" class="w-full h-full object-cover" onerror="this.onerror=null; this.parentElement.innerHTML='<i data-lucide=\\'user\\' class=\\'w-5 h-5 text-white\\'></i>'; lucide.createIcons();">` :
+                    `<img src="${imageBaseUrl + player.avatar}" alt="${player.name}" class="w-full h-full object-cover" onerror="this.onerror=null; this.parentElement.innerHTML='<i data-lucide=\\'user\\' class=\\'w-5 h-5 text-white\\'></i>'; lucide.createIcons();">` :
                     `<i data-lucide="user" class="w-5 h-5 text-white"></i>`
                 }
                             </div>
@@ -862,7 +863,7 @@ startContent();
                     <div class="flex items-center gap-6">
                         <div class="w-24 h-24 bg-white bg-opacity-20 rounded-full flex items-center justify-center overflow-hidden">
                             ${player.avatar ?
-                `<img src="${player.avatar}" alt="${player.name}" class="w-full h-full object-cover" onerror="this.onerror=null; this.parentElement.innerHTML='<i data-lucide=\\'user\\' class=\\'w-12 h-12\\'></i>';">` :
+                `<img src="${player.avatar.startsWith('http') ? player.avatar : '<?php echo PLAYER_IMAGES_BASE_PATH; ?>' + player.avatar}" alt="${player.name}" class="w-full h-full object-cover" onerror="this.onerror=null; this.parentElement.innerHTML='<i data-lucide=\\'user\\' class=\\'w-12 h-12\\'></i>';">` :
                 `<i data-lucide="user" class="w-12 h-12"></i>`
             }
                         </div>
