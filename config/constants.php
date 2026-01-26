@@ -7,6 +7,9 @@ define('DREAM_TEAM_APP', true);
 // Include helper functions
 require_once __DIR__ . '/../includes/helpers.php';
 
+// Asset paths
+define('PLAYER_IMAGES_BASE_PATH', 'assets/images/players/');
+
 // Budget configuration
 define('DEFAULT_BUDGET', 500000000); // €500M default budget - optimal for competitive lineups
 define('DEFAULT_MAX_PLAYERS', 23); // Default maximum players in squad

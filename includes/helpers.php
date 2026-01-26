@@ -96,6 +96,14 @@ if (!function_exists('getPlayerAvatar')) {
 if (!function_exists('getPlayerAvatarWithImage')) {
     function getPlayerAvatarWithImage($playerName, $imageUrl = null, $size = 'md', $customClass = '')
     {
+        // Check if image URL is a local file (doesn't start with http)
+        if ($imageUrl && strpos($imageUrl, 'http') !== 0) {
+            $fullImagePath = PLAYER_IMAGES_BASE_PATH . $imageUrl;
+            if (file_exists($fullImagePath)) {
+                $imageUrl = $fullImagePath;
+            }
+        }
+
         if ($imageUrl && file_exists($imageUrl)) {
             // Size classes
             $sizeClasses = [
