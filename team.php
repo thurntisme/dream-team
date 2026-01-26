@@ -1622,44 +1622,143 @@ startContent();
             }
         });
 
-        // Show system players
+        // Collect and sort players - team players first
+        const matchingPlayers = [];
+        const addedPlayerUuids = new Set(); // Track added players to avoid duplicates
+        
         players.forEach((player, idx) => {
-            const isSelectedInStarting = selectedPlayers.some(p => p && p.name === player.name);
-            const isSelectedInSubs = substitutePlayers.some(p => p && p.name === player.name);
+            const isSelectedInStarting = selectedPlayers.some(p => p && p.uuid === player.uuid);
+            const isSelectedInSubs = substitutePlayers.some(p => p && p.uuid === player.uuid);
             const isSelected = isSelectedInStarting || isSelectedInSubs;
 
-            const matchesPosition = isSelectingSubstitute ? true : (player.position === requiredPosition);
             const matchesSearch = player.name.toLowerCase().includes(searchLower);
+
+            // Skip if already added (prevents duplicates)
+            if (addedPlayerUuids.has(player.uuid)) {
+                return;
+            }
+
+            // For team players: always show them if they match search (ignore position requirement)
+            if (isSelected && matchesSearch) {
+                matchingPlayers.push({
+                    player,
+                    idx,
+                    isSelected,
+                    isSelectedInStarting,
+                    isSelectedInSubs,
+                    showMainPosition: true // Flag to show main position instead of required position
+                });
+                addedPlayerUuids.add(player.uuid);
+                return;
+            }
+
+            // For non-team players: check if they can play in the required position
+            let matchesPosition = false;
+            if (isSelectingSubstitute) {
+                matchesPosition = true; // Any position for substitutes
+            } else {
+                // Check primary position or playablePositions array
+                const playablePositions = player.playablePositions || [player.position];
+                matchesPosition = playablePositions.includes(requiredPosition);
+            }
+
+            if (matchesPosition && matchesSearch) {
+                matchingPlayers.push({
+                    player,
+                    idx,
+                    isSelected,
+                    isSelectedInStarting,
+                    isSelectedInSubs,
+                    showMainPosition: false
+                });
+                addedPlayerUuids.add(player.uuid);
+            }
+        });
+
+        // Sort: team players first (starting XI, then substitutes), then available players
+        matchingPlayers.sort((a, b) => {
+            if (a.isSelected && !b.isSelected) return -1;
+            if (!a.isSelected && b.isSelected) return 1;
+            if (a.isSelected && b.isSelected) {
+                // Both in team: starting XI before substitutes
+                if (a.isSelectedInStarting && !b.isSelectedInStarting) return -1;
+                if (!a.isSelectedInStarting && b.isSelectedInStarting) return 1;
+            }
+            return 0;
+        });
+
+        // Render sorted players
+        matchingPlayers.forEach(({ player, idx, isSelected, isSelectedInStarting, showMainPosition }) => {
             const wouldExceedBudget = (currentTeamValue + (player.value || 0)) > maxBudget;
 
-            if (!isSelected && matchesPosition && matchesSearch) {
+            // Determine player status and styling
+            let itemClass, priceClass, budgetWarning = '', teamBadge = '';
+            
+            if (isSelected) {
+                // Player is already in team - highlight with green background but keep clickable
+                const teamPosition = isSelectedInStarting ? 'Starting XI' : 'Substitute';
+                itemClass = 'bg-green-50 border-green-300 hover:bg-green-100 cursor-pointer modal-player-item';
+                priceClass = 'text-gray-600';
+                teamBadge = `<span class="text-xs bg-green-600 text-white px-2 py-1 rounded font-medium">${teamPosition}</span>`;
+            } else {
+                // Player is available
                 const isAffordable = !wouldExceedBudget;
-                const itemClass = isAffordable ? 'hover:bg-blue-50 cursor-pointer modal-player-item' : 'bg-gray-100 cursor-not-allowed opacity-60';
-                const priceClass = isAffordable ? 'text-green-600' : 'text-red-600';
-                const budgetWarning = wouldExceedBudget ? '<div class="text-xs text-red-500 mt-1">Exceeds budget</div>' : '';
+                itemClass = isAffordable ? 'hover:bg-blue-50 cursor-pointer modal-player-item' : 'bg-gray-100 cursor-not-allowed opacity-60';
+                priceClass = isAffordable ? 'text-green-600' : 'text-red-600';
+                budgetWarning = wouldExceedBudget ? '<div class="text-xs text-red-500 mt-1">Exceeds budget</div>' : '';
+            }
 
-                $list.append(`
-                        <div class="flex items-center justify-between p-3 border rounded ${itemClass}" ${isAffordable ? `data-idx="${idx}"` : ''}>
-                            <div class="flex-1" ${isAffordable ? `onclick="selectModalPlayer(${idx})"` : ''}>
-                                <div class="font-medium">${player.name}</div>
+            // Show playable positions
+            // For team players, always show their main position
+            // For available players, show if they can play multiple positions
+            const playablePositions = player.playablePositions || [player.position];
+            let positionsDisplay;
+            
+            if (showMainPosition) {
+                // Team player - show main position only
+                positionsDisplay = `<span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">${player.position}</span>`;
+            } else {
+                // Available player - show playable positions with indicator
+                positionsDisplay = playablePositions.length > 1 
+                    ? `<span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">${player.position}</span><span class="text-xs text-blue-500 ml-1" title="Can also play: ${playablePositions.filter(p => p !== player.position).join(', ')}">+${playablePositions.length - 1}</span>`
+                    : `<span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">${player.position}</span>`;
+            }
+
+            // Determine if player is clickable (team players and affordable players are clickable)
+            const isClickable = isSelected || !wouldExceedBudget;
+
+            // Generate player avatar
+            const avatarHtml = getPlayerAvatarHtml(player.name, player.avatar);
+
+            $list.append(`
+                    <div class="flex items-center justify-between p-3 border rounded ${itemClass}" ${isClickable ? `data-idx="${idx}"` : ''}>
+                        <div class="flex items-center gap-3 flex-1" ${isClickable ? `onclick="selectModalPlayer(${idx})"` : ''}>
+                            <div class="w-12 h-12 flex-shrink-0">
+                                ${avatarHtml}
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2">
+                                    <div class="font-medium">${player.name}</div>
+                                    ${teamBadge}
+                                </div>
                                 <div class="text-sm ${priceClass} font-semibold">${formatMarketValue(player.value || 0)}</div>
                                 ${budgetWarning}
                             </div>
-                            <div class="flex items-center gap-2">
-                                <div class="flex flex-col items-end gap-1">
-                                    <span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">${player.position}</span>
-                                    <div class="flex items-center gap-1">
-                                        <span class="text-xs text-yellow-600">★</span>
-                                        <span class="text-xs text-gray-600">${player.rating || 'N/A'}</span>
-                                    </div>
-                                </div>
-                                <button onclick="showPlayerInfo(${JSON.stringify(player).replace(/"/g, '&quot;')}); event.stopPropagation();" class="p-1 text-blue-600 hover:bg-blue-100 rounded transition-colors" title="Player Info">
-                                    <i data-lucide="info" class="w-3 h-3"></i>
-                                </button>
-                            </div>
                         </div>
-                    `);
-            }
+                        <div class="flex items-center gap-2">
+                            <div class="flex flex-col items-end gap-1">
+                                ${positionsDisplay}
+                                <div class="flex items-center gap-1">
+                                    <span class="text-xs text-yellow-600">★</span>
+                                    <span class="text-xs text-gray-600">${player.rating || 'N/A'}</span>
+                                </div>
+                            </div>
+                            <button onclick="showPlayerInfo(${JSON.stringify(player).replace(/"/g, '&quot;')}); event.stopPropagation();" class="p-1 text-blue-600 hover:bg-blue-100 rounded transition-colors" title="Player Info">
+                                <i data-lucide="info" class="w-3 h-3"></i>
+                            </button>
+                        </div>
+                    </div>
+                `);
         });
 
         if ($list.children().length === 0) {
@@ -1671,6 +1770,92 @@ startContent();
             if (idx !== undefined) {
                 const player = players[idx];
 
+                // Check if player is already in team (by uuid)
+                const isInStarting = selectedPlayers.some(p => p && p.uuid === player.uuid);
+                const isInSubs = substitutePlayers.some(p => p && p.uuid === player.uuid);
+                const isAlreadyInTeam = isInStarting || isInSubs;
+
+                if (isAlreadyInTeam) {
+                    // Player is already in team - just switch positions
+                    const currentPlayer = isSelectingSubstitute ? substitutePlayers[currentSlotIdx] : selectedPlayers[currentSlotIdx];
+                    
+                    // Find where the selected player currently is (by uuid)
+                    let sourceIsSubstitute = false;
+                    let sourceIdx = -1;
+                    
+                    if (isInStarting) {
+                        sourceIdx = selectedPlayers.findIndex(p => p && p.uuid === player.uuid);
+                        sourceIsSubstitute = false;
+                    } else {
+                        sourceIdx = substitutePlayers.findIndex(p => p && p.uuid === player.uuid);
+                        sourceIsSubstitute = true;
+                    }
+
+                    // Perform the switch
+                    if (isSelectingSubstitute) {
+                        // Moving to substitutes
+                        substitutePlayers[currentSlotIdx] = player;
+                        if (sourceIsSubstitute) {
+                            substitutePlayers[sourceIdx] = currentPlayer;
+                        } else {
+                            selectedPlayers[sourceIdx] = currentPlayer;
+                        }
+                    } else {
+                        // Moving to starting XI
+                        selectedPlayers[currentSlotIdx] = player;
+                        if (sourceIsSubstitute) {
+                            substitutePlayers[sourceIdx] = currentPlayer;
+                        } else {
+                            selectedPlayers[sourceIdx] = currentPlayer;
+                        }
+                    }
+
+                    // Save the team with switched positions
+                    $.post('api/save_team_api.php', {
+                        formation: $('#formation').val(),
+                        team: JSON.stringify(selectedPlayers),
+                        substitutes: JSON.stringify(substitutePlayers)
+                    }, function (response) {
+                        if (response.success) {
+                            closeModal('playerModal');
+                            isSelectingSubstitute = false;
+
+                            // Update displays
+                            renderPlayers();
+                            renderField();
+                            renderSubstitutes();
+
+                            // Show success message
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Players Switched!',
+                                text: `${player.name} has been moved to the new position`,
+                                timer: 2000,
+                                showConfirmButton: false,
+                                toast: true,
+                                position: 'top-end'
+                            });
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: response.message || 'Failed to switch players',
+                                confirmButtonColor: '#3b82f6'
+                            });
+                        }
+                    }).fail(function () {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'Failed to save team changes',
+                            confirmButtonColor: '#3b82f6'
+                        });
+                    });
+
+                    return;
+                }
+
+                // Player is not in team - proceed with purchase logic
                 // Double-check budget before adding
                 let currentTeamValue = 0;
                 selectedPlayers.forEach((p, i) => {

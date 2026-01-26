@@ -24,14 +24,6 @@
         "uuid": "std03-c3d4-e5f6-g7h8-i9j0k1l2m3n4"
     },
     {
-        "name": "Pierre Dubois",
-        "position": "CB",
-        "rating": 69,
-        "value": 4000000,
-        "age": 31,
-        "uuid": "std04-d4e5-f6g7-h8i9-j0k1l2m3n4o5"
-    },
-    {
         "name": "Viktor Petrov",
         "position": "CB",
         "rating": 72,
