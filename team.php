@@ -90,6 +90,7 @@ startContent();
     const players = <?php echo json_encode(getDefaultPlayers()); ?>;
     let maxBudget = <?php echo $user_budget; ?>; // User's maximum budget
     const maxPlayers = <?php echo $max_players; ?>; // Maximum squad size
+    const imageBaseUrl = '<?= PLAYER_IMAGES_BASE_PATH ?>';
 
     let selectedPlayerIdx = null; // Track which player is currently selected
 
@@ -1318,7 +1319,7 @@ startContent();
 
         // If we have a valid image URL, return image tag
         if (imageUrl) {
-            return `<img src="${imageUrl}" alt="${playerName}" class="w-full h-full object-cover rounded-full" onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\\'w-full h-full ${color.bg} ${color.text} rounded-full flex items-center justify-center font-bold text-lg\\'>${initials}</div>';">`;
+            return `<img src="${imageBaseUrl + imageUrl}" alt="${playerName}" class="w-full h-full object-cover rounded-full" onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\\'w-full h-full ${color.bg} ${color.text} rounded-full flex items-center justify-center font-bold text-lg\\'>${initials}</div>';">`;
         }
 
         // Return initials avatar

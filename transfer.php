@@ -435,6 +435,35 @@ startContent();
         const activeTab = document.getElementById(tabName + 'Tab');
         activeTab.classList.add('bg-white', 'text-blue-600', 'shadow-sm');
         activeTab.classList.remove('text-gray-600', 'hover:text-gray-900');
+
+        // Update URL with tab parameter
+        updateTabURL(tabName);
+    }
+
+    // Update URL with tab parameter
+    function updateTabURL(tabName) {
+        const params = new URLSearchParams(window.location.search);
+        
+        if (tabName === 'myPlayers') {
+            params.set('tab', 'myPlayers');
+        } else {
+            params.delete('tab'); // Remove tab param for default "players" tab
+        }
+
+        const newURL = params.toString() ? `${window.location.pathname}?${params.toString()}` : window.location.pathname;
+        window.history.pushState({}, '', newURL);
+    }
+
+    // Load active tab from URL
+    function loadActiveTabFromURL() {
+        const params = new URLSearchParams(window.location.search);
+        const tab = params.get('tab');
+        
+        if (tab === 'myPlayers') {
+            switchTab('myPlayers');
+        } else {
+            switchTab('players');
+        }
     }
 
     // Event listeners for tabs
@@ -443,10 +472,48 @@ startContent();
         currentPage = 1;
         renderPlayers();
     });
-    document.getElementById('myPlayersTab').addEventListener('click', () => switchTab('myPlayers'));
+    document.getElementById('myPlayersTab').addEventListener('click', () => {
+        switchTab('myPlayers');
+    });
+
+    // Update URL parameters without reloading
+    function updateURLParams() {
+        const search = document.getElementById('playerSearch').value;
+        const category = document.getElementById('categoryFilter').value;
+        const position = document.getElementById('positionFilter').value;
+        const priceRange = document.getElementById('priceFilter').value;
+
+        const params = new URLSearchParams();
+        
+        if (search) params.set('search', search);
+        if (category) params.set('category', category);
+        if (position) params.set('position', position);
+        if (priceRange) params.set('price', priceRange);
+        if (currentPage > 1) params.set('page', currentPage);
+
+        const newURL = params.toString() ? `${window.location.pathname}?${params.toString()}` : window.location.pathname;
+        window.history.pushState({}, '', newURL);
+    }
+
+    // Load filters from URL parameters
+    function loadFiltersFromURL() {
+        const params = new URLSearchParams(window.location.search);
+        
+        const search = params.get('search');
+        const category = params.get('category');
+        const position = params.get('position');
+        const priceRange = params.get('price');
+        const page = params.get('page');
+
+        if (search) document.getElementById('playerSearch').value = search;
+        if (category) document.getElementById('categoryFilter').value = category;
+        if (position) document.getElementById('positionFilter').value = position;
+        if (priceRange) document.getElementById('priceFilter').value = priceRange;
+        if (page) currentPage = parseInt(page);
+    }
 
     // Filter and search functionality
-    function filterPlayers() {
+    function filterPlayers(resetPage = true) {
         const search = document.getElementById('playerSearch').value.toLowerCase();
         const category = document.getElementById('categoryFilter').value;
         const position = document.getElementById('positionFilter').value;
@@ -478,7 +545,10 @@ startContent();
             return matchesSearch && matchesCategory && matchesPosition && matchesPrice;
         });
 
-        currentPage = 1; // Reset to first page when filtering
+        if (resetPage) {
+            currentPage = 1; // Reset to first page when filtering
+        }
+        updateURLParams();
         renderPlayers();
     }
 
@@ -630,6 +700,7 @@ startContent();
     // Go to specific page
     function goToPage(page) {
         currentPage = page;
+        updateURLParams();
         renderPlayers();
     }
 
@@ -637,6 +708,7 @@ startContent();
     function previousPage() {
         if (currentPage > 1) {
             currentPage--;
+            updateURLParams();
             renderPlayers();
         }
     }
@@ -646,6 +718,7 @@ startContent();
         const totalPages = Math.ceil(filteredPlayers.length / playersPerPage);
         if (currentPage < totalPages) {
             currentPage++;
+            updateURLParams();
             renderPlayers();
         }
     }
@@ -1198,8 +1271,10 @@ startContent();
 
     // Initialize
     document.addEventListener('DOMContentLoaded', function () {
+        loadActiveTabFromURL();
+        loadFiltersFromURL();
         updatePlayerCounts();
-        renderPlayers();
+        filterPlayers(false); // Don't reset page on initial load
         lucide.createIcons();
     });
 </script>
