@@ -9,6 +9,121 @@ document.addEventListener('DOMContentLoaded', function() {
     lucide.createIcons();
 });
 
+/**
+ * Modal/Popup Management Functions
+ * Handle opening/closing modals and managing body scroll
+ */
+
+// Open modal and disable body scroll
+window.openModal = function(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        // Show modal
+        modal.classList.remove('hidden');
+        
+        // Update ARIA attributes
+        modal.setAttribute('aria-hidden', 'false');
+        
+        // Disable body scroll
+        document.body.style.overflow = 'hidden';
+        document.body.style.paddingRight = getScrollbarWidth() + 'px';
+        
+        // Add modal-open class for additional styling if needed
+        document.body.classList.add('modal-open');
+        
+        // Focus the modal for keyboard navigation
+        modal.focus();
+        
+        // Trigger custom event
+        const event = new CustomEvent('modalOpened', { detail: { modalId: modalId } });
+        document.dispatchEvent(event);
+    }
+};
+
+// Close modal and enable body scroll
+window.closeModal = function(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        // Hide modal
+        modal.classList.add('hidden');
+        
+        // Update ARIA attributes
+        modal.setAttribute('aria-hidden', 'true');
+        
+        // Check if there are any other open modals by role and aria-hidden
+        const openModals = document.querySelectorAll('[role="dialog"][aria-hidden="false"]');
+        
+        // Only re-enable scroll if no other modals are open
+        if (openModals.length === 0) {
+            document.body.style.overflow = '';
+            document.body.style.paddingRight = '';
+            document.body.classList.remove('modal-open');
+        }
+        
+        // Trigger custom event
+        const event = new CustomEvent('modalClosed', { detail: { modalId: modalId } });
+        document.dispatchEvent(event);
+    }
+};
+
+// Toggle modal (open if closed, close if open)
+window.toggleModal = function(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        if (modal.classList.contains('hidden')) {
+            openModal(modalId);
+        } else {
+            closeModal(modalId);
+        }
+    }
+};
+
+// Get scrollbar width (to prevent layout shift when disabling scroll)
+function getScrollbarWidth() {
+    // Create temporary div to measure scrollbar width
+    const outer = document.createElement('div');
+    outer.style.visibility = 'hidden';
+    outer.style.overflow = 'scroll';
+    outer.style.msOverflowStyle = 'scrollbar';
+    document.body.appendChild(outer);
+    
+    const inner = document.createElement('div');
+    outer.appendChild(inner);
+    
+    const scrollbarWidth = outer.offsetWidth - inner.offsetWidth;
+    
+    outer.parentNode.removeChild(outer);
+    
+    return scrollbarWidth;
+}
+
+// Close modal when clicking outside (on backdrop)
+window.setupModalBackdropClose = function(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.addEventListener('click', function(e) {
+            // Close if clicking directly on the modal backdrop (not on modal content)
+            if (e.target === modal) {
+                closeModal(modalId);
+            }
+        });
+    }
+};
+
+// Close modal when pressing Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        // Find all open modals
+        const openModals = document.querySelectorAll('[id$="Modal"]:not(.hidden), [id$="modal"]:not(.hidden)');
+        
+        // Close the most recently opened modal
+        if (openModals.length > 0) {
+            const lastModal = openModals[openModals.length - 1];
+            closeModal(lastModal.id);
+        }
+    }
+});
+
 // Global level-up notification handler
 window.handleLevelUpNotification = function (response) {
     if (response && response.level_up) {

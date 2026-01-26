@@ -1586,7 +1586,7 @@ startContent();
         $('#modalTitle').html(`${modalTitle} <span class="text-sm font-normal text-blue-600">(Budget: ${formatMarketValue(remainingBudget)})</span>`);
         $('#customPlayerLabel').text(`Custom ${requiredPosition} Player Name`);
         $('#customPlayerName').attr('placeholder', `Enter custom ${requiredPosition} name...`);
-        $('#playerModal').removeClass('hidden');
+        openModal('playerModal');
         $('#customPlayerName').val('');
         $('#playerSearch').val('');
         renderModalPlayers('');
@@ -1832,7 +1832,7 @@ startContent();
                                 // Update budget display in club overview
                                 $('#clubBudget').text(formatMarketValue(response.new_budget));
 
-                                $('#playerModal').addClass('hidden');
+                                closeModal('playerModal');
                                 isSelectingSubstitute = false;
 
                                 // Update displays
@@ -2108,7 +2108,7 @@ startContent();
                         // Update budget display in club overview
                         $('#clubBudget').text(formatMarketValue(response.new_budget));
 
-                        $('#playerModal').addClass('hidden');
+                        closeModal('playerModal');
                         isSelectingSubstitute = false;
 
                         renderPlayers();
@@ -2187,13 +2187,13 @@ startContent();
     });
 
     $('#closeModal').click(function () {
-        $('#playerModal').addClass('hidden');
+        closeModal('playerModal');
         isSelectingSubstitute = false;
     });
 
     $('#playerModal').click(function (e) {
         if (e.target === this) {
-            $(this).addClass('hidden');
+            closeModal('playerModal');
             isSelectingSubstitute = false;
         }
     });
@@ -2566,7 +2566,7 @@ startContent();
         `;
 
         $('#playerInfoContent').html(playerInfoHtml);
-        $('#playerInfoModal').removeClass('hidden');
+        openModal('playerInfoModal');
         lucide.createIcons();
     }
 
@@ -2643,7 +2643,7 @@ startContent();
                         });
 
                         // Close modal and refresh displays
-                        $('#playerInfoModal').addClass('hidden');
+                        closeModal('playerInfoModal');
                         renderPlayers();
                         renderSubstitutes();
 
@@ -2925,7 +2925,7 @@ startContent();
                 }
 
                 // Close modal and refresh displays
-                $('#playerInfoModal').addClass('hidden');
+                closeModal('playerInfoModal');
                 renderPlayers();
                 renderSubstitutes();
 
@@ -3261,12 +3261,12 @@ startContent();
 
     // Close player info modal
     $('#closePlayerInfoModal ').click(function () {
-        $('#playerInfoModal ').addClass('hidden ');
+        closeModal('playerInfoModal');
     });
 
     $('#playerInfoModal').click(function (e) {
         if (e.target === this) {
-            $(this).addClass('hidden');
+            closeModal('playerInfoModal');
         }
     });
 
@@ -3423,7 +3423,7 @@ startContent();
             }
         }).then((result) => {
             if (result.isConfirmed) {
-                $('#recommendationsModal').removeClass('hidden');
+                openModal('recommendationsModal');
                 loadRecommendations();
             }
         });
@@ -3431,13 +3431,13 @@ startContent();
 
     // Close recommendations modal
     $('#closeRecommendationsModal, #closeRecommendationsModalFooter').click(function() {
-        $('#recommendationsModal').addClass('hidden');
+        closeModal('recommendationsModal');
     });
 
     // Close modal when clicking outside
     $('#recommendationsModal').click(function(e) {
         if (e.target === this) {
-            $(this).addClass('hidden');
+            closeModal('recommendationsModal');
         }
     });
 
@@ -3627,7 +3627,7 @@ startContent();
                 $('#teamAnalysisSection, #recommendationsSection').removeClass('hidden');
             } else {
                 if (response.error_type === 'insufficient_budget') {
-                    $('#recommendationsModal').addClass('hidden');
+                    closeModal('recommendationsModal');
                     Swal.fire({
                         icon: 'warning',
                         title: 'Insufficient Budget',
@@ -3787,7 +3787,7 @@ startContent();
     // Select recommended player
     window.selectRecommendedPlayer = function(player) {
         // Close recommendations modal
-        $('#recommendationsModal').addClass('hidden');
+        closeModal('recommendationsModal');
         
         // Find empty slot or ask user to choose position
         const emptySlot = selectedPlayers.findIndex(p => p === null);
