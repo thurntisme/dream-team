@@ -27,7 +27,7 @@
         "age": 18,
         "uuid": "b2c3d4e5-f6g7-8901-bcde-f23456789012",
         "nation": "Brazil",
-        "avatar": null,
+        "avatar": "diego-santos.jpeg",
         "playablePositions": [
             "GK"
         ],
@@ -294,7 +294,7 @@
             "strength": 72,
             "vision": 71
         },
-        "avatar": null
+        "avatar": "jamal-williams.jpeg"
     },
     {
         "name": "Matteo Bianchi",
@@ -338,7 +338,7 @@
             "stamina": 74,
             "shooting": 72
         },
-        "avatar": null
+        "avatar": "noah-anderson.jpeg"
     },
     {
         "name": "Gabriel Costa",
@@ -538,7 +538,7 @@
             "shooting": 77,
             "agility": 79
         },
-        "avatar": null
+        "avatar": "ryan-mitchell.jpeg"
     },
     {
         "name": "Lorenzo Conti",
@@ -737,7 +737,7 @@
             "strength": 74,
             "heading": 75
         },
-        "avatar": null
+        "avatar": "miguel-torres.jpeg"
     },
     {
         "name": "Finn Nielsen",
@@ -825,7 +825,7 @@
             "strength": 75,
             "heading": 76
         },
-        "avatar": null
+        "avatar": "enzo-moretti.jpeg"
     },
     {
         "name": "Jayden Brown",
