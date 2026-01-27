@@ -938,10 +938,10 @@ startContent();
                             <h2 class="text-3xl font-bold mb-2">${player.name}</h2>
                             <div class="flex items-center gap-4 text-blue-100">
                                 <span class="bg-blue-500 px-2 py-1 rounded text-sm font-semibold">${player.position}</span>
-                                ${player.nation ? `
+                                ${player.nationality ? `
                                 <span class="flex items-center gap-1">
                                     <i data-lucide="flag" class="w-4 h-4"></i>
-                                    ${player.nation}
+                                    ${player.nationality}
                                 </span>
                                 ` : ''}
                                 ${player.age ? `
@@ -966,12 +966,12 @@ startContent();
                         Career Information
                     </h3>
                     <div class="space-y-3">
-                        ${player.nation ? `
+                        ${player.nationality ? `
                         <div class="flex justify-between">
                             <span class="text-gray-600">Nationality:</span>
                             <span class="font-medium flex items-center gap-1">
                                 <i data-lucide="flag" class="w-4 h-4"></i>
-                                ${player.nation}
+                                ${player.nationality}
                             </span>
                         </div>
                         ` : ''}

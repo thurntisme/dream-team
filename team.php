@@ -1189,7 +1189,8 @@ startContent();
         `);
 
         // Update nationality
-        $('#selectedPlayerNationality').text(player.nationality || 'Unknown');
+        console.log(player)
+        $('#selectedPlayerNationality').text(player.nation || player.nationality || 'Unknown');
 
         // Update contract (remaining matches)
         const remainingMatches = player.contract_remaining || player.contract_matches_remaining || player.contract_matches || 0;
