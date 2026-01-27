@@ -132,7 +132,7 @@ try {
 startContent();
 ?>
 
-<div class="container mx-auto px-4 py-6">
+<div class="container mx-auto py-6">
     <!-- Header -->
     <div class="flex items-center justify-between mb-6">
         <div class="flex items-center gap-3">
@@ -740,7 +740,7 @@ startContent();
         </div>
 
         <!-- League Structure Info -->
-        <div class="mt-4 bg-gray-50 rounded-lg p-4">
+        <div class="border border-gray-200 rounded-lg mt-4 bg-gray-50 rounded-lg p-4">
             <h4 class="font-semibold text-gray-900 mb-2 flex items-center gap-2">
                 <i data-lucide="info" class="w-4 h-4"></i>
                 League Structure

@@ -201,7 +201,7 @@ function getLeagueStandings($db, $season)
         (lt.goals_for - lt.goals_against) as goal_difference
     FROM league_teams lt 
     WHERE lt.season = :season AND lt.division = 1
-    ORDER BY points DESC, goal_difference DESC, lt.goals_for DESC, lt.name ASC';
+    ORDER BY points DESC, goal_difference DESC, lt.goals_for DESC, lt.is_user DESC, lt.name ASC';
 
     $stmt = $db->prepare($sql);
     $stmt->bindValue(':season', $season, SQLITE3_INTEGER);
