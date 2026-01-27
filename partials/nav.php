@@ -17,9 +17,6 @@ function renderNavigation($isLoggedIn, $showAuth, $currentPage, $clubName, $user
                         <i data-lucide="shield" class="w-8 h-8 text-blue-600"></i>
                         <div>
                             <div class="font-bold text-xl text-gray-900">Dream Team</div>
-                            <?php if ($clubName): ?>
-                                <div class="text-xs text-gray-500"><?php echo htmlspecialchars($clubName); ?></div>
-                            <?php endif; ?>
                         </div>
                     </a>
                 </div>

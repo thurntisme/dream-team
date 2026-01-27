@@ -37,13 +37,13 @@ function renderBannerAd($position = 'content', $user_id = null)
     echo '<div class="border border-gray-200 rounded-lg p-4 bg-gray-50 text-center">';
 
     if ($ad['type'] === 'image') {
-        echo '<a href="' . htmlspecialchars($ad['url']) . '" target="_blank" rel="noopener">';
+        echo '<a href="' . htmlspecialchars($ad['url']) . '">';
         echo '<img src="' . htmlspecialchars($ad['image']) . '" alt="' . htmlspecialchars($ad['title']) . '" class="max-w-full h-auto mx-auto">';
         echo '</a>';
     } else {
         echo '<div class="text-lg font-semibold text-gray-900 mb-2">' . htmlspecialchars($ad['title']) . '</div>';
         echo '<div class="text-gray-600 mb-3">' . htmlspecialchars($ad['description']) . '</div>';
-        echo '<a href="' . htmlspecialchars($ad['url']) . '" target="_blank" rel="noopener" class="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">';
+        echo '<a href="' . htmlspecialchars($ad['url']) . '" class="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">';
         echo htmlspecialchars($ad['cta']);
         echo '</a>';
     }
