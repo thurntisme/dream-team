@@ -594,6 +594,10 @@ startContent();
     function renderSubstitutes() {
         const $list = $('#substitutesList').empty();
         const maxSubstitutes = maxPlayers - 11; // Max substitutes = total squad - starting 11
+        
+        // Update substitute count display
+        const currentSubsCount = substitutePlayers.filter(p => p !== null).length;
+        $('#substituteCountDisplay').text(`${currentSubsCount}/${maxSubstitutes}`);
 
         substitutePlayers.forEach((player, idx) => {
             if (player) {

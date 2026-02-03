@@ -24,9 +24,7 @@
                 Quick Search
             </button>
         </div>
-        <p class="text-xs text-gray-500 mb-4">Backup players for your squad • Max
-            <?php echo $max_players - 11; ?>
-            substitutes
+        <p class="text-xs text-gray-500 mb-4">Backup players for your squad • <span id="substituteCountDisplay"><?php echo $substitute_players; ?>/<?php echo $max_players - 11; ?></span> substitutes
         </p>
         <div id="substitutesList" class="space-y-2 max-h-60 overflow-y-auto"></div>
     </div>
