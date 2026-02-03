@@ -4,1709 +4,1069 @@ session_start();
 require_once 'config/config.php';
 require_once 'config/constants.php';
 require_once 'partials/layout.php';
+require_once 'includes/league_functions.php';
 
-
-
-// Get opponent ID from URL
+// Check if this is a league match or club challenge
+$match_id = $_GET['match_id'] ?? null;
+$match_result_id = $_GET['match_result'] ?? null;
 $opponent_id = $_GET['opponent'] ?? null;
-if (!$opponent_id) {
-    header('Location: clubs.php');
+
+if ($match_result_id) {
+    // This is a match result display
+    displayMatchResult($match_result_id);
+} elseif ($match_id) {
+    // This is a league match preview
+    handleLeagueMatch($match_id);
+} elseif ($opponent_id) {
+    // This is a club challenge
+    handleClubChallenge($opponent_id);
+} else {
+    header('Location: league.php');
     exit;
 }
 
-// Challenge system configuration
-define('CHALLENGE_BASE_COST', 5000000); // €5M base cost
-define('WIN_REWARD_PERCENTAGE', 1.5); // 150% of challenge cost (50% profit + cost back)
+function handleLeagueMatch($match_id) {
+    try {
+        $db = getDbConnection();
+        $user_id = $_SESSION['user_id'];
 
-try {
-    $db = getDbConnection();
+        // Get match details
+        $stmt = $db->prepare('
+            SELECT lm.*, 
+                   ht.name as home_team_name, ht.user_id as home_user_id,
+                   at.name as away_team_name, at.user_id as away_user_id
+            FROM league_matches lm
+            JOIN league_teams ht ON lm.home_team_id = ht.id
+            JOIN league_teams at ON lm.away_team_id = at.id
+            WHERE lm.id = :match_id AND lm.status = "scheduled"
+            AND (ht.user_id = :user_id OR at.user_id = :user_id)
+        ');
+        $stmt->bindValue(':match_id', $match_id, SQLITE3_INTEGER);
+        $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+        $result = $stmt->execute();
+        $match = $result->fetchArray(SQLITE3_ASSOC);
 
-    // Get user's team data
-    $stmt = $db->prepare('SELECT name, club_name, formation, team, budget FROM users WHERE id = :id');
-    $stmt->bindValue(':id', $_SESSION['user_id'], SQLITE3_INTEGER);
-    $result = $stmt->execute();
-    $user_data = $result->fetchArray(SQLITE3_ASSOC);
-
-    // Get opponent's team data
-    $stmt = $db->prepare('SELECT name, club_name, formation, team, budget FROM users WHERE id = :opponent_id AND id != :user_id');
-    $stmt->bindValue(':opponent_id', $opponent_id, SQLITE3_INTEGER);
-    $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
-    $result = $stmt->execute();
-    $opponent_data = $result->fetchArray(SQLITE3_ASSOC);
-
-    if (!$user_data || !$opponent_data) {
-        header('Location: clubs.php');
-        exit;
-    }
-
-    // Check if challenge was properly initiated
-    if (!isset($_SESSION['active_challenge']) || $_SESSION['active_challenge']['opponent_id'] != $opponent_id) {
-        $_SESSION['challenge_error'] = 'Invalid challenge session. Please initiate the challenge again.';
-        header('Location: clubs.php');
-        exit;
-    }
-
-    // Get challenge data from session
-    $challenge_cost = $_SESSION['active_challenge']['challenge_cost'];
-    $potential_reward = $challenge_cost * 1.5; // 150% of challenge cost
-
-    // Validate teams (without deducting budget again)
-    $user_team = json_decode($user_data['team'] ?? '[]', true);
-    $user_player_count = count(array_filter($user_team, fn($p) => $p !== null));
-
-    if ($user_player_count < 11) {
-        $_SESSION['challenge_error'] = 'You need a complete team (11 players) to challenge other clubs!';
-        header('Location: clubs.php');
-        exit;
-    }
-
-    $opponent_team = json_decode($opponent_data['team'] ?? '[]', true);
-    $opponent_player_count = count(array_filter($opponent_team, fn($p) => $p !== null));
-    if ($opponent_player_count < 11) {
-        $_SESSION['challenge_error'] = 'This club doesn\'t have a complete team and cannot be challenged.';
-        header('Location: clubs.php');
-        exit;
-    }
-
-    // Calculate team values
-    $user_team = json_decode($user_data['team'] ?? '[]', true);
-    $opponent_team = json_decode($opponent_data['team'] ?? '[]', true);
-
-    $user_team_value = calculateTeamValue($user_team);
-    $opponent_team_value = calculateTeamValue($opponent_team);
-
-    // Simulate the match
-    $match_result = simulateMatch($user_team, $opponent_team, $user_team_value, $opponent_team_value);
-
-    // Apply match injuries to user team
-    if (!empty($match_result['injuries'])) {
-        $user_team = applyMatchInjuries($user_team, $match_result['injuries']);
-        
-        // Update user team in database with injuries
-        $stmt = $db->prepare('UPDATE users SET team = :team WHERE id = :user_id');
-        $stmt->bindValue(':team', json_encode($user_team), SQLITE3_TEXT);
-        $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
-        $stmt->execute();
-    }
-
-    // Process match result and calculate rewards (but don't apply yet)
-    $financial_result = calculateMatchRewards($_SESSION['user_id'], $match_result, $challenge_cost, $potential_reward);
-
-    // Store pending reward in session for approval
-    $_SESSION['pending_reward'] = [
-        'amount' => $financial_result['earnings'],
-        'challenge_cost' => $challenge_cost,
-        'match_result' => $match_result['result'],
-        'opponent_name' => $opponent_data['club_name'],
-        'financial_details' => $financial_result
-    ];
-
-    // Clear the active challenge session since match is now set up
-    unset($_SESSION['active_challenge']);
-
-    $db->close();
-
-} catch (Exception $e) {
-    header('Location: clubs.php');
-    exit;
-}
-
-// Challenge validation functions (budget deduction moved to initiate_challenge.php)
-
-function calculateMatchRewards($user_id, $match_result, $challenge_cost, $potential_reward)
-{
-    global $db;
-
-    // Get user data for club level calculation
-    $stmt = $db->prepare('SELECT budget, team FROM users WHERE id = :user_id');
-    $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
-    $result = $stmt->execute();
-    $user_data = $result->fetchArray(SQLITE3_ASSOC);
-
-    $user_team = json_decode($user_data['team'] ?? '[]', true);
-    $club_level = $user_data['club_level'] ?? 1;
-    $level_bonus = calculateLevelBonus($club_level);
-
-    $earnings = 0;
-    $bonus_earnings = 0;
-    $result_message = '';
-
-    if ($match_result['result'] === 'win') {
-        // User wins - calculate reward + level bonus (pending approval)
-        $earnings = $potential_reward;
-        $bonus_earnings = $earnings * $level_bonus;
-
-        $result_message = 'Victory! You can earn ' . formatMarketValue($earnings) . ' in prize money';
-        if ($bonus_earnings > 0) {
-            $result_message .= ' + ' . formatMarketValue($bonus_earnings) . ' club level bonus (Level ' . $club_level . ')!';
-        } else {
-            $result_message .= '!';
+        if (!$match) {
+            $_SESSION['error'] = 'Match not found or not available to play.';
+            header('Location: league.php');
+            exit;
         }
-    } elseif ($match_result['result'] === 'draw') {
-        // Draw - calculate 80% refund + level bonus (pending approval)
-        $earnings = $challenge_cost * 0.8;
-        $bonus_earnings = $earnings * ($level_bonus * 0.5); // Half bonus for draws
 
-        $result_message = 'Draw! You can receive ' . formatMarketValue($earnings) . ' (80% refund)';
-        if ($bonus_earnings > 0) {
-            $result_message .= ' + ' . formatMarketValue($bonus_earnings) . ' level bonus.';
-        } else {
-            $result_message .= '.';
+        // Determine user's role and get team data
+        $is_home = ($match['home_user_id'] == $user_id);
+        $opponent_user_id = $is_home ? $match['away_user_id'] : $match['home_user_id'];
+
+        // Get user's team data
+        $stmt = $db->prepare('SELECT * FROM users WHERE id = :id');
+        $stmt->bindValue(':id', $user_id, SQLITE3_INTEGER);
+        $result = $stmt->execute();
+        $user_data = $result->fetchArray(SQLITE3_ASSOC);
+
+        // Get opponent's team data (if it's a user, otherwise generate AI team)
+        $opponent_data = null;
+        if ($opponent_user_id) {
+            $stmt = $db->prepare('SELECT * FROM users WHERE id = :id');
+            $stmt->bindValue(':id', $opponent_user_id, SQLITE3_INTEGER);
+            $result = $stmt->execute();
+            $opponent_data = $result->fetchArray(SQLITE3_ASSOC);
         }
-    } else {
-        // Loss - calculate consolation bonus based on club level (pending approval)
-        if ($club_level >= 2) {
-            // Level-based consolation: Level 2: 15%, Level 3: 20%, Level 4: 25%, Level 5: 30%
-            $consolation_rate = 0.1 + ($club_level * 0.05); // 15% to 30% based on level
-            $bonus_earnings = $challenge_cost * $consolation_rate;
 
-            $result_message = 'Defeat! You lost the challenge fee but can receive ' . formatMarketValue($bonus_earnings) . ' consolation bonus (' . round($consolation_rate * 100) . '% - Level ' . $club_level . ').';
-        } else {
-            // Beginner level still gets small consolation
-            $bonus_earnings = $challenge_cost * 0.1; // 10% for beginners
-
-            $result_message = 'Defeat! You lost the challenge fee but can receive ' . formatMarketValue($bonus_earnings) . ' consolation bonus (10% - Level ' . $club_level . ').';
-        }
-    }
-
-    return [
-        'earnings' => $earnings + $bonus_earnings,
-        'base_earnings' => $earnings,
-        'bonus_earnings' => $bonus_earnings,
-        'club_level' => $club_level,
-        'challenge_cost' => $challenge_cost,
-        'message' => $result_message,
-        'pending' => true
-    ];
-}
-
-
-
-// Calculate level bonus percentage
-function calculateLevelBonus($level)
-{
-    // Progressive bonus system: 2% per level up to 100%
-    return min($level * 0.02, 1.0); // Cap at 100% bonus
-}
-
-// Get club level name
-function getClubLevelName($level)
-{
-    switch ($level) {
-        case 5:
-            return 'Elite';
-        case 4:
-            return 'Professional';
-        case 3:
-            return 'Semi-Professional';
-        case 2:
-            return 'Amateur';
-        case 1:
-        default:
-            return 'Beginner';
-    }
-}
-
-// Helper function to calculate team value
-function calculateTeamValue($team)
-{
-    if (!is_array($team))
-        return 0;
-
-    $totalValue = 0;
-    foreach ($team as $player) {
-        if ($player && isset($player['value'])) {
-            $totalValue += $player['value'];
-        }
-    }
-    return $totalValue;
-}
-
-// Get random player names for events
-function getRandomPlayer($team, $fallback = 'Player')
-{
-    if (!is_array($team))
-        return $fallback;
-
-    $players = array_filter($team, fn($p) => $p !== null && isset($p['name']));
-    if (empty($players))
-        return $fallback;
-
-    return $players[array_rand($players)]['name'];
-}
-
-// Simulate match between two teams
-function simulateMatch($user_team, $opponent_team, $user_team_value, $opponent_team_value)
-{
-    // Calculate team strengths based on multiple factors
-    $user_strength = calculateTeamStrength($user_team, $user_team_value);
-    $opponent_strength = calculateTeamStrength($opponent_team, $opponent_team_value);
-
-    // Add some randomness to make matches more interesting
-    $user_performance = $user_strength * (0.7 + (mt_rand(0, 60) / 100)); // 70-130% of base strength
-    $opponent_performance = $opponent_strength * (0.7 + (mt_rand(0, 60) / 100));
-
-    // Calculate goal probabilities based on performance difference
-    $total_performance = $user_performance + $opponent_performance;
-    $user_goal_probability = $user_performance / $total_performance;
-
-    // Simulate goals (0-5 goals per team, weighted by strength)
-    $total_goals = mt_rand(0, 6); // Total goals in match
-    $user_goals = 0;
-    $opponent_goals = 0;
-
-    for ($i = 0; $i < $total_goals; $i++) {
-        if (mt_rand(1, 100) / 100 <= $user_goal_probability) {
-            $user_goals++;
-        } else {
-            $opponent_goals++;
-        }
-    }
-
-    // Determine result
-    if ($user_goals > $opponent_goals) {
-        $result = 'win';
-    } elseif ($user_goals < $opponent_goals) {
-        $result = 'loss';
-    } else {
-        $result = 'draw';
-    }
-
-    // Check for match injuries
-    $match_injuries = checkMatchInjuries($user_team);
-
-    // Generate match events
-    $events = generateMatchEvents($user_team, $opponent_team, $user_goals, $opponent_goals, $match_injuries);
-
-    return [
-        'userGoals' => $user_goals,
-        'opponentGoals' => $opponent_goals,
-        'result' => $result,
-        'userStrength' => round($user_strength, 1),
-        'opponentStrength' => round($opponent_strength, 1),
-        'events' => $events,
-        'injuries' => $match_injuries
-    ];
-}
-
-// Calculate team strength based on players and formation
-function calculateTeamStrength($team, $team_value)
-{
-    if (!is_array($team))
-        return 50;
-
-    $player_count = count(array_filter($team, fn($p) => $p !== null));
-
-    // Base strength from team value (normalized to 0-100 scale)
-    $value_strength = min(100, ($team_value / 1000000000) * 100); // €1B = 100 strength
-
-    // Player count bonus/penalty
-    $count_modifier = 1.0;
-    if ($player_count < 11) {
-        $count_modifier = 0.7 + ($player_count / 11) * 0.3; // Penalty for incomplete team
-    }
-
-    // Calculate average player rating
-    $total_rating = 0;
-    $rated_players = 0;
-    foreach ($team as $player) {
-        if ($player && isset($player['rating']) && $player['rating'] > 0) {
-            $total_rating += $player['rating'];
-            $rated_players++;
-        }
-    }
-
-    $avg_rating = $rated_players > 0 ? $total_rating / $rated_players : 75;
-    $rating_strength = ($avg_rating - 50) * 2; // Convert 50-100 rating to 0-100 strength
-
-    // Combine factors
-    $final_strength = (($value_strength * 0.6) + ($rating_strength * 0.4)) * $count_modifier;
-
-    return max(10, min(100, $final_strength)); // Clamp between 10-100
-}
-
-// Check for match injuries
-function checkMatchInjuries($user_team) {
-    $injuries = [];
-    
-    foreach ($user_team as $player) {
-        if ($player && !isPlayerInjured($player)) {
-            $injury_result = checkForMatchInjury($player);
-            if ($injury_result['injured']) {
-                $injuries[] = [
-                    'player_uuid' => $player['uuid'],
-                    'player_name' => $player['name'],
-                    'injury_type' => $injury_result['injury_type'],
-                    'minute' => mt_rand(1, 90)
-                ];
-            }
-        }
-    }
-    
-    return $injuries;
-}
-
-function checkForMatchInjury($player) {
-    $base_injury_chance = 0.03; // 3% base chance during match
-    $fitness = $player['fitness'] ?? 100;
-    
-    // Significantly increase injury chance for low fitness players
-    if ($fitness < 40) {
-        $base_injury_chance *= 4; // 12% chance for very low fitness
-    } elseif ($fitness < 60) {
-        $base_injury_chance *= 2.5; // 7.5% chance for low fitness
-    } elseif ($fitness < 80) {
-        $base_injury_chance *= 1.5; // 4.5% chance for moderate fitness
-    }
-    
-    // Random check
-    if (mt_rand(1, 10000) / 10000 <= $base_injury_chance) {
-        // Determine injury type (more severe injuries for low fitness)
-        $rand = mt_rand(1, 100) / 100;
-        if ($fitness < 40) {
-            // Low fitness players get more serious injuries
-            if ($rand <= 0.5) {
-                $injury_type = 'minor_strain';
-            } elseif ($rand <= 0.8) {
-                $injury_type = 'muscle_injury';
+        // Handle match simulation
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['simulate_match'])) {
+            $result = simulateMatch($db, $match_id, $user_id);
+            if ($result) {
+                // Redirect to match result page
+                header('Location: match-simulator.php?match_result=' . $match_id);
+                exit;
             } else {
-                $injury_type = 'serious_injury';
-            }
-        } else {
-            // Normal injury distribution
-            if ($rand <= 0.8) {
-                $injury_type = 'minor_strain';
-            } elseif ($rand <= 0.95) {
-                $injury_type = 'muscle_injury';
-            } else {
-                $injury_type = 'serious_injury';
+                $_SESSION['error'] = 'Failed to simulate match.';
             }
         }
-        
-        return ['injured' => true, 'injury_type' => $injury_type];
+
+        $db->close();
+        displayLeagueMatch($match, $user_data, $opponent_data, $is_home);
+
+    } catch (Exception $e) {
+        error_log("League match error: " . $e->getMessage());
+        $_SESSION['error'] = 'An error occurred while loading the match.';
+        header('Location: league.php');
+        exit;
     }
-    
-    return ['injured' => false];
 }
 
-function isPlayerInjured($player) {
-    return isset($player['injury']) && $player['injury']['days_remaining'] > 0;
-}
-
-function applyMatchInjuries($user_team, $match_injuries) {
-    // Injury types are now defined in config/constants.php
-    $injury_types_config = getInjuryTypes();
-    $injury_types = [];
+function displayLeagueMatch($match, $user_data, $opponent_data, $is_home) {
+    startContent();
+    ?>
     
-    // Convert range arrays to random values for this execution
-    foreach ($injury_types_config as $type => $config) {
-        $injury_types[$type] = [
-            'name' => $config['name'],
-            'duration_days' => rand($config['duration_days'][0], $config['duration_days'][1]),
-            'fitness_penalty' => rand($config['fitness_penalty'][0], $config['fitness_penalty'][1])
-        ];
-    }
-    
-    foreach ($match_injuries as $injury) {
-        // Find the player in the team
-        for ($i = 0; $i < count($user_team); $i++) {
-            if ($user_team[$i] && $user_team[$i]['uuid'] === $injury['player_uuid']) {
-                $injury_data = $injury_types[$injury['injury_type']];
-                
-                $user_team[$i]['injury'] = [
-                    'type' => $injury['injury_type'],
-                    'name' => $injury_data['name'],
-                    'duration_days' => $injury_data['duration_days'],
-                    'days_remaining' => $injury_data['duration_days'],
-                    'fitness_penalty' => $injury_data['fitness_penalty'],
-                    'injury_date' => date('Y-m-d H:i:s')
-                ];
-                
-                // Apply immediate fitness penalty
-                $user_team[$i]['fitness'] = max(0, ($user_team[$i]['fitness'] ?? 100) - $injury_data['fitness_penalty']);
-                break;
-            }
-        }
-    }
-    
-    return $user_team;
-}
-
-// Generate match events for display
-function generateMatchEvents($user_team, $opponent_team, $user_goals, $opponent_goals, $match_injuries = [])
-{
-    $events = [];
-    $total_goals = $user_goals + $opponent_goals;
-
-    // Generate goal events
-    for ($i = 0; $i < $user_goals; $i++) {
-        $scorer = getRandomPlayer($user_team, 'Player');
-        $minute = mt_rand(1, 90);
-        $events[] = [
-            'minute' => $minute,
-            'type' => 'goal',
-            'team' => 'user',
-            'player' => $scorer,
-            'description' => "GOAL! {$scorer} finds the net!"
-        ];
-    }
-
-    for ($i = 0; $i < $opponent_goals; $i++) {
-        $scorer = getRandomPlayer($opponent_team, 'Player');
-        $minute = mt_rand(1, 90);
-        $events[] = [
-            'minute' => $minute,
-            'type' => 'goal',
-            'team' => 'opponent',
-            'player' => $scorer,
-            'description' => "Goal for the opposition. {$scorer} scores."
-        ];
-    }
-
-    // Add injury events
-    foreach ($match_injuries as $injury) {
-        $injury_types_config = getInjuryTypes();
-        $injury_names = [];
-        foreach ($injury_types_config as $type => $config) {
-            $injury_names[$type] = $config['name'];
-        }
-        
-        $injury_name = $injury_names[$injury['injury_type']] ?? 'Injury';
-        $events[] = [
-            'minute' => $injury['minute'],
-            'type' => 'injury',
-            'team' => 'user',
-            'player' => $injury['player_name'],
-            'description' => "⚕️ {$injury['player_name']} suffers a {$injury_name} and may be out for several days."
-        ];
-    }
-
-    // Add some random events
-    if (mt_rand(1, 3) === 1) { // 33% chance
-        $player = getRandomPlayer(mt_rand(0, 1) ? $user_team : $opponent_team, 'Player');
-        $events[] = [
-            'minute' => mt_rand(1, 90),
-            'type' => 'yellow_card',
-            'player' => $player,
-            'description' => "Yellow card for {$player}"
-        ];
-    }
-
-    if (mt_rand(1, 10) === 1) { // 10% chance
-        $player = getRandomPlayer(mt_rand(0, 1) ? $user_team : $opponent_team, 'Player');
-        $events[] = [
-            'minute' => mt_rand(1, 90),
-            'type' => 'red_card',
-            'player' => $player,
-            'description' => "Red card! {$player} is sent off!"
-        ];
-    }
-
-    // Sort events by minute
-    usort($events, fn($a, $b) => $a['minute'] - $b['minute']);
-
-    return $events;
-}
-
-// Start content capture
-startContent();
-?>
-
-<div class="p-4">
-    <div class="bg-white rounded-lg p-6 mb-6">
-        <div class="text-center mb-8">
-            <h1 class="text-3xl font-bold text-gray-900 mb-2">Challenge Match</h1>
-            <p class="text-gray-600">Competitive Match - Stakes: <?php echo formatMarketValue($challenge_cost); ?></p>
-
-            <!-- Challenge Info -->
-            <div class="mt-4 inline-flex items-center gap-4 bg-blue-100 text-blue-800 px-6 py-3 rounded-full text-sm">
-                <div class="flex items-center gap-2">
-                    <i data-lucide="coins" class="w-4 h-4"></i>
-                    <span>Entry Fee: <?php echo formatMarketValue($challenge_cost); ?></span>
-                </div>
-                <div class="flex items-center gap-2">
-                    <i data-lucide="trophy" class="w-4 h-4"></i>
-                    <span>Win Prize: <?php echo formatMarketValue($potential_reward); ?></span>
-                </div>
-            </div>
-
-            <!-- Match Timer -->
-            <div class="mt-4 flex justify-center items-center gap-4">
-                <div id="matchTimer"
-                    class="inline-flex items-center gap-2 bg-red-600 text-white px-6 py-3 rounded-full text-lg font-bold">
-                    <i data-lucide="clock" class="w-5 h-5"></i>
-                    <span id="timerDisplay">0'</span>
-                </div>
-                <button id="startMatch"
-                    class="inline-flex items-center gap-2 bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors">
-                    <i data-lucide="play" class="w-5 h-5"></i>
-                    Start Match
-                </button>
-                <button id="pauseMatch"
-                    class="hidden inline-flex items-center gap-2 bg-yellow-600 text-white px-6 py-3 rounded-lg hover:bg-yellow-700 transition-colors">
-                    <i data-lucide="pause" class="w-5 h-5"></i>
-                    Pause
-                </button>
-            </div>
-        </div>
-
-        <!-- Live Score Display -->
-        <div class="bg-gradient-to-r from-green-50 to-blue-50 rounded-lg p-8 mb-6 relative overflow-hidden">
-            <!-- Background animation -->
-            <div class="absolute inset-0 opacity-5">
-                <div class="absolute top-4 left-4 animate-pulse">
-                    <i data-lucide="zap" class="w-32 h-32 text-gray-900"></i>
-                </div>
-            </div>
-
-            <div class="relative flex justify-between items-center">
-                <!-- User Team -->
-                <div class="text-center flex-1">
-                    <div
-                        class="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-3 shadow-lg">
-                        <i data-lucide="shield" class="w-8 h-8 text-white"></i>
-                    </div>
-                    <h3 class="text-lg font-bold text-gray-900"><?php echo htmlspecialchars($user_data['club_name']); ?>
-                    </h3>
-                    <p class="text-sm text-gray-600"><?php echo htmlspecialchars($user_data['name']); ?></p>
-                    <p class="text-xs text-gray-500 mt-1"><?php echo formatMarketValue($user_team_value); ?></p>
-                </div>
-
-                <!-- Live Score -->
-                <div class="text-center mx-8">
-                    <div class="text-6xl font-bold text-gray-900 mb-2">
-                        <span id="userScore">0</span> - <span id="opponentScore">0</span>
-                    </div>
-                    <div id="matchStatus"
-                        class="text-lg font-semibold text-gray-600 flex items-center justify-center gap-2">
-                        <i data-lucide="clock" class="w-5 h-5"></i>
-                        <span id="matchStatusText">Pending - Ready to Start</span>
-                    </div>
-                </div>
-
-                <!-- Opponent Team -->
-                <div class="text-center flex-1">
-                    <div
-                        class="w-16 h-16 bg-red-600 rounded-full flex items-center justify-center mx-auto mb-3 shadow-lg">
-                        <i data-lucide="shield" class="w-8 h-8 text-white"></i>
-                    </div>
-                    <h3 class="text-lg font-bold text-gray-900">
-                        <?php echo htmlspecialchars($opponent_data['club_name']); ?>
-                    </h3>
-                    <p class="text-sm text-gray-600"><?php echo htmlspecialchars($opponent_data['name']); ?></p>
-                    <p class="text-xs text-gray-500 mt-1"><?php echo formatMarketValue($opponent_team_value); ?></p>
-                </div>
-            </div>
-        </div>
-
-        <div class="grid grid-cols-12">
-            <!-- Football Field with Players -->
-            <div class="bg-white rounded-lg p-6 mb-6 col-span-7">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                    <i data-lucide="map" class="w-5 h-5"></i>
-                    Live Field View
-                </h3>
-                <div class="bg-gradient-to-b from-green-500 to-green-600 rounded-lg shadow-lg relative"
-                    style="min-height: 600px; height: 600px;">
-                    <!-- Field Lines -->
-                    <div class="absolute inset-8 border-2 border-white border-opacity-40 rounded overflow-hidden">
-                        <!-- Center Line -->
-                        <div class="absolute top-1/2 left-0 right-0 h-0.5 bg-white opacity-40"></div>
-                        <!-- Center Circle -->
-                        <div
-                            class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-24 h-24 border-2 border-white border-opacity-40 rounded-full">
+    <div class="container mx-auto py-6">
+        <!-- Match Header -->
+        <div class="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden mb-6">
+            <div class="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-6">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
+                            <i data-lucide="stadium" class="w-6 h-6"></i>
                         </div>
-                        <div
-                            class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-2 h-2 bg-white opacity-40 rounded-full">
-                        </div>
-
-                        <!-- Top Penalty Area -->
-                        <div
-                            class="absolute top-0 left-1/2 transform -translate-x-1/2 w-48 h-20 border-2 border-t-0 border-white border-opacity-40">
-                        </div>
-                        <div
-                            class="absolute top-0 left-1/2 transform -translate-x-1/2 w-24 h-10 border-2 border-t-0 border-white border-opacity-40">
-                        </div>
-
-                        <!-- Bottom Penalty Area -->
-                        <div
-                            class="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-48 h-20 border-2 border-b-0 border-white border-opacity-40">
-                        </div>
-                        <div
-                            class="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-24 h-10 border-2 border-b-0 border-white border-opacity-40">
-                        </div>
-
-                        <!-- Corner Arcs -->
-                        <div
-                            class="absolute top-0 left-0 w-8 h-8 border-2 border-t-0 border-l-0 border-white border-opacity-40 rounded-br-full">
-                        </div>
-                        <div
-                            class="absolute top-0 right-0 w-8 h-8 border-2 border-t-0 border-r-0 border-white border-opacity-40 rounded-bl-full">
-                        </div>
-                        <div
-                            class="absolute bottom-0 left-0 w-8 h-8 border-2 border-b-0 border-l-0 border-white border-opacity-40 rounded-tr-full">
-                        </div>
-                        <div
-                            class="absolute bottom-0 right-0 w-8 h-8 border-2 border-b-0 border-r-0 border-white border-opacity-40 rounded-tl-full">
+                        <div>
+                            <h1 class="text-2xl font-bold">Premier League Match</h1>
+                            <p class="text-blue-100">
+                                Gameweek <?php echo $match['gameweek']; ?> • 
+                                <?php echo date('l, M j, Y', strtotime($match['match_date'])); ?>
+                            </p>
                         </div>
                     </div>
-
-                    <!-- Players will be rendered here -->
-                    <div id="fieldPlayers" class="relative h-full"></div>
-                </div>
-            </div>
-
-            <!-- Live Match Events -->
-            <div class="bg-white rounded-lg p-6 mb-6 col-span-5">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                    <i data-lucide="radio" class="w-5 h-5"></i>
-                    Live Commentary
-                </h3>
-                <div id="liveEvents" class="space-y-3 max-h-80 overflow-y-auto">
-                    <div class="text-center text-gray-500 py-8">
-                        <i data-lucide="mic" class="w-8 h-8 mx-auto mb-2"></i>
-                        <p>Match commentary will appear here...</p>
-                        <p class="text-sm">Click "Start Match" to begin!</p>
+                    <div class="text-right">
+                        <div class="bg-white bg-opacity-20 px-4 py-2 rounded-lg">
+                            <i data-lucide="map-pin" class="w-4 h-4 inline mr-2"></i>
+                            <?php echo htmlspecialchars($match['home_team_name']); ?> Stadium
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Match Statistics -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <div class="bg-gray-50 rounded-lg p-4">
-                <h4 class="font-semibold text-gray-900 mb-3">Your Team</h4>
-                <div class="space-y-2 text-sm">
-                    <div class="flex justify-between">
-                        <span class="text-gray-600">Formation:</span>
-                        <span class="font-medium"><?php echo htmlspecialchars($user_data['formation']); ?></span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span class="text-gray-600">Team Value:</span>
-                        <span
-                            class="font-medium text-green-600"><?php echo formatMarketValue($user_team_value); ?></span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span class="text-gray-600">Players:</span>
-                        <span
-                            class="font-medium"><?php echo count(array_filter($user_team, fn($p) => $p !== null)); ?>/11</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="bg-gray-50 rounded-lg p-4">
-                <h4 class="font-semibold text-gray-900 mb-3">Opponent</h4>
-                <div class="space-y-2 text-sm">
-                    <div class="flex justify-between">
-                        <span class="text-gray-600">Formation:</span>
-                        <span class="font-medium"><?php echo htmlspecialchars($opponent_data['formation']); ?></span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span class="text-gray-600">Team Value:</span>
-                        <span
-                            class="font-medium text-green-600"><?php echo formatMarketValue($opponent_team_value); ?></span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span class="text-gray-600">Players:</span>
-                        <span
-                            class="font-medium"><?php echo count(array_filter($opponent_team, fn($p) => $p !== null)); ?>/11</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Live Match Statistics -->
-        <div class="bg-white rounded-lg p-6 mb-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                <i data-lucide="activity" class="w-5 h-5"></i>
-                Live Statistics
-            </h3>
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 text-center">
-                <div class="bg-gray-50 rounded-lg p-4">
-                    <div id="liveUserGoals" class="text-2xl font-bold text-blue-600 mb-1">0</div>
-                    <div class="text-sm text-gray-600">Goals</div>
-                    <div class="text-xs text-gray-500 mt-1"><?php echo htmlspecialchars($user_data['club_name']); ?>
-                    </div>
-                </div>
-                <div class="bg-gray-50 rounded-lg p-4">
-                    <div id="liveOpponentGoals" class="text-2xl font-bold text-red-600 mb-1">0</div>
-                    <div class="text-sm text-gray-600">Goals</div>
-                    <div class="text-xs text-gray-500 mt-1"><?php echo htmlspecialchars($opponent_data['club_name']); ?>
-                    </div>
-                </div>
-                <div class="bg-gray-50 rounded-lg p-4">
-                    <div id="liveEventsCount" class="text-2xl font-bold text-gray-600 mb-1">0</div>
-                    <div class="text-sm text-gray-600">Events</div>
-                    <div class="text-xs text-gray-500 mt-1">Total</div>
-                </div>
-                <div class="bg-gray-50 rounded-lg p-4">
-                    <div id="matchProgress" class="text-2xl font-bold text-purple-600 mb-1">0%</div>
-                    <div class="text-sm text-gray-600">Progress</div>
-                    <div class="text-xs text-gray-500 mt-1">Match Time</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Financial Result -->
-        <div class="bg-white rounded-lg p-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                <i data-lucide="banknote" class="w-5 h-5"></i>
-                Financial Summary
-                <?php if ($financial_result['pending']): ?>
-                    <span id="financialStatusBadge"
-                        class="ml-2 px-2 py-1 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">
-                        MATCH PENDING
-                    </span>
-                <?php endif; ?>
-            </h3>
-            <div id="financialSummaryCard"
-                class="bg-gradient-to-r from-gray-50 to-gray-100 border-gray-200 border rounded-lg p-6 text-center">
-                <div id="financialMessage" class="text-2xl font-bold mb-2 text-gray-700">
-                    Match Not Started - Awaiting Results
-                </div>
-
-                <div class="hidden mt-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
-                    <div class="text-sm text-orange-700 mb-2">
-                        <i data-lucide="alert-circle" class="w-4 h-4 inline mr-1"></i>
-                        Click "Approve Reward" to receive your earnings and complete the transaction.
-                    </div>
-                </div>
-
-                <!-- Club Level Display -->
-                <div class="mb-4 p-3 bg-white bg-opacity-50 rounded-lg">
-                    <div class="text-sm text-gray-600">Your Club Level</div>
-                    <div class="text-lg font-bold text-purple-600">
-                        Level <?php echo $financial_result['club_level']; ?> -
-                        <?php echo getClubLevelName($financial_result['club_level']); ?>
-                    </div>
-                    <?php if ($financial_result['bonus_earnings'] > 0): ?>
-                        <div class="text-xs text-purple-500 mt-1">
-                            +<?php echo (calculateLevelBonus($financial_result['club_level']) * 100); ?>% level bonus
-                            applied
+        <!-- Team Lineups -->
+        <div class="grid md:grid-cols-2 gap-6 mb-6">
+            <!-- Home Team -->
+            <div class="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
+                <div class="bg-green-50 border-b border-green-200 p-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 <?php echo $is_home ? 'bg-blue-600' : 'bg-gray-500'; ?> rounded-full flex items-center justify-center">
+                            <i data-lucide="<?php echo $is_home ? 'user' : 'users'; ?>" class="w-5 h-5 text-white"></i>
                         </div>
-                    <?php endif; ?>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
-                    <div class="bg-white bg-opacity-50 rounded-lg p-3">
-                        <div class="text-sm text-gray-600">Challenge Fee</div>
-                        <div class="text-lg font-bold text-red-600">-<?php echo formatMarketValue($challenge_cost); ?>
-                        </div>
-                    </div>
-                    <div class="bg-white bg-opacity-50 rounded-lg p-3">
-                        <div class="text-sm text-gray-600">Base Earnings</div>
-                        <div id="baseEarningsDisplay" class="text-lg font-bold text-gray-500">TBD</div>
-                    </div>
-                    <div class="bg-white bg-opacity-50 rounded-lg p-3">
-                        <div class="text-sm text-gray-600">Level Bonus</div>
-                        <div id="levelBonusDisplay" class="text-lg font-bold text-gray-500">TBD</div>
-                    </div>
-                    <div class="bg-white bg-opacity-50 rounded-lg p-3">
-                        <div class="text-sm text-gray-600">Net Result</div>
-                        <div id="netResultDisplay" class="text-lg font-bold text-gray-500">TBD</div>
-                    </div>
-                </div>
-
-                <!-- Approval Button -->
-                <?php if ($financial_result['pending']): ?>
-                    <div id="approvalSection" class="mt-6 pt-4 border-t border-white border-opacity-50 hidden">
-                        <button id="approveRewardBtn"
-                            class="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg transform transition-all duration-200 hover:scale-105 flex items-center gap-2 mx-auto">
-                            <i data-lucide="check-circle" class="w-5 h-5"></i>
-                            Approve Reward
-                        </button>
-                        <div class="text-xs text-gray-600 mt-2 opacity-75">
-                            This will deduct the challenge fee and add your earnings to your budget
-                        </div>
-                    </div>
-                <?php endif; ?>
-
-                <!-- Updated Budget Display -->
-                <?php
-                try {
-                    $db = getDbConnection();
-                    $stmt = $db->prepare('SELECT budget FROM users WHERE id = :id');
-                    $stmt->bindValue(':id', $_SESSION['user_id'], SQLITE3_INTEGER);
-                    $result = $stmt->execute();
-                    $updated_user = $result->fetchArray(SQLITE3_ASSOC);
-                    $db->close();
-                    $current_budget = $updated_user['budget'];
-                } catch (Exception $e) {
-                    $current_budget = $user_data['budget'];
-                }
-                ?>
-                <div class="mt-4 pt-4 border-t border-white border-opacity-50">
-                    <div class="text-sm text-gray-600">
-                        <?php echo $financial_result['pending'] ? 'Current Budget (Before Transaction)' : 'Updated Budget'; ?>
-                    </div>
-                    <div class="text-xl font-bold text-blue-600"><?php echo formatMarketValue($user_data['budget']); ?>
-                    </div>
-                    <?php if ($financial_result['pending']): ?>
-                        <div id="afterApprovalBudget" class="text-xs text-gray-500 mt-1">
-                            After approval: TBD (Awaiting match completion)
-                        </div>
-                    <?php endif; ?>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Team Performance -->
-    <div class="bg-white rounded-lg p-6 mb-6">
-        <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <i data-lucide="trending-up" class="w-5 h-5"></i>
-            Team Performance Analysis
-        </h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div class="text-center">
-                <h4 class="font-medium text-gray-900 mb-2">
-                    <?php echo htmlspecialchars($user_data['club_name']); ?>
-                </h4>
-                <div class="w-full bg-gray-200 rounded-full h-4 mb-2">
-                    <div class="bg-blue-600 h-4 rounded-full transition-all duration-1000" style="width:
-                            <?php echo $match_result['userStrength']; ?>%">
-                    </div>
-                </div>
-                <p class="text-sm text-gray-600">Strength:
-                    <?php echo $match_result['userStrength']; ?>%
-                </p>
-            </div>
-            <div class="text-center">
-                <h4 class="font-medium text-gray-900 mb-2">
-                    <?php echo htmlspecialchars($opponent_data['club_name']); ?>
-                </h4>
-                <div class="w-full bg-gray-200 rounded-full h-4 mb-2">
-                    <div class="bg-red-600 h-4 rounded-full transition-all duration-1000"
-                        style="width: <?php echo $match_result['opponentStrength']; ?>%"></div>
-                </div>
-                <p class="text-sm text-gray-600">Strength: <?php echo $match_result['opponentStrength']; ?>%</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Actions -->
-    <div class=" flex justify-center gap-4">
-        <a href="clubs.php?<?php
-        $_SESSION['match_success'] = $financial_result['message'];
-        echo 'completed=1';
-        ?>"
-            class="inline-flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors">
-            <i data-lucide="arrow-left" class="w-4 h-4"></i>
-            Back to Clubs
-        </a>
-        <a href="team.php"
-            class="inline-flex items-center gap-2 bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700 transition-colors">
-            <i data-lucide="users" class="w-4 h-4"></i>
-            My Team
-        </a>
-        <a href="match-simulator.php?opponent=<?php echo $opponent_id; ?>"
-            class="inline-flex items-center gap-2 bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors">
-            <i data-lucide="refresh-cw" class="w-4 h-4"></i>
-            Play Again
-        </a>
-    </div>
-</div>
-</div>
-
-<script>
-    // Match data from PHP
-    const matchData = {
-        userTeam: <?php echo json_encode($user_team); ?>,
-        opponentTeam: <?php echo json_encode($opponent_team); ?>,
-        userFormation: '<?php echo $user_data['formation']; ?>',
-        opponentFormation: '<?php echo $opponent_data['formation']; ?>',
-        matchResult: <?php echo json_encode($match_result); ?>,
-        formations: <?php echo json_encode(FORMATIONS); ?>
-    };
-
-    let matchTimer = 0;
-    let matchInterval = null;
-    let isMatchRunning = false;
-    let currentEventIndex = 0;
-    let matchStatus = 'pending'; // pending, processing, end, processed
-
-    // Function to update match status
-    function updateMatchStatus(status) {
-        matchStatus = status;
-        const statusElement = document.getElementById('matchStatusText');
-        const approvalSection = document.getElementById('approvalSection');
-        const financialBadge = document.getElementById('financialStatusBadge');
-        const financialMessage = document.getElementById('financialMessage');
-
-        switch (status) {
-            case 'pending':
-                statusElement.textContent = 'Pending - Ready to Start';
-                statusElement.className = '';
-                if (approvalSection) approvalSection.classList.add('hidden');
-                if (financialBadge) {
-                    financialBadge.textContent = 'MATCH PENDING';
-                    financialBadge.className = 'ml-2 px-2 py-1 bg-gray-100 text-gray-600 text-xs font-medium rounded-full';
-                }
-                if (financialMessage) {
-                    financialMessage.textContent = 'Match Not Started - Awaiting Results';
-                    financialMessage.className = 'text-2xl font-bold mb-2 text-gray-700';
-                }
-                break;
-            case 'processing':
-                statusElement.textContent = 'Processing - Match in Progress';
-                statusElement.className = 'text-blue-600';
-                if (approvalSection) approvalSection.classList.add('hidden');
-                if (financialBadge) {
-                    financialBadge.textContent = 'MATCH IN PROGRESS';
-                    financialBadge.className = 'ml-2 px-2 py-1 bg-blue-100 text-blue-600 text-xs font-medium rounded-full';
-                }
-                if (financialMessage) {
-                    financialMessage.textContent = 'Match in Progress - Final Result Pending';
-                    financialMessage.className = 'text-2xl font-bold mb-2 text-blue-700';
-                }
-                break;
-            case 'end':
-                statusElement.textContent = 'Ended - Processing Results';
-                statusElement.className = 'text-orange-600';
-                if (approvalSection) approvalSection.classList.add('hidden'); // Keep hidden until processing complete
-                if (financialBadge) {
-                    financialBadge.textContent = 'PROCESSING RESULTS';
-                    financialBadge.className = 'ml-2 px-2 py-1 bg-orange-100 text-orange-600 text-xs font-medium rounded-full';
-                }
-                if (financialMessage) {
-                    financialMessage.textContent = 'Match Ended - Processing Results...';
-                    financialMessage.className = 'text-2xl font-bold mb-2 text-orange-700';
-                }
-                break;
-            case 'processed':
-                statusElement.textContent = 'Ended - Results Ready';
-                statusElement.className = 'text-green-600';
-                if (approvalSection) approvalSection.classList.remove('hidden'); // Now show approve button
-                if (financialBadge) {
-                    financialBadge.textContent = 'PENDING APPROVAL';
-                    financialBadge.className = 'ml-2 px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full';
-                }
-                break;
-        }
-    }
-
-    // Initialize icons
-    lucide.createIcons();
-
-    // Render field players
-    function renderFieldPlayers() {
-        const $field = $('#fieldPlayers');
-        $field.empty();
-
-        // Render user team (bottom half)
-        renderTeamOnField(matchData.userTeam, matchData.userFormation, 'user', $field);
-
-        // Render opponent team (top half, flipped)
-        renderTeamOnField(matchData.opponentTeam, matchData.opponentFormation, 'opponent', $field);
-    }
-
-    function renderTeamOnField(team, formation, teamType, $field) {
-        const formationData = matchData.formations[formation];
-        let players = team;
-        let positions = formationData.positions;
-        let roles = formationData.roles;
-
-        const isOpponent = teamType === 'opponent';
-        let playerIdx = 0;
-
-        positions.forEach((line, lineIdx) => {
-            line.forEach(xPos => {
-                const player = players[playerIdx];
-                let yPos;
-
-                if (isOpponent) {
-                    // Opponent team in top half (GK at top)
-                    xPos = 100 - xPos;
-                    yPos = ((lineIdx + 1) * (50 / (positions.length + 1)));
-                } else {
-                    // User team in bottom half (GK at bottom)
-                    // yPos = 50 + ((lineIdx + 1) * (50 / (positions.length + 1)));
-                    yPos = 100 - ((lineIdx + 1) * (50 / (positions.length + 1)));
-                }
-
-                // Get the role for this position (now properly aligned)
-                const requiredPosition = roles[playerIdx] || 'GK';
-                const colors = getPositionColors(requiredPosition);
-                const teamColor = isOpponent ? 'bg-red-500' : 'bg-blue-500';
-
-                if (player) {
-                    $field.append(`
-                        <div class="absolute transition-all duration-200" 
-                             style="left: ${xPos}%; top: ${yPos}%; transform: translate(-50%, -50%);">
-                            <div class="w-11 h-11 ${teamColor} rounded-full flex flex-col items-center justify-center shadow-lg border-2 border-white">
-                                <i data-lucide="user" class="w-4 h-4 text-white"></i>
-                                <span class="text-[8px] font-bold text-white">${requiredPosition}</span>
+                        <div>
+                            <h3 class="font-bold text-lg <?php echo $is_home ? 'text-blue-600' : 'text-gray-700'; ?>">
+                                <?php echo htmlspecialchars($match['home_team_name']); ?>
+                            </h3>
+                            <div class="flex items-center gap-2 text-sm">
+                                <i data-lucide="home" class="w-4 h-4 text-green-600"></i>
+                                <span class="text-green-600 font-medium">HOME</span>
+                                <?php if ($is_home): ?>
+                                    <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-bold ml-2">YOUR TEAM</span>
+                                <?php endif; ?>
                             </div>
-                            <div class="absolute ${isOpponent ? 'bottom-full mb-1' : 'top-full mt-1'} left-1/2 transform -translate-x-1/2 whitespace-nowrap">
-                                <div class="text-white text-[10px] font-bold bg-black bg-opacity-70 px-1.5 py-0.5 rounded">
-                                    ${player.name}
+                        </div>
+                    </div>
+                </div>
+                <div class="p-4">
+                    <?php displayTeamLineup($is_home ? $user_data : $opponent_data, 'home'); ?>
+                </div>
+            </div>
+
+            <!-- Away Team -->
+            <div class="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
+                <div class="bg-orange-50 border-b border-orange-200 p-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 <?php echo !$is_home ? 'bg-blue-600' : 'bg-gray-500'; ?> rounded-full flex items-center justify-center">
+                            <i data-lucide="<?php echo !$is_home ? 'user' : 'users'; ?>" class="w-5 h-5 text-white"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-lg <?php echo !$is_home ? 'text-blue-600' : 'text-gray-700'; ?>">
+                                <?php echo htmlspecialchars($match['away_team_name']); ?>
+                            </h3>
+                            <div class="flex items-center gap-2 text-sm">
+                                <i data-lucide="plane" class="w-4 h-4 text-orange-600"></i>
+                                <span class="text-orange-600 font-medium">AWAY</span>
+                                <?php if (!$is_home): ?>
+                                    <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-bold ml-2">YOUR TEAM</span>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-4">
+                    <?php displayTeamLineup(!$is_home ? $user_data : $opponent_data, 'away'); ?>
+                </div>
+            </div>
+        </div>
+
+        <!-- Match Actions -->
+        <div class="bg-white rounded-lg shadow border border-gray-200 p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Ready to Play?</h3>
+                    <p class="text-gray-600">
+                        Both teams are set up and ready. Click simulate to see the match result.
+                    </p>
+                </div>
+                <div class="flex gap-3">
+                    <a href="league.php" 
+                       class="bg-gray-100 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-200 font-medium transition-colors flex items-center gap-2">
+                        <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                        Back to League
+                    </a>
+                    <form method="POST" class="inline">
+                        <button type="submit" name="simulate_match"
+                                class="bg-green-600 text-white px-8 py-3 rounded-lg hover:bg-green-700 font-bold transition-colors flex items-center gap-2 shadow-md">
+                            <i data-lucide="play" class="w-5 h-5"></i>
+                            Simulate Match
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <?php
+    endContent('League Match');
+}
+
+function displayMatchResult($match_id) {
+    try {
+        $db = getDbConnection();
+        $user_id = $_SESSION['user_id'];
+
+        // Get match details
+        $stmt = $db->prepare('
+            SELECT lm.*, 
+                   ht.name as home_team_name, ht.user_id as home_user_id,
+                   at.name as away_team_name, at.user_id as away_user_id
+            FROM league_matches lm
+            JOIN league_teams ht ON lm.home_team_id = ht.id
+            JOIN league_teams at ON lm.away_team_id = at.id
+            WHERE lm.id = :match_id AND lm.status = "completed"
+            AND (ht.user_id = :user_id OR at.user_id = :user_id)
+        ');
+        $stmt->bindValue(':match_id', $match_id, SQLITE3_INTEGER);
+        $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+        $result = $stmt->execute();
+        $match = $result->fetchArray(SQLITE3_ASSOC);
+
+        if (!$match) {
+            $_SESSION['error'] = 'Match result not found.';
+            header('Location: league.php');
+            exit;
+        }
+
+        // Get user's current data
+        $stmt = $db->prepare('SELECT budget, fans FROM users WHERE id = :id');
+        $stmt->bindValue(':id', $user_id, SQLITE3_INTEGER);
+        $result = $stmt->execute();
+        $user_data = $result->fetchArray(SQLITE3_ASSOC);
+
+        // Determine user's role
+        $is_home = ($match['home_user_id'] == $user_id);
+        $user_score = $is_home ? $match['home_score'] : $match['away_score'];
+        $opponent_score = $is_home ? $match['away_score'] : $match['home_score'];
+
+        // Determine match result
+        $match_result = 'draw';
+        if ($user_score > $opponent_score) {
+            $match_result = 'win';
+        } elseif ($user_score < $opponent_score) {
+            $match_result = 'loss';
+        }
+
+        // Calculate match rewards
+        $rewards = calculateLeagueMatchRewards($match_result, $user_score, $opponent_score, $is_home);
+
+        // Check if mystery box has already been claimed
+        $session_key = "mystery_box_claimed_{$match_id}_{$user_id}";
+        $mystery_box_claimed = isset($_SESSION[$session_key]) && $_SESSION[$session_key] === true;
+
+        $db->close();
+        displayMatchResultPage($match, $is_home, $user_score, $opponent_score, $match_result, $rewards, $user_data, $mystery_box_claimed);
+
+    } catch (Exception $e) {
+        error_log("Match result error: " . $e->getMessage());
+        $_SESSION['error'] = 'An error occurred while loading the match result.';
+        header('Location: league.php');
+        exit;
+    }
+}
+
+function displayMatchResultPage($match, $is_home, $user_score, $opponent_score, $match_result, $rewards, $user_data, $mystery_box_claimed = false) {
+    startContent();
+    ?>
+    
+    <div class="container mx-auto py-6">
+        <!-- Match Result Header -->
+        <div class="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden mb-6">
+            <div class="bg-gradient-to-r <?php 
+                echo $match_result === 'win' ? 'from-green-500 to-green-600' : 
+                    ($match_result === 'draw' ? 'from-yellow-500 to-yellow-600' : 'from-red-500 to-red-600'); 
+            ?> text-white p-6">
+                <div class="text-center">
+                    <div class="mb-4">
+                        <div class="text-6xl font-bold mb-2">
+                            <?php echo $user_score; ?> - <?php echo $opponent_score; ?>
+                        </div>
+                        <div class="text-2xl font-bold">
+                            <?php 
+                            echo $match_result === 'win' ? '🎉 VICTORY!' : 
+                                ($match_result === 'draw' ? '🤝 DRAW!' : '😞 DEFEAT!'); 
+                            ?>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-center gap-8">
+                        <div class="text-center">
+                            <div class="text-lg font-semibold">
+                                <?php echo $is_home ? htmlspecialchars($match['home_team_name']) : htmlspecialchars($match['away_team_name']); ?>
+                            </div>
+                            <div class="text-sm opacity-90">Your Team</div>
+                        </div>
+                        <div class="text-3xl font-bold">VS</div>
+                        <div class="text-center">
+                            <div class="text-lg font-semibold">
+                                <?php echo $is_home ? htmlspecialchars($match['away_team_name']) : htmlspecialchars($match['home_team_name']); ?>
+                            </div>
+                            <div class="text-sm opacity-90">Opponent</div>
+                        </div>
+                    </div>
+                    <div class="mt-4 text-sm opacity-90">
+                        Gameweek <?php echo $match['gameweek']; ?> • Premier League
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Match Rewards -->
+        <div class="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden mb-6">
+            <div class="bg-gradient-to-r from-green-500 to-green-600 text-white p-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
+                        <i data-lucide="coins" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold">Match Rewards</h3>
+                        <p class="text-green-100 text-sm">Your earnings from this match</p>
+                    </div>
+                </div>
+            </div>
+            <div class="p-6">
+                <div class="grid md:grid-cols-2 gap-6">
+                    <!-- Budget Rewards -->
+                    <div>
+                        <h4 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                            <i data-lucide="banknote" class="w-4 h-4 text-green-600"></i>
+                            Budget Earned
+                        </h4>
+                        <div class="space-y-2">
+                            <?php foreach ($rewards['breakdown'] as $reward): ?>
+                                <div class="flex justify-between items-center p-2 bg-gray-50 rounded">
+                                    <span class="text-sm"><?php echo htmlspecialchars($reward['description']); ?></span>
+                                    <span class="font-medium text-green-600">+€<?php echo number_format($reward['amount']); ?></span>
+                                </div>
+                            <?php endforeach; ?>
+                            <div class="border-t pt-2 mt-3">
+                                <div class="flex justify-between items-center font-bold">
+                                    <span>Total Budget Earned:</span>
+                                    <span class="text-green-600 text-lg">+€<?php echo number_format($rewards['budget_earned']); ?></span>
                                 </div>
                             </div>
                         </div>
-                    `);
-                }
-                playerIdx++;
-            });
-        });
-    }
-
-    function getPositionColors(position) {
-        const colorMap = {
-            'GK': { bg: 'bg-amber-400', border: 'border-amber-500' },
-            'CB': { bg: 'bg-emerald-400', border: 'border-emerald-500' },
-            'LB': { bg: 'bg-emerald-400', border: 'border-emerald-500' },
-            'RB': { bg: 'bg-emerald-400', border: 'border-emerald-500' },
-            'LWB': { bg: 'bg-emerald-400', border: 'border-emerald-500' },
-            'RWB': { bg: 'bg-emerald-400', border: 'border-emerald-500' },
-            'CDM': { bg: 'bg-blue-400', border: 'border-blue-500' },
-            'CM': { bg: 'bg-blue-400', border: 'border-blue-500' },
-            'CAM': { bg: 'bg-blue-400', border: 'border-blue-500' },
-            'LM': { bg: 'bg-blue-400', border: 'border-blue-500' },
-            'RM': { bg: 'bg-blue-400', border: 'border-blue-500' },
-            'LW': { bg: 'bg-red-400', border: 'border-red-500' },
-            'RW': { bg: 'bg-red-400', border: 'border-red-500' },
-            'ST': { bg: 'bg-red-400', border: 'border-red-500' },
-            'CF': { bg: 'bg-red-400', border: 'border-red-500' }
-        };
-        return colorMap[position] || colorMap['GK'];
-    }
-
-    // Start match simulation
-    function startMatch() {
-        if (isMatchRunning) return;
-
-        isMatchRunning = true;
-        matchTimer = 0;
-        currentEventIndex = 0;
-
-        $('#startMatch').addClass('hidden');
-        $('#pauseMatch').removeClass('hidden');
-        $('#matchStatus').html('<i data-lucide="play" class="w-5 h-5"></i> <span id="matchStatusText">Processing - Match in Progress</span>');
-
-        // Update match status
-        updateMatchStatus('processing');
-
-        // Reset scores and statistics
-        $('#userScore').text('0');
-        $('#opponentScore').text('0');
-        $('#liveUserGoals').text('0');
-        $('#liveOpponentGoals').text('0');
-        $('#liveEventsCount').text('0');
-        $('#matchProgress').text('0%');
-
-        // Clear events
-        $('#liveEvents').html('<div class="text-center text-gray-500 py-4">Match starting...</div>');
-
-        // Start timer
-        matchInterval = setInterval(() => {
-            matchTimer++;
-            $('#timerDisplay').text(matchTimer + "'");
-
-            // Update match progress
-            const progress = Math.round((matchTimer / 90) * 100);
-            $('#matchProgress').text(progress + '%');
-
-            // Check for events at this minute
-            checkForEvents(matchTimer);
-
-            // End match at 90 minutes
-            if (matchTimer >= 90) {
-                endMatch();
-            }
-        }, 100); // Fast simulation - 100ms per minute
-
-        lucide.createIcons();
-    }
-
-    function checkForEvents(minute) {
-        const events = matchData.matchResult.events;
-
-        events.forEach((event, index) => {
-            if (event.minute === minute && index >= currentEventIndex) {
-                displayEvent(event);
-
-                if (event.type === 'goal') {
-                    if (event.team === 'user') {
-                        const currentScore = parseInt($('#userScore').text());
-                        $('#userScore').text(currentScore + 1);
-                        $('#liveUserGoals').text(currentScore + 1);
-                        // Celebration animation for user goal
-                        $('#userScore').addClass('animate-bounce text-green-600');
-                        setTimeout(() => $('#userScore').removeClass('animate-bounce text-green-600'), 2000);
-                    } else {
-                        const currentScore = parseInt($('#opponentScore').text());
-                        $('#opponentScore').text(currentScore + 1);
-                        $('#liveOpponentGoals').text(currentScore + 1);
-                        // Animation for opponent goal
-                        $('#opponentScore').addClass('animate-pulse text-red-600');
-                        setTimeout(() => $('#opponentScore').removeClass('animate-pulse text-red-600'), 2000);
-                    }
-                }
-
-                // Update live events counter
-                const eventCount = parseInt($('#liveEventsCount').text()) + 1;
-                $('#liveEventsCount').text(eventCount);
-
-                currentEventIndex = index + 1;
-            }
-        });
-    }
-
-    function displayEvent(event) {
-        const eventHtml = `
-            <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg animate-pulse">
-                <div class="w-12 h-8 bg-gray-200 rounded flex items-center justify-center text-sm font-bold text-gray-700">
-                    ${event.minute}'
-                </div>
-                <div class="flex-1">
-                    ${getEventIcon(event.type)}
-                    <span class="font-medium">${event.description}</span>
-                </div>
-            </div>
-        `;
-
-        $('#liveEvents').prepend(eventHtml);
-        lucide.createIcons();
-    }
-
-    function getEventIcon(type) {
-        switch (type) {
-            case 'goal':
-                return '<i data-lucide="target" class="w-4 h-4 text-green-600 inline mr-2"></i>';
-            case 'yellow_card':
-                return '<div class="w-4 h-4 bg-yellow-400 rounded-sm inline-block mr-2"></div>';
-            case 'red_card':
-                return '<div class="w-4 h-4 bg-red-500 rounded-sm inline-block mr-2"></div>';
-            default:
-                return '<i data-lucide="info" class="w-4 h-4 text-blue-600 inline mr-2"></i>';
-        }
-    }
-
-    function pauseMatch() {
-        if (!isMatchRunning) return;
-
-        clearInterval(matchInterval);
-        isMatchRunning = false;
-
-        $('#startMatch').removeClass('hidden');
-        $('#pauseMatch').addClass('hidden');
-        $('#matchStatus').html('<i data-lucide="pause" class="w-5 h-5"></i> <span id="matchStatusText">Processing - Match Paused</span>');
-
-        lucide.createIcons();
-    }
-
-    function endMatch() {
-        clearInterval(matchInterval);
-        isMatchRunning = false;
-
-        $('#startMatch').addClass('hidden');
-        $('#pauseMatch').addClass('hidden');
-
-        const userGoals = parseInt($('#userScore').text());
-        const opponentGoals = parseInt($('#opponentScore').text());
-
-        let resultText = '';
-        let resultClass = '';
-
-        if (userGoals > opponentGoals) {
-            resultText = '<i data-lucide="trophy" class="w-5 h-5"></i> VICTORY!';
-            resultClass = 'text-green-600';
-        } else if (userGoals < opponentGoals) {
-            resultText = '<i data-lucide="frown" class="w-5 h-5"></i> DEFEAT!';
-            resultClass = 'text-red-600';
-        } else {
-            resultText = '<i data-lucide="equal" class="w-5 h-5"></i> DRAW!';
-            resultClass = 'text-yellow-600';
-        }
-
-        $('#matchStatus').html(resultText + ' <span id="matchStatusText">Ended - Match Complete</span>').removeClass('text-gray-600').addClass(resultClass);
-        $('#timerDisplay').text("90' FT");
-
-        // Update match status to end
-        updateMatchStatus('end');
-
-        // Add final whistle event
-        displayEvent({
-            minute: 90,
-            type: 'whistle',
-            description: 'Full Time! Match finished.'
-        });
-
-        // Update financial summary and show result popup after match ends
-        <?php if ($financial_result['pending']): ?>
-            setTimeout(() => {
-                if (matchStatus === 'end') {
-                    showProcessingPopup();
-                }
-            }, 1000);
-        <?php endif; ?>
-
-        lucide.createIcons();
-    }
-
-    // Event listeners
-    $('#startMatch').click(startMatch);
-    $('#pauseMatch').click(pauseMatch);
-
-    // Initialize field
-    $(document).ready(() => {
-        renderFieldPlayers();
-        updateMatchStatus('pending'); // Initialize match status
-        lucide.createIcons();
-    });
-</script>
-
-<!-- Processing Popup -->
-<div id="processingPopup" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-    <div class="bg-white rounded-lg p-8 w-full max-w-sm mx-4 shadow-2xl">
-        <div class="text-center">
-            <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-blue-100 flex items-center justify-center">
-                <i data-lucide="loader" class="w-8 h-8 text-blue-600 animate-spin"></i>
-            </div>
-            <h2 class="text-xl font-bold mb-2 text-gray-900">Processing Match Result</h2>
-            <p class="text-gray-600 mb-4">Calculating rewards and updating club data...</p>
-            <div class="text-sm text-gray-500">Please wait</div>
-        </div>
-    </div>
-</div>
-
-<!-- Match Result Popup -->
-<div id="matchResultPopup" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-    <div class="bg-white rounded-lg p-8 w-full max-w-md mx-4 shadow-2xl">
-        <div class="text-center">
-            <div id="popupResultIcon" class="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center">
-                <i id="popupResultIconSvg" class="w-8 h-8"></i>
-            </div>
-            <h2 id="popupResultTitle" class="text-2xl font-bold mb-2"></h2>
-            <p id="popupResultMessage" class="text-gray-600 mb-6"></p>
-
-            <div class="bg-gray-50 rounded-lg p-4 mb-6">
-                <div class="text-sm text-gray-600 mb-2">Financial Summary</div>
-                <div class="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                        <div class="text-gray-500">Challenge Fee</div>
-                        <div id="popupChallengeFee" class="font-bold text-red-600"></div>
                     </div>
+
+                    <!-- Fan Changes -->
                     <div>
-                        <div class="text-gray-500">Potential Earnings</div>
-                        <div id="popupEarnings" class="font-bold text-green-600"></div>
-                    </div>
-                </div>
-                <div class="border-t mt-3 pt-3">
-                    <div class="text-gray-500">Net Result</div>
-                    <div id="popupNetResult" class="text-lg font-bold"></div>
-                </div>
-            </div>
-
-            <div class="flex gap-3">
-                <button id="popupApproveBtn"
-                    class="flex-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transform transition-all duration-200 hover:scale-105 flex items-center justify-center gap-2">
-                    <i data-lucide="check-circle" class="w-5 h-5"></i>
-                    Approve Reward
-                </button>
-                <button id="popupCloseBtn"
-                    class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
-                    Later
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<script>
-    // Show processing popup and handle match result processing
-    function showProcessingPopup() {
-        // Show processing popup
-        document.getElementById('processingPopup').classList.remove('hidden');
-        lucide.createIcons();
-
-        // Get live match results
-        const userGoals = parseInt($('#userScore').text());
-        const opponentGoals = parseInt($('#opponentScore').text());
-
-        // Send AJAX request to process match result
-        fetch('api/update_match_result_api.php', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                userGoals: userGoals,
-                opponentGoals: opponentGoals
-            })
-        })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Update financial summary with processed results
-                    updateFinancialSummary();
-
-                    // Update status to processed (shows approve button)
-                    updateMatchStatus('processed');
-
-                    // Hide processing popup
-                    document.getElementById('processingPopup').classList.add('hidden');
-
-                    // Show result popup after a brief delay
-                    setTimeout(() => {
-                        showMatchResultPopup();
-                    }, 500);
-                } else {
-                    // Handle error
-                    document.getElementById('processingPopup').classList.add('hidden');
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Processing Error',
-                        text: data.message || 'Failed to process match result',
-                        confirmButtonColor: '#ef4444'
-                    });
-                }
-            })
-            .catch(error => {
-                console.error('Error processing match result:', error);
-                document.getElementById('processingPopup').classList.add('hidden');
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Connection Error',
-                    text: 'Failed to process match result. Please try again.',
-                    confirmButtonColor: '#ef4444'
-                });
-            });
-    }
-
-    // Show result popup when match ends
-    function showMatchResultPopup() {
-        // Only show popup if match results have been processed
-        if (matchStatus !== 'processed') {
-            return;
-        }
-
-        // Get live match results from the simulation
-        const userGoals = parseInt($('#userScore').text());
-        const opponentGoals = parseInt($('#opponentScore').text());
-
-        // Determine match result from live simulation
-        let matchResult;
-        if (userGoals > opponentGoals) {
-            matchResult = 'win';
-        } else if (userGoals < opponentGoals) {
-            matchResult = 'loss';
-        } else {
-            matchResult = 'draw';
-        }
-
-        const challengeCost = <?php echo $challenge_cost; ?>;
-        const opponentName = '<?php echo htmlspecialchars($opponent_data["club_name"]); ?>';
-
-        // Calculate earnings based on live result
-        const potentialReward = <?php echo $potential_reward; ?>;
-        const clubLevel = <?php echo $financial_result["club_level"]; ?>;
-        const levelBonus = <?php echo calculateLevelBonus($financial_result["club_level"]); ?>;
-
-        let earnings = 0;
-        if (matchResult === 'win') {
-            earnings = potentialReward + (potentialReward * levelBonus);
-        } else if (matchResult === 'draw') {
-            const baseEarnings = challengeCost * 0.8;
-            earnings = baseEarnings + (baseEarnings * (levelBonus * 0.5));
-        } else {
-            // Loss - consolation bonus
-            if (clubLevel >= 2) {
-                const consolationRate = 0.1 + (clubLevel * 0.05);
-                earnings = challengeCost * consolationRate;
-            } else {
-                earnings = challengeCost * 0.1;
-            }
-        }
-
-        const netResult = earnings - challengeCost;
-
-        // Set popup content based on result
-        const popup = document.getElementById('matchResultPopup');
-        const icon = document.getElementById('popupResultIcon');
-        const iconSvg = document.getElementById('popupResultIconSvg');
-        const title = document.getElementById('popupResultTitle');
-        const message = document.getElementById('popupResultMessage');
-
-        if (matchResult === 'win') {
-            icon.className = 'w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center bg-green-100';
-            iconSvg.setAttribute('data-lucide', 'trophy');
-            iconSvg.className = 'w-8 h-8 text-green-600';
-            title.textContent = 'Victory!';
-            title.className = 'text-2xl font-bold mb-2 text-green-700';
-            message.textContent = `Congratulations! You defeated ${opponentName} ${userGoals}-${opponentGoals}!`;
-        } else if (matchResult === 'draw') {
-            icon.className = 'w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center bg-yellow-100';
-            iconSvg.setAttribute('data-lucide', 'equal');
-            iconSvg.className = 'w-8 h-8 text-yellow-600';
-            title.textContent = 'Draw!';
-            title.className = 'text-2xl font-bold mb-2 text-yellow-700';
-            message.textContent = `You drew ${userGoals}-${opponentGoals} against ${opponentName}.`;
-        } else {
-            icon.className = 'w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center bg-red-100';
-            iconSvg.setAttribute('data-lucide', 'x-circle');
-            iconSvg.className = 'w-8 h-8 text-red-600';
-            title.textContent = 'Defeat';
-            title.className = 'text-2xl font-bold mb-2 text-red-700';
-            message.textContent = `You lost ${userGoals}-${opponentGoals} against ${opponentName}.`;
-        }
-
-        // Set financial details
-        document.getElementById('popupChallengeFee').textContent = '-' + formatMarketValue(challengeCost);
-        document.getElementById('popupEarnings').textContent = '+' + formatMarketValue(earnings);
-
-        const netResultElement = document.getElementById('popupNetResult');
-        netResultElement.textContent = (netResult >= 0 ? '+' : '') + formatMarketValue(netResult);
-        netResultElement.className = 'text-lg font-bold ' + (netResult >= 0 ? 'text-green-600' : 'text-red-600');
-
-        // Show popup
-        popup.classList.remove('hidden');
-        lucide.createIcons();
-    }
-
-    // Approve reward function
-    function approveReward() {
-        const approveBtn = document.getElementById('approveRewardBtn');
-        const popupApproveBtn = document.getElementById('popupApproveBtn');
-
-        // Disable buttons
-        if (approveBtn) {
-            approveBtn.disabled = true;
-            approveBtn.innerHTML = '<i data-lucide="loader" class="w-5 h-5 animate-spin"></i> Processing...';
-        }
-        if (popupApproveBtn) {
-            popupApproveBtn.disabled = true;
-            popupApproveBtn.innerHTML = '<i data-lucide="loader" class="w-5 h-5 animate-spin"></i> Processing...';
-        }
-
-        fetch('api/approve_reward_api.php', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            }
-        })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Reward Approved!',
-                        html: `
-                            <div class="text-left">
-                                <p class="mb-2"><strong>Transaction completed successfully!</strong></p>
-                                <p class="mb-1">Net Result: <span class="font-bold ${data.net_result.startsWith('+') ? 'text-green-600' : 'text-red-600'}">${data.net_result}</span></p>
-                                <p>New Budget: <span class="font-bold text-blue-600">${data.new_budget}</span></p>
+                        <h4 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                            <i data-lucide="users" class="w-4 h-4 text-blue-600"></i>
+                            Fan Support
+                        </h4>
+                        <div class="space-y-3">
+                            <div class="p-4 bg-blue-50 rounded-lg">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-sm text-gray-600">Fan Change:</span>
+                                    <span class="font-bold <?php echo $rewards['fan_change'] >= 0 ? 'text-green-600' : 'text-red-600'; ?>">
+                                        <?php echo $rewards['fan_change'] >= 0 ? '+' : ''; ?><?php echo number_format($rewards['fan_change']); ?>
+                                    </span>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-600">Current Fans:</span>
+                                    <span class="font-medium text-blue-600"><?php echo number_format($user_data['fans'] ?? 5000); ?></span>
+                                </div>
                             </div>
-                        `,
-                        confirmButtonColor: '#10b981',
-                        confirmButtonText: 'Continue'
-                    }).then(() => {
-                        // Redirect to clubs page
-                        window.location.href = 'clubs.php';
-                    });
-                } else {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: data.message,
-                        confirmButtonColor: '#ef4444'
-                    });
+                            <div class="text-xs text-gray-500">
+                                <?php if ($rewards['fan_change'] > 0): ?>
+                                    <i data-lucide="trending-up" class="w-3 h-3 inline mr-1"></i>
+                                    Great performance! Your fanbase is growing.
+                                <?php elseif ($rewards['fan_change'] < 0): ?>
+                                    <i data-lucide="trending-down" class="w-3 h-3 inline mr-1"></i>
+                                    Disappointing result. Some fans are losing faith.
+                                <?php else: ?>
+                                    <i data-lucide="minus" class="w-3 h-3 inline mr-1"></i>
+                                    Steady performance. Fan support remains stable.
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-                    // Re-enable buttons
-                    if (approveBtn) {
-                        approveBtn.disabled = false;
-                        approveBtn.innerHTML = '<i data-lucide="check-circle" class="w-5 h-5"></i> Approve Reward';
-                    }
-                    if (popupApproveBtn) {
-                        popupApproveBtn.disabled = false;
-                        popupApproveBtn.innerHTML = '<i data-lucide="check-circle" class="w-5 h-5"></i> Approve Reward';
-                    }
-                }
-                lucide.createIcons();
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Connection Error',
-                    text: 'Failed to process reward. Please try again.',
-                    confirmButtonColor: '#ef4444'
+        <!-- Post-Match Reward -->
+        <div class="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden mb-6">
+            <div class="bg-gradient-to-r from-purple-500 to-purple-600 text-white p-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
+                        <i data-lucide="gift" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold">Post-Match Reward</h3>
+                        <p class="text-purple-100 text-sm">Choose 1 of 3 mystery boxes to reveal your reward!</p>
+                    </div>
+                </div>
+            </div>
+            <div class="p-6">
+                <div class="grid grid-cols-3 gap-4 mb-6">
+                    <?php for ($i = 1; $i <= 3; $i++): ?>
+                        <div class="mystery-box cursor-pointer transform hover:scale-105 transition-transform duration-200 <?php echo $mystery_box_claimed ? 'opacity-50 cursor-not-allowed' : ''; ?>" 
+                             data-box="<?php echo $i; ?>" <?php echo $mystery_box_claimed ? 'style="pointer-events: none;"' : ''; ?>>
+                            <div class="bg-gradient-to-br from-purple-400 to-purple-600 rounded-lg p-6 text-center text-white shadow-lg">
+                                <?php if ($mystery_box_claimed): ?>
+                                    <div class="w-16 h-16 mx-auto mb-3 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                                        <i data-lucide="lock" class="w-8 h-8"></i>
+                                    </div>
+                                    <div class="font-bold text-lg">Already Claimed</div>
+                                    <div class="text-sm opacity-90">Reward used</div>
+                                <?php else: ?>
+                                    <div class="w-16 h-16 mx-auto mb-3 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                                        <i data-lucide="gift" class="w-8 h-8"></i>
+                                    </div>
+                                    <div class="font-bold text-lg">Mystery Box <?php echo $i; ?></div>
+                                    <div class="text-sm opacity-90">Click to reveal</div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    <?php endfor; ?>
+                </div>
+                
+                <!-- Reward Display (Hidden initially) -->
+                <div id="reward-display" class="<?php echo $mystery_box_claimed ? '' : 'hidden'; ?>">
+                    <?php if ($mystery_box_claimed): ?>
+                        <div class="bg-gradient-to-r from-gray-400 to-gray-500 rounded-lg p-6 text-center text-white">
+                            <div class="text-2xl font-bold mb-2">🔒 Already Claimed</div>
+                            <div class="text-lg">You have already claimed your mystery box reward for this match.</div>
+                            <div class="text-sm mt-2 opacity-90">Each match allows only one mystery box claim.</div>
+                        </div>
+                    <?php else: ?>
+                        <div class="bg-gradient-to-r from-yellow-400 to-orange-500 rounded-lg p-6 text-center text-white">
+                            <div class="text-2xl font-bold mb-2">🎁 Congratulations!</div>
+                            <div id="reward-content" class="text-lg"></div>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+
+        <!-- Continue Button -->
+        <div class="text-center">
+            <a href="league.php" 
+               class="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 font-bold transition-colors inline-flex items-center gap-2">
+                <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                Continue to League
+            </a>
+        </div>
+    </div>
+
+    <script>
+        // Mystery box selection - only if not already claimed
+        <?php if (!$mystery_box_claimed): ?>
+        document.querySelectorAll('.mystery-box').forEach(box => {
+            box.addEventListener('click', function() {
+                const boxNumber = this.dataset.box;
+                
+                // Generate all 3 rewards (one for each box)
+                const allRewards = [
+                    { type: 'budget', amount: 500000, text: 'You received €500,000!', icon: '💰' },
+                    { type: 'budget', amount: 750000, text: 'You received €750,000!', icon: '💰' },
+                    { type: 'budget', amount: 1000000, text: 'You received €1,000,000!', icon: '💰' },
+                    { type: 'player', text: 'You received a random player card!', icon: '⚽' },
+                    { type: 'item', text: 'You received a training boost item!', icon: '🏃' },
+                    { type: 'budget', amount: 250000, text: 'You received €250,000!', icon: '💰' },
+                    { type: 'fans', amount: 1000, text: 'You gained 1,000 new fans!', icon: '👥' }
+                ];
+                
+                // Shuffle and pick 3 different rewards
+                const shuffled = [...allRewards].sort(() => 0.5 - Math.random());
+                const boxRewards = shuffled.slice(0, 3);
+                const selectedReward = boxRewards[boxNumber - 1];
+                
+                // Disable all boxes
+                document.querySelectorAll('.mystery-box').forEach(b => {
+                    b.style.pointerEvents = 'none';
                 });
-
-                // Re-enable buttons
-                if (approveBtn) {
-                    approveBtn.disabled = false;
-                    approveBtn.innerHTML = '<i data-lucide="check-circle" class="w-5 h-5"></i> Approve Reward';
+                
+                // Add shake animation to selected box (no scaling)
+                this.style.transition = 'all 0.3s ease';
+                this.style.animation = 'shake 0.5s ease-in-out';
+                
+                // Add animations if not already added
+                if (!document.querySelector('#mystery-animations')) {
+                    const style = document.createElement('style');
+                    style.id = 'mystery-animations';
+                    style.textContent = `
+                        @keyframes shake {
+                            0%, 100% { transform: translateX(0); }
+                            25% { transform: translateX(-5px); }
+                            75% { transform: translateX(5px); }
+                        }
+                        @keyframes pulse-glow {
+                            0%, 100% { box-shadow: 0 0 20px rgba(255, 215, 0, 0.5); }
+                            50% { box-shadow: 0 0 30px rgba(255, 215, 0, 0.8); }
+                        }
+                        @keyframes flip-reveal {
+                            0% { transform: rotateY(0deg); }
+                            50% { transform: rotateY(90deg); }
+                            100% { transform: rotateY(0deg); }
+                        }
+                        @keyframes fade-gray {
+                            0% { opacity: 1; }
+                            100% { opacity: 0.6; }
+                        }
+                    `;
+                    document.head.appendChild(style);
                 }
-                if (popupApproveBtn) {
-                    popupApproveBtn.disabled = false;
-                    popupApproveBtn.innerHTML = '<i data-lucide="check-circle" class="w-5 h-5"></i> Approve Reward';
-                }
-                lucide.createIcons();
+                
+                // Show opening animation and reveal all boxes
+                setTimeout(() => {
+                    // Add glow effect to selected box
+                    this.style.animation = 'pulse-glow 1s ease-in-out infinite';
+                    this.style.borderRadius = '12px';
+                    
+                    // Fade other boxes
+                    document.querySelectorAll('.mystery-box').forEach((b, index) => {
+                        const boxNum = parseInt(b.dataset.box);
+                        if (boxNum != boxNumber) {
+                            b.style.animation = 'fade-gray 0.5s ease-out forwards';
+                        }
+                    });
+                    
+                    // Reveal all boxes with flip animation
+                    setTimeout(() => {
+                        document.querySelectorAll('.mystery-box').forEach((b, index) => {
+                            const boxNum = parseInt(b.dataset.box);
+                            const reward = boxRewards[boxNum - 1];
+                            const boxContent = b.querySelector('.bg-gradient-to-br');
+                            
+                            // Add flip animation
+                            b.style.animation = 'flip-reveal 0.8s ease-in-out';
+                            
+                            setTimeout(() => {
+                                if (boxNum == boxNumber) {
+                                    // Selected box - show as winner (no bouncing icon)
+                                    boxContent.innerHTML = `
+                                        <div class="w-16 h-16 mx-auto mb-3 bg-white bg-opacity-30 rounded-full flex items-center justify-center text-2xl">
+                                            ${reward.icon}
+                                        </div>
+                                        <div class="font-bold text-lg text-yellow-200">SELECTED!</div>
+                                        <div class="text-sm">${reward.text}</div>
+                                    `;
+                                    boxContent.className = 'bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-lg p-6 text-center text-white shadow-lg';
+                                    b.style.animation = 'pulse-glow 2s ease-in-out infinite';
+                                } else {
+                                    // Other boxes - show what was inside
+                                    boxContent.innerHTML = `
+                                        <div class="w-16 h-16 mx-auto mb-3 bg-white bg-opacity-20 rounded-full flex items-center justify-center text-2xl">
+                                            ${reward.icon}
+                                        </div>
+                                        <div class="font-bold text-sm text-gray-300">Box ${boxNum}</div>
+                                        <div class="text-xs opacity-75">${reward.text}</div>
+                                    `;
+                                    boxContent.className = 'bg-gradient-to-br from-gray-400 to-gray-600 rounded-lg p-6 text-center text-white shadow-lg';
+                                    b.style.opacity = '0.6';
+                                    b.style.animation = 'none';
+                                }
+                            }, 400); // Half way through flip animation
+                        });
+                        
+                        // Show main reward display with slide-up animation
+                        setTimeout(() => {
+                            const rewardDisplay = document.getElementById('reward-display');
+                            document.getElementById('reward-content').innerHTML = `
+                                <div class="text-3xl mb-2">${selectedReward.icon}</div>
+                                <div class="text-xl font-bold">${selectedReward.text}</div>
+                                <div class="text-sm mt-2 opacity-90">Check the other boxes to see what you could have won!</div>
+                            `;
+                            rewardDisplay.style.transform = 'translateY(20px)';
+                            rewardDisplay.style.opacity = '0';
+                            rewardDisplay.style.transition = 'all 0.5s ease-out';
+                            rewardDisplay.classList.remove('hidden');
+                            
+                            // Slide up animation
+                            setTimeout(() => {
+                                rewardDisplay.style.transform = 'translateY(0)';
+                                rewardDisplay.style.opacity = '1';
+                            }, 50);
+                            
+                            // Send reward to backend
+                            // Show processing indicator
+                            setTimeout(() => {
+                                const processingDiv = document.createElement('div');
+                                processingDiv.id = 'processing-indicator';
+                                processingDiv.className = 'mt-3 p-2 bg-blue-100 text-blue-800 rounded-lg text-sm';
+                                processingDiv.innerHTML = `
+                                    <i data-lucide="loader" class="w-4 h-4 inline mr-1 animate-spin"></i>
+                                    Applying reward to your account...
+                                `;
+                                document.getElementById('reward-content').appendChild(processingDiv);
+                                
+                                // Initialize lucide icons for the new element
+                                if (typeof lucide !== 'undefined') {
+                                    lucide.createIcons();
+                                }
+                            }, 500);
+                            
+                            fetch('api/mystery_box_reward_api.php', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({
+                                    reward: selectedReward,
+                                    match_id: <?php echo $match['id'] ?? 'null'; ?>
+                                })
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                // Remove processing indicator
+                                const processingIndicator = document.getElementById('processing-indicator');
+                                if (processingIndicator) {
+                                    processingIndicator.remove();
+                                }
+                                
+                                if (data.success) {
+                                    console.log('Reward applied successfully:', data.message);
+                                    
+                                    // Disable all mystery boxes permanently
+                                    document.querySelectorAll('.mystery-box').forEach(b => {
+                                        b.style.pointerEvents = 'none';
+                                        b.style.opacity = '0.5';
+                                        b.style.cursor = 'not-allowed';
+                                    });
+                                    
+                                    // Update the reward display with confirmation
+                                    const confirmationDiv = document.createElement('div');
+                                    confirmationDiv.className = 'mt-3 p-2 bg-green-100 text-green-800 rounded-lg text-sm';
+                                    confirmationDiv.innerHTML = `
+                                        <i data-lucide="check-circle" class="w-4 h-4 inline mr-1"></i>
+                                        ${data.message}
+                                    `;
+                                    document.getElementById('reward-content').appendChild(confirmationDiv);
+                                    
+                                    // Add a note that mystery boxes are now disabled
+                                    setTimeout(() => {
+                                        const disabledNote = document.createElement('div');
+                                        disabledNote.className = 'mt-2 p-2 bg-gray-100 text-gray-600 rounded-lg text-xs';
+                                        disabledNote.innerHTML = `
+                                            <i data-lucide="lock" class="w-3 h-3 inline mr-1"></i>
+                                            Mystery boxes are now disabled for this match.
+                                        `;
+                                        document.getElementById('reward-content').appendChild(disabledNote);
+                                        
+                                        // Initialize lucide icons for the new element
+                                        if (typeof lucide !== 'undefined') {
+                                            lucide.createIcons();
+                                        }
+                                    }, 1000);
+                                    
+                                    // Initialize lucide icons for the new element
+                                    if (typeof lucide !== 'undefined') {
+                                        lucide.createIcons();
+                                    }
+                                } else {
+                                    console.error('Failed to apply reward:', data.message);
+                                    
+                                    // Show error message
+                                    const errorDiv = document.createElement('div');
+                                    errorDiv.className = 'mt-3 p-2 bg-red-100 text-red-800 rounded-lg text-sm';
+                                    errorDiv.innerHTML = `
+                                        <i data-lucide="x-circle" class="w-4 h-4 inline mr-1"></i>
+                                        Failed to apply reward. Please try again.
+                                    `;
+                                    document.getElementById('reward-content').appendChild(errorDiv);
+                                    
+                                    // Initialize lucide icons for the new element
+                                    if (typeof lucide !== 'undefined') {
+                                        lucide.createIcons();
+                                    }
+                                }
+                            })
+                            .catch(error => {
+                                console.error('Error applying reward:', error);
+                                
+                                // Remove processing indicator
+                                const processingIndicator = document.getElementById('processing-indicator');
+                                if (processingIndicator) {
+                                    processingIndicator.remove();
+                                }
+                                
+                                // Show error message
+                                const errorDiv = document.createElement('div');
+                                errorDiv.className = 'mt-3 p-2 bg-red-100 text-red-800 rounded-lg text-sm';
+                                errorDiv.innerHTML = `
+                                    <i data-lucide="wifi-off" class="w-4 h-4 inline mr-1"></i>
+                                    Connection error. Reward may not have been applied.
+                                `;
+                                document.getElementById('reward-content').appendChild(errorDiv);
+                                
+                                // Initialize lucide icons for the new element
+                                if (typeof lucide !== 'undefined') {
+                                    lucide.createIcons();
+                                }
+                            });
+                            
+                            console.log('Reward selected:', selectedReward);
+                            console.log('All box contents:', boxRewards);
+                        }, 1000);
+                        
+                    }, 200);
+                }, 800);
             });
+        });
+        <?php endif; ?>
+    </script>
+
+    <?php
+    endContent('Match Result');
+}
+
+function displayTeamLineup($team_data, $side) {
+    if (!$team_data) {
+        // AI team - generate basic lineup
+        echo '<div class="text-center text-gray-500 py-8">';
+        echo '<i data-lucide="users" class="w-12 h-12 mx-auto mb-3 text-gray-400"></i>';
+        echo '<p>AI Team Lineup</p>';
+        echo '<p class="text-sm">Formation: 4-4-2</p>';
+        echo '</div>';
+        return;
     }
 
-    // Event listeners
-    document.addEventListener('DOMContentLoaded', function () {
-        // Approve button event listeners
-        const approveBtn = document.getElementById('approveRewardBtn');
-        const popupApproveBtn = document.getElementById('popupApproveBtn');
-        const popupCloseBtn = document.getElementById('popupCloseBtn');
+    $team = json_decode($team_data['team'], true) ?? [];
+    $substitutes = json_decode($team_data['substitutes'], true) ?? [];
+    $formation = $team_data['formation'] ?? '4-4-2';
 
-        if (approveBtn) {
-            approveBtn.addEventListener('click', approveReward);
+    ?>
+    <div class="space-y-4">
+        <!-- Formation -->
+        <div class="text-center">
+            <span class="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm font-medium">
+                Formation: <?php echo htmlspecialchars($formation); ?>
+            </span>
+        </div>
+
+        <!-- Starting XI -->
+        <div>
+            <h4 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                <i data-lucide="users" class="w-4 h-4"></i>
+                Starting XI
+            </h4>
+            <div class="space-y-2">
+                <?php if (!empty($team)): ?>
+                    <?php foreach ($team as $index => $player): ?>
+                        <?php if ($player): ?>
+                            <div class="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
+                                <div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-bold">
+                                    <?php echo $index + 1; ?>
+                                </div>
+                                <div class="flex-1">
+                                    <div class="font-medium"><?php echo htmlspecialchars($player['name']); ?></div>
+                                    <div class="text-sm text-gray-600"><?php echo htmlspecialchars($player['position']); ?></div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-sm font-medium"><?php echo $player['rating']; ?></div>
+                                    <div class="text-xs text-gray-500">Rating</div>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <p class="text-gray-500 text-center py-4">No starting lineup set</p>
+                <?php endif; ?>
+            </div>
+        </div>
+
+        <!-- Substitutes -->
+        <?php if (!empty($substitutes)): ?>
+            <div>
+                <h4 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                    <i data-lucide="user-plus" class="w-4 h-4"></i>
+                    Substitutes
+                </h4>
+                <div class="space-y-2">
+                    <?php foreach ($substitutes as $player): ?>
+                        <?php if ($player): ?>
+                            <div class="flex items-center gap-3 p-2 bg-yellow-50 rounded-lg">
+                                <div class="w-6 h-6 bg-yellow-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                                    S
+                                </div>
+                                <div class="flex-1">
+                                    <div class="font-medium text-sm"><?php echo htmlspecialchars($player['name']); ?></div>
+                                    <div class="text-xs text-gray-600"><?php echo htmlspecialchars($player['position']); ?></div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-xs font-medium"><?php echo $player['rating']; ?></div>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        <?php endif; ?>
+    </div>
+    <?php
+}
+
+function handleClubChallenge($opponent_id) {
+    // Challenge system configuration
+    define('CHALLENGE_BASE_COST', 5000000); // €5M base cost
+    define('WIN_REWARD_PERCENTAGE', 1.5); // 150% of challenge cost (50% profit + cost back)
+
+    try {
+        $db = getDbConnection();
+
+        // Get user's team data
+        $stmt = $db->prepare('SELECT name, club_name, formation, team, budget FROM users WHERE id = :id');
+        $stmt->bindValue(':id', $_SESSION['user_id'], SQLITE3_INTEGER);
+        $result = $stmt->execute();
+        $user_data = $result->fetchArray(SQLITE3_ASSOC);
+
+        // Get opponent's team data
+        $stmt = $db->prepare('SELECT name, club_name, formation, team, budget FROM users WHERE id = :opponent_id AND id != :user_id');
+        $stmt->bindValue(':opponent_id', $opponent_id, SQLITE3_INTEGER);
+        $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+        $result = $stmt->execute();
+        $opponent_data = $result->fetchArray(SQLITE3_ASSOC);
+
+        if (!$user_data || !$opponent_data) {
+            header('Location: clubs.php');
+            exit;
         }
-        if (popupApproveBtn) {
-            popupApproveBtn.addEventListener('click', approveReward);
-        }
-        if (popupCloseBtn) {
-            popupCloseBtn.addEventListener('click', function () {
-                document.getElementById('matchResultPopup').classList.add('hidden');
-            });
-        }
-    });
 
-    // Update financial summary with live match results
-    function updateFinancialSummary() {
-        // Get live match results
-        const userGoals = parseInt($('#userScore').text());
-        const opponentGoals = parseInt($('#opponentScore').text());
-
-        // Determine match result
-        let matchResult;
-        if (userGoals > opponentGoals) {
-            matchResult = 'win';
-        } else if (userGoals < opponentGoals) {
-            matchResult = 'loss';
-        } else {
-            matchResult = 'draw';
+        // Check if challenge was properly initiated
+        if (!isset($_SESSION['active_challenge']) || $_SESSION['active_challenge']['opponent_id'] != $opponent_id) {
+            $_SESSION['challenge_error'] = 'Invalid challenge session. Please initiate the challenge again.';
+            header('Location: clubs.php');
+            exit;
         }
 
-        const challengeCost = <?php echo $challenge_cost; ?>;
-        const potentialReward = <?php echo $potential_reward; ?>;
-        const clubLevel = <?php echo $financial_result["club_level"]; ?>;
-        const levelBonus = <?php echo calculateLevelBonus($financial_result["club_level"]); ?>;
+        // Get challenge data from session
+        $challenge_cost = $_SESSION['active_challenge']['challenge_cost'];
+        $potential_reward = $challenge_cost * 1.5; // 150% of challenge cost
 
-        // Calculate earnings based on live result
-        let baseEarnings = 0;
-        let bonusEarnings = 0;
-        let message = '';
-        let cardClass = '';
-        let messageClass = '';
+        // Validate teams (without deducting budget again)
+        $user_team = json_decode($user_data['team'] ?? '[]', true);
+        $user_player_count = count(array_filter($user_team, fn($p) => $p !== null));
 
-        if (matchResult === 'win') {
-            baseEarnings = potentialReward;
-            bonusEarnings = baseEarnings * levelBonus;
-            message = 'Victory! You can earn ' + formatMarketValue(baseEarnings) + ' in prize money';
-            if (bonusEarnings > 0) {
-                message += ' + ' + formatMarketValue(bonusEarnings) + ' club level bonus!';
-            } else {
-                message += '!';
-            }
-            cardClass = 'from-green-50 to-green-100 border-green-200';
-            messageClass = 'text-green-700';
-        } else if (matchResult === 'draw') {
-            baseEarnings = challengeCost * 0.8;
-            bonusEarnings = baseEarnings * (levelBonus * 0.5);
-            message = 'Draw! You can receive ' + formatMarketValue(baseEarnings) + ' (80% refund)';
-            if (bonusEarnings > 0) {
-                message += ' + ' + formatMarketValue(bonusEarnings) + ' level bonus.';
-            } else {
-                message += '.';
-            }
-            cardClass = 'from-yellow-50 to-yellow-100 border-yellow-200';
-            messageClass = 'text-yellow-700';
-        } else {
-            // Loss - consolation bonus
-            if (clubLevel >= 2) {
-                const consolationRate = 0.1 + (clubLevel * 0.05);
-                baseEarnings = challengeCost * consolationRate;
-                message = 'Defeat! You lost the challenge fee but can receive ' + formatMarketValue(baseEarnings) + ' consolation bonus (' + Math.round(consolationRate * 100) + '% - Level ' + clubLevel + ').';
-            } else {
-                baseEarnings = challengeCost * 0.1;
-                message = 'Defeat! You lost the challenge fee but can receive ' + formatMarketValue(baseEarnings) + ' consolation bonus (10% - Level ' + clubLevel + ').';
-            }
-            cardClass = 'from-red-50 to-red-100 border-red-200';
-            messageClass = 'text-red-700';
+        if ($user_player_count < 11) {
+            $_SESSION['challenge_error'] = 'You need a complete team (11 players) to challenge other clubs!';
+            header('Location: clubs.php');
+            exit;
         }
 
-        const totalEarnings = baseEarnings + bonusEarnings;
-        const netResult = totalEarnings - challengeCost;
+        $opponent_team = json_decode($opponent_data['team'] ?? '[]', true);
+        $opponent_player_count = count(array_filter($opponent_team, fn($p) => $p !== null));
+        if ($opponent_player_count < 11) {
+            $_SESSION['challenge_error'] = 'This club doesn\'t have a complete team and cannot be challenged.';
+            header('Location: clubs.php');
+            exit;
+        }
 
-        // Update the financial summary display
-        const summaryCard = document.getElementById('financialSummaryCard');
-        const messageElement = document.getElementById('financialMessage');
-        const baseEarningsElement = document.getElementById('baseEarningsDisplay');
-        const levelBonusElement = document.getElementById('levelBonusDisplay');
-        const netResultElement = document.getElementById('netResultDisplay');
+        // Calculate team values
+        $user_team_value = calculateTeamValue($user_team);
+        $opponent_team_value = calculateTeamValue($opponent_team);
 
-        // Update card styling
-        summaryCard.className = 'bg-gradient-to-r ' + cardClass + ' border rounded-lg p-6 text-center';
+        // Simulate the match
+        $match_result = simulateClubMatch($user_team, $opponent_team, $user_team_value, $opponent_team_value);
 
-        // Update message
-        messageElement.textContent = message;
-        messageElement.className = 'text-2xl font-bold mb-2 ' + messageClass;
+        // Apply match injuries to user team
+        if (!empty($match_result['injuries'])) {
+            $user_team = applyClubMatchInjuries($user_team, $match_result['injuries']);
+            
+            // Update user team in database with injuries
+            $stmt = $db->prepare('UPDATE users SET team = :team WHERE id = :user_id');
+            $stmt->bindValue(':team', json_encode($user_team), SQLITE3_TEXT);
+            $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+            $stmt->execute();
+        }
 
-        // Update financial breakdown
-        baseEarningsElement.textContent = '+' + formatMarketValue(baseEarnings);
-        baseEarningsElement.className = 'text-lg font-bold text-green-600';
+        // Process match result and calculate rewards (but don't apply yet)
+        $financial_result = calculateMatchRewards($_SESSION['user_id'], $match_result, $challenge_cost, $potential_reward);
 
-        levelBonusElement.textContent = '+' + formatMarketValue(bonusEarnings);
-        levelBonusElement.className = 'text-lg font-bold text-purple-600';
+        // Store pending reward in session for approval
+        $_SESSION['pending_reward'] = [
+            'amount' => $financial_result['earnings'],
+            'challenge_cost' => $challenge_cost,
+            'match_result' => $match_result['result'],
+            'opponent_name' => $opponent_data['club_name'],
+            'financial_details' => $financial_result
+        ];
 
-        netResultElement.textContent = (netResult >= 0 ? '+' : '') + formatMarketValue(netResult);
-        netResultElement.className = 'text-lg font-bold ' + (netResult >= 0 ? 'text-green-600' : 'text-red-600');
+        // Clear the active challenge session since match is now set up
+        unset($_SESSION['active_challenge']);
 
-        // Update "After approval" budget
-        const currentBudget = <?php echo $user_data['budget']; ?>;
-        const afterApprovalBudget = currentBudget - challengeCost + totalEarnings;
-        const afterApprovalElement = document.getElementById('afterApprovalBudget');
-        if (afterApprovalElement) {
-            afterApprovalElement.textContent = 'After approval: ' + formatMarketValue(afterApprovalBudget);
+        $db->close();
+
+        // Display club challenge result page
+        displayClubChallengeResult($match_result, $user_data, $opponent_data, $financial_result);
+
+    } catch (Exception $e) {
+        header('Location: clubs.php');
+        exit;
+    }
+}
+
+function displayClubChallengeResult($match_result, $user_data, $opponent_data, $financial_result) {
+    startContent();
+    ?>
+
+    <div class="container mx-auto py-6">
+        <div class="max-w-4xl mx-auto">
+            <!-- Match Result Header -->
+            <div class="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden mb-6">
+                <div class="bg-gradient-to-r from-purple-500 to-purple-600 text-white p-6">
+                    <div class="text-center">
+                        <h1 class="text-3xl font-bold mb-2">Club Challenge Result</h1>
+                        <p class="text-purple-100">
+                            <?php echo htmlspecialchars($user_data['club_name']); ?> vs 
+                            <?php echo htmlspecialchars($opponent_data['club_name']); ?>
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Match Result Display -->
+            <div class="bg-white rounded-lg shadow border border-gray-200 p-6 mb-6">
+                <div class="text-center">
+                    <div class="text-6xl font-bold mb-4 <?php 
+                        echo $match_result['result'] === 'win' ? 'text-green-600' : 
+                            ($match_result['result'] === 'draw' ? 'text-yellow-600' : 'text-red-600'); 
+                    ?>">
+                        <?php echo $match_result['user_score']; ?> - <?php echo $match_result['opponent_score']; ?>
+                    </div>
+                    <div class="text-2xl font-bold mb-2 <?php 
+                        echo $match_result['result'] === 'win' ? 'text-green-600' : 
+                            ($match_result['result'] === 'draw' ? 'text-yellow-600' : 'text-red-600'); 
+                    ?>">
+                        <?php 
+                        echo $match_result['result'] === 'win' ? 'VICTORY!' : 
+                            ($match_result['result'] === 'draw' ? 'DRAW!' : 'DEFEAT!'); 
+                        ?>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Continue to reward approval -->
+            <div class="text-center">
+                <a href="clubs.php" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 font-medium">
+                    Continue
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <?php
+    endContent('Club Challenge Result');
+}
+
+// Challenge validation functions and utilities
+function calculateMatchRewards($user_id, $match_result, $challenge_cost, $potential_reward) {
+    $earnings = 0;
+    $details = [];
+
+    if ($match_result['result'] === 'win') {
+        $earnings = $potential_reward;
+        $details[] = "Victory reward: €" . number_format($potential_reward);
+    } elseif ($match_result['result'] === 'draw') {
+        $earnings = $challenge_cost; // Get challenge cost back
+        $details[] = "Draw - challenge cost returned: €" . number_format($challenge_cost);
+    } else {
+        $earnings = 0;
+        $details[] = "Defeat - no reward";
+    }
+
+    return [
+        'earnings' => $earnings,
+        'details' => $details
+    ];
+}
+
+function calculateTeamValue($team) {
+    $total_value = 0;
+    foreach ($team as $player) {
+        if ($player && isset($player['value'])) {
+            $total_value += $player['value'];
+        }
+    }
+    return $total_value;
+}
+
+// Simulate match between two teams (for club challenges)
+function simulateClubMatch($user_team, $opponent_team, $user_team_value, $opponent_team_value) {
+    // Calculate team strengths based on multiple factors
+    $user_strength = calculateClubTeamStrength($user_team, $user_team_value);
+    $opponent_strength = calculateClubTeamStrength($opponent_team, $opponent_team_value);
+
+    // Add some randomness to make matches unpredictable
+    $user_performance = $user_strength * (0.7 + (mt_rand(0, 60) / 100)); // 70-130% of strength
+    $opponent_performance = $opponent_strength * (0.7 + (mt_rand(0, 60) / 100));
+
+    // Generate scores based on performance
+    $user_score = max(0, round(($user_performance / 100) * (mt_rand(0, 4) + mt_rand(0, 2))));
+    $opponent_score = max(0, round(($opponent_performance / 100) * (mt_rand(0, 4) + mt_rand(0, 2))));
+
+    // Determine result
+    $result = 'draw';
+    if ($user_score > $opponent_score) {
+        $result = 'win';
+    } elseif ($user_score < $opponent_score) {
+        $result = 'loss';
+    }
+
+    // Generate potential injuries (low chance)
+    $injuries = [];
+    if (mt_rand(1, 100) <= 15) { // 15% chance of injury
+        $injured_player_index = mt_rand(0, count($user_team) - 1);
+        if ($user_team[$injured_player_index]) {
+            $injuries[] = $injured_player_index;
         }
     }
 
-    // Update session with live match result
-    function updateSessionWithLiveResult() {
-        const userGoals = parseInt($('#userScore').text());
-        const opponentGoals = parseInt($('#opponentScore').text());
+    return [
+        'user_score' => $user_score,
+        'opponent_score' => $opponent_score,
+        'result' => $result,
+        'user_performance' => round($user_performance, 1),
+        'opponent_performance' => round($opponent_performance, 1),
+        'injuries' => $injuries
+    ];
+}
 
-        fetch('api/update_match_result_api.php', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                userGoals: userGoals,
-                opponentGoals: opponentGoals
-            })
-        })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    console.log('Session updated with live result:', data.match_result);
-                } else {
-                    console.error('Failed to update session:', data.message);
-                }
-            })
-            .catch(error => {
-                console.error('Error updating session:', error);
-            });
-    }
+function calculateClubTeamStrength($team, $team_value) {
+    if (empty($team)) return 50;
 
-    // Format market value function (JavaScript version)
-    function formatMarketValue(value) {
-        if (value >= 1000000) {
-            return '€' + (value / 1000000).toFixed(1) + 'M';
-        } else if (value >= 1000) {
-            return '€' + Math.round(value / 1000) + 'K';
-        } else {
-            return '€' + value.toLocaleString();
+    $total_rating = 0;
+    $player_count = 0;
+
+    foreach ($team as $player) {
+        if ($player && isset($player['rating'])) {
+            $total_rating += $player['rating'];
+            $player_count++;
         }
     }
-</script>
 
-<?php
-// End content capture and render layout
-endContent('Live Match Simulation', 'match', true, false, true);
+    if ($player_count === 0) return 50;
+
+    $average_rating = $total_rating / $player_count;
+    
+    // Base strength from average rating (50-100 range)
+    $strength = min(100, max(50, $average_rating));
+    
+    // Slight adjustment based on team value
+    $value_factor = min(10, ($team_value / 100000000) * 5); // Max 10 point bonus for very expensive teams
+    $strength += $value_factor;
+
+    return min(100, $strength);
+}
+
+function applyClubMatchInjuries($team, $injury_indices) {
+    foreach ($injury_indices as $index) {
+        if (isset($team[$index]) && $team[$index]) {
+            // Reduce player fitness/rating temporarily
+            $team[$index]['fitness'] = max(50, ($team[$index]['fitness'] ?? 100) - mt_rand(10, 30));
+            $team[$index]['injury_status'] = 'minor'; // Could be used for future injury system
+        }
+    }
+    return $team;
+}
 ?>

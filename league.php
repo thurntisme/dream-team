@@ -86,9 +86,6 @@ try {
     // Get current gameweek
     $current_gameweek = getCurrentGameweek($db, $current_season);
 
-    // Check if user has a match in current gameweek
-    $user_has_match = hasUserMatchInGameweek($db, $user_id, $current_season, $current_gameweek);
-
     // Get current validation status for display
     $current_validation = validateClubForLeague($user);
 
@@ -151,17 +148,6 @@ startContent();
                     <i data-lucide="alert-triangle" class="w-4 h-4"></i>
                     <span class="font-medium">Club Not Eligible</span>
                 </div>
-            <?php elseif ($user_has_match): ?>
-                <div class="bg-green-100 text-green-800 px-4 py-2 rounded-lg flex items-center gap-2">
-                    <i data-lucide="play" class="w-4 h-4"></i>
-                    <span class="font-medium">You have a match this gameweek!</span>
-                </div>
-            <?php else: ?>
-                <button id="simulateAllBtn"
-                    class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2">
-                    <i data-lucide="fast-forward" class="w-4 h-4"></i>
-                    Simulate Gameweek
-                </button>
             <?php endif; ?>
         </div>
     </div>
@@ -714,20 +700,15 @@ startContent();
                         </div>
                     </div>
                     
-                    <?php if ($user_has_match): ?>
-                        <form method="POST" class="inline">
+                    <?php if ($next_match): ?>
+                        <form method="GET" action="match-simulator.php" class="inline">
                             <input type="hidden" name="match_id" value="<?php echo $next_match['id']; ?>">
-                            <button type="submit" name="simulate_match"
+                            <button type="submit"
                                 class="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 font-medium transition-colors flex items-center gap-2 shadow-md">
                                 <i data-lucide="play" class="w-4 h-4"></i>
                                 Play Match
                             </button>
                         </form>
-                    <?php else: ?>
-                        <div class="bg-gray-100 text-gray-600 px-4 py-2 rounded-lg font-medium flex items-center gap-2">
-                            <i data-lucide="clock" class="w-4 h-4"></i>
-                            <span>Waiting for gameweek</span>
-                        </div>
                     <?php endif; ?>
                 </div>
             </div>
@@ -1502,24 +1483,6 @@ startContent();
                 // User is leaving the gameweek completed page, clear rewards
                 navigator.sendBeacon('api/clear_gameweek_results_api.php');
             }
-        });
-
-        // Simulate gameweek
-        document.getElementById('simulateAllBtn')?.addEventListener('click', function () {
-            Swal.fire({
-                icon: 'question',
-                title: 'Simulate Gameweek?',
-                text: 'This will simulate all matches in the current gameweek.',
-                showCancelButton: true,
-                confirmButtonColor: '#3b82f6 ',
-                cancelButtonColor: '#6b7280 ',
-                confirmButtonText: 'Simulate Gameweek',
-                cancelButtonText: 'Cancel'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    window.location.href = 'simulate_league.php';
-                }
-            });
         });
 
         // Process nation call
