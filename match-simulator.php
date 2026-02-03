@@ -566,25 +566,34 @@ function displayLeagueMatch($match, $user_data, $opponent_data, $is_home, $oppon
 
             playersList.innerHTML = html;
             modal.classList.remove('hidden');
-
-            // Attach close listeners after modal is shown
-            attachFitnessWarningListeners();
+            document.body.style.overflow = 'hidden'; // Disable body scroll
         }
 
-        function attachFitnessWarningListeners() {
-            const closeBtn = document.getElementById('closeFitnessWarningModal');
+        function closeFitnessWarning() {
             const modal = document.getElementById('fitnessWarningModal');
+            if (modal) {
+                modal.classList.add('hidden');
+                document.body.style.overflow = ''; // Re-enable body scroll
+            }
+        }
 
-            if (closeBtn) {
-                closeBtn.addEventListener('click', function() {
-                    modal.classList.add('hidden');
-                });
+        function initFitnessWarningListeners() {
+            const modal = document.getElementById('fitnessWarningModal');
+            const closeBtnIcon = document.getElementById('closeFitnessWarningModal');
+            const closeBtnFooter = document.getElementById('closeFitnessWarningModalBtn');
+
+            if (closeBtnIcon) {
+                closeBtnIcon.addEventListener('click', closeFitnessWarning);
+            }
+
+            if (closeBtnFooter) {
+                closeBtnFooter.addEventListener('click', closeFitnessWarning);
             }
 
             if (modal) {
                 modal.addEventListener('click', function(e) {
                     if (e.target === this) {
-                        this.classList.add('hidden');
+                        closeFitnessWarning();
                     }
                 });
             }
@@ -592,37 +601,9 @@ function displayLeagueMatch($match, $user_data, $opponent_data, $is_home, $oppon
 
         // Initialize fitness warning listeners when DOM is ready
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', function() {
-                const closeBtn = document.getElementById('closeFitnessWarningModal');
-                const modal = document.getElementById('fitnessWarningModal');
-
-                if (closeBtn && modal) {
-                    closeBtn.addEventListener('click', function() {
-                        modal.classList.add('hidden');
-                    });
-
-                    modal.addEventListener('click', function(e) {
-                        if (e.target === this) {
-                            this.classList.add('hidden');
-                        }
-                    });
-                }
-            });
+            document.addEventListener('DOMContentLoaded', initFitnessWarningListeners);
         } else {
-            const closeBtn = document.getElementById('closeFitnessWarningModal');
-            const modal = document.getElementById('fitnessWarningModal');
-
-            if (closeBtn && modal) {
-                closeBtn.addEventListener('click', function() {
-                    modal.classList.add('hidden');
-                });
-
-                modal.addEventListener('click', function(e) {
-                    if (e.target === this) {
-                        this.classList.add('hidden');
-                    }
-                });
-            }
+            initFitnessWarningListeners();
         }
     </script>
 
@@ -663,7 +644,7 @@ function displayLeagueMatch($match, $user_data, $opponent_data, $is_home, $oppon
                     <i data-lucide="users" class="w-4 h-4"></i>
                     Go to Team
                 </a>
-                <button id="closeFitnessWarningModal" class="bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700 font-medium transition-colors">
+                <button id="closeFitnessWarningModalBtn" class="bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700 font-medium transition-colors">
                     Close
                 </button>
             </div>
