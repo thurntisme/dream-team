@@ -45,7 +45,7 @@ startContent();
                                 <?php echo htmlspecialchars($season_summary['user_team_data']['name']); ?>
                             </h2>
                             <p class="text-blue-100">
-                                <?php echo $season_summary['user_division'] == 1 ? 'Premier League' : 'Championship'; ?>
+                                <?php echo $season_summary['user_division'] == 1 ? 'Elite League' : 'Pro League'; ?>
                                 -
                                 <?php echo ordinal($season_summary['user_position']); ?> Place
                             </p>
@@ -208,7 +208,7 @@ startContent();
         <div class="bg-gradient-to-r from-gray-700 to-gray-800 text-white p-4">
             <h3 class="text-xl font-bold flex items-center gap-2">
                 <i data-lucide="list" class="w-6 h-6"></i>
-                Final Premier League Table
+                Final Elite League Table
             </h3>
         </div>
         <div class="overflow-x-auto">
@@ -310,7 +310,7 @@ startContent();
             <div class="bg-gradient-to-r from-green-500 to-green-600 text-white p-4">
                 <h3 class="text-lg font-bold flex items-center gap-2">
                     <i data-lucide="arrow-up" class="w-5 h-5"></i>
-                    Promoted to Premier League
+                    Promoted to Elite League
                 </h3>
             </div>
             <div class="p-4">

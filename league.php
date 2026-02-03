@@ -34,11 +34,43 @@ try {
         exit;
     }
 
-    // Initialize league if not exists
-    initializeLeague($db, $user_id);
-
     // Get current season
     $current_season = getCurrentSeason($db);
+    
+    // Check if league exists for current season
+    $stmt = $db->prepare('SELECT COUNT(*) as count FROM league_teams WHERE season = :season');
+    $stmt->bindValue(':season', $current_season, SQLITE3_INTEGER);
+    $result = $stmt->execute();
+    $row = $result->fetchArray(SQLITE3_ASSOC);
+    $league_exists = $row['count'] > 0;
+
+    // Handle league creation
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_league'])) {
+        // Re-validate club before league creation
+        $club_validation = validateClubForLeague($user);
+        if (!$club_validation['is_valid']) {
+            $_SESSION['league_validation_errors'] = $club_validation['errors'];
+            header('Location: team.php?league_validation_failed=1');
+            exit;
+        }
+
+        // Create league tables if they don't exist
+        createLeagueTables($db);
+        
+        // Create league teams and fixtures
+        createLeagueTeams($db, $user_id, $current_season);
+        generateFixtures($db, $current_season);
+        
+        $_SESSION['success_message'] = 'League created successfully! Your season begins now.';
+        header('Location: league.php');
+        exit;
+    }
+
+    // If no league exists, show create league page
+    if (!$league_exists) {
+        displayCreateLeaguePage($db, $current_season, $user);
+        exit;
+    }
 
     // Handle match simulation - simulate entire gameweek
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['simulate_match'])) {
@@ -130,12 +162,21 @@ startContent();
 ?>
 
 <div class="container mx-auto py-6">
+    <!-- Success Message -->
+    <?php if (isset($_SESSION['success_message'])): ?>
+        <div class="bg-green-100 border border-green-200 text-green-800 px-4 py-3 rounded-lg mb-6 flex items-center gap-2">
+            <i data-lucide="check-circle" class="w-5 h-5"></i>
+            <span><?php echo htmlspecialchars($_SESSION['success_message']); ?></span>
+        </div>
+        <?php unset($_SESSION['success_message']); ?>
+    <?php endif; ?>
+
     <!-- Header -->
     <div class="flex items-center justify-between mb-6">
         <div class="flex items-center gap-3">
             <i data-lucide="trophy" class="w-8 h-8 text-yellow-600"></i>
             <div>
-                <h1 class="text-2xl font-bold">Premier League</h1>
+                <h1 class="text-2xl font-bold">Elite League</h1>
                 <p class="text-gray-600">Season <?php echo $current_season; ?> • Gameweek
                     <?php echo $current_gameweek; ?>
                 </p>
@@ -531,8 +572,8 @@ startContent();
                 <div class="mt-4 p-4 bg-white bg-opacity-10 rounded-lg">
                     <h4 class="font-semibold mb-2">What happens next:</h4>
                     <ul class="text-sm text-orange-100 space-y-1">
-                        <li>• Bottom 3 teams will be relegated to Championship</li>
-                        <li>• Top 3 Championship teams will be promoted to Premier League</li>
+                        <li>• Bottom 3 teams will be relegated to Pro League</li>
+                        <li>• Top 3 Pro League teams will be promoted to Elite League</li>
                         <li>• New season fixtures will be generated</li>
                         <li>• All team statistics will be reset for the new season</li>
                     </ul>
@@ -575,7 +616,7 @@ startContent();
                     <div class="bg-white bg-opacity-10 rounded-lg p-4">
                         <h4 class="font-semibold mb-2 flex items-center gap-2">
                             <i data-lucide="arrow-up" class="w-4 h-4 text-green-300"></i>
-                            Promoted to Premier League
+                            Promoted to Elite League
                         </h4>
                         <ul class="text-sm space-y-1">
                             <?php foreach ($relegation['promoted_teams'] as $team): ?>
@@ -696,7 +737,7 @@ startContent();
                         </div>
                         <div class="flex items-center gap-1">
                             <i data-lucide="trophy" class="w-4 h-4"></i>
-                            <span>Premier League</span>
+                            <span>Elite League</span>
                         </div>
                     </div>
                     
@@ -859,10 +900,10 @@ startContent();
                 League Structure
             </h4>
             <div class="text-sm text-gray-700 space-y-1">
-                <p><strong>Premier League:</strong> 20 teams compete for the title and European qualification</p>
-                <p><strong>Championship:</strong> 24 teams compete for promotion to the Premier League</p>
-                <p><strong>Relegation/Promotion:</strong> At season end, bottom 3 Premier League teams are relegated and
-                    top 3 Championship teams are promoted</p>
+                <p><strong>Elite League:</strong> 20 teams compete for the title and European qualification</p>
+                <p><strong>Pro League:</strong> 20 teams compete for promotion to the Elite League</p>
+                <p><strong>Relegation/Promotion:</strong> At season end, bottom 3 Elite League teams are relegated and
+                    top 3 Pro League teams are promoted</p>
             </div>
         </div>
     </div>
@@ -1586,8 +1627,8 @@ startContent();
                     <div class="text-left">
                         <p class="mb-3">This will finalize the current season and:</p>
                         <ul class="text-sm space-y-1 mb-3">
-                            <li>• Relegate bottom 3 Premier League teams</li>
-                            <li>• Promote top 3 Championship teams</li>
+                            <li>• Relegate bottom 3 Elite League teams</li>
+                            <li>• Promote top 3 Pro League teams</li>
                             <li>• Start a new season with fresh fixtures</li>
                             <li>• Reset all team statistics</li>
                         </ul>
@@ -2114,4 +2155,150 @@ startContent();
 
 <?php
 endContent('League - Dream Team', 'league', true, false, true);
+
+function displayCreateLeaguePage($db, $current_season, $user) {
+    startContent();
+    ?>
+    
+    <div class="container mx-auto py-6">
+        <!-- Header -->
+        <div class="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden mb-6">
+            <div class="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-6">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
+                        <i data-lucide="trophy" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-bold">Elite League <?php echo $current_season; ?></h1>
+                        <p class="text-blue-100">Ready to start your league journey?</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- League Preview -->
+        <div class="grid md:grid-cols-2 gap-6 mb-6">
+            <!-- Premier League Teams Preview -->
+            <div class="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
+                <div class="bg-green-50 border-b border-green-200 p-4">
+                    <h3 class="font-bold text-lg text-green-800 flex items-center gap-2">
+                        <i data-lucide="crown" class="w-5 h-5"></i>
+                        Elite League (Division 1)
+                    </h3>
+                    <p class="text-green-600 text-sm">20 teams competing for the title</p>
+                </div>
+                <div class="p-4 max-h-96 overflow-y-auto">
+                    <div class="space-y-2">
+                        <!-- User's Team -->
+                        <div class="flex items-center gap-3 p-2 bg-blue-50 rounded-lg border border-blue-200">
+                            <div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-bold">
+                                1
+                            </div>
+                            <div class="flex-1">
+                                <div class="font-medium text-blue-800"><?php echo htmlspecialchars($user['club_name']); ?></div>
+                                <div class="text-xs text-blue-600">Your Team</div>
+                            </div>
+                        </div>
+                        
+                        <!-- All 19 AI Teams -->
+                        <?php foreach (FAKE_CLUBS as $index => $team_name): ?>
+                            <div class="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
+                                <div class="w-8 h-8 bg-gray-500 rounded-full flex items-center justify-center text-white text-sm font-bold">
+                                    <?php echo $index + 2; ?>
+                                </div>
+                                <div class="flex-1">
+                                    <div class="font-medium text-gray-700"><?php echo htmlspecialchars($team_name); ?></div>
+                                    <div class="text-xs text-gray-500">AI Team</div>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Championship Teams Preview -->
+            <div class="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
+                <div class="bg-orange-50 border-b border-orange-200 p-4">
+                    <h3 class="font-bold text-lg text-orange-800 flex items-center gap-2">
+                        <i data-lucide="medal" class="w-5 h-5"></i>
+                        Pro League (Division 2)
+                    </h3>
+                    <p class="text-orange-600 text-sm">20 teams fighting for promotion</p>
+                </div>
+                <div class="p-4 max-h-96 overflow-y-auto">
+                    <div class="space-y-2">
+                        <!-- All 20 Championship Teams -->
+                        <?php foreach (CHAMPIONSHIP_CLUBS as $index => $team_name): ?>
+                            <div class="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
+                                <div class="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center text-white text-sm font-bold">
+                                    <?php echo $index + 1; ?>
+                                </div>
+                                <div class="flex-1">
+                                    <div class="font-medium text-gray-700"><?php echo htmlspecialchars($team_name); ?></div>
+                                    <div class="text-xs text-gray-500">AI Team</div>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- League Information -->
+        <div class="bg-white rounded-lg shadow border border-gray-200 p-6 mb-6">
+            <h3 class="font-bold text-lg text-gray-900 mb-4 flex items-center gap-2">
+                <i data-lucide="info" class="w-5 h-5 text-blue-600"></i>
+                League Information
+            </h3>
+            <div class="grid md:grid-cols-3 gap-4">
+                <div class="text-center p-4 bg-blue-50 rounded-lg">
+                    <div class="text-2xl font-bold text-blue-600">38</div>
+                    <div class="text-sm text-blue-800">Gameweeks</div>
+                    <div class="text-xs text-blue-600 mt-1">Full season schedule</div>
+                </div>
+                <div class="text-center p-4 bg-green-50 rounded-lg">
+                    <div class="text-2xl font-bold text-green-600">40</div>
+                    <div class="text-sm text-green-800">Total Teams</div>
+                    <div class="text-xs text-green-600 mt-1">20 Premier + 20 Championship</div>
+                </div>
+                <div class="text-center p-4 bg-purple-50 rounded-lg">
+                    <div class="text-2xl font-bold text-purple-600">€5M+</div>
+                    <div class="text-sm text-purple-800">Match Rewards</div>
+                    <div class="text-xs text-purple-600 mt-1">Win bonuses & prizes</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Create League Action -->
+        <div class="bg-white rounded-lg shadow border border-gray-200 p-6">
+            <div class="text-center">
+                <div class="mb-4">
+                    <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <i data-lucide="play" class="w-8 h-8 text-green-600"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-2">Ready to Start Your Season?</h3>
+                    <p class="text-gray-600 mb-6">
+                        Create the league and begin your journey to become the Elite League champion!<br>
+                        Your team will be placed in the Elite League alongside 19 other competitive clubs.
+                    </p>
+                </div>
+                
+                <form method="POST" class="inline">
+                    <button type="submit" name="create_league" 
+                            class="bg-green-600 text-white px-8 py-4 rounded-lg hover:bg-green-700 font-bold text-lg transition-colors flex items-center gap-3 mx-auto shadow-lg">
+                        <i data-lucide="trophy" class="w-6 h-6"></i>
+                        Create Elite League <?php echo $current_season; ?>
+                    </button>
+                </form>
+                
+                <p class="text-sm text-gray-500 mt-4">
+                    This will create the full league structure with all teams and fixtures for the season.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <?php
+    endContent('Create League - Dream Team');
+}
 ?>

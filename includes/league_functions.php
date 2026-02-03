@@ -69,14 +69,14 @@ function createLeagueTeams($db, $user_id, $season)
     $result = $stmt->execute();
     $user = $result->fetchArray(SQLITE3_ASSOC);
 
-    // Insert user's team in Premier League (Division 1)
+    // Insert user's team in Elite League (Division 1)
     $stmt = $db->prepare('INSERT INTO league_teams (season, user_id, name, is_user, division) VALUES (:season, :user_id, :name, 1, 1)');
     $stmt->bindValue(':season', $season, SQLITE3_INTEGER);
     $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
     $stmt->bindValue(':name', $user['club_name'], SQLITE3_TEXT);
     $stmt->execute();
 
-    // Insert Premier League fake teams (Division 1) - 19 teams
+    // Insert Elite League fake teams (Division 1) - 19 teams
     foreach (FAKE_CLUBS as $club_name) {
         $stmt = $db->prepare('INSERT INTO league_teams (season, name, is_user, division) VALUES (:season, :name, 0, 1)');
         $stmt->bindValue(':season', $season, SQLITE3_INTEGER);
@@ -95,7 +95,7 @@ function createLeagueTeams($db, $user_id, $season)
 
 function generateFixtures($db, $season)
 {
-    // Get all Premier League teams for the season (Division 1 only)
+    // Get all Elite League teams for the season (Division 1 only)
     $stmt = $db->prepare('SELECT id FROM league_teams WHERE season = :season AND division = 1 ORDER BY id');
     $stmt->bindValue(':season', $season, SQLITE3_INTEGER);
     $result = $stmt->execute();
@@ -1421,17 +1421,17 @@ function processRelegationPromotion($db, $season)
         return ['success' => false, 'message' => 'Relegation already processed for this season'];
     }
 
-    // Get final Premier League standings
+    // Get final Elite League standings
     $premier_standings = getLeagueStandings($db, $season);
 
-    // Get final Championship standings
+    // Get final Pro League standings
     $championship_standings = getChampionshipStandings($db, $season);
 
     if (count($premier_standings) < 20 || count($championship_standings) < 3) {
         return ['success' => false, 'message' => 'Invalid league structure for relegation'];
     }
 
-    // Teams to be relegated (bottom 3 from Premier League)
+    // Teams to be relegated (bottom 3 from Elite League)
     $relegated_teams = array_slice($premier_standings, -3);
 
     // Teams to be promoted (top 3 from Championship)
@@ -1475,7 +1475,7 @@ function processRelegationPromotion($db, $season)
         // Create teams for next season
         $next_season = $season + 1;
 
-        // 1. Keep top 17 Premier League teams in Division 1
+        // 1. Keep top 17 Elite League teams in Division 1
         $staying_premier_teams = array_slice($premier_standings, 0, 17);
         foreach ($staying_premier_teams as $team) {
             $stmt = $db->prepare('INSERT INTO league_teams (season, user_id, name, is_user, division) VALUES (:season, :user_id, :name, :is_user, 1)');
@@ -1522,7 +1522,7 @@ function processRelegationPromotion($db, $season)
                 $stmt->execute();
             }
 
-            // Add relegated Premier League teams (non-user) to Championship
+            // Add relegated Elite League teams (non-user) to Pro League
             foreach ($relegated_teams as $team) {
                 if (!$team['is_user']) {
                     $stmt = $db->prepare('INSERT INTO league_teams (season, user_id, name, is_user, division) VALUES (:season, :user_id, :name, :is_user, 2)');
@@ -1534,7 +1534,7 @@ function processRelegationPromotion($db, $season)
                 }
             }
         } else {
-            // User stays in Premier League, create new Championship with remaining teams
+            // User stays in Elite League, create new Pro League with remaining teams
             $remaining_championship = array_slice($championship_standings, 3); // Teams 4-24 from Championship
             foreach ($remaining_championship as $team) {
                 $stmt = $db->prepare('INSERT INTO league_teams (season, user_id, name, is_user, division) VALUES (:season, :user_id, :name, :is_user, 2)');
@@ -1545,7 +1545,7 @@ function processRelegationPromotion($db, $season)
                 $stmt->execute();
             }
 
-            // Add relegated Premier League teams to Championship
+            // Add relegated Elite League teams to Pro League
             foreach ($relegated_teams as $team) {
                 $stmt = $db->prepare('INSERT INTO league_teams (season, user_id, name, is_user, division) VALUES (:season, :user_id, :name, :is_user, 2)');
                 $stmt->bindValue(':season', $next_season, SQLITE3_INTEGER);
@@ -1556,7 +1556,7 @@ function processRelegationPromotion($db, $season)
             }
         }
 
-        // Generate fixtures for next season (Premier League only)
+        // Generate fixtures for next season (Elite League only)
         generateFixtures($db, $next_season);
 
         $db->exec('COMMIT');
@@ -1620,8 +1620,8 @@ function calculateSeasonEndRewards($position, $division = 1)
 {
     $rewards = [];
 
-    if ($division == 1) { // Premier League
-        // Base prize money for Premier League participation
+    if ($division == 1) { // Elite League
+        // Base prize money for Elite League participation
         $base_prize = 50000000; // €50M base
 
         // Position-based prize money (higher for better positions)
@@ -1629,7 +1629,7 @@ function calculateSeasonEndRewards($position, $division = 1)
 
         // Special bonuses
         if ($position == 1) {
-            $rewards[] = ['type' => 'prize', 'description' => 'Premier League Champions', 'amount' => 100000000];
+            $rewards[] = ['type' => 'prize', 'description' => 'Elite League Champions', 'amount' => 100000000];
             $rewards[] = ['type' => 'prize', 'description' => 'Champions League Qualification', 'amount' => 25000000];
         } elseif ($position <= 4) {
             $rewards[] = ['type' => 'prize', 'description' => 'Champions League Qualification', 'amount' => 25000000];
@@ -1642,7 +1642,7 @@ function calculateSeasonEndRewards($position, $division = 1)
             $rewards[] = ['type' => 'compensation', 'description' => 'Relegation Compensation', 'amount' => 20000000];
         }
 
-        $rewards[] = ['type' => 'prize', 'description' => 'Premier League Participation', 'amount' => $base_prize];
+        $rewards[] = ['type' => 'prize', 'description' => 'Elite League Participation', 'amount' => $base_prize];
         $rewards[] = ['type' => 'prize', 'description' => "Final Position: {$position}th Place", 'amount' => $position_prize];
 
     } else { // Championship
@@ -1651,10 +1651,10 @@ function calculateSeasonEndRewards($position, $division = 1)
         $position_prize = (25 - $position) * 500000; // €500K per position from bottom
 
         if ($position == 1) {
-            $rewards[] = ['type' => 'prize', 'description' => 'Championship Winners', 'amount' => 20000000];
-            $rewards[] = ['type' => 'prize', 'description' => 'Premier League Promotion', 'amount' => 30000000];
+            $rewards[] = ['type' => 'prize', 'description' => 'Pro League Winners', 'amount' => 20000000];
+            $rewards[] = ['type' => 'prize', 'description' => 'Elite League Promotion', 'amount' => 30000000];
         } elseif ($position <= 3) {
-            $rewards[] = ['type' => 'prize', 'description' => 'Premier League Promotion', 'amount' => 30000000];
+            $rewards[] = ['type' => 'prize', 'description' => 'Elite League Promotion', 'amount' => 30000000];
         }
 
         $rewards[] = ['type' => 'prize', 'description' => 'Championship Participation', 'amount' => $base_prize];
@@ -1669,10 +1669,10 @@ function calculateSeasonEndRewards($position, $division = 1)
  */
 function getSeasonEndSummary($db, $season, $user_id)
 {
-    // Get final Premier League standings
+    // Get final Elite League standings
     $premier_standings = getLeagueStandings($db, $season);
 
-    // Get final Championship standings  
+    // Get final Pro League standings  
     $championship_standings = getChampionshipStandings($db, $season);
 
     // Find user's position and division
@@ -1680,7 +1680,7 @@ function getSeasonEndSummary($db, $season, $user_id)
     $user_division = null;
     $user_team_data = null;
 
-    // Check Premier League first
+    // Check Elite League first
     foreach ($premier_standings as $index => $team) {
         if ($team['user_id'] == $user_id) {
             $user_position = $index + 1;
@@ -1690,7 +1690,7 @@ function getSeasonEndSummary($db, $season, $user_id)
         }
     }
 
-    // If not found in Premier League, check Championship
+    // If not found in Elite League, check Pro League
     if ($user_position === null) {
         foreach ($championship_standings as $index => $team) {
             if ($team['user_id'] == $user_id) {

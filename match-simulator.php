@@ -108,7 +108,7 @@ function displayLeagueMatch($match, $user_data, $opponent_data, $is_home) {
                             <i data-lucide="stadium" class="w-6 h-6"></i>
                         </div>
                         <div>
-                            <h1 class="text-2xl font-bold">Premier League Match</h1>
+                            <h1 class="text-2xl font-bold">Elite League Match</h1>
                             <p class="text-blue-100">
                                 Gameweek <?php echo $match['gameweek']; ?> • 
                                 <?php echo date('l, M j, Y', strtotime($match['match_date'])); ?>
@@ -314,7 +314,7 @@ function displayMatchResultPage($match, $is_home, $user_score, $opponent_score, 
                         </div>
                     </div>
                     <div class="mt-4 text-sm opacity-90">
-                        Gameweek <?php echo $match['gameweek']; ?> • Premier League
+                        Gameweek <?php echo $match['gameweek']; ?> • Elite League
                     </div>
                 </div>
             </div>

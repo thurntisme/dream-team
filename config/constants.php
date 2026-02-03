@@ -471,11 +471,7 @@ define('CHAMPIONSHIP_CLUBS', [
     'Volcanic United',
     'Tornado FC',
     'Lightning Hawks',
-    'Storm Breakers',
-    'Diamond Crusaders',
-    'Emerald City FC',
-    'Ruby Rangers',
-    'Sapphire United'
+    'Storm Breakers'
 ]);
 
 // Staff System Constants
