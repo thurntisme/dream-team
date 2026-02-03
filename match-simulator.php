@@ -86,8 +86,19 @@ function handleLeagueMatch($match_id)
 
         // Handle match simulation
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['simulate_match'])) {
-            $result = simulateMatch($db, $match_id, $user_id);
-            if ($result) {
+            // Simulate ALL matches in the current gameweek, including the user's match
+            $gameweek_results = simulateCurrentGameweek($db, $user_id, $match['season'], $match['gameweek']);
+
+            // Store results in session just in case
+            $_SESSION['gameweek_results'] = $gameweek_results;
+
+            // Check if our match was simulated successfully
+            $stmt_check = $db->prepare("SELECT status FROM league_matches WHERE id = :id");
+            $stmt_check->bindValue(':id', $match_id, SQLITE3_INTEGER);
+            $res_check = $stmt_check->execute();
+            $row_check = $res_check->fetchArray(SQLITE3_ASSOC);
+
+            if ($row_check && $row_check['status'] === 'completed') {
                 // Redirect to match result page
                 header('Location: match-simulator.php?match_result=' . $match_id);
                 exit;
@@ -1116,15 +1127,53 @@ function displayMatchResultPage($match, $is_home, $user_score, $opponent_score, 
 
         <!-- Continue Button -->
         <div class="text-center">
-            <a href="league.php"
+            <button id="continueBtn"
                 class="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 font-bold transition-colors inline-flex items-center gap-2">
                 <i data-lucide="arrow-right" class="w-5 h-5"></i>
-                Continue to League
-            </a>
+                <span>Continue to League</span>
+            </button>
         </div>
     </div>
 
     <script>
+        // Handle continue button click
+        document.getElementById('continueBtn').addEventListener('click', function() {
+            const btn = this;
+            const originalContent = btn.innerHTML;
+
+            // Show loading state
+            btn.disabled = true;
+            btn.innerHTML = '<i data-lucide="loader" class="w-5 h-5 animate-spin"></i><span>Simulating League...</span>';
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+
+            // Call API to simulate league
+            fetch('api/simulate_league_api.php')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Redirect to league standings
+                        window.location.href = 'league.php?tab=standings&gameweek_completed=1';
+                    } else {
+                        console.error('Simulation failed:', data.message);
+                        alert('Failed to simulate league: ' + data.message);
+                        // Reset button state
+                        btn.disabled = false;
+                        btn.innerHTML = originalContent;
+                        if (typeof lucide !== 'undefined') {
+                            lucide.createIcons();
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred. Redirecting to league...');
+                    // Fallback redirect
+                    window.location.href = 'league.php?tab=standings';
+                });
+        });
+
         // Mystery box selection - only if not already claimed
         <?php if (!$mystery_box_claimed): ?>
             document.querySelectorAll('.mystery-box').forEach(box => {
