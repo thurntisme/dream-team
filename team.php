@@ -52,7 +52,7 @@ startContent();
     <div class="grid grid-cols-1 lg:grid-cols-7 gap-4">
         <div class="lg:col-span-2 gap-4">
             <?php include 'components/team-selector.php'; ?>
-        </div>   
+        </div>
 
         <div class="lg:col-span-3">
             <?php include 'components/team-field.php'; ?>
@@ -60,7 +60,7 @@ startContent();
 
         <div class="lg:col-span-2">
             <?php include 'components/player-selector.php'; ?>
-        </div>   
+        </div>
     </div>
 
     <div class="flex justify-center gap-4">
@@ -106,8 +106,9 @@ startContent();
 
     // UUID generation function
     function generateUUID() {
-        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-            var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            var r = Math.random() * 16 | 0,
+                v = c == 'x' ? r : (r & 0x3 | 0x8);
             return v.toString(16);
         });
     }
@@ -386,9 +387,9 @@ startContent();
         const experienceInCurrentLevel = experience - totalRequiredCurrent;
         const experienceNeededForLevel = totalRequiredNext - totalRequiredCurrent;
 
-        const progressPercentage = experienceNeededForLevel > 0
-            ? (experienceInCurrentLevel / experienceNeededForLevel) * 100
-            : 0;
+        const progressPercentage = experienceNeededForLevel > 0 ?
+            (experienceInCurrentLevel / experienceNeededForLevel) * 100 :
+            0;
 
         return {
             level: level,
@@ -594,7 +595,7 @@ startContent();
     function renderSubstitutes() {
         const $list = $('#substitutesList').empty();
         const maxSubstitutes = maxPlayers - 11; // Max substitutes = total squad - starting 11
-        
+
         // Update substitute count display
         const currentSubsCount = substitutePlayers.filter(p => p !== null).length;
         $('#substituteCountDisplay').text(`${currentSubsCount}/${maxSubstitutes}`);
@@ -680,7 +681,7 @@ startContent();
 
         // Update challenge status
         const canChallenge = playerCount >= 11;
-        const $challengeStatus = $('.text-lg.font-bold').filter(function () {
+        const $challengeStatus = $('.text-lg.font-bold').filter(function() {
             return $(this).text() === 'Ready' || $(this).text() === 'Not Ready';
         });
 
@@ -729,12 +730,17 @@ startContent();
     // JavaScript version of level bonus calculation
     function getLevelBonusJS(level) {
         switch (level) {
-            case 5: return 25;
-            case 4: return 20;
-            case 3: return 15;
-            case 2: return 10;
+            case 5:
+                return 25;
+            case 4:
+                return 20;
+            case 3:
+                return 15;
+            case 2:
+                return 10;
             case 1:
-            default: return 0;
+            default:
+                return 0;
         }
     }
 
@@ -772,7 +778,7 @@ startContent();
                     formation: $('#formation').val(),
                     team: JSON.stringify(selectedPlayers),
                     substitutes: JSON.stringify(substitutePlayers)
-                }, function (response) {
+                }, function(response) {
                     if (response.success) {
                         Swal.fire({
                             icon: 'success',
@@ -796,7 +802,7 @@ startContent();
                             confirmButtonColor: '#ef4444'
                         });
                     }
-                }, 'json').fail(function () {
+                }, 'json').fail(function() {
                     // If request failed, revert the change
                     substitutePlayers[idx] = player;
                     renderSubstitutes();
@@ -835,7 +841,7 @@ startContent();
                 formation: $('#formation').val(),
                 team: JSON.stringify(selectedPlayers),
                 substitutes: JSON.stringify(substitutePlayers)
-            }, function (response) {
+            }, function(response) {
                 if (response.success) {
                     Swal.fire({
                         icon: 'success',
@@ -862,7 +868,7 @@ startContent();
                         confirmButtonColor: '#ef4444'
                     });
                 }
-            }, 'json').fail(function () {
+            }, 'json').fail(function() {
                 // If request failed, revert the change
                 selectedPlayers[emptyStartingSlot] = null;
                 substitutePlayers[subIdx] = substitute;
@@ -958,7 +964,7 @@ startContent();
             formation: $('#formation').val(),
             team: JSON.stringify(selectedPlayers),
             substitutes: JSON.stringify(substitutePlayers)
-        }, function (response) {
+        }, function(response) {
             if (response.success) {
                 Swal.fire({
                     icon: 'success',
@@ -985,7 +991,7 @@ startContent();
                     confirmButtonColor: '#ef4444'
                 });
             }
-        }, 'json').fail(function () {
+        }, 'json').fail(function() {
             // If request failed, revert the change
             selectedPlayers[startingIdx] = startingPlayer;
             substitutePlayers[subIdx] = substitute;
@@ -1071,7 +1077,7 @@ startContent();
             formation: $('#formation').val(),
             team: JSON.stringify(selectedPlayers),
             substitutes: JSON.stringify(substitutePlayers)
-        }, function (response) {
+        }, function(response) {
             if (response.success) {
                 Swal.fire({
                     icon: 'success',
@@ -1110,7 +1116,7 @@ startContent();
                     confirmButtonColor: '#ef4444'
                 });
             }
-        }, 'json').fail(function () {
+        }, 'json').fail(function() {
             // If request failed, revert the change
             selectedPlayers[startingIdx] = startingPlayer;
             substitutePlayers[subIdx] = substitute;
@@ -1139,7 +1145,7 @@ startContent();
     // Function to update selected player info box
     function updateSelectedPlayerInfo() {
         const $infoBox = $('#selectedPlayerInfo');
-        
+
         if (selectedPlayerIdx === null) {
             // No player selected, hide the info box
             $infoBox.addClass('hidden');
@@ -1147,7 +1153,7 @@ startContent();
         }
 
         const player = selectedPlayers[selectedPlayerIdx];
-        
+
         if (!player) {
             // Empty slot selected, hide the info box
             $infoBox.addClass('hidden');
@@ -1422,7 +1428,7 @@ startContent();
                     formation: $('#formation').val(),
                     team: JSON.stringify(selectedPlayers),
                     substitutes: JSON.stringify(substitutePlayers)
-                }, function (response) {
+                }, function(response) {
                     if (response.success) {
                         Swal.fire({
                             icon: 'success',
@@ -1447,7 +1453,7 @@ startContent();
                             confirmButtonColor: '#ef4444'
                         });
                     }
-                }, 'json').fail(function () {
+                }, 'json').fail(function() {
                     // If request failed, revert the change
                     selectedPlayers[idx] = player;
                     renderPlayers();
@@ -1479,17 +1485,46 @@ startContent();
 
     // Generate player avatar HTML
     function getPlayerAvatarHtml(playerName, imageUrl = null) {
-        const colors = [
-            { bg: 'bg-blue-600', text: 'text-white' },
-            { bg: 'bg-green-600', text: 'text-white' },
-            { bg: 'bg-purple-600', text: 'text-white' },
-            { bg: 'bg-red-600', text: 'text-white' },
-            { bg: 'bg-yellow-600', text: 'text-white' },
-            { bg: 'bg-indigo-600', text: 'text-white' },
-            { bg: 'bg-pink-600', text: 'text-white' },
-            { bg: 'bg-teal-600', text: 'text-white' },
-            { bg: 'bg-orange-600', text: 'text-white' },
-            { bg: 'bg-cyan-600', text: 'text-white' }
+        const colors = [{
+                bg: 'bg-blue-600',
+                text: 'text-white'
+            },
+            {
+                bg: 'bg-green-600',
+                text: 'text-white'
+            },
+            {
+                bg: 'bg-purple-600',
+                text: 'text-white'
+            },
+            {
+                bg: 'bg-red-600',
+                text: 'text-white'
+            },
+            {
+                bg: 'bg-yellow-600',
+                text: 'text-white'
+            },
+            {
+                bg: 'bg-indigo-600',
+                text: 'text-white'
+            },
+            {
+                bg: 'bg-pink-600',
+                text: 'text-white'
+            },
+            {
+                bg: 'bg-teal-600',
+                text: 'text-white'
+            },
+            {
+                bg: 'bg-orange-600',
+                text: 'text-white'
+            },
+            {
+                bg: 'bg-cyan-600',
+                text: 'text-white'
+            }
         ];
 
         // Get initials from player name
@@ -1715,19 +1750,19 @@ startContent();
         lucide.createIcons();
 
         // Click handlers
-        $('.player-slot').click(function () {
+        $('.player-slot').click(function() {
             const idx = $(this).data('idx');
             selectPlayer(idx);
         });
 
-        $('.empty-slot').click(function () {
+        $('.empty-slot').click(function() {
             const idx = $(this).data('idx');
             choosePlayer(idx);
         });
 
         // Hover effects
         $('.player-slot').hover(
-            function () {
+            function() {
                 const idx = $(this).data('idx');
                 const isSelected = selectedPlayerIdx === idx;
 
@@ -1743,7 +1778,7 @@ startContent();
                     }
                 }
             },
-            function () {
+            function() {
                 const idx = $(this).data('idx');
                 const isSelected = selectedPlayerIdx === idx;
 
@@ -1756,7 +1791,7 @@ startContent();
         );
 
         // Right-click context menu for quick removal
-        $('.player-slot').on('contextmenu', function (e) {
+        $('.player-slot').on('contextmenu', function(e) {
             e.preventDefault();
             const idx = $(this).data('idx');
             removePlayer(idx);
@@ -1828,7 +1863,7 @@ startContent();
         // Collect and sort players - team players first
         const matchingPlayers = [];
         const addedPlayerUuids = new Set(); // Track added players to avoid duplicates
-        
+
         players.forEach((player, idx) => {
             const isSelectedInStarting = selectedPlayers.some(p => p && p.uuid === player.uuid);
             const isSelectedInSubs = substitutePlayers.some(p => p && p.uuid === player.uuid);
@@ -1891,12 +1926,19 @@ startContent();
         });
 
         // Render sorted players
-        matchingPlayers.forEach(({ player, idx, isSelected, isSelectedInStarting, showMainPosition }) => {
+        matchingPlayers.forEach(({
+            player,
+            idx,
+            isSelected,
+            isSelectedInStarting,
+            showMainPosition
+        }) => {
             const wouldExceedBudget = (currentTeamValue + (player.value || 0)) > maxBudget;
 
             // Determine player status and styling
-            let itemClass, priceClass, budgetWarning = '', teamBadge = '';
-            
+            let itemClass, priceClass, budgetWarning = '',
+                teamBadge = '';
+
             if (isSelected) {
                 // Player is already in team - highlight with green background but keep clickable
                 const teamPosition = isSelectedInStarting ? 'Starting XI' : 'Substitute';
@@ -1916,15 +1958,15 @@ startContent();
             // For available players, show if they can play multiple positions
             const playablePositions = player.playablePositions || [player.position];
             let positionsDisplay;
-            
+
             if (showMainPosition) {
                 // Team player - show main position only
                 positionsDisplay = `<span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">${player.position}</span>`;
             } else {
                 // Available player - show playable positions with indicator
-                positionsDisplay = playablePositions.length > 1 
-                    ? `<span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">${player.position}</span><span class="text-xs text-blue-500 ml-1" title="Can also play: ${playablePositions.filter(p => p !== player.position).join(', ')}">+${playablePositions.length - 1}</span>`
-                    : `<span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">${player.position}</span>`;
+                positionsDisplay = playablePositions.length > 1 ?
+                    `<span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">${player.position}</span><span class="text-xs text-blue-500 ml-1" title="Can also play: ${playablePositions.filter(p => p !== player.position).join(', ')}">+${playablePositions.length - 1}</span>` :
+                    `<span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">${player.position}</span>`;
             }
 
             // Determine if player is clickable (team players and affordable players are clickable)
@@ -1969,7 +2011,7 @@ startContent();
         }
 
         // Handle modal player selection
-        window.selectModalPlayer = function (idx) {
+        window.selectModalPlayer = function(idx) {
             if (idx !== undefined) {
                 const player = players[idx];
 
@@ -1981,11 +2023,11 @@ startContent();
                 if (isAlreadyInTeam) {
                     // Player is already in team - just switch positions
                     const currentPlayer = isSelectingSubstitute ? substitutePlayers[currentSlotIdx] : selectedPlayers[currentSlotIdx];
-                    
+
                     // Find where the selected player currently is (by uuid)
                     let sourceIsSubstitute = false;
                     let sourceIdx = -1;
-                    
+
                     if (isInStarting) {
                         sourceIdx = selectedPlayers.findIndex(p => p && p.uuid === player.uuid);
                         sourceIsSubstitute = false;
@@ -2018,7 +2060,7 @@ startContent();
                         formation: $('#formation').val(),
                         team: JSON.stringify(selectedPlayers),
                         substitutes: JSON.stringify(substitutePlayers)
-                    }, function (response) {
+                    }, function(response) {
                         if (response.success) {
                             closeModal('playerModal');
                             isSelectingSubstitute = false;
@@ -2046,7 +2088,7 @@ startContent();
                                 confirmButtonColor: '#3b82f6'
                             });
                         }
-                    }).fail(function () {
+                    }).fail(function() {
                         Swal.fire({
                             icon: 'error',
                             title: 'Error',
@@ -2083,9 +2125,9 @@ startContent();
                 const requiredPosition = isSelectingSubstitute ? 'Substitute' : getPositionForSlot(currentSlotIdx);
 
                 let confirmTitle = isReplacement ? 'Replace Player?' : 'Buy Player?';
-                let confirmText = isReplacement
-                    ? `Replace ${currentPlayer.name} with ${player.name} for ${formatMarketValue(player.value || 0)}?`
-                    : `Buy ${player.name} (${requiredPosition}) for ${formatMarketValue(player.value || 0)}?`;
+                let confirmText = isReplacement ?
+                    `Replace ${currentPlayer.name} with ${player.name} for ${formatMarketValue(player.value || 0)}?` :
+                    `Buy ${player.name} (${requiredPosition}) for ${formatMarketValue(player.value || 0)}?`;
 
                 Swal.fire({
                     title: confirmTitle,
@@ -2185,7 +2227,7 @@ startContent();
                             substitutes: JSON.stringify(substitutePlayers),
                             player_cost: player.value || 0,
                             player_uuid: player.uuid
-                        }, function (response) {
+                        }, function(response) {
                             if (response.success) {
                                 // Update local budget variable
                                 maxBudget = response.new_budget;
@@ -2238,7 +2280,7 @@ startContent();
                                     confirmButtonColor: '#ef4444'
                                 });
                             }
-                        }, 'json').fail(function () {
+                        }, 'json').fail(function() {
                             // Revert the change if request failed
                             if (isSelectingSubstitute) {
                                 substitutePlayers[currentSlotIdx] = null;
@@ -2265,16 +2307,16 @@ startContent();
     }
 
 
-    $('#playerSearch').on('input', function () {
+    $('#playerSearch').on('input', function() {
         renderModalPlayers($(this).val());
     });
 
-    $('#closeModal').click(function () {
+    $('#closeModal').click(function() {
         closeModal('playerModal');
         isSelectingSubstitute = false;
     });
 
-    $('#playerModal').click(function (e) {
+    $('#playerModal').click(function(e) {
         if (e.target === this) {
             closeModal('playerModal');
             isSelectingSubstitute = false;
@@ -2283,7 +2325,7 @@ startContent();
 
 
 
-    $('#formation').change(function () {
+    $('#formation').change(function() {
         const formation = $('#formation').val();
         const newFormation = formations[formation];
         const newRoles = newFormation.roles;
@@ -2326,7 +2368,7 @@ startContent();
         renderField();
     });
 
-    $('#resetTeam').click(function () {
+    $('#resetTeam').click(function() {
         Swal.fire({
             icon: 'warning',
             title: 'Reset Team?',
@@ -2343,7 +2385,7 @@ startContent();
         });
     });
 
-    $('#saveTeam').click(function () {
+    $('#saveTeam').click(function() {
         const filledSlots = selectedPlayers.filter(p => p !== null).length;
         const totalSlots = selectedPlayers.length;
 
@@ -2358,9 +2400,9 @@ startContent();
         }
 
         let confirmTitle = `Save Team (${filledSlots}/${totalSlots} players)`;
-        let confirmText = filledSlots < totalSlots
-            ? 'Your team is not complete. You can continue adding players later.'
-            : 'Save your complete team?';
+        let confirmText = filledSlots < totalSlots ?
+            'Your team is not complete. You can continue adding players later.' :
+            'Save your complete team?';
 
         Swal.fire({
             icon: 'question',
@@ -2377,7 +2419,7 @@ startContent();
                     formation: $('#formation').val(),
                     team: JSON.stringify(selectedPlayers),
                     substitutes: JSON.stringify(substitutePlayers)
-                }, function (response) {
+                }, function(response) {
                     if (response.redirect) {
                         window.location.href = response.redirect;
                     } else if (response.success) {
@@ -2388,9 +2430,9 @@ startContent();
                             Swal.fire({
                                 icon: 'success',
                                 title: 'Team Saved!',
-                                text: filledSlots === totalSlots
-                                    ? 'Your complete team has been saved successfully!'
-                                    : `Team saved successfully! (${filledSlots}/${totalSlots} players selected)`,
+                                text: filledSlots === totalSlots ?
+                                    'Your complete team has been saved successfully!' :
+                                    `Team saved successfully! (${filledSlots}/${totalSlots} players selected)`,
                                 confirmButtonColor: '#10b981'
                             });
                         }
@@ -2402,7 +2444,7 @@ startContent();
                             confirmButtonColor: '#ef4444'
                         });
                     }
-                }, 'json').fail(function () {
+                }, 'json').fail(function() {
                     Swal.fire({
                         icon: 'error',
                         title: 'Connection Error',
@@ -2654,7 +2696,7 @@ startContent();
     }
 
     // Contract renewal functionality
-    window.renewContract = function (playerUuid, playerName, currentRemaining) {
+    window.renewContract = function(playerUuid, playerName, currentRemaining) {
         const renewalCost = Math.floor(Math.random() * 5000000) + 2000000; // €2M - €7M
         const newMatches = Math.floor(Math.random() * 21) + 20; // 20-40 new matches
 
@@ -2706,7 +2748,7 @@ startContent();
                     player_uuid: playerUuid,
                     renewal_cost: renewalCost,
                     new_matches: newMatches
-                }, function (response) {
+                }, function(response) {
                     if (response.success) {
                         // Update local budget
                         maxBudget = response.new_budget;
@@ -2747,7 +2789,7 @@ startContent();
                             confirmButtonColor: '#ef4444'
                         });
                     }
-                }, 'json').fail(function () {
+                }, 'json').fail(function() {
                     Swal.fire({
                         icon: 'error',
                         title: 'Connection Error',
@@ -2760,7 +2802,7 @@ startContent();
     };
 
     // Card level upgrade functionality
-    window.upgradeCardLevel = function (playerUuid, playerName, currentCardLevel, playerValue) {
+    window.upgradeCardLevel = function(playerUuid, playerName, currentCardLevel, playerValue) {
         const upgradeCost = getCardLevelUpgradeCost(currentCardLevel, playerValue);
         const newCardLevel = currentCardLevel + 1;
         const cardInfo = getCardLevelDisplayInfo(newCardLevel);
@@ -2986,7 +3028,7 @@ startContent();
         $.post('api/upgrade_card_level_api.php', {
             player_uuid: playerUuid,
             player_type: playerType
-        }, function (response) {
+        }, function(response) {
             if (response.success) {
                 // Update local budget
                 maxBudget = response.new_budget;
@@ -3109,7 +3151,7 @@ startContent();
                     confirmButtonColor: '#ef4444'
                 });
             }
-        }, 'json').fail(function () {
+        }, 'json').fail(function() {
             Swal.fire({
                 icon: 'error',
                 title: 'Connection Error',
@@ -3120,7 +3162,7 @@ startContent();
     }
 
     // Training functionality (only if button exists)
-    $('#trainAllBtn').click(function () {
+    $('#trainAllBtn').click(function() {
         Swal.fire({
             icon: 'question',
             title: 'Train All Players?',
@@ -3162,9 +3204,9 @@ startContent();
 
                 // Send training request
                 $.post('api/train_players_api.php', {
-                    action: 'train_all'
-                })
-                    .done(function (response) {
+                        action: 'train_all'
+                    })
+                    .done(function(response) {
                         if (response.success) {
                             // Handle level up notification first
                             if (response.level_up) {
@@ -3201,7 +3243,7 @@ startContent();
                             });
                         }
                     })
-                    .fail(function () {
+                    .fail(function() {
                         Swal.fire({
                             icon: 'error',
                             title: 'Training Failed',
@@ -3214,7 +3256,7 @@ startContent();
     });
 
     // Daily Recovery functionality
-    $('#dailyRecoveryBtn').click(function () {
+    $('#dailyRecoveryBtn').click(function() {
         Swal.fire({
             icon: 'question',
             title: 'Process Daily Recovery?',
@@ -3250,9 +3292,9 @@ startContent();
 
                 // Send recovery request
                 $.post('api/daily_recovery_api.php', {
-                    action: 'process_daily_recovery'
-                })
-                    .done(function (response) {
+                        action: 'process_daily_recovery'
+                    })
+                    .done(function(response) {
                         if (response.success) {
                             let resultHtml = '<div class="text-left">';
 
@@ -3299,7 +3341,7 @@ startContent();
                             });
                         }
                     })
-                    .fail(function () {
+                    .fail(function() {
                         Swal.fire({
                             icon: 'error',
                             title: 'Recovery Failed',
@@ -3343,11 +3385,11 @@ startContent();
     }
 
     // Close player info modal
-    $('#closePlayerInfoModal ').click(function () {
+    $('#closePlayerInfoModal ').click(function() {
         closeModal('playerInfoModal');
     });
 
-    $('#playerInfoModal').click(function (e) {
+    $('#playerInfoModal').click(function(e) {
         if (e.target === this) {
             closeModal('playerInfoModal');
         }
@@ -3359,7 +3401,9 @@ startContent();
     // Open recommendations modal with cost confirmation
     $('#recommendPlayersBtn').click(function() {
         // First get the cost
-        $.post('api/recommend_players_api.php', { action: 'get_cost' }, function(response) {
+        $.post('api/recommend_players_api.php', {
+            action: 'get_cost'
+        }, function(response) {
             if (response.success) {
                 showRecommendationCostConfirmation(response.cost, response.formatted_cost);
             } else {
@@ -3384,7 +3428,7 @@ startContent();
     function showRecommendationCostConfirmation(cost, formattedCost) {
         const currentBudget = maxBudget;
         const remainingAfter = currentBudget - cost;
-        
+
         if (currentBudget < cost) {
             Swal.fire({
                 icon: 'warning',
@@ -3533,7 +3577,7 @@ startContent();
     $('.recommendation-filter').click(function() {
         $('.recommendation-filter').removeClass('active bg-blue-600 text-white').addClass('bg-gray-200 text-gray-700');
         $(this).removeClass('bg-gray-200 text-gray-700').addClass('active bg-blue-600 text-white');
-        
+
         const filter = $(this).data('filter');
         filterRecommendations(filter);
     });
@@ -3550,17 +3594,46 @@ startContent();
         let currentStep = 0;
         let progressInterval = null;
 
-        const analysisSteps = [
-            { text: 'Initializing AI analysis engine...', duration: 800 },
-            { text: 'Scanning current team composition...', duration: 1200 },
-            { text: 'Analyzing formation requirements...', duration: 1000 },
-            { text: 'Evaluating player ratings and positions...', duration: 1500 },
-            { text: 'Identifying team weaknesses...', duration: 1000 },
-            { text: 'Searching player database...', duration: 1800 },
-            { text: 'Calculating compatibility scores...', duration: 1200 },
-            { text: 'Applying budget constraints...', duration: 800 },
-            { text: 'Ranking recommendations by priority...', duration: 1000 },
-            { text: 'Finalizing analysis results...', duration: 600 }
+        const analysisSteps = [{
+                text: 'Initializing AI analysis engine...',
+                duration: 800
+            },
+            {
+                text: 'Scanning current team composition...',
+                duration: 1200
+            },
+            {
+                text: 'Analyzing formation requirements...',
+                duration: 1000
+            },
+            {
+                text: 'Evaluating player ratings and positions...',
+                duration: 1500
+            },
+            {
+                text: 'Identifying team weaknesses...',
+                duration: 1000
+            },
+            {
+                text: 'Searching player database...',
+                duration: 1800
+            },
+            {
+                text: 'Calculating compatibility scores...',
+                duration: 1200
+            },
+            {
+                text: 'Applying budget constraints...',
+                duration: 800
+            },
+            {
+                text: 'Ranking recommendations by priority...',
+                duration: 1000
+            },
+            {
+                text: 'Finalizing analysis results...',
+                duration: 600
+            }
         ];
 
         // Update loading content with progress bar
@@ -3648,12 +3721,12 @@ startContent();
                 } else {
                     // All steps complete, make API call
                     clearInterval(progressInterval);
-                    
+
                     // Show final completion step
                     $('#analysisStep').text('Analysis complete! Loading results...');
                     $('#analysisProgress').css('width', '100%');
                     $('#analysisPercentage').text('100%');
-                    
+
                     // Wait a moment then load actual results
                     setTimeout(() => {
                         loadActualRecommendations();
@@ -3677,15 +3750,17 @@ startContent();
 
     // Load actual recommendations from API
     function loadActualRecommendations() {
-        $.post('api/recommend_players_api.php', { action: 'get_recommendations' }, function(response) {
+        $.post('api/recommend_players_api.php', {
+            action: 'get_recommendations'
+        }, function(response) {
             $('#recommendationsLoading').addClass('hidden');
-            
+
             if (response.success) {
                 // Update local budget after payment
                 if (response.cost_paid) {
                     maxBudget = response.budget;
                     $('#clubBudget').text(formatMarketValue(response.budget));
-                    
+
                     // Show payment success toast
                     Swal.fire({
                         icon: 'success',
@@ -3703,7 +3778,7 @@ startContent();
                         position: 'top-end'
                     });
                 }
-                
+
                 currentRecommendations = response.recommendations;
                 displayTeamAnalysis(response);
                 displayRecommendations(response.recommendations);
@@ -3750,12 +3825,12 @@ startContent();
         // Show issues if any
         if (data.emptyPositions.length > 0 || data.weakPositions.length > 0) {
             $('#issuesFound').removeClass('hidden');
-            
+
             if (data.emptyPositions.length > 0) {
                 $('#emptyPositionsList').removeClass('hidden');
                 $('#emptyPositionsText').text(data.emptyPositions.join(', '));
             }
-            
+
             if (data.weakPositions.length > 0) {
                 $('#weakPositionsList').removeClass('hidden');
                 $('#weakPositionsText').text(data.weakPositions.join(', '));
@@ -3777,10 +3852,10 @@ startContent();
             const player = rec.player;
             const priorityColors = {
                 'high': 'border-red-200 bg-red-50',
-                'medium': 'border-orange-200 bg-orange-50', 
+                'medium': 'border-orange-200 bg-orange-50',
                 'low': 'border-blue-200 bg-blue-50'
             };
-            
+
             const priorityLabels = {
                 'high': 'High Priority',
                 'medium': 'Medium Priority',
@@ -3871,15 +3946,15 @@ startContent();
     window.selectRecommendedPlayer = function(player) {
         // Close recommendations modal
         closeModal('recommendationsModal');
-        
+
         // Find empty slot or ask user to choose position
         const emptySlot = selectedPlayers.findIndex(p => p === null);
-        
+
         if (emptySlot !== -1) {
             // Direct assignment to empty slot
             currentSlotIdx = emptySlot;
             isSelectingSubstitute = false;
-            
+
             // Show confirmation before adding
             Swal.fire({
                 title: 'Add Recommended Player?',
@@ -3996,15 +4071,15 @@ startContent();
     // Quick search for substitute functionality
     $('#quickSearchSubstitute').on('click', function() {
         const maxSubstitutes = maxPlayers - 11;
-        
+
         // Ensure substitutePlayers array has the correct length
         while (substitutePlayers.length < maxSubstitutes) {
             substitutePlayers.push(null);
         }
-        
+
         // Find the next available substitute slot
         const availableSlot = substitutePlayers.findIndex(p => p === null);
-        
+
         if (availableSlot === -1) {
             Swal.fire({
                 icon: 'warning',
@@ -4014,7 +4089,7 @@ startContent();
             });
             return;
         }
-        
+
         // Double-check that the slot is actually empty (safety check)
         if (substitutePlayers[availableSlot] !== null && substitutePlayers[availableSlot] !== undefined) {
             Swal.fire({
@@ -4025,15 +4100,164 @@ startContent();
             });
             return;
         }
-        
+
         // Set up for substitute selection
         currentSlotIdx = availableSlot;
         isSelectingSubstitute = true;
-        
+
         // Open the player selection modal
         openPlayerModal();
     });
 
+    // Team Fitness Upgrade
+    $('#upgradeFitnessBtn').click(function() {
+        // Calculate estimated cost (client-side estimation)
+        let totalCost = 0;
+        let playersToHeal = 0;
+        const costPerPoint = 1000;
+
+        // Check starting players
+        selectedPlayers.forEach(player => {
+            if (player && (player.fitness || 100) < 100) {
+                const missing = 100 - (player.fitness || 100);
+                let cost = missing * costPerPoint;
+
+                // Rating multiplier logic (approximate to server)
+                const rating = player.rating || 75;
+                const multiplier = Math.max(1.0, rating / 75);
+                cost = Math.round(cost * multiplier);
+
+                totalCost += cost;
+                playersToHeal++;
+            }
+        });
+
+        // Check substitutes
+        substitutePlayers.forEach(player => {
+            if (player && (player.fitness || 100) < 100) {
+                const missing = 100 - (player.fitness || 100);
+                let cost = missing * costPerPoint;
+
+                // Rating multiplier logic (approximate to server)
+                const rating = player.rating || 75;
+                const multiplier = Math.max(1.0, rating / 75);
+                cost = Math.round(cost * multiplier);
+
+                totalCost += cost;
+                playersToHeal++;
+            }
+        });
+
+        if (playersToHeal === 0) {
+            Swal.fire({
+                icon: 'info',
+                title: 'Full Fitness',
+                text: 'All players are already at 100% fitness!',
+                confirmButtonColor: '#3b82f6'
+            });
+            return;
+        }
+
+        Swal.fire({
+            title: 'Upgrade Team Fitness?',
+            html: `
+                <div class="text-left space-y-3">
+                    <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                        <h4 class="font-semibold text-blue-900 mb-2">Fitness Restoration</h4>
+                        <div class="space-y-1 text-sm text-blue-800">
+                            <div class="flex justify-between">
+                                <span>Players to heal:</span>
+                                <span class="font-bold">${playersToHeal}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Target Fitness:</span>
+                                <span class="font-bold text-green-600">100%</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                        <h4 class="font-semibold text-yellow-900 mb-2">Estimated Cost:</h4>
+                        <div class="text-2xl font-bold text-yellow-600">${formatMarketValue(totalCost)}</div>
+                        <p class="text-xs text-yellow-700 mt-1">Cost depends on player ratings and missing fitness.</p>
+                    </div>
+                </div>
+            `,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#10b981',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: '<i data-lucide="zap" class="w-4 h-4 inline mr-1"></i> Confirm Upgrade',
+            cancelButtonText: 'Cancel',
+            didOpen: () => {
+                lucide.createIcons();
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Show loading
+                Swal.fire({
+                    title: 'Restoring Fitness...',
+                    text: 'Please wait while we treat your players',
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    showConfirmButton: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
+                // Call API
+                $.post('api/upgrade_team_fitness_api.php', {}, function(response) {
+                    if (response.success) {
+                        // Update local data
+                        if (response.updated_team) {
+                            selectedPlayers = response.updated_team;
+                        }
+                        if (response.updated_substitutes) {
+                            substitutePlayers = response.updated_substitutes;
+                        }
+
+                        // Update budget
+                        maxBudget = response.new_budget;
+                        $('#remainingBudget').text(formatMarketValue(maxBudget));
+                        $('#clubBudget').text(formatMarketValue(maxBudget));
+
+                        renderPlayers();
+                        renderField();
+                        renderSubstitutes();
+                        updateClubStats();
+                        if (typeof selectedPlayerIdx !== 'undefined' && selectedPlayerIdx !== null) {
+                            updateSelectedPlayerInfo();
+                        }
+
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Fitness Restored!',
+                            text: `Successfully restored fitness for all players. Cost: ${formatMarketValue(response.cost)}`,
+                            timer: 3000,
+                            showConfirmButton: false,
+                            toast: true,
+                            position: 'top-end'
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Upgrade Failed',
+                            text: response.message || 'Could not upgrade fitness',
+                            confirmButtonColor: '#ef4444'
+                        });
+                    }
+                }, 'json').fail(function() {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Connection Error',
+                        text: 'Failed to connect to server',
+                        confirmButtonColor: '#ef4444'
+                    });
+                });
+            }
+        });
+    });
 </script>
 
 <link rel="stylesheet" href="assets/css/swal-custom.css">

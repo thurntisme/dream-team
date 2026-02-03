@@ -14,7 +14,7 @@
         </select>
         <div class="flex items-center justify-between mt-6 mb-2">
             <h2 class="text-xl font-bold">Your Players</h2>
-            <button id="recommendPlayersBtn" 
+            <button id="recommendPlayersBtn"
                 class="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-2 rounded-lg hover:from-blue-700 hover:to-blue-800 flex items-center gap-2 text-sm font-medium transition-all duration-200 shadow-md hover:shadow-lg relative">
                 <i data-lucide="brain" class="w-4 h-4"></i>
                 AI Recommendations
@@ -41,6 +41,16 @@
             </div>
             <div id="playerCount" class="text-xs text-gray-500">0/11 players selected</div>
         </div>
+
+        <!-- Fitness Upgrade Button -->
+        <div class="mt-4 border-t pt-4">
+            <button id="upgradeFitnessBtn"
+                class="w-full bg-gradient-to-r from-green-500 to-green-600 text-white px-4 py-2 rounded-lg hover:from-green-600 hover:to-green-700 flex items-center justify-center gap-2 text-sm font-medium transition-all duration-200 shadow-sm hover:shadow-md">
+                <i data-lucide="zap" class="w-4 h-4"></i>
+                Upgrade Team Fitness
+            </button>
+            <p class="text-xs text-gray-500 mt-1 text-center">Restore all players to 100% fitness</p>
+        </div>
     </div>
     <!-- Selected Player -->
     <div id="selectedPlayerInfo" class="bg-white rounded-lg shadow p-4 hidden">
@@ -59,7 +69,7 @@
                     <i data-lucide="info" class="w-5 h-5"></i>
                 </button>
             </div>
-            
+
             <!-- Player stats -->
             <div class="grid grid-cols-2 gap-3">
                 <div class="bg-gray-50 rounded-lg p-3">
@@ -109,7 +119,7 @@
                     <div id="selectedPlayerSalary" class="text-sm font-bold text-blue-600">€0.0M/week</div>
                 </div>
             </div>
-            
+
             <!-- Action buttons -->
             <div class="flex gap-2 pt-2">
                 <button id="changePlayerBtn" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 transition-colors">
@@ -120,7 +130,7 @@
                     <i data-lucide="trash-2" class="w-4 h-4"></i>
                 </button>
             </div>
-            
+
             <!-- Renew Contract Button -->
             <button id="renewContractBtn" class="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 transition-all duration-200 shadow-md hover:shadow-lg">
                 <i data-lucide="file-signature" class="w-4 h-4"></i>
