@@ -22,6 +22,7 @@ CREATE TABLE users (
     fans INTEGER DEFAULT 5000,
     club_exp INTEGER DEFAULT 0,
     club_level INTEGER DEFAULT 1,
+    matches_played INTEGER DEFAULT 0,
     user_plan TEXT DEFAULT "free",
     plan_expires_at DATETIME,
     last_login DATETIME,
@@ -37,6 +38,7 @@ CREATE TABLE users (
 - `budget`: Club's available money in euros
 - `formation`: Current tactical formation (e.g., "4-4-2")
 - `max_players`: Maximum squad size (can be increased via shop items)
+- `matches_played`: Total matches played by the user (used for nation call calculations)
 
 ### user_settings
 User preferences and configuration settings.

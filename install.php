@@ -112,6 +112,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install'])) {
             fans INTEGER DEFAULT 5000,
             club_exp INTEGER DEFAULT 0,
             club_level INTEGER DEFAULT 1,
+            matches_played INTEGER DEFAULT 0,
             user_plan TEXT DEFAULT "free",
             plan_expires_at DATETIME,
             last_login DATETIME,

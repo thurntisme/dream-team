@@ -616,6 +616,138 @@ startContent();
         <?php unset($_SESSION['relegation_result']); ?>
     <?php endif; ?>
 
+    <!-- Next Match Summary Box -->
+    <?php 
+    // Find user's next match
+    $next_match = null;
+    foreach ($upcoming_matches as $match) {
+        if (($match['home_team_id'] == $user_id || $match['away_team_id'] == $user_id) && $match['status'] == 'scheduled') {
+            $next_match = $match;
+            break;
+        }
+    }
+    ?>
+    
+    <?php if ($next_match && $current_validation['is_valid']): ?>
+        <div class="mb-6 bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
+                            <i data-lucide="calendar" class="w-5 h-5"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-bold">Next Fixture</h3>
+                            <p class="text-blue-100 text-sm">
+                                Gameweek <?php echo $next_match['gameweek']; ?> • 
+                                <?php echo date('l, M j', strtotime($next_match['match_date'])); ?>
+                            </p>
+                        </div>
+                    </div>
+                    <div class="bg-white bg-opacity-20 px-3 py-1 rounded-full text-sm font-medium">
+                        <i data-lucide="clock" class="w-4 h-4 inline mr-1"></i>
+                        Upcoming
+                    </div>
+                </div>
+            </div>
+
+            <!-- Match Details -->
+            <div class="p-6">
+                <div class="flex items-center justify-between">
+                    <!-- Home Team -->
+                    <div class="flex-1 text-center">
+                        <div class="w-16 h-16 mx-auto mb-3 <?php echo $next_match['home_team_id'] == $user_id ? 'bg-blue-600' : 'bg-gray-500'; ?> rounded-full flex items-center justify-center shadow-md">
+                            <i data-lucide="<?php echo $next_match['home_team_id'] == $user_id ? 'user' : 'users'; ?>" class="w-6 h-6 text-white"></i>
+                        </div>
+                        <h4 class="font-bold text-lg <?php echo $next_match['home_team_id'] == $user_id ? 'text-blue-600' : 'text-gray-700'; ?> mb-1">
+                            <?php echo htmlspecialchars($next_match['home_team']); ?>
+                        </h4>
+                        <div class="flex items-center justify-center gap-1 text-sm">
+                            <i data-lucide="home" class="w-4 h-4 text-green-600"></i>
+                            <span class="text-green-600 font-medium">HOME</span>
+                        </div>
+                        <?php if ($next_match['home_team_id'] == $user_id): ?>
+                            <div class="mt-2 bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-bold inline-block">
+                                YOUR TEAM
+                            </div>
+                        <?php endif; ?>
+                    </div>
+
+                    <!-- VS Section -->
+                    <div class="flex-shrink-0 mx-8">
+                        <div class="w-16 h-16 bg-gray-100 border-2 border-gray-300 rounded-full flex items-center justify-center">
+                            <span class="text-gray-600 font-black text-xl">VS</span>
+                        </div>
+                    </div>
+
+                    <!-- Away Team -->
+                    <div class="flex-1 text-center">
+                        <div class="w-16 h-16 mx-auto mb-3 <?php echo $next_match['away_team_id'] == $user_id ? 'bg-blue-600' : 'bg-gray-500'; ?> rounded-full flex items-center justify-center shadow-md">
+                            <i data-lucide="<?php echo $next_match['away_team_id'] == $user_id ? 'user' : 'users'; ?>" class="w-6 h-6 text-white"></i>
+                        </div>
+                        <h4 class="font-bold text-lg <?php echo $next_match['away_team_id'] == $user_id ? 'text-blue-600' : 'text-gray-700'; ?> mb-1">
+                            <?php echo htmlspecialchars($next_match['away_team']); ?>
+                        </h4>
+                        <div class="flex items-center justify-center gap-1 text-sm">
+                            <i data-lucide="plane" class="w-4 h-4 text-orange-600"></i>
+                            <span class="text-orange-600 font-medium">AWAY</span>
+                        </div>
+                        <?php if ($next_match['away_team_id'] == $user_id): ?>
+                            <div class="mt-2 bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-bold inline-block">
+                                YOUR TEAM
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+                <!-- Match Info & Actions -->
+                <div class="mt-6 pt-4 border-t border-gray-200 flex items-center justify-between">
+                    <div class="flex items-center gap-4 text-sm text-gray-600">
+                        <div class="flex items-center gap-1">
+                            <i data-lucide="map-pin" class="w-4 h-4"></i>
+                            <span><?php echo $next_match['home_team_id'] == $user_id ? 'Your Stadium' : htmlspecialchars($next_match['home_team']) . ' Stadium'; ?></span>
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <i data-lucide="trophy" class="w-4 h-4"></i>
+                            <span>Premier League</span>
+                        </div>
+                    </div>
+                    
+                    <?php if ($user_has_match): ?>
+                        <form method="POST" class="inline">
+                            <input type="hidden" name="match_id" value="<?php echo $next_match['id']; ?>">
+                            <button type="submit" name="simulate_match"
+                                class="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 font-medium transition-colors flex items-center gap-2 shadow-md">
+                                <i data-lucide="play" class="w-4 h-4"></i>
+                                Play Match
+                            </button>
+                        </form>
+                    <?php else: ?>
+                        <div class="bg-gray-100 text-gray-600 px-4 py-2 rounded-lg font-medium flex items-center gap-2">
+                            <i data-lucide="clock" class="w-4 h-4"></i>
+                            <span>Waiting for gameweek</span>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+    <?php elseif (!$next_match && $current_validation['is_valid']): ?>
+        <div class="mb-6 bg-white rounded-lg shadow border border-gray-200 p-6">
+            <div class="flex items-center justify-center gap-4">
+                <div class="w-12 h-12 bg-gray-400 rounded-full flex items-center justify-center">
+                    <i data-lucide="calendar-x" class="w-6 h-6 text-white"></i>
+                </div>
+                <div class="text-center">
+                    <h3 class="text-lg font-semibold text-gray-700 mb-1">Season Complete</h3>
+                    <p class="text-gray-600 text-sm">
+                        All fixtures have been played. Check the final standings!
+                    </p>
+                </div>
+            </div>
+        </div>
+    <?php endif; ?>
+
     <!-- Tabs -->
     <div class="border-b border-gray-200 mb-6">
         <nav class="-mb-px flex space-x-8">
