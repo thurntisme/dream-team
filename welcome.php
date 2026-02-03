@@ -165,7 +165,7 @@ startContent();
                     </div>
                 </div>
 
-                <a href="<?php echo route('team'); ?>"
+                <a href="<?php echo route('team.php'); ?>"
                     class="block w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 text-center">
                     Manage Your Club
                 </a>

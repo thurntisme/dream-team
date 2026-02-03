@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (response.redirect) {
                 window.location.href = response.redirect;
             } else if (response.success) {
-                window.location.href = '/team';
+                window.location.href = '/team.php';
             }
         }, 'json');
     });
