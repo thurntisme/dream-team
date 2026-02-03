@@ -1288,22 +1288,7 @@ function displayMatchResultPage($match, $is_home, $user_score, $opponent_score, 
 
                                 // Send reward to backend
                                 // Show processing indicator
-                                setTimeout(() => {
-                                    const processingDiv = document.createElement('div');
-                                    processingDiv.id = 'processing-indicator';
-                                    processingDiv.className = 'mt-3 p-2 bg-blue-100 text-blue-800 rounded-lg text-sm';
-                                    processingDiv.innerHTML = `
-                                    <i data-lucide="loader" class="w-4 h-4 inline mr-1 animate-spin"></i>
-                                    Applying reward to your account...
-                                `;
-                                    document.getElementById('reward-content').appendChild(processingDiv);
-
-                                    // Initialize lucide icons for the new element
-                                    if (typeof lucide !== 'undefined') {
-                                        lucide.createIcons();
-                                    }
-                                }, 500);
-
+                                // Applying reward logic starts here
                                 fetch('api/mystery_box_reward_api.php', {
                                         method: 'POST',
                                         headers: {
@@ -1430,22 +1415,6 @@ function displayMatchResultPage($match, $is_home, $user_score, $opponent_score, 
                                                     lucide.createIcons();
                                                 }
                                             }
-
-                                            // Add a note that mystery boxes are now disabled
-                                            setTimeout(() => {
-                                                const disabledNote = document.createElement('div');
-                                                disabledNote.className = 'mt-2 p-2 bg-gray-100 text-gray-600 rounded-lg text-xs';
-                                                disabledNote.innerHTML = `
-                                            <i data-lucide="lock" class="w-3 h-3 inline mr-1"></i>
-                                            Mystery boxes are now disabled for this match.
-                                        `;
-                                                document.getElementById('reward-content').appendChild(disabledNote);
-
-                                                // Initialize lucide icons for the new element
-                                                if (typeof lucide !== 'undefined') {
-                                                    lucide.createIcons();
-                                                }
-                                            }, 1000);
 
                                             // Initialize lucide icons for the new element
                                             if (typeof lucide !== 'undefined') {
