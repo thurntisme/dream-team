@@ -4265,6 +4265,156 @@ startContent();
             }
         });
     });
+
+    // Team Form Upgrade
+    $('#upgradeFormBtn').click(function() {
+        // Calculate estimated cost (client-side estimation)
+        let totalCost = 0;
+        let playersToBoost = 0;
+        const costPerPoint = 50000; // Higher cost per form point
+
+        // Check starting players
+        selectedPlayers.forEach(player => {
+            if (player && (player.form || 7) < 10) {
+                const missing = 10 - (player.form || 7);
+                let cost = missing * costPerPoint;
+
+                // Rating multiplier logic
+                const rating = player.rating || 75;
+                const multiplier = Math.max(1.0, rating / 75);
+                cost = Math.round(cost * multiplier);
+
+                totalCost += cost;
+                playersToBoost++;
+            }
+        });
+
+        // Check substitutes
+        substitutePlayers.forEach(player => {
+            if (player && (player.form || 7) < 10) {
+                const missing = 10 - (player.form || 7);
+                let cost = missing * costPerPoint;
+
+                // Rating multiplier logic
+                const rating = player.rating || 75;
+                const multiplier = Math.max(1.0, rating / 75);
+                cost = Math.round(cost * multiplier);
+
+                totalCost += cost;
+                playersToBoost++;
+            }
+        });
+
+        if (playersToBoost === 0) {
+            Swal.fire({
+                icon: 'info',
+                title: 'Peak Form',
+                text: 'All players are already at peak form (10.0)!',
+                confirmButtonColor: '#3b82f6'
+            });
+            return;
+        }
+
+        Swal.fire({
+            title: 'Upgrade Team Form?',
+            html: `
+                <div class="text-left space-y-3">
+                    <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                        <h4 class="font-semibold text-purple-900 mb-2">Form Boost</h4>
+                        <div class="space-y-1 text-sm text-purple-800">
+                            <div class="flex justify-between">
+                                <span>Players to boost:</span>
+                                <span class="font-bold">${playersToBoost}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Target Form:</span>
+                                <span class="font-bold text-green-600">10.0 (Superb)</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                        <h4 class="font-semibold text-yellow-900 mb-2">Estimated Cost:</h4>
+                        <div class="text-2xl font-bold text-yellow-600">${formatMarketValue(totalCost)}</div>
+                        <p class="text-xs text-yellow-700 mt-1">Form upgrades are premium services.</p>
+                    </div>
+                </div>
+            `,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#8b5cf6',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: '<i data-lucide="trending-up" class="w-4 h-4 inline mr-1"></i> Confirm Boost',
+            cancelButtonText: 'Cancel',
+            didOpen: () => {
+                lucide.createIcons();
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Show loading
+                Swal.fire({
+                    title: 'Boosting Form...',
+                    text: 'Motivating players to peak performance',
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    showConfirmButton: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
+                // Call API
+                $.post('api/upgrade_team_form_api.php', {}, function(response) {
+                    if (response.success) {
+                        // Update local data
+                        if (response.updated_team) {
+                            selectedPlayers = response.updated_team;
+                        }
+                        if (response.updated_substitutes) {
+                            substitutePlayers = response.updated_substitutes;
+                        }
+
+                        // Update budget
+                        maxBudget = response.new_budget;
+                        $('#remainingBudget').text(formatMarketValue(maxBudget));
+                        $('#clubBudget').text(formatMarketValue(maxBudget));
+
+                        renderPlayers();
+                        renderField();
+                        renderSubstitutes();
+                        updateClubStats();
+                        if (typeof selectedPlayerIdx !== 'undefined' && selectedPlayerIdx !== null) {
+                            updateSelectedPlayerInfo();
+                        }
+
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Form Boosted!',
+                            text: `Successfully boosted form for all players. Cost: ${formatMarketValue(response.cost)}`,
+                            timer: 3000,
+                            showConfirmButton: false,
+                            toast: true,
+                            position: 'top-end'
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Upgrade Failed',
+                            text: response.message || 'Could not upgrade form',
+                            confirmButtonColor: '#ef4444'
+                        });
+                    }
+                }, 'json').fail(function() {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Connection Error',
+                        text: 'Failed to connect to server',
+                        confirmButtonColor: '#ef4444'
+                    });
+                });
+            }
+        });
+    });
 </script>
 
 <link rel="stylesheet" href="assets/css/swal-custom.css">

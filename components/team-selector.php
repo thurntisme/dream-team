@@ -49,7 +49,14 @@
                 <i data-lucide="zap" class="w-4 h-4"></i>
                 Upgrade Team Fitness
             </button>
-            <p class="text-xs text-gray-500 mt-1 text-center">Restore all players to 100% fitness</p>
+            <p class="text-xs text-gray-500 mt-1 text-center mb-3">Restore all players to 100% fitness</p>
+
+            <button id="upgradeFormBtn"
+                class="w-full bg-gradient-to-r from-purple-500 to-purple-600 text-white px-4 py-2 rounded-lg hover:from-purple-600 hover:to-purple-700 flex items-center justify-center gap-2 text-sm font-medium transition-all duration-200 shadow-sm hover:shadow-md">
+                <i data-lucide="trending-up" class="w-4 h-4"></i>
+                Upgrade Team Form
+            </button>
+            <p class="text-xs text-gray-500 mt-1 text-center">Boost all players to 10.0 form</p>
         </div>
     </div>
     <!-- Selected Player -->
