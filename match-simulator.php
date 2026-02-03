@@ -55,6 +55,7 @@ function handleLeagueMatch($match_id) {
         // Determine user's role and get team data
         $is_home = ($match['home_user_id'] == $user_id);
         $opponent_user_id = $is_home ? $match['away_user_id'] : $match['home_user_id'];
+        $opponent_team_id = $is_home ? $match['away_team_id'] : $match['home_team_id'];
 
         // Get user's team data
         $stmt = $db->prepare('SELECT * FROM users WHERE id = :id');
@@ -64,11 +65,22 @@ function handleLeagueMatch($match_id) {
 
         // Get opponent's team data (if it's a user, otherwise generate AI team)
         $opponent_data = null;
+        $opponent_roster = null;
+        
         if ($opponent_user_id) {
             $stmt = $db->prepare('SELECT * FROM users WHERE id = :id');
             $stmt->bindValue(':id', $opponent_user_id, SQLITE3_INTEGER);
             $result = $stmt->execute();
             $opponent_data = $result->fetchArray(SQLITE3_ASSOC);
+        }
+        
+        // Get opponent's league roster (for both user and AI teams)
+        $stmt = $db->prepare('SELECT player_data FROM league_team_rosters WHERE league_team_id = :team_id ORDER BY id DESC LIMIT 1');
+        $stmt->bindValue(':team_id', $opponent_team_id, SQLITE3_INTEGER);
+        $result = $stmt->execute();
+        $roster_row = $result->fetchArray(SQLITE3_ASSOC);
+        if ($roster_row) {
+            $opponent_roster = json_decode($roster_row['player_data'], true);
         }
 
         // Handle match simulation
@@ -84,7 +96,7 @@ function handleLeagueMatch($match_id) {
         }
 
         $db->close();
-        displayLeagueMatch($match, $user_data, $opponent_data, $is_home);
+        displayLeagueMatch($match, $user_data, $opponent_data, $is_home, $opponent_roster);
 
     } catch (Exception $e) {
         error_log("League match error: " . $e->getMessage());
@@ -94,7 +106,7 @@ function handleLeagueMatch($match_id) {
     }
 }
 
-function displayLeagueMatch($match, $user_data, $opponent_data, $is_home) {
+function displayLeagueMatch($match, $user_data, $opponent_data, $is_home, $opponent_roster = null) {
     startContent();
     ?>
     
@@ -149,7 +161,7 @@ function displayLeagueMatch($match, $user_data, $opponent_data, $is_home) {
                     </div>
                 </div>
                 <div class="p-4">
-                    <?php displayTeamLineup($is_home ? $user_data : $opponent_data, 'home'); ?>
+                    <?php displayTeamLineup($is_home ? $user_data : $opponent_data, 'home', $is_home ? null : $opponent_roster); ?>
                 </div>
             </div>
 
@@ -175,7 +187,7 @@ function displayLeagueMatch($match, $user_data, $opponent_data, $is_home) {
                     </div>
                 </div>
                 <div class="p-4">
-                    <?php displayTeamLineup(!$is_home ? $user_data : $opponent_data, 'away'); ?>
+                    <?php displayTeamLineup(!$is_home ? $user_data : $opponent_data, 'away', !$is_home ? null : $opponent_roster); ?>
                 </div>
             </div>
         </div>
@@ -737,7 +749,81 @@ function displayMatchResultPage($match, $is_home, $user_score, $opponent_score, 
     endContent('Match Result');
 }
 
-function displayTeamLineup($team_data, $side) {
+function displayTeamLineup($team_data, $side, $league_roster = null) {
+    // If league_roster is provided, use it instead of team_data
+    if ($league_roster) {
+        ?>
+        <div class="space-y-4">
+            <!-- Formation -->
+            <div class="text-center">
+                <span class="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm font-medium">
+                    League Team Roster
+                </span>
+            </div>
+
+            <!-- Starting XI (first 11 players) -->
+            <div>
+                <h4 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                    <i data-lucide="users" class="w-4 h-4"></i>
+                    Starting XI
+                </h4>
+                <div class="space-y-2">
+                    <?php if (!empty($league_roster)): ?>
+                        <?php foreach (array_slice($league_roster, 0, 11) as $index => $player): ?>
+                            <?php if ($player): ?>
+                                <div class="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
+                                    <div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-bold">
+                                        <?php echo $index + 1; ?>
+                                    </div>
+                                    <div class="flex-1">
+                                        <div class="font-medium"><?php echo htmlspecialchars($player['name']); ?></div>
+                                        <div class="text-sm text-gray-600"><?php echo htmlspecialchars($player['position']); ?></div>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="text-sm font-medium"><?php echo $player['rating']; ?></div>
+                                        <div class="text-xs text-gray-500">Rating</div>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <p class="text-gray-500 text-center py-4">No roster data available</p>
+                    <?php endif; ?>
+                </div>
+            </div>
+
+            <!-- Substitutes (first 5 players from bench) -->
+            <?php if (count($league_roster) > 11): ?>
+                <div>
+                    <h4 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                        <i data-lucide="user-plus" class="w-4 h-4"></i>
+                        Substitutes
+                    </h4>
+                    <div class="space-y-2">
+                        <?php foreach (array_slice($league_roster, 11, 5) as $player): ?>
+                            <?php if ($player): ?>
+                                <div class="flex items-center gap-3 p-2 bg-yellow-50 rounded-lg">
+                                    <div class="w-6 h-6 bg-yellow-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                                        S
+                                    </div>
+                                    <div class="flex-1">
+                                        <div class="font-medium text-sm"><?php echo htmlspecialchars($player['name']); ?></div>
+                                        <div class="text-xs text-gray-600"><?php echo htmlspecialchars($player['position']); ?></div>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="text-xs font-medium"><?php echo $player['rating']; ?></div>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            <?php endif; ?>
+        </div>
+        <?php
+        return;
+    }
+    
     if (!$team_data) {
         // AI team - generate basic lineup
         echo '<div class="text-center text-gray-500 py-8">';
@@ -800,7 +886,7 @@ function displayTeamLineup($team_data, $side) {
                     Substitutes
                 </h4>
                 <div class="space-y-2">
-                    <?php foreach ($substitutes as $player): ?>
+                    <?php foreach (array_slice($substitutes, 0, 5) as $player): ?>
                         <?php if ($player): ?>
                             <div class="flex items-center gap-3 p-2 bg-yellow-50 rounded-lg">
                                 <div class="w-6 h-6 bg-yellow-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
