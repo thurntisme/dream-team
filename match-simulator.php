@@ -219,8 +219,213 @@ function displayLeagueMatch($match, $user_data, $opponent_data, $is_home, $oppon
         </div>
     </div>
 
+    <?php showPlayerInfoModal(); ?>
+
     <?php
     endContent('League Match');
+}
+
+// Player Info Modal
+function showPlayerInfoModal() {
+    ?>
+    <!-- Player Info Modal -->
+    <div id="playerInfoModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100]">
+        <div class="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-end mb-6">
+                <button id="closePlayerInfoModal" class="text-gray-500 hover:text-gray-700">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+            <div id="playerInfoContent">
+                <!-- Player info will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Format market value for display (JavaScript version)
+        function formatMarketValue(value) {
+            if (value >= 1000000) {
+                return '€' + (value / 1000000).toFixed(1) + 'M';
+            } else if (value >= 1000) {
+                return '€' + (value / 1000).toFixed(0) + 'K';
+            }
+            return '€' + value;
+        }
+
+        function showPlayerInfo(playerData) {
+            const player = playerData;
+
+            // Get contract matches (initialize if not set)
+            const contractMatches = player.contract_matches || Math.floor(Math.random() * 36) + 15;
+            const contractRemaining = player.contract_matches_remaining || contractMatches;
+
+            // Use player's actual attributes if available, otherwise generate them
+            let stats = player.attributes || generatePlayerStats(player.position, player.rating);
+
+            // Capitalize first letter of attribute names
+            const formatAttributeName = (name) => {
+                return name.charAt(0).toUpperCase() + name.slice(1);
+            };
+
+            // Normalize stats object to have capitalized keys for display
+            const normalizedStats = {};
+            Object.entries(stats).forEach(([key, value]) => {
+                normalizedStats[formatAttributeName(key)] = value;
+            });
+
+            const playerInfoHtml = `
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Player Header -->
+                    <div class="lg:col-span-2 bg-gradient-to-r from-blue-600 to-blue-800 text-white rounded-lg p-6">
+                        <div class="flex items-center gap-6">
+                            <div class="w-24 h-24 bg-white bg-opacity-20 rounded-full flex items-center justify-center overflow-hidden">
+                                ${player.avatar ?
+                    `<img src="${player.avatar.startsWith('http') ? player.avatar : '<?php echo PLAYER_IMAGES_BASE_PATH; ?>' + player.avatar}" alt="${player.name}" class="w-full h-full object-cover" onerror="this.onerror=null; this.parentElement.innerHTML='<i data-lucide=\\'user\\' class=\\'w-12 h-12\\'></i>';">` :
+                    `<i data-lucide="user" class="w-12 h-12"></i>`
+                }
+                            </div>
+                            <div class="flex-1">
+                                <h2 class="text-3xl font-bold mb-2">${player.name}</h2>
+                                <div class="flex items-center gap-4 text-blue-100">
+                                    <span class="bg-blue-500 px-2 py-1 rounded text-sm font-semibold">${player.position}</span>
+                                    ${player.nationality ? `
+                                    <span class="flex items-center gap-1">
+                                        <i data-lucide="flag" class="w-4 h-4"></i>
+                                        ${player.nationality}
+                                    </span>
+                                    ` : ''}
+                                    ${player.age ? `
+                                    <span class="flex items-center gap-1">
+                                        <i data-lucide="calendar" class="w-4 h-4"></i>
+                                        ${player.age} years
+                                    </span>
+                                    ` : ''}
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-3xl font-bold">★${player.rating}</div>
+                                <div class="text-blue-200 text-sm">Overall Rating</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Career Information -->
+                    <div class="bg-gray-50 rounded-lg p-4">
+                        <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                            <i data-lucide="briefcase" class="w-5 h-5 text-green-600"></i>
+                            Career Information
+                        </h3>
+                        <div class="space-y-3">
+                            ${player.nationality ? `
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Nationality:</span>
+                                <span class="font-medium flex items-center gap-1">
+                                    <i data-lucide="flag" class="w-4 h-4"></i>
+                                    ${player.nationality}
+                                </span>
+                            </div>
+                            ` : ''}
+                            ${player.age ? `
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Age:</span>
+                                <span class="font-medium">${player.age} years old</span>
+                            </div>
+                            ` : ''}
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Current Club:</span>
+                                <span class="font-medium">${player.club || 'Free Agent'}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Market Value:</span>
+                                <span class="font-medium text-green-600">${formatMarketValue(player.value)}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Primary Position:</span>
+                                <span class="font-medium">${player.position}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Matches Played:</span>
+                                <span class="font-medium">${player.matches_played || 0}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Positions & Skills -->
+                    <div class="bg-gray-50 rounded-lg p-4">
+                        <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                            <i data-lucide="target" class="w-5 h-5 text-purple-600"></i>
+                            Positions & Skills
+                        </h3>
+                        <div class="space-y-4">
+                            <div>
+                                <span class="text-gray-600 text-sm">Playable Positions:</span>
+                                <div class="flex flex-wrap gap-2 mt-2">
+                                    ${(player.playablePositions || [player.position]).map(pos =>
+                        `<span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm font-medium">${pos}</span>`
+                    ).join('')}
+                                </div>
+                            </div>
+                            <div>
+                                <span class="text-gray-600 text-sm">Key Attributes:</span>
+                                <div class="mt-2 space-y-2">
+                                    ${Object.entries(normalizedStats).map(([stat, value]) => `
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-sm">${stat}</span>
+                                            <div class="flex items-center gap-2">
+                                                <div class="w-16 bg-gray-200 rounded-full h-2">
+                                                    <div class="bg-blue-600 h-2 rounded-full" style="width: ${value}%"></div>
+                                                </div>
+                                                <span class="text-sm font-medium w-8">${value}</span>
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Description -->
+                    <div class="lg:col-span-2 bg-gray-50 rounded-lg p-4">
+                        <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                            <i data-lucide="file-text" class="w-5 h-5 text-orange-600"></i>
+                            Player Description
+                        </h3>
+                        <p class="text-gray-700 leading-relaxed">${player.description || 'Professional football player with great potential and skills.'}</p>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('playerInfoContent').innerHTML = playerInfoHtml;
+            document.getElementById('playerInfoModal').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        // Helper function to generate player stats based on position and rating
+        function generatePlayerStats(position, rating) {
+            const baseStats = {
+                pace: Math.min(99, rating + Math.floor(Math.random() * 20) - 10),
+                shooting: Math.min(99, rating + Math.floor(Math.random() * 20) - 10),
+                passing: Math.min(99, rating + Math.floor(Math.random() * 20) - 10),
+                dribbling: Math.min(99, rating + Math.floor(Math.random() * 20) - 10),
+                defense: Math.min(99, rating + Math.floor(Math.random() * 20) - 10),
+                physical: Math.min(99, rating + Math.floor(Math.random() * 20) - 10)
+            };
+            return baseStats;
+        }
+
+        // Close player info modal
+        document.getElementById('closePlayerInfoModal').addEventListener('click', function () {
+            document.getElementById('playerInfoModal').classList.add('hidden');
+        });
+
+        document.getElementById('playerInfoModal').addEventListener('click', function (e) {
+            if (e.target === this) {
+                this.classList.add('hidden');
+            }
+        });
+    </script>
+    <?php
 }
 
 function displayMatchResult($match_id) {
@@ -771,7 +976,7 @@ function displayTeamLineup($team_data, $side, $league_roster = null) {
                     <?php if (!empty($league_roster)): ?>
                         <?php foreach (array_slice($league_roster, 0, 11) as $index => $player): ?>
                             <?php if ($player): ?>
-                                <div class="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
+                                <div class="flex items-center gap-3 p-2 bg-gray-50 rounded-lg cursor-pointer hover:bg-blue-50 transition-colors" onclick="showPlayerInfo(<?php echo htmlspecialchars(json_encode($player)); ?>)">
                                     <div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-bold">
                                         <?php echo $index + 1; ?>
                                     </div>
@@ -802,7 +1007,7 @@ function displayTeamLineup($team_data, $side, $league_roster = null) {
                     <div class="space-y-2">
                         <?php foreach (array_slice($league_roster, 11, 5) as $player): ?>
                             <?php if ($player): ?>
-                                <div class="flex items-center gap-3 p-2 bg-yellow-50 rounded-lg">
+                                <div class="flex items-center gap-3 p-2 bg-yellow-50 rounded-lg cursor-pointer hover:bg-yellow-100 transition-colors" onclick="showPlayerInfo(<?php echo htmlspecialchars(json_encode($player)); ?>)">
                                     <div class="w-6 h-6 bg-yellow-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
                                         S
                                     </div>
@@ -857,7 +1062,7 @@ function displayTeamLineup($team_data, $side, $league_roster = null) {
                 <?php if (!empty($team)): ?>
                     <?php foreach ($team as $index => $player): ?>
                         <?php if ($player): ?>
-                            <div class="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
+                            <div class="flex items-center gap-3 p-2 bg-gray-50 rounded-lg cursor-pointer hover:bg-blue-50 transition-colors" onclick="showPlayerInfo(<?php echo htmlspecialchars(json_encode($player)); ?>)">
                                 <div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-bold">
                                     <?php echo $index + 1; ?>
                                 </div>
@@ -888,7 +1093,7 @@ function displayTeamLineup($team_data, $side, $league_roster = null) {
                 <div class="space-y-2">
                     <?php foreach (array_slice($substitutes, 0, 5) as $player): ?>
                         <?php if ($player): ?>
-                            <div class="flex items-center gap-3 p-2 bg-yellow-50 rounded-lg">
+                            <div class="flex items-center gap-3 p-2 bg-yellow-50 rounded-lg cursor-pointer hover:bg-yellow-100 transition-colors" onclick="showPlayerInfo(<?php echo htmlspecialchars(json_encode($player)); ?>)">
                                 <div class="w-6 h-6 bg-yellow-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
                                     S
                                 </div>
