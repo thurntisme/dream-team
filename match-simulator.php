@@ -404,7 +404,7 @@ function displayLeagueMatch($match, $user_data, $opponent_data, $is_home, $oppon
                         <i data-lucide="arrow-left" class="w-4 h-4"></i>
                         Back to League
                     </a>
-                    <form method="POST" class="inline">
+                    <form method="POST" class="inline" onsubmit="return checkPlayerFitness(<?php echo htmlspecialchars(json_encode($user_data)); ?>)">
                         <button type="submit" name="simulate_match"
                                 class="bg-green-600 text-white px-8 py-3 rounded-lg hover:bg-green-700 font-bold transition-colors flex items-center gap-2 shadow-md">
                             <i data-lucide="play" class="w-5 h-5"></i>
@@ -456,7 +456,155 @@ function displayLeagueMatch($match, $user_data, $opponent_data, $is_home, $oppon
                 });
             }
         }
+
+        // Check player fitness before match
+        function checkPlayerFitness(teamData) {
+            const team = JSON.parse(teamData.team || '[]');
+            const substitutes = JSON.parse(teamData.substitutes || '[]');
+            
+            // Combine all players
+            const allPlayers = [...team, ...substitutes];
+            
+            // Find players with fitness < 20
+            const lowFitnessPlayers = allPlayers.filter(player => 
+                player && player.fitness !== undefined && player.fitness < 20
+            );
+            
+            if (lowFitnessPlayers.length > 0) {
+                // Show warning modal
+                showFitnessWarning(lowFitnessPlayers);
+                return false; // Prevent form submission
+            }
+            
+            return true; // Allow form submission
+        }
+
+        function showFitnessWarning(players) {
+            const modal = document.getElementById('fitnessWarningModal');
+            const playersList = document.getElementById('lowFitnessPlayersList');
+            
+            // Build player list HTML
+            let html = '';
+            players.forEach(player => {
+                html += `
+                    <div class="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200 mb-2">
+                        <div>
+                            <div class="font-medium text-gray-900">${player.name}</div>
+                            <div class="text-sm text-gray-600">${player.position}</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-lg font-bold text-red-600">${player.fitness}%</div>
+                            <div class="text-xs text-red-600">Fitness</div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            playersList.innerHTML = html;
+            modal.classList.remove('hidden');
+            
+            // Attach close listeners after modal is shown
+            attachFitnessWarningListeners();
+        }
+
+        function attachFitnessWarningListeners() {
+            const closeBtn = document.getElementById('closeFitnessWarningModal');
+            const modal = document.getElementById('fitnessWarningModal');
+            
+            if (closeBtn) {
+                closeBtn.addEventListener('click', function() {
+                    modal.classList.add('hidden');
+                });
+            }
+            
+            if (modal) {
+                modal.addEventListener('click', function(e) {
+                    if (e.target === this) {
+                        this.classList.add('hidden');
+                    }
+                });
+            }
+        }
+
+        // Initialize fitness warning listeners when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', function() {
+                const closeBtn = document.getElementById('closeFitnessWarningModal');
+                const modal = document.getElementById('fitnessWarningModal');
+                
+                if (closeBtn && modal) {
+                    closeBtn.addEventListener('click', function() {
+                        modal.classList.add('hidden');
+                    });
+                    
+                    modal.addEventListener('click', function(e) {
+                        if (e.target === this) {
+                            this.classList.add('hidden');
+                        }
+                    });
+                }
+            });
+        } else {
+            const closeBtn = document.getElementById('closeFitnessWarningModal');
+            const modal = document.getElementById('fitnessWarningModal');
+            
+            if (closeBtn && modal) {
+                closeBtn.addEventListener('click', function() {
+                    modal.classList.add('hidden');
+                });
+                
+                modal.addEventListener('click', function(e) {
+                    if (e.target === this) {
+                        this.classList.add('hidden');
+                    }
+                });
+            }
+        }
     </script>
+
+    <!-- Fitness Warning Modal -->
+    <div id="fitnessWarningModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100]">
+        <div class="bg-white rounded-lg p-6 w-full max-w-2xl">
+            <div class="flex justify-between items-center mb-6">
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                        <i data-lucide="alert-circle" class="w-6 h-6 text-red-600"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-900">Low Fitness Warning</h2>
+                        <p class="text-sm text-gray-600">Players below 20% fitness cannot play</p>
+                    </div>
+                </div>
+                <button id="closeFitnessWarningModal" class="text-gray-500 hover:text-gray-700">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+            
+            <div class="mb-6">
+                <p class="text-gray-700 mb-4">The following players have fitness below 20% and must be rested before playing:</p>
+                <div id="lowFitnessPlayersList" class="space-y-2 max-h-64 overflow-y-auto">
+                    <!-- Players will be listed here -->
+                </div>
+            </div>
+            
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                <p class="text-sm text-blue-900">
+                    <i data-lucide="info" class="w-4 h-4 inline mr-2"></i>
+                    Please rest these players or replace them with substitutes before playing the match.
+                </p>
+            </div>
+            
+            <div class="flex justify-end gap-3">
+                <a href="team.php" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 font-medium transition-colors inline-flex items-center gap-2">
+                    <i data-lucide="users" class="w-4 h-4"></i>
+                    Go to Team
+                </a>
+                <button id="closeFitnessWarningModal" class="bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700 font-medium transition-colors">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
 
     <?php showPlayerInfoModal(); ?>
 
