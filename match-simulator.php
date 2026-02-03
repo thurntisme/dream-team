@@ -25,7 +25,8 @@ if ($match_result_id) {
     exit;
 }
 
-function handleLeagueMatch($match_id) {
+function handleLeagueMatch($match_id)
+{
     try {
         $db = getDbConnection();
         $user_id = $_SESSION['user_id'];
@@ -66,14 +67,14 @@ function handleLeagueMatch($match_id) {
         // Get opponent's team data (if it's a user, otherwise generate AI team)
         $opponent_data = null;
         $opponent_roster = null;
-        
+
         if ($opponent_user_id) {
             $stmt = $db->prepare('SELECT * FROM users WHERE id = :id');
             $stmt->bindValue(':id', $opponent_user_id, SQLITE3_INTEGER);
             $result = $stmt->execute();
             $opponent_data = $result->fetchArray(SQLITE3_ASSOC);
         }
-        
+
         // Get opponent's league roster (for both user and AI teams)
         $stmt = $db->prepare('SELECT player_data FROM league_team_rosters WHERE league_team_id = :team_id ORDER BY id DESC LIMIT 1');
         $stmt->bindValue(':team_id', $opponent_team_id, SQLITE3_INTEGER);
@@ -97,7 +98,6 @@ function handleLeagueMatch($match_id) {
 
         $db->close();
         displayLeagueMatch($match, $user_data, $opponent_data, $is_home, $opponent_roster);
-
     } catch (Exception $e) {
         error_log("League match error: " . $e->getMessage());
         $_SESSION['error'] = 'An error occurred while loading the match.';
@@ -106,32 +106,51 @@ function handleLeagueMatch($match_id) {
     }
 }
 
-function displayLeagueMatch($match, $user_data, $opponent_data, $is_home, $opponent_roster = null) {
+function displayLeagueMatch($match, $user_data, $opponent_data, $is_home, $opponent_roster = null)
+{
     startContent();
-    ?>
-    
+?>
+
     <script>
         // Global formation modal function - defined early so onclick handlers can access it
         window.showFormationModal = function(side, teamData) {
             const team = JSON.parse(JSON.stringify(teamData));
             const formation = team.formation || '4-4-2';
             const teamPlayers = JSON.parse(team.team || '[]');
-            
+
             // Formation data
             const formations = {
-                '4-4-2': { roles: ['GK', 'LB', 'CB', 'CB', 'RB', 'LM', 'CM', 'CM', 'RM', 'ST', 'ST'] },
-                '4-3-3': { roles: ['GK', 'LB', 'CB', 'CB', 'RB', 'CDM', 'CM', 'CM', 'LW', 'ST', 'RW'] },
-                '3-5-2': { roles: ['GK', 'CB', 'CB', 'CB', 'LWB', 'CDM', 'CM', 'CAM', 'RWB', 'ST', 'ST'] },
-                '4-2-3-1': { roles: ['GK', 'LB', 'CB', 'CB', 'RB', 'CDM', 'CDM', 'LW', 'CAM', 'RW', 'ST'] },
-                '4-1-4-1': { roles: ['GK', 'LB', 'CB', 'CB', 'RB', 'CDM', 'LM', 'CM', 'CM', 'RM', 'ST'] },
-                '5-3-2': { roles: ['GK', 'LWB', 'CB', 'CB', 'CB', 'RWB', 'CM', 'CAM', 'CM', 'ST', 'ST'] },
-                '3-4-3': { roles: ['GK', 'CB', 'CB', 'CB', 'LM', 'CDM', 'CDM', 'RM', 'LW', 'ST', 'RW'] },
-                '4-3-2-1': { roles: ['GK', 'LB', 'CB', 'CB', 'RB', 'CDM', 'CM', 'CM', 'CAM', 'CAM', 'ST'] },
-                '4-5-1': { roles: ['GK', 'LB', 'CB', 'CB', 'RB', 'LM', 'CM', 'CM', 'CM', 'RM', 'ST'] }
+                '4-4-2': {
+                    roles: ['GK', 'LB', 'CB', 'CB', 'RB', 'LM', 'CM', 'CM', 'RM', 'ST', 'ST']
+                },
+                '4-3-3': {
+                    roles: ['GK', 'LB', 'CB', 'CB', 'RB', 'CDM', 'CM', 'CM', 'LW', 'ST', 'RW']
+                },
+                '3-5-2': {
+                    roles: ['GK', 'CB', 'CB', 'CB', 'LWB', 'CDM', 'CM', 'CAM', 'RWB', 'ST', 'ST']
+                },
+                '4-2-3-1': {
+                    roles: ['GK', 'LB', 'CB', 'CB', 'RB', 'CDM', 'CDM', 'LW', 'CAM', 'RW', 'ST']
+                },
+                '4-1-4-1': {
+                    roles: ['GK', 'LB', 'CB', 'CB', 'RB', 'CDM', 'LM', 'CM', 'CM', 'RM', 'ST']
+                },
+                '5-3-2': {
+                    roles: ['GK', 'LWB', 'CB', 'CB', 'CB', 'RWB', 'CM', 'CAM', 'CM', 'ST', 'ST']
+                },
+                '3-4-3': {
+                    roles: ['GK', 'CB', 'CB', 'CB', 'LM', 'CDM', 'CDM', 'RM', 'LW', 'ST', 'RW']
+                },
+                '4-3-2-1': {
+                    roles: ['GK', 'LB', 'CB', 'CB', 'RB', 'CDM', 'CM', 'CM', 'CAM', 'CAM', 'ST']
+                },
+                '4-5-1': {
+                    roles: ['GK', 'LB', 'CB', 'CB', 'RB', 'LM', 'CM', 'CM', 'CM', 'RM', 'ST']
+                }
             };
-            
+
             const formationRoles = formations[formation]?.roles || formations['4-4-2'].roles;
-            
+
             // Build formation HTML with field visualization
             let html = `
                 <div class="space-y-6">
@@ -163,42 +182,87 @@ function displayLeagueMatch($match, $user_data, $opponent_data, $is_home, $oppon
                         <!-- Players on Field -->
                         <div class="relative h-full">
             `;
-            
+
             // Render players on field
             const positions = [
-                [50],                          // GK
-                [20, 40, 60, 80],             // Defense
-                [20, 40, 60, 80],             // Midfield
-                [35, 65]                       // Attack
+                [50], // GK
+                [20, 40, 60, 80], // Defense
+                [20, 40, 60, 80], // Midfield
+                [35, 65] // Attack
             ];
-            
+
             let playerIdx = 0;
             const positionColors = {
-                'GK': { bg: 'bg-amber-400', border: 'border-amber-500' },
-                'CB': { bg: 'bg-emerald-400', border: 'border-emerald-500' },
-                'LB': { bg: 'bg-emerald-400', border: 'border-emerald-500' },
-                'RB': { bg: 'bg-emerald-400', border: 'border-emerald-500' },
-                'LWB': { bg: 'bg-emerald-400', border: 'border-emerald-500' },
-                'RWB': { bg: 'bg-emerald-400', border: 'border-emerald-500' },
-                'CDM': { bg: 'bg-blue-400', border: 'border-blue-500' },
-                'CM': { bg: 'bg-blue-400', border: 'border-blue-500' },
-                'CAM': { bg: 'bg-blue-400', border: 'border-blue-500' },
-                'LM': { bg: 'bg-blue-400', border: 'border-blue-500' },
-                'RM': { bg: 'bg-blue-400', border: 'border-blue-500' },
-                'LW': { bg: 'bg-red-400', border: 'border-red-500' },
-                'RW': { bg: 'bg-red-400', border: 'border-red-500' },
-                'ST': { bg: 'bg-red-400', border: 'border-red-500' },
-                'CF': { bg: 'bg-red-400', border: 'border-red-500' }
+                'GK': {
+                    bg: 'bg-amber-400',
+                    border: 'border-amber-500'
+                },
+                'CB': {
+                    bg: 'bg-emerald-400',
+                    border: 'border-emerald-500'
+                },
+                'LB': {
+                    bg: 'bg-emerald-400',
+                    border: 'border-emerald-500'
+                },
+                'RB': {
+                    bg: 'bg-emerald-400',
+                    border: 'border-emerald-500'
+                },
+                'LWB': {
+                    bg: 'bg-emerald-400',
+                    border: 'border-emerald-500'
+                },
+                'RWB': {
+                    bg: 'bg-emerald-400',
+                    border: 'border-emerald-500'
+                },
+                'CDM': {
+                    bg: 'bg-blue-400',
+                    border: 'border-blue-500'
+                },
+                'CM': {
+                    bg: 'bg-blue-400',
+                    border: 'border-blue-500'
+                },
+                'CAM': {
+                    bg: 'bg-blue-400',
+                    border: 'border-blue-500'
+                },
+                'LM': {
+                    bg: 'bg-blue-400',
+                    border: 'border-blue-500'
+                },
+                'RM': {
+                    bg: 'bg-blue-400',
+                    border: 'border-blue-500'
+                },
+                'LW': {
+                    bg: 'bg-red-400',
+                    border: 'border-red-500'
+                },
+                'RW': {
+                    bg: 'bg-red-400',
+                    border: 'border-red-500'
+                },
+                'ST': {
+                    bg: 'bg-red-400',
+                    border: 'border-red-500'
+                },
+                'CF': {
+                    bg: 'bg-red-400',
+                    border: 'border-red-500'
+                }
             };
-            
+
             positions.forEach((line, lineIdx) => {
                 const yPos = 100 - ((lineIdx + 1) * (100 / (positions.length + 1)));
-                
+
                 line.forEach(xPos => {
                     const player = teamPlayers[playerIdx];
                     const role = formationRoles[playerIdx];
                     const colors = positionColors[role] || positionColors['GK'];
-                    
+
                     if (player) {
                         html += `
                             <div class="absolute cursor-pointer" style="left: ${xPos}%; top: ${yPos}%; transform: translate(-50%, -50%);">
@@ -229,11 +293,11 @@ function displayLeagueMatch($match, $user_data, $opponent_data, $is_home, $oppon
                             </div>
                         `;
                     }
-                    
+
                     playerIdx++;
                 });
             });
-            
+
             html += `
                         </div>
                     </div>
@@ -241,7 +305,7 @@ function displayLeagueMatch($match, $user_data, $opponent_data, $is_home, $oppon
                     <!-- Player Details -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             `;
-            
+
             // Add player details
             playerIdx = 0;
             positions.forEach((line, lineIdx) => {
@@ -249,7 +313,7 @@ function displayLeagueMatch($match, $user_data, $opponent_data, $is_home, $oppon
                     const player = teamPlayers[playerIdx];
                     const role = formationRoles[playerIdx];
                     const colors = positionColors[role] || positionColors['GK'];
-                    
+
                     if (player) {
                         html += `
                             <div class="bg-gray-50 rounded-lg p-3 border-l-4 ${colors.border}">
@@ -266,23 +330,23 @@ function displayLeagueMatch($match, $user_data, $opponent_data, $is_home, $oppon
                             </div>
                         `;
                     }
-                    
+
                     playerIdx++;
                 });
             });
-            
+
             html += `
                     </div>
                 </div>
             `;
-            
+
             document.getElementById('formationModalTitle').textContent = `${team.club_name || 'Team'} - ${formation}`;
             document.getElementById('formationContent').innerHTML = html;
             document.getElementById('formationModal').classList.remove('hidden');
             lucide.createIcons();
         };
     </script>
-    
+
     <div class="container mx-auto py-6">
         <!-- Match Header -->
         <div class="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden mb-6">
@@ -295,7 +359,7 @@ function displayLeagueMatch($match, $user_data, $opponent_data, $is_home, $oppon
                         <div>
                             <h1 class="text-2xl font-bold">Elite League Match</h1>
                             <p class="text-blue-100">
-                                Gameweek <?php echo $match['gameweek']; ?> • 
+                                Gameweek <?php echo $match['gameweek']; ?> •
                                 <?php echo date('l, M j, Y', strtotime($match['match_date'])); ?>
                             </p>
                         </div>
@@ -334,8 +398,8 @@ function displayLeagueMatch($match, $user_data, $opponent_data, $is_home, $oppon
                             </div>
                         </div>
                         <?php if ($is_home && $user_data): ?>
-                            <button onclick="showFormationModal('home', <?php echo htmlspecialchars(json_encode($user_data)); ?>)" 
-                                    class="bg-blue-100 text-blue-700 px-3 py-1 rounded text-xs font-medium hover:bg-blue-200 transition-colors flex items-center gap-1">
+                            <button onclick="showFormationModal('home', <?php echo htmlspecialchars(json_encode($user_data)); ?>)"
+                                class="bg-blue-100 text-blue-700 px-3 py-1 rounded text-xs font-medium hover:bg-blue-200 transition-colors flex items-center gap-1">
                                 <i data-lucide="grid-3x3" class="w-3 h-3"></i>
                                 Formation
                             </button>
@@ -369,14 +433,14 @@ function displayLeagueMatch($match, $user_data, $opponent_data, $is_home, $oppon
                             </div>
                         </div>
                         <?php if (!$is_home && $user_data): ?>
-                            <button onclick="showFormationModal('away', <?php echo htmlspecialchars(json_encode($user_data)); ?>)" 
-                                    class="bg-blue-100 text-blue-700 px-3 py-1 rounded text-xs font-medium hover:bg-blue-200 transition-colors flex items-center gap-1">
+                            <button onclick="showFormationModal('away', <?php echo htmlspecialchars(json_encode($user_data)); ?>)"
+                                class="bg-blue-100 text-blue-700 px-3 py-1 rounded text-xs font-medium hover:bg-blue-200 transition-colors flex items-center gap-1">
                                 <i data-lucide="grid-3x3" class="w-3 h-3"></i>
                                 Formation
                             </button>
                         <?php elseif ($is_home && ($opponent_data || $opponent_roster)): ?>
-                            <button onclick="showFormationModal('away', <?php echo htmlspecialchars(json_encode($opponent_data ?: ['team' => json_encode($opponent_roster), 'formation' => '4-4-2', 'club_name' => $match['away_team_name']])); ?>)" 
-                                    class="bg-blue-100 text-blue-700 px-3 py-1 rounded text-xs font-medium hover:bg-blue-200 transition-colors flex items-center gap-1">
+                            <button onclick="showFormationModal('away', <?php echo htmlspecialchars(json_encode($opponent_data ?: ['team' => json_encode($opponent_roster), 'formation' => '4-4-2', 'club_name' => $match['away_team_name']])); ?>)"
+                                class="bg-blue-100 text-blue-700 px-3 py-1 rounded text-xs font-medium hover:bg-blue-200 transition-colors flex items-center gap-1">
                                 <i data-lucide="grid-3x3" class="w-3 h-3"></i>
                                 Formation
                             </button>
@@ -399,14 +463,14 @@ function displayLeagueMatch($match, $user_data, $opponent_data, $is_home, $oppon
                     </p>
                 </div>
                 <div class="flex gap-3">
-                    <a href="league.php" 
-                       class="bg-gray-100 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-200 font-medium transition-colors flex items-center gap-2">
+                    <a href="league.php"
+                        class="bg-gray-100 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-200 font-medium transition-colors flex items-center gap-2">
                         <i data-lucide="arrow-left" class="w-4 h-4"></i>
                         Back to League
                     </a>
                     <form method="POST" class="inline" onsubmit="return checkPlayerFitness(<?php echo htmlspecialchars(json_encode($user_data)); ?>)">
                         <button type="submit" name="simulate_match"
-                                class="bg-green-600 text-white px-8 py-3 rounded-lg hover:bg-green-700 font-bold transition-colors flex items-center gap-2 shadow-md">
+                            class="bg-green-600 text-white px-8 py-3 rounded-lg hover:bg-green-700 font-bold transition-colors flex items-center gap-2 shadow-md">
                             <i data-lucide="play" class="w-5 h-5"></i>
                             Simulate Match
                         </button>
@@ -438,7 +502,7 @@ function displayLeagueMatch($match, $user_data, $opponent_data, $is_home, $oppon
         } else {
             attachFormationModalListeners();
         }
-        
+
         function attachFormationModalListeners() {
             const closeBtn = document.getElementById('closeFormationModal');
             if (closeBtn) {
@@ -446,7 +510,7 @@ function displayLeagueMatch($match, $user_data, $opponent_data, $is_home, $oppon
                     document.getElementById('formationModal').classList.add('hidden');
                 });
             }
-            
+
             const modal = document.getElementById('formationModal');
             if (modal) {
                 modal.addEventListener('click', function(e) {
@@ -461,28 +525,28 @@ function displayLeagueMatch($match, $user_data, $opponent_data, $is_home, $oppon
         function checkPlayerFitness(teamData) {
             const team = JSON.parse(teamData.team || '[]');
             const substitutes = JSON.parse(teamData.substitutes || '[]');
-            
+
             // Combine all players
             const allPlayers = [...team, ...substitutes];
-            
+
             // Find players with fitness < 20
-            const lowFitnessPlayers = allPlayers.filter(player => 
+            const lowFitnessPlayers = allPlayers.filter(player =>
                 player && player.fitness !== undefined && player.fitness < 20
             );
-            
+
             if (lowFitnessPlayers.length > 0) {
                 // Show warning modal
                 showFitnessWarning(lowFitnessPlayers);
                 return false; // Prevent form submission
             }
-            
+
             return true; // Allow form submission
         }
 
         function showFitnessWarning(players) {
             const modal = document.getElementById('fitnessWarningModal');
             const playersList = document.getElementById('lowFitnessPlayersList');
-            
+
             // Build player list HTML
             let html = '';
             players.forEach(player => {
@@ -499,10 +563,10 @@ function displayLeagueMatch($match, $user_data, $opponent_data, $is_home, $oppon
                     </div>
                 `;
             });
-            
+
             playersList.innerHTML = html;
             modal.classList.remove('hidden');
-            
+
             // Attach close listeners after modal is shown
             attachFitnessWarningListeners();
         }
@@ -510,13 +574,13 @@ function displayLeagueMatch($match, $user_data, $opponent_data, $is_home, $oppon
         function attachFitnessWarningListeners() {
             const closeBtn = document.getElementById('closeFitnessWarningModal');
             const modal = document.getElementById('fitnessWarningModal');
-            
+
             if (closeBtn) {
                 closeBtn.addEventListener('click', function() {
                     modal.classList.add('hidden');
                 });
             }
-            
+
             if (modal) {
                 modal.addEventListener('click', function(e) {
                     if (e.target === this) {
@@ -531,12 +595,12 @@ function displayLeagueMatch($match, $user_data, $opponent_data, $is_home, $oppon
             document.addEventListener('DOMContentLoaded', function() {
                 const closeBtn = document.getElementById('closeFitnessWarningModal');
                 const modal = document.getElementById('fitnessWarningModal');
-                
+
                 if (closeBtn && modal) {
                     closeBtn.addEventListener('click', function() {
                         modal.classList.add('hidden');
                     });
-                    
+
                     modal.addEventListener('click', function(e) {
                         if (e.target === this) {
                             this.classList.add('hidden');
@@ -547,12 +611,12 @@ function displayLeagueMatch($match, $user_data, $opponent_data, $is_home, $oppon
         } else {
             const closeBtn = document.getElementById('closeFitnessWarningModal');
             const modal = document.getElementById('fitnessWarningModal');
-            
+
             if (closeBtn && modal) {
                 closeBtn.addEventListener('click', function() {
                     modal.classList.add('hidden');
                 });
-                
+
                 modal.addEventListener('click', function(e) {
                     if (e.target === this) {
                         this.classList.add('hidden');
@@ -579,21 +643,21 @@ function displayLeagueMatch($match, $user_data, $opponent_data, $is_home, $oppon
                     <i data-lucide="x" class="w-6 h-6"></i>
                 </button>
             </div>
-            
+
             <div class="mb-6">
                 <p class="text-gray-700 mb-4">The following players have fitness below 20% and must be rested before playing:</p>
                 <div id="lowFitnessPlayersList" class="space-y-2 max-h-64 overflow-y-auto">
                     <!-- Players will be listed here -->
                 </div>
             </div>
-            
+
             <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
                 <p class="text-sm text-blue-900">
                     <i data-lucide="info" class="w-4 h-4 inline mr-2"></i>
                     Please rest these players or replace them with substitutes before playing the match.
                 </p>
             </div>
-            
+
             <div class="flex justify-end gap-3">
                 <a href="team.php" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 font-medium transition-colors inline-flex items-center gap-2">
                     <i data-lucide="users" class="w-4 h-4"></i>
@@ -608,13 +672,14 @@ function displayLeagueMatch($match, $user_data, $opponent_data, $is_home, $oppon
 
     <?php showPlayerInfoModal(); ?>
 
-    <?php
+<?php
     endContent('League Match');
 }
 
 // Player Info Modal
-function showPlayerInfoModal() {
-    ?>
+function showPlayerInfoModal()
+{
+?>
     <!-- Player Info Modal -->
     <div id="playerInfoModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100]">
         <div class="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -802,20 +867,21 @@ function showPlayerInfoModal() {
         }
 
         // Close player info modal
-        document.getElementById('closePlayerInfoModal').addEventListener('click', function () {
+        document.getElementById('closePlayerInfoModal').addEventListener('click', function() {
             document.getElementById('playerInfoModal').classList.add('hidden');
         });
 
-        document.getElementById('playerInfoModal').addEventListener('click', function (e) {
+        document.getElementById('playerInfoModal').addEventListener('click', function(e) {
             if (e.target === this) {
                 this.classList.add('hidden');
             }
         });
     </script>
-    <?php
+<?php
 }
 
-function displayMatchResult($match_id) {
+function displayMatchResult($match_id)
+{
     try {
         $db = getDbConnection();
         $user_id = $_SESSION['user_id'];
@@ -870,7 +936,6 @@ function displayMatchResult($match_id) {
 
         $db->close();
         displayMatchResultPage($match, $is_home, $user_score, $opponent_score, $match_result, $rewards, $user_data, $mystery_box_claimed);
-
     } catch (Exception $e) {
         error_log("Match result error: " . $e->getMessage());
         $_SESSION['error'] = 'An error occurred while loading the match result.';
@@ -879,38 +944,37 @@ function displayMatchResult($match_id) {
     }
 }
 
-function displayMatchResultPage($match, $is_home, $user_score, $opponent_score, $match_result, $rewards, $user_data, $mystery_box_claimed = false) {
+function displayMatchResultPage($match, $is_home, $user_score, $opponent_score, $match_result, $rewards, $user_data, $mystery_box_claimed = false)
+{
     startContent();
-    ?>
-    
+?>
+
     <div class="container mx-auto py-6">
         <!-- Match Result Header -->
         <div class="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden mb-6">
-            <div class="bg-gradient-to-r <?php 
-                echo $match_result === 'win' ? 'from-green-500 to-green-600' : 
-                    ($match_result === 'draw' ? 'from-yellow-500 to-yellow-600' : 'from-red-500 to-red-600'); 
-            ?> text-white p-6">
+            <div class="bg-gradient-to-r <?php
+                                            echo $match_result === 'win' ? 'from-green-500 to-green-600' : ($match_result === 'draw' ? 'from-yellow-500 to-yellow-600' : 'from-red-500 to-red-600');
+                                            ?> text-white p-6">
                 <div class="text-center">
                     <div class="mb-4">
                         <div class="text-6xl font-bold mb-2">
                             <?php echo $user_score; ?> - <?php echo $opponent_score; ?>
                         </div>
                         <div class="text-2xl font-bold">
-                            <?php 
-                            echo $match_result === 'win' ? '🎉 VICTORY!' : 
-                                ($match_result === 'draw' ? '🤝 DRAW!' : '😞 DEFEAT!'); 
+                            <?php
+                            echo $match_result === 'win' ? '🎉 VICTORY!' : ($match_result === 'draw' ? '🤝 DRAW!' : '😞 DEFEAT!');
                             ?>
                         </div>
                     </div>
                     <div class="flex items-center justify-center gap-8">
-                        <div class="text-center">
+                        <div class="text-right w-[25%] px-4">
                             <div class="text-lg font-semibold">
                                 <?php echo $is_home ? htmlspecialchars($match['home_team_name']) : htmlspecialchars($match['away_team_name']); ?>
                             </div>
                             <div class="text-sm opacity-90">Your Team</div>
                         </div>
                         <div class="text-3xl font-bold">VS</div>
-                        <div class="text-center">
+                        <div class="text-left w-[25%] px-4">
                             <div class="text-lg font-semibold">
                                 <?php echo $is_home ? htmlspecialchars($match['away_team_name']) : htmlspecialchars($match['home_team_name']); ?>
                             </div>
@@ -957,7 +1021,7 @@ function displayMatchResultPage($match, $is_home, $user_score, $opponent_score, 
                                     <span>Total Budget Earned:</span>
                                     <span class="text-green-600 text-lg">+€<?php echo number_format($rewards['budget_earned']); ?></span>
                                 </div>
-                                
+
                                 <!-- Budget Before and After -->
                                 <div class="grid grid-cols-2 gap-3">
                                     <div class="bg-red-50 border border-red-200 rounded-lg p-3">
@@ -1030,8 +1094,8 @@ function displayMatchResultPage($match, $is_home, $user_score, $opponent_score, 
             <div class="p-6">
                 <div class="grid grid-cols-3 gap-4 mb-6">
                     <?php for ($i = 1; $i <= 3; $i++): ?>
-                        <div class="mystery-box cursor-pointer transform hover:scale-105 transition-transform duration-200 <?php echo $mystery_box_claimed ? 'opacity-50 cursor-not-allowed' : ''; ?>" 
-                             data-box="<?php echo $i; ?>" <?php echo $mystery_box_claimed ? 'style="pointer-events: none;"' : ''; ?>>
+                        <div class="mystery-box cursor-pointer transform hover:scale-105 transition-transform duration-200 <?php echo $mystery_box_claimed ? 'opacity-50 cursor-not-allowed' : ''; ?>"
+                            data-box="<?php echo $i; ?>" <?php echo $mystery_box_claimed ? 'style="pointer-events: none;"' : ''; ?>>
                             <div class="bg-gradient-to-br from-purple-400 to-purple-600 rounded-lg p-6 text-center text-white shadow-lg">
                                 <?php if ($mystery_box_claimed): ?>
                                     <div class="w-16 h-16 mx-auto mb-3 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
@@ -1050,7 +1114,7 @@ function displayMatchResultPage($match, $is_home, $user_score, $opponent_score, 
                         </div>
                     <?php endfor; ?>
                 </div>
-                
+
                 <!-- Reward Display (Hidden initially) -->
                 <div id="reward-display" class="<?php echo $mystery_box_claimed ? '' : 'hidden'; ?>">
                     <?php if ($mystery_box_claimed): ?>
@@ -1071,8 +1135,8 @@ function displayMatchResultPage($match, $is_home, $user_score, $opponent_score, 
 
         <!-- Continue Button -->
         <div class="text-center">
-            <a href="league.php" 
-               class="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 font-bold transition-colors inline-flex items-center gap-2">
+            <a href="league.php"
+                class="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 font-bold transition-colors inline-flex items-center gap-2">
                 <i data-lucide="arrow-right" class="w-5 h-5"></i>
                 Continue to League
             </a>
@@ -1082,40 +1146,72 @@ function displayMatchResultPage($match, $is_home, $user_score, $opponent_score, 
     <script>
         // Mystery box selection - only if not already claimed
         <?php if (!$mystery_box_claimed): ?>
-        document.querySelectorAll('.mystery-box').forEach(box => {
-            box.addEventListener('click', function() {
-                const boxNumber = this.dataset.box;
-                
-                // Generate all 3 rewards (one for each box)
-                const allRewards = [
-                    { type: 'budget', amount: 500000, text: 'You received €500,000!', icon: '💰' },
-                    { type: 'budget', amount: 750000, text: 'You received €750,000!', icon: '💰' },
-                    { type: 'budget', amount: 1000000, text: 'You received €1,000,000!', icon: '💰' },
-                    { type: 'player', text: 'You received a random player card!', icon: '⚽' },
-                    { type: 'item', text: 'You received a training boost item!', icon: '🏃' },
-                    { type: 'budget', amount: 250000, text: 'You received €250,000!', icon: '💰' },
-                    { type: 'fans', amount: 1000, text: 'You gained 1,000 new fans!', icon: '👥' }
-                ];
-                
-                // Shuffle and pick 3 different rewards
-                const shuffled = [...allRewards].sort(() => 0.5 - Math.random());
-                const boxRewards = shuffled.slice(0, 3);
-                const selectedReward = boxRewards[boxNumber - 1];
-                
-                // Disable all boxes
-                document.querySelectorAll('.mystery-box').forEach(b => {
-                    b.style.pointerEvents = 'none';
-                });
-                
-                // Add shake animation to selected box (no scaling)
-                this.style.transition = 'all 0.3s ease';
-                this.style.animation = 'shake 0.5s ease-in-out';
-                
-                // Add animations if not already added
-                if (!document.querySelector('#mystery-animations')) {
-                    const style = document.createElement('style');
-                    style.id = 'mystery-animations';
-                    style.textContent = `
+            document.querySelectorAll('.mystery-box').forEach(box => {
+                box.addEventListener('click', function() {
+                    const boxNumber = this.dataset.box;
+
+                    // Generate all 3 rewards (one for each box)
+                    const allRewards = [{
+                            type: 'budget',
+                            amount: 500000,
+                            text: 'You received €500,000!',
+                            icon: '💰'
+                        },
+                        {
+                            type: 'budget',
+                            amount: 750000,
+                            text: 'You received €750,000!',
+                            icon: '💰'
+                        },
+                        {
+                            type: 'budget',
+                            amount: 1000000,
+                            text: 'You received €1,000,000!',
+                            icon: '💰'
+                        },
+                        {
+                            type: 'player',
+                            text: 'You received a random player card!',
+                            icon: '⚽'
+                        },
+                        {
+                            type: 'item',
+                            text: 'You received a training boost item!',
+                            icon: '🏃'
+                        },
+                        {
+                            type: 'budget',
+                            amount: 250000,
+                            text: 'You received €250,000!',
+                            icon: '💰'
+                        },
+                        {
+                            type: 'fans',
+                            amount: 1000,
+                            text: 'You gained 1,000 new fans!',
+                            icon: '👥'
+                        }
+                    ];
+
+                    // Shuffle and pick 3 different rewards
+                    const shuffled = [...allRewards].sort(() => 0.5 - Math.random());
+                    const boxRewards = shuffled.slice(0, 3);
+                    const selectedReward = boxRewards[boxNumber - 1];
+
+                    // Disable all boxes
+                    document.querySelectorAll('.mystery-box').forEach(b => {
+                        b.style.pointerEvents = 'none';
+                    });
+
+                    // Add shake animation to selected box (no scaling)
+                    this.style.transition = 'all 0.3s ease';
+                    this.style.animation = 'shake 0.5s ease-in-out';
+
+                    // Add animations if not already added
+                    if (!document.querySelector('#mystery-animations')) {
+                        const style = document.createElement('style');
+                        style.id = 'mystery-animations';
+                        style.textContent = `
                         @keyframes shake {
                             0%, 100% { transform: translateX(0); }
                             25% { transform: translateX(-5px); }
@@ -1135,205 +1231,295 @@ function displayMatchResultPage($match, $is_home, $user_score, $opponent_score, 
                             100% { opacity: 0.6; }
                         }
                     `;
-                    document.head.appendChild(style);
-                }
-                
-                // Show opening animation and reveal all boxes
-                setTimeout(() => {
-                    // Add glow effect to selected box
-                    this.style.animation = 'pulse-glow 1s ease-in-out infinite';
-                    this.style.borderRadius = '12px';
-                    
-                    // Fade other boxes
-                    document.querySelectorAll('.mystery-box').forEach((b, index) => {
-                        const boxNum = parseInt(b.dataset.box);
-                        if (boxNum != boxNumber) {
-                            b.style.animation = 'fade-gray 0.5s ease-out forwards';
-                        }
-                    });
-                    
-                    // Reveal all boxes with flip animation
+                        document.head.appendChild(style);
+                    }
+
+                    // Show opening animation and reveal all boxes
                     setTimeout(() => {
+                        // Add glow effect to selected box
+                        this.style.animation = 'pulse-glow 1s ease-in-out infinite';
+                        this.style.borderRadius = '12px';
+
+                        // Fade other boxes
                         document.querySelectorAll('.mystery-box').forEach((b, index) => {
                             const boxNum = parseInt(b.dataset.box);
-                            const reward = boxRewards[boxNum - 1];
-                            const boxContent = b.querySelector('.bg-gradient-to-br');
-                            
-                            // Add flip animation
-                            b.style.animation = 'flip-reveal 0.8s ease-in-out';
-                            
-                            setTimeout(() => {
-                                if (boxNum == boxNumber) {
-                                    // Selected box - show as winner (no bouncing icon)
-                                    boxContent.innerHTML = `
+                            if (boxNum != boxNumber) {
+                                b.style.animation = 'fade-gray 0.5s ease-out forwards';
+                            }
+                        });
+
+                        // Reveal all boxes with flip animation
+                        setTimeout(() => {
+                            document.querySelectorAll('.mystery-box').forEach((b, index) => {
+                                const boxNum = parseInt(b.dataset.box);
+                                const reward = boxRewards[boxNum - 1];
+                                const boxContent = b.querySelector('.bg-gradient-to-br');
+
+                                // Add flip animation
+                                b.style.animation = 'flip-reveal 0.8s ease-in-out';
+
+                                setTimeout(() => {
+                                    if (boxNum == boxNumber) {
+                                        // Selected box - show as winner (no bouncing icon)
+                                        boxContent.innerHTML = `
                                         <div class="w-16 h-16 mx-auto mb-3 bg-white bg-opacity-30 rounded-full flex items-center justify-center text-2xl">
                                             ${reward.icon}
                                         </div>
                                         <div class="font-bold text-lg text-yellow-200">SELECTED!</div>
                                         <div class="text-sm">${reward.text}</div>
                                     `;
-                                    boxContent.className = 'bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-lg p-6 text-center text-white shadow-lg';
-                                    b.style.animation = 'pulse-glow 2s ease-in-out infinite';
-                                } else {
-                                    // Other boxes - show what was inside
-                                    boxContent.innerHTML = `
+                                        boxContent.className = 'bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-lg p-6 text-center text-white shadow-lg';
+                                        b.style.animation = 'pulse-glow 2s ease-in-out infinite';
+                                    } else {
+                                        // Other boxes - show what was inside
+                                        boxContent.innerHTML = `
                                         <div class="w-16 h-16 mx-auto mb-3 bg-white bg-opacity-20 rounded-full flex items-center justify-center text-2xl">
                                             ${reward.icon}
                                         </div>
                                         <div class="font-bold text-sm text-gray-300">Box ${boxNum}</div>
                                         <div class="text-xs opacity-75">${reward.text}</div>
                                     `;
-                                    boxContent.className = 'bg-gradient-to-br from-gray-400 to-gray-600 rounded-lg p-6 text-center text-white shadow-lg';
-                                    b.style.opacity = '0.6';
-                                    b.style.animation = 'none';
-                                }
-                            }, 400); // Half way through flip animation
-                        });
-                        
-                        // Show main reward display with slide-up animation
-                        setTimeout(() => {
-                            const rewardDisplay = document.getElementById('reward-display');
-                            document.getElementById('reward-content').innerHTML = `
+                                        boxContent.className = 'bg-gradient-to-br from-gray-400 to-gray-600 rounded-lg p-6 text-center text-white shadow-lg';
+                                        b.style.opacity = '0.6';
+                                        b.style.animation = 'none';
+                                    }
+                                }, 400); // Half way through flip animation
+                            });
+
+                            // Show main reward display with slide-up animation
+                            setTimeout(() => {
+                                const rewardDisplay = document.getElementById('reward-display');
+                                document.getElementById('reward-content').innerHTML = `
                                 <div class="text-3xl mb-2">${selectedReward.icon}</div>
                                 <div class="text-xl font-bold">${selectedReward.text}</div>
                                 <div class="text-sm mt-2 opacity-90">Check the other boxes to see what you could have won!</div>
                             `;
-                            rewardDisplay.style.transform = 'translateY(20px)';
-                            rewardDisplay.style.opacity = '0';
-                            rewardDisplay.style.transition = 'all 0.5s ease-out';
-                            rewardDisplay.classList.remove('hidden');
-                            
-                            // Slide up animation
-                            setTimeout(() => {
-                                rewardDisplay.style.transform = 'translateY(0)';
-                                rewardDisplay.style.opacity = '1';
-                            }, 50);
-                            
-                            // Send reward to backend
-                            // Show processing indicator
-                            setTimeout(() => {
-                                const processingDiv = document.createElement('div');
-                                processingDiv.id = 'processing-indicator';
-                                processingDiv.className = 'mt-3 p-2 bg-blue-100 text-blue-800 rounded-lg text-sm';
-                                processingDiv.innerHTML = `
+                                rewardDisplay.style.transform = 'translateY(20px)';
+                                rewardDisplay.style.opacity = '0';
+                                rewardDisplay.style.transition = 'all 0.5s ease-out';
+                                rewardDisplay.classList.remove('hidden');
+
+                                // Slide up animation
+                                setTimeout(() => {
+                                    rewardDisplay.style.transform = 'translateY(0)';
+                                    rewardDisplay.style.opacity = '1';
+                                }, 50);
+
+                                // Send reward to backend
+                                // Show processing indicator
+                                setTimeout(() => {
+                                    const processingDiv = document.createElement('div');
+                                    processingDiv.id = 'processing-indicator';
+                                    processingDiv.className = 'mt-3 p-2 bg-blue-100 text-blue-800 rounded-lg text-sm';
+                                    processingDiv.innerHTML = `
                                     <i data-lucide="loader" class="w-4 h-4 inline mr-1 animate-spin"></i>
                                     Applying reward to your account...
                                 `;
-                                document.getElementById('reward-content').appendChild(processingDiv);
-                                
-                                // Initialize lucide icons for the new element
-                                if (typeof lucide !== 'undefined') {
-                                    lucide.createIcons();
-                                }
-                            }, 500);
-                            
-                            fetch('api/mystery_box_reward_api.php', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                },
-                                body: JSON.stringify({
-                                    reward: selectedReward,
-                                    match_id: <?php echo $match['id'] ?? 'null'; ?>
-                                })
-                            })
-                            .then(response => response.json())
-                            .then(data => {
-                                // Remove processing indicator
-                                const processingIndicator = document.getElementById('processing-indicator');
-                                if (processingIndicator) {
-                                    processingIndicator.remove();
-                                }
-                                
-                                if (data.success) {
-                                    console.log('Reward applied successfully:', data.message);
-                                    
-                                    // Disable all mystery boxes permanently
-                                    document.querySelectorAll('.mystery-box').forEach(b => {
-                                        b.style.pointerEvents = 'none';
-                                        b.style.opacity = '0.5';
-                                        b.style.cursor = 'not-allowed';
-                                    });
-                                    
-                                    // Update the reward display with confirmation
-                                    const confirmationDiv = document.createElement('div');
-                                    confirmationDiv.className = 'mt-3 p-2 bg-green-100 text-green-800 rounded-lg text-sm';
-                                    confirmationDiv.innerHTML = `
+                                    document.getElementById('reward-content').appendChild(processingDiv);
+
+                                    // Initialize lucide icons for the new element
+                                    if (typeof lucide !== 'undefined') {
+                                        lucide.createIcons();
+                                    }
+                                }, 500);
+
+                                fetch('api/mystery_box_reward_api.php', {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                        },
+                                        body: JSON.stringify({
+                                            reward: selectedReward,
+                                            match_id: <?php echo $match['id'] ?? 'null'; ?>
+                                        })
+                                    })
+                                    .then(response => response.json())
+                                    .then(data => {
+                                        // Remove processing indicator
+                                        const processingIndicator = document.getElementById('processing-indicator');
+                                        if (processingIndicator) {
+                                            processingIndicator.remove();
+                                        }
+
+                                        if (data.success) {
+                                            console.log('Reward applied successfully:', data.message);
+
+                                            // Disable all mystery boxes permanently
+                                            document.querySelectorAll('.mystery-box').forEach(b => {
+                                                b.style.pointerEvents = 'none';
+                                                b.style.opacity = '0.5';
+                                                b.style.cursor = 'not-allowed';
+                                            });
+
+                                            // Update the reward display with confirmation
+                                            const confirmationDiv = document.createElement('div');
+                                            confirmationDiv.className = 'mt-3 p-2 bg-green-100 text-green-800 rounded-lg text-sm';
+                                            confirmationDiv.innerHTML = `
                                         <i data-lucide="check-circle" class="w-4 h-4 inline mr-1"></i>
                                         ${data.message}
                                     `;
-                                    document.getElementById('reward-content').appendChild(confirmationDiv);
-                                    
-                                    // Add a note that mystery boxes are now disabled
-                                    setTimeout(() => {
-                                        const disabledNote = document.createElement('div');
-                                        disabledNote.className = 'mt-2 p-2 bg-gray-100 text-gray-600 rounded-lg text-xs';
-                                        disabledNote.innerHTML = `
+                                            document.getElementById('reward-content').appendChild(confirmationDiv);
+
+                                            // Display player info if available
+                                            if (data.player_data) {
+                                                const player = data.player_data;
+                                                const playerCard = document.createElement('div');
+                                                playerCard.className = 'mt-4 bg-white rounded-lg shadow-md p-4 text-gray-800 transform transition-all duration-500 animate-fade-in-up';
+
+                                                // Determine border color based on rating
+                                                let borderColor = 'border-gray-200';
+                                                let headerBg = 'bg-gray-100';
+
+                                                if (player.rating >= 85) {
+                                                    borderColor = 'border-yellow-400 border-2';
+                                                    headerBg = 'bg-gradient-to-r from-yellow-100 to-yellow-50';
+                                                } else if (player.rating >= 80) {
+                                                    borderColor = 'border-blue-400 border-2';
+                                                    headerBg = 'bg-gradient-to-r from-blue-100 to-blue-50';
+                                                } else if (player.rating >= 75) {
+                                                    borderColor = 'border-green-400 border-2';
+                                                    headerBg = 'bg-gradient-to-r from-green-100 to-green-50';
+                                                }
+
+                                                playerCard.classList.add(borderColor.split(' ')[0]);
+                                                if (borderColor.includes('border-2')) playerCard.classList.add('border-2');
+
+                                                // Use default stats if not present (fallback)
+                                                const stats = {
+                                                    pace: player.pace || Math.floor(Math.random() * (95 - 60) + 60),
+                                                    shooting: player.shooting || Math.floor(Math.random() * (90 - 50) + 50),
+                                                    passing: player.passing || Math.floor(Math.random() * (90 - 50) + 50),
+                                                    dribbling: player.dribbling || Math.floor(Math.random() * (92 - 55) + 55),
+                                                    defending: player.defending || Math.floor(Math.random() * (88 - 40) + 40),
+                                                    physical: player.physical || Math.floor(Math.random() * (90 - 50) + 50)
+                                                };
+
+                                                playerCard.innerHTML = `
+                                            <div class="flex items-center gap-4 ${headerBg} p-3 rounded-t-lg -mx-4 -mt-4 mb-3 border-b border-gray-100">
+                                                <div class="w-16 h-16 bg-gradient-to-br from-blue-600 to-purple-700 rounded-full flex items-center justify-center text-white text-2xl font-bold shadow-lg ring-2 ring-white">
+                                                    ${player.rating}
+                                                </div>
+                                                <div class="text-left flex-1">
+                                                    <div class="font-bold text-xl text-gray-900">${player.name}</div>
+                                                    <div class="flex items-center gap-2 text-sm text-gray-600">
+                                                        <span class="px-2 py-0.5 bg-white border border-gray-200 rounded text-xs font-bold uppercase tracking-wider">${player.position}</span>
+                                                        <span class="text-gray-400">•</span>
+                                                        <span class="flex items-center gap-1"><i data-lucide="activity" class="w-3 h-3"></i> ${player.fitness || 100}% Fit</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                                                 <div class="flex justify-between items-center border-b border-gray-100 pb-1">
+                                                    <span class="text-gray-500">PAC</span>
+                                                    <span class="font-bold ${stats.pace > 80 ? 'text-green-600' : 'text-gray-800'}">${stats.pace}</span>
+                                                 </div>
+                                                 <div class="flex justify-between items-center border-b border-gray-100 pb-1">
+                                                    <span class="text-gray-500">DRI</span>
+                                                    <span class="font-bold ${stats.dribbling > 80 ? 'text-green-600' : 'text-gray-800'}">${stats.dribbling}</span>
+                                                 </div>
+                                                 <div class="flex justify-between items-center border-b border-gray-100 pb-1">
+                                                    <span class="text-gray-500">SHO</span>
+                                                    <span class="font-bold ${stats.shooting > 80 ? 'text-green-600' : 'text-gray-800'}">${stats.shooting}</span>
+                                                 </div>
+                                                 <div class="flex justify-between items-center border-b border-gray-100 pb-1">
+                                                    <span class="text-gray-500">DEF</span>
+                                                    <span class="font-bold ${stats.defending > 80 ? 'text-green-600' : 'text-gray-800'}">${stats.defending}</span>
+                                                 </div>
+                                                 <div class="flex justify-between items-center pb-1">
+                                                    <span class="text-gray-500">PAS</span>
+                                                    <span class="font-bold ${stats.passing > 80 ? 'text-green-600' : 'text-gray-800'}">${stats.passing}</span>
+                                                 </div>
+                                                 <div class="flex justify-between items-center pb-1">
+                                                    <span class="text-gray-500">PHY</span>
+                                                    <span class="font-bold ${stats.physical > 80 ? 'text-green-600' : 'text-gray-800'}">${stats.physical}</span>
+                                                 </div>
+                                            </div>
+                                            
+                                            <div class="mt-3 pt-2 border-t border-gray-100 text-center">
+                                                <span class="text-xs text-green-600 font-medium flex items-center justify-center gap-1">
+                                                    <i data-lucide="check" class="w-3 h-3"></i> Added to Substitutes
+                                                </span>
+                                            </div>
+                                        `;
+                                                document.getElementById('reward-content').appendChild(playerCard);
+
+                                                // Initialize icons
+                                                if (typeof lucide !== 'undefined') {
+                                                    lucide.createIcons();
+                                                }
+                                            }
+
+                                            // Add a note that mystery boxes are now disabled
+                                            setTimeout(() => {
+                                                const disabledNote = document.createElement('div');
+                                                disabledNote.className = 'mt-2 p-2 bg-gray-100 text-gray-600 rounded-lg text-xs';
+                                                disabledNote.innerHTML = `
                                             <i data-lucide="lock" class="w-3 h-3 inline mr-1"></i>
                                             Mystery boxes are now disabled for this match.
                                         `;
-                                        document.getElementById('reward-content').appendChild(disabledNote);
-                                        
+                                                document.getElementById('reward-content').appendChild(disabledNote);
+
+                                                // Initialize lucide icons for the new element
+                                                if (typeof lucide !== 'undefined') {
+                                                    lucide.createIcons();
+                                                }
+                                            }, 1000);
+
+                                            // Initialize lucide icons for the new element
+                                            if (typeof lucide !== 'undefined') {
+                                                lucide.createIcons();
+                                            }
+                                        } else {
+                                            console.error('Failed to apply reward:', data.message);
+
+                                            // Show error message
+                                            const errorDiv = document.createElement('div');
+                                            errorDiv.className = 'mt-3 p-2 bg-red-100 text-red-800 rounded-lg text-sm';
+                                            errorDiv.innerHTML = `
+                                        <i data-lucide="x-circle" class="w-4 h-4 inline mr-1"></i>
+                                        Failed to apply reward. Please try again.
+                                    `;
+                                            document.getElementById('reward-content').appendChild(errorDiv);
+
+                                            // Initialize lucide icons for the new element
+                                            if (typeof lucide !== 'undefined') {
+                                                lucide.createIcons();
+                                            }
+                                        }
+                                    })
+                                    .catch(error => {
+                                        console.error('Error applying reward:', error);
+
+                                        // Remove processing indicator
+                                        const processingIndicator = document.getElementById('processing-indicator');
+                                        if (processingIndicator) {
+                                            processingIndicator.remove();
+                                        }
+
+                                        // Show error message
+                                        const errorDiv = document.createElement('div');
+                                        errorDiv.className = 'mt-3 p-2 bg-red-100 text-red-800 rounded-lg text-sm';
+                                        errorDiv.innerHTML = `
+                                    <i data-lucide="wifi-off" class="w-4 h-4 inline mr-1"></i>
+                                    Connection error. Reward may not have been applied.
+                                `;
+                                        document.getElementById('reward-content').appendChild(errorDiv);
+
                                         // Initialize lucide icons for the new element
                                         if (typeof lucide !== 'undefined') {
                                             lucide.createIcons();
                                         }
-                                    }, 1000);
-                                    
-                                    // Initialize lucide icons for the new element
-                                    if (typeof lucide !== 'undefined') {
-                                        lucide.createIcons();
-                                    }
-                                } else {
-                                    console.error('Failed to apply reward:', data.message);
-                                    
-                                    // Show error message
-                                    const errorDiv = document.createElement('div');
-                                    errorDiv.className = 'mt-3 p-2 bg-red-100 text-red-800 rounded-lg text-sm';
-                                    errorDiv.innerHTML = `
-                                        <i data-lucide="x-circle" class="w-4 h-4 inline mr-1"></i>
-                                        Failed to apply reward. Please try again.
-                                    `;
-                                    document.getElementById('reward-content').appendChild(errorDiv);
-                                    
-                                    // Initialize lucide icons for the new element
-                                    if (typeof lucide !== 'undefined') {
-                                        lucide.createIcons();
-                                    }
-                                }
-                            })
-                            .catch(error => {
-                                console.error('Error applying reward:', error);
-                                
-                                // Remove processing indicator
-                                const processingIndicator = document.getElementById('processing-indicator');
-                                if (processingIndicator) {
-                                    processingIndicator.remove();
-                                }
-                                
-                                // Show error message
-                                const errorDiv = document.createElement('div');
-                                errorDiv.className = 'mt-3 p-2 bg-red-100 text-red-800 rounded-lg text-sm';
-                                errorDiv.innerHTML = `
-                                    <i data-lucide="wifi-off" class="w-4 h-4 inline mr-1"></i>
-                                    Connection error. Reward may not have been applied.
-                                `;
-                                document.getElementById('reward-content').appendChild(errorDiv);
-                                
-                                // Initialize lucide icons for the new element
-                                if (typeof lucide !== 'undefined') {
-                                    lucide.createIcons();
-                                }
-                            });
-                            
-                            console.log('Reward selected:', selectedReward);
-                            console.log('All box contents:', boxRewards);
-                        }, 1000);
-                        
-                    }, 200);
-                }, 800);
+                                    });
+
+                                console.log('Reward selected:', selectedReward);
+                                console.log('All box contents:', boxRewards);
+                            }, 1000);
+
+                        }, 200);
+                    }, 800);
+                });
             });
-        });
         <?php endif; ?>
     </script>
 
@@ -1341,10 +1527,11 @@ function displayMatchResultPage($match, $is_home, $user_score, $opponent_score, 
     endContent('Match Result');
 }
 
-function displayTeamLineup($team_data, $side, $league_roster = null) {
+function displayTeamLineup($team_data, $side, $league_roster = null)
+{
     // If league_roster is provided, use it instead of team_data
     if ($league_roster) {
-        ?>
+    ?>
         <div class="space-y-4">
             <!-- Formation -->
             <div class="text-center">
@@ -1412,10 +1599,10 @@ function displayTeamLineup($team_data, $side, $league_roster = null) {
                 </div>
             <?php endif; ?>
         </div>
-        <?php
+    <?php
         return;
     }
-    
+
     if (!$team_data) {
         // AI team - generate basic lineup
         echo '<div class="text-center text-gray-500 py-8">';
@@ -1429,7 +1616,7 @@ function displayTeamLineup($team_data, $side, $league_roster = null) {
     $team = json_decode($team_data['team'], true) ?? [];
     $substitutes = json_decode($team_data['substitutes'], true) ?? [];
     $formation = $team_data['formation'] ?? '4-4-2';
-    
+
     // Get formation roles for displaying positions
     $formationRoles = FORMATIONS[$formation]['roles'] ?? FORMATIONS['4-4-2']['roles'];
 
@@ -1452,7 +1639,7 @@ function displayTeamLineup($team_data, $side, $league_roster = null) {
                 <?php if (!empty($team)): ?>
                     <?php foreach ($team as $index => $player): ?>
                         <?php if ($player): ?>
-                            <?php 
+                            <?php
                             // Get the formation role for this position
                             $formationRole = $formationRoles[$index] ?? $player['position'];
                             ?>
@@ -1505,10 +1692,11 @@ function displayTeamLineup($team_data, $side, $league_roster = null) {
             </div>
         <?php endif; ?>
     </div>
-    <?php
+<?php
 }
 
-function handleClubChallenge($opponent_id) {
+function handleClubChallenge($opponent_id)
+{
     // Challenge system configuration
     define('CHALLENGE_BASE_COST', 5000000); // €5M base cost
     define('WIN_REWARD_PERCENTAGE', 1.5); // 150% of challenge cost (50% profit + cost back)
@@ -1573,7 +1761,7 @@ function handleClubChallenge($opponent_id) {
         // Apply match injuries to user team
         if (!empty($match_result['injuries'])) {
             $user_team = applyClubMatchInjuries($user_team, $match_result['injuries']);
-            
+
             // Update user team in database with injuries
             $stmt = $db->prepare('UPDATE users SET team = :team WHERE id = :user_id');
             $stmt->bindValue(':team', json_encode($user_team), SQLITE3_TEXT);
@@ -1600,16 +1788,16 @@ function handleClubChallenge($opponent_id) {
 
         // Display club challenge result page
         displayClubChallengeResult($match_result, $user_data, $opponent_data, $financial_result);
-
     } catch (Exception $e) {
         header('Location: clubs.php');
         exit;
     }
 }
 
-function displayClubChallengeResult($match_result, $user_data, $opponent_data, $financial_result) {
+function displayClubChallengeResult($match_result, $user_data, $opponent_data, $financial_result)
+{
     startContent();
-    ?>
+?>
 
     <div class="container mx-auto py-6">
         <div class="max-w-4xl mx-auto">
@@ -1617,11 +1805,18 @@ function displayClubChallengeResult($match_result, $user_data, $opponent_data, $
             <div class="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden mb-6">
                 <div class="bg-gradient-to-r from-purple-500 to-purple-600 text-white p-6">
                     <div class="text-center">
-                        <h1 class="text-3xl font-bold mb-2">Club Challenge Result</h1>
-                        <p class="text-purple-100">
-                            <?php echo htmlspecialchars($user_data['club_name']); ?> vs 
-                            <?php echo htmlspecialchars($opponent_data['club_name']); ?>
-                        </p>
+                        <h1 class="text-3xl font-bold mb-4">Club Challenge Result</h1>
+                        <div class="grid grid-cols-3 gap-4 items-center text-purple-100 font-medium">
+                            <div class="text-right truncate">
+                                <?php echo htmlspecialchars($user_data['club_name']); ?>
+                            </div>
+                            <div class="text-center text-sm uppercase tracking-wider text-purple-200">
+                                VS
+                            </div>
+                            <div class="text-left truncate">
+                                <?php echo htmlspecialchars($opponent_data['club_name']); ?>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1629,19 +1824,16 @@ function displayClubChallengeResult($match_result, $user_data, $opponent_data, $
             <!-- Match Result Display -->
             <div class="bg-white rounded-lg shadow border border-gray-200 p-6 mb-6">
                 <div class="text-center">
-                    <div class="text-6xl font-bold mb-4 <?php 
-                        echo $match_result['result'] === 'win' ? 'text-green-600' : 
-                            ($match_result['result'] === 'draw' ? 'text-yellow-600' : 'text-red-600'); 
-                    ?>">
+                    <div class="text-6xl font-bold mb-4 <?php
+                                                        echo $match_result['result'] === 'win' ? 'text-green-600' : ($match_result['result'] === 'draw' ? 'text-yellow-600' : 'text-red-600');
+                                                        ?>">
                         <?php echo $match_result['user_score']; ?> - <?php echo $match_result['opponent_score']; ?>
                     </div>
-                    <div class="text-2xl font-bold mb-2 <?php 
-                        echo $match_result['result'] === 'win' ? 'text-green-600' : 
-                            ($match_result['result'] === 'draw' ? 'text-yellow-600' : 'text-red-600'); 
-                    ?>">
-                        <?php 
-                        echo $match_result['result'] === 'win' ? 'VICTORY!' : 
-                            ($match_result['result'] === 'draw' ? 'DRAW!' : 'DEFEAT!'); 
+                    <div class="text-2xl font-bold mb-2 <?php
+                                                        echo $match_result['result'] === 'win' ? 'text-green-600' : ($match_result['result'] === 'draw' ? 'text-yellow-600' : 'text-red-600');
+                                                        ?>">
+                        <?php
+                        echo $match_result['result'] === 'win' ? 'VICTORY!' : ($match_result['result'] === 'draw' ? 'DRAW!' : 'DEFEAT!');
                         ?>
                     </div>
                 </div>
@@ -1656,12 +1848,13 @@ function displayClubChallengeResult($match_result, $user_data, $opponent_data, $
         </div>
     </div>
 
-    <?php
+<?php
     endContent('Club Challenge Result');
 }
 
 // Challenge validation functions and utilities
-function calculateMatchRewards($user_id, $match_result, $challenge_cost, $potential_reward) {
+function calculateMatchRewards($user_id, $match_result, $challenge_cost, $potential_reward)
+{
     $earnings = 0;
     $details = [];
 
@@ -1682,7 +1875,8 @@ function calculateMatchRewards($user_id, $match_result, $challenge_cost, $potent
     ];
 }
 
-function calculateTeamValue($team) {
+function calculateTeamValue($team)
+{
     $total_value = 0;
     foreach ($team as $player) {
         if ($player && isset($player['value'])) {
@@ -1693,7 +1887,8 @@ function calculateTeamValue($team) {
 }
 
 // Simulate match between two teams (for club challenges)
-function simulateClubMatch($user_team, $opponent_team, $user_team_value, $opponent_team_value) {
+function simulateClubMatch($user_team, $opponent_team, $user_team_value, $opponent_team_value)
+{
     // Calculate team strengths based on multiple factors
     $user_strength = calculateClubTeamStrength($user_team, $user_team_value);
     $opponent_strength = calculateClubTeamStrength($opponent_team, $opponent_team_value);
@@ -1733,7 +1928,8 @@ function simulateClubMatch($user_team, $opponent_team, $user_team_value, $oppone
     ];
 }
 
-function calculateClubTeamStrength($team, $team_value) {
+function calculateClubTeamStrength($team, $team_value)
+{
     if (empty($team)) return 50;
 
     $total_rating = 0;
@@ -1749,10 +1945,10 @@ function calculateClubTeamStrength($team, $team_value) {
     if ($player_count === 0) return 50;
 
     $average_rating = $total_rating / $player_count;
-    
+
     // Base strength from average rating (50-100 range)
     $strength = min(100, max(50, $average_rating));
-    
+
     // Slight adjustment based on team value
     $value_factor = min(10, ($team_value / 100000000) * 5); // Max 10 point bonus for very expensive teams
     $strength += $value_factor;
@@ -1760,7 +1956,8 @@ function calculateClubTeamStrength($team, $team_value) {
     return min(100, $strength);
 }
 
-function applyClubMatchInjuries($team, $injury_indices) {
+function applyClubMatchInjuries($team, $injury_indices)
+{
     foreach ($injury_indices as $index) {
         if (isset($team[$index]) && $team[$index]) {
             // Reduce player fitness/rating temporarily
