@@ -349,9 +349,25 @@ function displayMatchResultPage($match, $is_home, $user_score, $opponent_score, 
                                 </div>
                             <?php endforeach; ?>
                             <div class="border-t pt-2 mt-3">
-                                <div class="flex justify-between items-center font-bold">
+                                <div class="flex justify-between items-center font-bold mb-3">
                                     <span>Total Budget Earned:</span>
                                     <span class="text-green-600 text-lg">+€<?php echo number_format($rewards['budget_earned']); ?></span>
+                                </div>
+                                
+                                <!-- Budget Before and After -->
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div class="bg-red-50 border border-red-200 rounded-lg p-3">
+                                        <div class="text-xs text-red-600 font-semibold mb-1">BEFORE MATCH</div>
+                                        <div class="text-lg font-bold text-red-700">
+                                            €<?php echo number_format($user_data['budget'] - $rewards['budget_earned']); ?>
+                                        </div>
+                                    </div>
+                                    <div class="bg-green-50 border border-green-200 rounded-lg p-3">
+                                        <div class="text-xs text-green-600 font-semibold mb-1">AFTER MATCH</div>
+                                        <div class="text-lg font-bold text-green-700">
+                                            €<?php echo number_format($user_data['budget']); ?>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
