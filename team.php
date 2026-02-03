@@ -525,7 +525,10 @@ startContent();
                 $list.append(`
                         <div class="flex items-center justify-between p-2 border rounded ${bgClass} cursor-pointer transition-all duration-200 player-list-item hover:bg-blue-50" data-idx="${idx}">
                             <div class="flex-1" onclick="selectPlayer(${idx})">
-                                <div class="${nameClass}">${player.name}${customBadge}</div>
+                                <div class="flex items-center gap-2">
+                                    <div class="${nameClass}">${player.name}${customBadge}</div>
+                                    ${(player.fitness || 100) < 20 ? '<i data-lucide="alert-circle" class="w-4 h-4 text-red-600" title="Low Fitness - Player needs rest"></i>' : ''}
+                                </div>
                                 <div class="${valueClass}">${formatMarketValue(player.value || 0)}</div>
                                 <div class="text-xs text-gray-500 mt-1">${player.position} • ★${getEffectiveRating(player)}</div>
                                 <div class="flex gap-2 mt-1 items-center">
@@ -603,7 +606,10 @@ startContent();
                 $list.append(`
                     <div class="flex items-center justify-between p-2 border rounded ${bgClass} hover:bg-blue-50 transition-all duration-200">
                         <div class="flex-1">
-                            <div class="${nameClass}">${player.name}${customBadge}</div>
+                            <div class="flex items-center gap-2">
+                                <div class="${nameClass}">${player.name}${customBadge}</div>
+                                ${(player.fitness || 100) < 20 ? '<i data-lucide="alert-circle" class="w-4 h-4 text-red-600" title="Low Fitness - Player needs rest"></i>' : ''}
+                            </div>
                             <div class="${valueClass}">${formatMarketValue(player.value || 0)}</div>
                             <div class="text-xs text-gray-500 mt-1">${player.position} • ★${getEffectiveRating(player)}</div>
                             <div class="flex gap-2 mt-1 items-center">
