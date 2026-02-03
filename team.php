@@ -1689,6 +1689,9 @@ startContent();
                     const isSelected = selectedPlayerIdx === idx;
                     const fitness = player.fitness || 100;
                     const fitnessColor = fitness >= 80 ? 'bg-green-500' : fitness >= 50 ? 'bg-yellow-500' : 'bg-red-500';
+                    const form = player.form || 7;
+                    const formArrowIcon = getFormArrowIcon(form);
+                    const formBadgeColor = getFormBadgeColor(form);
 
                     $field.append(`
                             <div class="absolute cursor-pointer player-slot transition-all duration-200" 
@@ -1698,6 +1701,11 @@ startContent();
                                         ${getPlayerAvatarHtml(player.name, player.avatar)}
                                     </div>
                                     
+                                    <!-- Form Icon -->
+                                    <div class="absolute top-0 -right-2 w-6 h-6 rounded-full flex items-center justify-center shadow-md ${formBadgeColor} ring-1 ring-white z-10" title="Form: ${form.toFixed(1)}">
+                                        ${formArrowIcon}
+                                    </div>
+
                                     <!-- Fitness progress bar -->
                                     <div class="absolute top-full left-1/2 transform -translate-x-1/2 mt-1 w-16">
                                         <div class="bg-gray-700 bg-opacity-80 rounded-full h-1.5 overflow-hidden shadow-md border border-white border-opacity-30">
@@ -2431,8 +2439,7 @@ startContent();
                                 icon: 'success',
                                 title: 'Team Saved!',
                                 text: filledSlots === totalSlots ?
-                                    'Your complete team has been saved successfully!' :
-                                    `Team saved successfully! (${filledSlots}/${totalSlots} players selected)`,
+                                    'Your complete team has been saved successfully!' : `Team saved successfully! (${filledSlots}/${totalSlots} players selected)`,
                                 confirmButtonColor: '#10b981'
                             });
                         }

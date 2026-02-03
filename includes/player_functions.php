@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Player Management Functions
  * 
@@ -81,15 +82,55 @@ if (!function_exists('generateRandomPlayerName')) {
     function generateRandomPlayerName()
     {
         $first_names = [
-            'Alex', 'Bruno', 'Carlos', 'David', 'Eduardo', 'Fernando', 'Gabriel', 'Hugo', 'Ivan', 'João',
-            'Kevin', 'Lucas', 'Miguel', 'Nicolas', 'Oscar', 'Pedro', 'Rafael', 'Samuel', 'Thiago', 'Victor',
-            'William', 'Xavier', 'Yuri', 'Zack'
+            'Alex',
+            'Bruno',
+            'Carlos',
+            'David',
+            'Eduardo',
+            'Fernando',
+            'Gabriel',
+            'Hugo',
+            'Ivan',
+            'João',
+            'Kevin',
+            'Lucas',
+            'Miguel',
+            'Nicolas',
+            'Oscar',
+            'Pedro',
+            'Rafael',
+            'Samuel',
+            'Thiago',
+            'Victor',
+            'William',
+            'Xavier',
+            'Yuri',
+            'Zack'
         ];
 
         $last_names = [
-            'Silva', 'Santos', 'Oliveira', 'Souza', 'Rodriguez', 'Fernandez', 'Lopez', 'Martinez', 'Garcia',
-            'Gonzalez', 'Perez', 'Sanchez', 'Ramirez', 'Cruz', 'Flores', 'Torres', 'Rivera', 'Gomez',
-            'Diaz', 'Morales', 'Jimenez', 'Herrera'
+            'Silva',
+            'Santos',
+            'Oliveira',
+            'Souza',
+            'Rodriguez',
+            'Fernandez',
+            'Lopez',
+            'Martinez',
+            'Garcia',
+            'Gonzalez',
+            'Perez',
+            'Sanchez',
+            'Ramirez',
+            'Cruz',
+            'Flores',
+            'Torres',
+            'Rivera',
+            'Gomez',
+            'Diaz',
+            'Morales',
+            'Jimenez',
+            'Herrera'
         ];
 
         return $first_names[array_rand($first_names)] . ' ' . $last_names[array_rand($last_names)];
@@ -183,16 +224,19 @@ if (!function_exists('updatePlayerForm')) {
 
         switch ($performance) {
             case 'excellent':
-                $form += rand(1, 2);
+                $form += (rand(15, 25) / 10); // +1.5 to +2.5
                 break;
             case 'good':
-                $form += rand(0, 1);
+                $form += (rand(5, 15) / 10); // +0.5 to +1.5
                 break;
             case 'average':
-                $form += rand(-1, 1) * 0.5;
+                // Fluctuation
+                $change = rand(-10, 10) / 10; // -1.0 to +1.0
+                if ($change == 0) $change = (rand(0, 1) ? 0.2 : -0.2);
+                $form += $change;
                 break;
             case 'poor':
-                $form -= rand(1, 2);
+                $form -= (rand(10, 25) / 10); // -1.0 to -2.5
                 break;
         }
 
