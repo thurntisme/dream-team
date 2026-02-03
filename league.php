@@ -36,7 +36,7 @@ try {
 
     // Get current season
     $current_season = getCurrentSeason($db);
-    
+
     // Check if league exists for current year
     $stmt = $db->prepare('SELECT COUNT(*) as count FROM league_teams WHERE season LIKE :year_pattern');
     $stmt->bindValue(':year_pattern', $current_season . '/%', SQLITE3_TEXT);
@@ -59,11 +59,11 @@ try {
 
         // Create league tables if they don't exist
         createLeagueTables($db);
-        
+
         // Create league teams and fixtures
         createLeagueTeams($db, $user_id, $next_season);
         generateFixtures($db, $next_season);
-        
+
         $_SESSION['success_message'] = "League {$next_season} created successfully! Your season begins now.";
         header('Location: league.php');
         exit;
@@ -85,7 +85,7 @@ try {
         // Create league teams and fixtures for new season
         createLeagueTeams($db, $user_id, $next_season);
         generateFixtures($db, $next_season);
-        
+
         $_SESSION['success_message'] = "League {$next_season} updated successfully! New season begins now.";
         header('Location: league.php');
         exit;
@@ -97,10 +97,10 @@ try {
         displayCreateLeaguePage($db, $next_season_id, $user, false);
         exit;
     }
-    
+
     // Get current season identifier for display
     $current_season_id = getCurrentSeasonIdentifier($db);
-    
+
     // Check if this is a subsequent season (league exists and we can update)
     $is_subsequent_season = $league_exists;
 
@@ -163,6 +163,60 @@ try {
     $most_yellow_cards = getMostYellowCards($db, $current_season_id, 3);
     $most_red_cards = getMostRedCards($db, $current_season_id, 3);
     $top_goalkeepers = getTopGoalkeepers($db, $current_season_id, 3);
+
+    // Get past seasons for League History
+    $history_data = [];
+    $stmt = $db->prepare('SELECT DISTINCT season FROM league_teams WHERE season != :current_season ORDER BY season DESC');
+    $stmt->bindValue(':current_season', $current_season_id, SQLITE3_TEXT);
+    $result = $stmt->execute();
+    while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+        $season = $row['season'];
+        $season_standings = getLeagueStandings($db, $season);
+
+        // Find champion
+        $champion = $season_standings[0] ?? null;
+
+        // Find user
+        $user_team = null;
+        $user_position = 0;
+        foreach ($season_standings as $index => $team) {
+            if ($team['is_user']) {
+                $user_team = $team;
+                $user_position = $index + 1;
+                break;
+            }
+        }
+
+        // Get matches for this season grouped by gameweek
+        $matches_sql = 'SELECT 
+            lm.*,
+            ht.name as home_team,
+            at.name as away_team
+        FROM league_matches lm
+        JOIN league_teams ht ON lm.home_team_id = ht.id
+        JOIN league_teams at ON lm.away_team_id = at.id
+        WHERE lm.season = :season
+        ORDER BY lm.gameweek ASC, lm.match_date ASC';
+
+        $stmt_matches = $db->prepare($matches_sql);
+        $stmt_matches->bindValue(':season', $season, SQLITE3_TEXT);
+        $matches_result = $stmt_matches->execute();
+
+        $matches_by_gameweek = [];
+        while ($match = $matches_result->fetchArray(SQLITE3_ASSOC)) {
+            $matches_by_gameweek[$match['gameweek']][] = $match;
+        }
+
+        $history_data[] = [
+            'season' => $season,
+            'champion' => $champion,
+            'user_team' => $user_team,
+            'user_position' => $user_position,
+            'standings' => $season_standings,
+            'matches_by_gameweek' => $matches_by_gameweek
+        ];
+    }
+
 
     // Calculate nation call availability
     $matchesPlayed = $user['matches_played'] ?? 0;
@@ -326,15 +380,15 @@ startContent();
                                 </span>
                                 <div class="flex items-center gap-2">
                                     <span class="text-2xl font-bold <?php
-                                    if ($results['user_position'] <= 4)
-                                        echo 'text-green-600'; // Champions League
-                                    elseif ($results['user_position'] <= 6)
-                                        echo 'text-blue-600'; // Europa League  
-                                    elseif ($results['user_position'] >= 18)
-                                        echo 'text-red-600'; // Relegation
-                                    else
-                                        echo 'text-gray-900';
-                                    ?>"><?php echo $results['user_position']; ?></span>
+                                                                    if ($results['user_position'] <= 4)
+                                                                        echo 'text-green-600'; // Champions League
+                                                                    elseif ($results['user_position'] <= 6)
+                                                                        echo 'text-blue-600'; // Europa League  
+                                                                    elseif ($results['user_position'] >= 18)
+                                                                        echo 'text-red-600'; // Relegation
+                                                                    else
+                                                                        echo 'text-gray-900';
+                                                                    ?>"><?php echo $results['user_position']; ?></span>
                                     <span class="text-gray-500">/ 20</span>
                                 </div>
                             </div>
@@ -702,7 +756,7 @@ startContent();
     <?php endif; ?>
 
     <!-- Next Match Summary Box -->
-    <?php 
+    <?php
     // Find user's next match
     $next_match = null;
     foreach ($upcoming_matches as $match) {
@@ -712,7 +766,7 @@ startContent();
         }
     }
     ?>
-    
+
     <?php if ($next_match && $current_validation['is_valid']): ?>
         <div class="mb-6 bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
             <!-- Header -->
@@ -725,7 +779,7 @@ startContent();
                         <div>
                             <h3 class="text-lg font-bold">Next Fixture</h3>
                             <p class="text-blue-100 text-sm">
-                                Gameweek <?php echo $next_match['gameweek']; ?> • 
+                                Gameweek <?php echo $next_match['gameweek']; ?> •
                                 <?php echo date('l, M j', strtotime($next_match['match_date'])); ?>
                             </p>
                         </div>
@@ -798,7 +852,7 @@ startContent();
                             <span>Elite League</span>
                         </div>
                     </div>
-                    
+
                     <?php if ($next_match): ?>
                         <form method="GET" action="match-simulator.php" class="inline">
                             <input type="hidden" name="match_id" value="<?php echo $next_match['id']; ?>">
@@ -842,6 +896,10 @@ startContent();
             <button class="tab-btn py-2 px-1 border-b-2 font-medium text-sm" data-tab="calendar">
                 <i data-lucide="calendar" class="w-4 h-4 inline mr-1"></i>
                 Calendar
+            </button>
+            <button class="tab-btn py-2 px-1 border-b-2 font-medium text-sm" data-tab="league-history">
+                <i data-lucide="book" class="w-4 h-4 inline mr-1"></i>
+                League History
             </button>
             <button class="tab-btn py-2 px-1 border-b-2 font-medium text-sm" data-tab="history">
                 <i data-lucide="history" class="w-4 h-4 inline mr-1"></i>
@@ -892,15 +950,15 @@ startContent();
                             <tr class="<?php echo $team['is_user'] ? 'bg-blue-50' : ''; ?> hover:bg-gray-50">
                                 <td class="px-4 py-3 text-sm font-medium">
                                     <span class="<?php
-                                    if ($index < 4)
-                                        echo 'text-green-600'; // Champions League
-                                    elseif ($index < 6)
-                                        echo 'text-blue-600'; // Europa League
-                                    elseif ($index >= 17)
-                                        echo 'text-red-600'; // Relegation
-                                    else
-                                        echo 'text-gray-900';
-                                    ?>"><?php echo $index + 1; ?></span>
+                                                    if ($index < 4)
+                                                        echo 'text-green-600'; // Champions League
+                                                    elseif ($index < 6)
+                                                        echo 'text-blue-600'; // Europa League
+                                                    elseif ($index >= 17)
+                                                        echo 'text-red-600'; // Relegation
+                                                    else
+                                                        echo 'text-gray-900';
+                                                    ?>"><?php echo $index + 1; ?></span>
                                 </td>
                                 <td class="px-4 py-3">
                                     <div class="flex items-center gap-2">
@@ -1125,16 +1183,16 @@ startContent();
                                         </div>
                                         <div class="text-xs text-gray-500">
                                             <?php echo $player['matches_played']; ?> matches
-                                                </div>
-                                            </div>
                                         </div>
-                                <?php endforeach; ?>
-                            </div>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
                     <?php else: ?>
-                            <div class="text-center py-8">
-                                <i data-lucide="star" class="w-12 h-12 text-gray-400 mx-auto mb-4"></i>
-                                <p class="text-gray-600">No player ratings available yet</p>
-                            </div>
+                        <div class="text-center py-8">
+                            <i data-lucide="star" class="w-12 h-12 text-gray-400 mx-auto mb-4"></i>
+                            <p class="text-gray-600">No player ratings available yet</p>
+                        </div>
                     <?php endif; ?>
                 </div>
             </div>
@@ -1151,41 +1209,41 @@ startContent();
                     </div>
                     <div class="p-4">
                         <?php if (!empty($most_yellow_cards)): ?>
-                                <div class="space-y-3">
-                                    <?php foreach ($most_yellow_cards as $index => $player): ?>
-                                            <?php $isUserPlayer = ($player['user_id'] == $user_id); ?>
+                            <div class="space-y-3">
+                                <?php foreach ($most_yellow_cards as $index => $player): ?>
+                                    <?php $isUserPlayer = ($player['user_id'] == $user_id); ?>
+                                    <div
+                                        class="flex items-center justify-between p-2 rounded <?php echo $isUserPlayer ? 'bg-blue-50 border-2 border-blue-200' : 'bg-gray-50'; ?>">
+                                        <div class="flex items-center gap-2">
                                             <div
-                                                class="flex items-center justify-between p-2 rounded <?php echo $isUserPlayer ? 'bg-blue-50 border-2 border-blue-200' : 'bg-gray-50'; ?>">
-                                                <div class="flex items-center gap-2">
-                                                    <div
-                                                        class="w-6 h-6 <?php echo $isUserPlayer ? 'bg-blue-600' : 'bg-yellow-600'; ?> rounded-full flex items-center justify-center text-white font-bold text-xs">
-                                                        <?php echo $index + 1; ?>
-                                                    </div>
-                                                    <div>
-                                                        <div class="font-medium text-sm flex items-center gap-2">
-                                                            <?php echo htmlspecialchars($player['player_name']); ?>
-                                                            <?php if ($isUserPlayer): ?>
-                                                                    <span class="px-1 py-0.5 bg-blue-600 text-white text-xs rounded">YOUR
-                                                                        PLAYER</span>
-                                                            <?php endif; ?>
-                                                        </div>
-                                                        <div
-                                                            class="text-xs <?php echo $isUserPlayer ? 'text-blue-700' : 'text-gray-600'; ?>">
-                                                            <?php echo htmlspecialchars($player['club_name']); ?>
-                                                        </div>
-                                                    </div>
+                                                class="w-6 h-6 <?php echo $isUserPlayer ? 'bg-blue-600' : 'bg-yellow-600'; ?> rounded-full flex items-center justify-center text-white font-bold text-xs">
+                                                <?php echo $index + 1; ?>
+                                            </div>
+                                            <div>
+                                                <div class="font-medium text-sm flex items-center gap-2">
+                                                    <?php echo htmlspecialchars($player['player_name']); ?>
+                                                    <?php if ($isUserPlayer): ?>
+                                                        <span class="px-1 py-0.5 bg-blue-600 text-white text-xs rounded">YOUR
+                                                            PLAYER</span>
+                                                    <?php endif; ?>
                                                 </div>
                                                 <div
-                                                    class="<?php echo $isUserPlayer ? 'text-blue-600' : 'text-yellow-600'; ?> font-bold">
-                                                    <?php echo $player['yellow_cards']; ?>
+                                                    class="text-xs <?php echo $isUserPlayer ? 'text-blue-700' : 'text-gray-600'; ?>">
+                                                    <?php echo htmlspecialchars($player['club_name']); ?>
                                                 </div>
                                             </div>
-                                    <?php endforeach; ?>
-                                </div>
+                                        </div>
+                                        <div
+                                            class="<?php echo $isUserPlayer ? 'text-blue-600' : 'text-yellow-600'; ?> font-bold">
+                                            <?php echo $player['yellow_cards']; ?>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
                         <?php else: ?>
-                                <div class="text-center py-4">
-                                    <p class="text-gray-600 text-sm">No yellow cards yet</p>
-                                </div>
+                            <div class="text-center py-4">
+                                <p class="text-gray-600 text-sm">No yellow cards yet</p>
+                            </div>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -1200,40 +1258,40 @@ startContent();
                     </div>
                     <div class="p-4">
                         <?php if (!empty($most_red_cards)): ?>
-                                <div class="space-y-3">
-                                    <?php foreach ($most_red_cards as $index => $player): ?>
-                                            <?php $isUserPlayer = ($player['user_id'] == $user_id); ?>
+                            <div class="space-y-3">
+                                <?php foreach ($most_red_cards as $index => $player): ?>
+                                    <?php $isUserPlayer = ($player['user_id'] == $user_id); ?>
+                                    <div
+                                        class="flex items-center justify-between p-2 rounded <?php echo $isUserPlayer ? 'bg-blue-50 border-2 border-blue-200' : 'bg-gray-50'; ?>">
+                                        <div class="flex items-center gap-2">
                                             <div
-                                                class="flex items-center justify-between p-2 rounded <?php echo $isUserPlayer ? 'bg-blue-50 border-2 border-blue-200' : 'bg-gray-50'; ?>">
-                                                <div class="flex items-center gap-2">
-                                                    <div
-                                                        class="w-6 h-6 <?php echo $isUserPlayer ? 'bg-blue-600' : 'bg-red-600'; ?> rounded-full flex items-center justify-center text-white font-bold text-xs">
-                                                        <?php echo $index + 1; ?>
-                                                    </div>
-                                                    <div>
-                                                        <div class="font-medium text-sm flex items-center gap-2">
-                                                            <?php echo htmlspecialchars($player['player_name']); ?>
-                                                            <?php if ($isUserPlayer): ?>
-                                                                    <span class="px-1 py-0.5 bg-blue-600 text-white text-xs rounded">YOUR
-                                                                        PLAYER</span>
-                                                            <?php endif; ?>
-                                                        </div>
-                                                        <div
-                                                            class="text-xs <?php echo $isUserPlayer ? 'text-blue-700' : 'text-gray-600'; ?>">
-                                                            <?php echo htmlspecialchars($player['club_name']); ?>
-                                                        </div>
-                                                    </div>
+                                                class="w-6 h-6 <?php echo $isUserPlayer ? 'bg-blue-600' : 'bg-red-600'; ?> rounded-full flex items-center justify-center text-white font-bold text-xs">
+                                                <?php echo $index + 1; ?>
+                                            </div>
+                                            <div>
+                                                <div class="font-medium text-sm flex items-center gap-2">
+                                                    <?php echo htmlspecialchars($player['player_name']); ?>
+                                                    <?php if ($isUserPlayer): ?>
+                                                        <span class="px-1 py-0.5 bg-blue-600 text-white text-xs rounded">YOUR
+                                                            PLAYER</span>
+                                                    <?php endif; ?>
                                                 </div>
-                                                <div class="<?php echo $isUserPlayer ? 'text-blue-600' : 'text-red-600'; ?> font-bold">
-                                                    <?php echo $player['red_cards']; ?>
+                                                <div
+                                                    class="text-xs <?php echo $isUserPlayer ? 'text-blue-700' : 'text-gray-600'; ?>">
+                                                    <?php echo htmlspecialchars($player['club_name']); ?>
                                                 </div>
                                             </div>
-                                    <?php endforeach; ?>
-                                </div>
+                                        </div>
+                                        <div class="<?php echo $isUserPlayer ? 'text-blue-600' : 'text-red-600'; ?> font-bold">
+                                            <?php echo $player['red_cards']; ?>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
                         <?php else: ?>
-                                <div class="text-center py-4">
-                                    <p class="text-gray-600 text-sm">No red cards yet</p>
-                                </div>
+                            <div class="text-center py-4">
+                                <p class="text-gray-600 text-sm">No red cards yet</p>
+                            </div>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -1249,55 +1307,55 @@ startContent();
                 </div>
                 <div class="p-4">
                     <?php if (!empty($top_goalkeepers)): ?>
-                            <div class="space-y-3">
-                                <?php foreach ($top_goalkeepers as $index => $gk): ?>
-                                        <?php $isUserPlayer = ($gk['user_id'] == $user_id); ?>
-                                        <div
-                                            class="flex items-center justify-between p-3 rounded-lg <?php echo $isUserPlayer ? 'bg-blue-50 border-2 border-blue-200' : 'bg-gray-50'; ?>">
-                                            <div class="flex items-center gap-3">
-                                                <div class="relative">
-                                                    <?php echo getPlayerAvatar($gk['player_name'], 'sm', 'shadow-md'); ?>
-                                                    <div class="absolute -bottom-1 -right-1 w-5 h-5 <?php echo $isUserPlayer ? 'bg-blue-600' : 'bg-cyan-600'; ?> rounded-full flex items-center justify-center text-white font-bold text-xs border-2 border-white">
-                                                        <?php echo $index + 1; ?>
-                                                    </div>
-                                                </div>
-                                                <div>
-                                                    <div class="font-medium flex items-center gap-2">
-                                                        <?php echo htmlspecialchars($gk['player_name']); ?>
-                                                        <?php if ($isUserPlayer): ?>
-                                                                <span class="px-2 py-1 bg-blue-600 text-white text-xs rounded-full">YOUR
-                                                                    PLAYER</span>
-                                                        <?php endif; ?>
-                                                    </div>
-                                                    <div
-                                                        class="text-sm <?php echo $isUserPlayer ? 'text-blue-700' : 'text-gray-600'; ?>">
-                                                        <?php echo htmlspecialchars($gk['club_name']); ?>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="text-right">
-                                                <div class="flex gap-4">
-                                                    <div class="text-center">
-                                                        <div
-                                                            class="text-lg font-bold <?php echo $isUserPlayer ? 'text-blue-600' : 'text-cyan-600'; ?>">
-                                                            <?php echo $gk['clean_sheets']; ?>
-                                                        </div>
-                                                        <div class="text-xs text-gray-500">clean sheets</div>
-                                                    </div>
-                                                    <div class="text-center">
-                                                        <div class="text-lg font-bold text-blue-600"><?php echo $gk['saves']; ?></div>
-                                                        <div class="text-xs text-gray-500">saves</div>
-                                                    </div>
-                                                </div>
+                        <div class="space-y-3">
+                            <?php foreach ($top_goalkeepers as $index => $gk): ?>
+                                <?php $isUserPlayer = ($gk['user_id'] == $user_id); ?>
+                                <div
+                                    class="flex items-center justify-between p-3 rounded-lg <?php echo $isUserPlayer ? 'bg-blue-50 border-2 border-blue-200' : 'bg-gray-50'; ?>">
+                                    <div class="flex items-center gap-3">
+                                        <div class="relative">
+                                            <?php echo getPlayerAvatar($gk['player_name'], 'sm', 'shadow-md'); ?>
+                                            <div class="absolute -bottom-1 -right-1 w-5 h-5 <?php echo $isUserPlayer ? 'bg-blue-600' : 'bg-cyan-600'; ?> rounded-full flex items-center justify-center text-white font-bold text-xs border-2 border-white">
+                                                <?php echo $index + 1; ?>
                                             </div>
                                         </div>
-                                <?php endforeach; ?>
-                            </div>
+                                        <div>
+                                            <div class="font-medium flex items-center gap-2">
+                                                <?php echo htmlspecialchars($gk['player_name']); ?>
+                                                <?php if ($isUserPlayer): ?>
+                                                    <span class="px-2 py-1 bg-blue-600 text-white text-xs rounded-full">YOUR
+                                                        PLAYER</span>
+                                                <?php endif; ?>
+                                            </div>
+                                            <div
+                                                class="text-sm <?php echo $isUserPlayer ? 'text-blue-700' : 'text-gray-600'; ?>">
+                                                <?php echo htmlspecialchars($gk['club_name']); ?>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="flex gap-4">
+                                            <div class="text-center">
+                                                <div
+                                                    class="text-lg font-bold <?php echo $isUserPlayer ? 'text-blue-600' : 'text-cyan-600'; ?>">
+                                                    <?php echo $gk['clean_sheets']; ?>
+                                                </div>
+                                                <div class="text-xs text-gray-500">clean sheets</div>
+                                            </div>
+                                            <div class="text-center">
+                                                <div class="text-lg font-bold text-blue-600"><?php echo $gk['saves']; ?></div>
+                                                <div class="text-xs text-gray-500">saves</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
                     <?php else: ?>
-                            <div class="text-center py-8">
-                                <i data-lucide="shield" class="w-12 h-12 text-gray-400 mx-auto mb-4"></i>
-                                <p class="text-gray-600">No goalkeeper stats available yet</p>
-                            </div>
+                        <div class="text-center py-8">
+                            <i data-lucide="shield" class="w-12 h-12 text-gray-400 mx-auto mb-4"></i>
+                            <p class="text-gray-600">No goalkeeper stats available yet</p>
+                        </div>
                     <?php endif; ?>
                 </div>
             </div>
@@ -1324,82 +1382,225 @@ startContent();
     <div id="calendar-tab" class="tab-content hidden">
         <div class="grid gap-4">
             <?php if (!empty($upcoming_matches)): ?>
-                    <?php
-                    $current_gw = null;
-                    foreach ($upcoming_matches as $match):
-                        if ($current_gw !== $match['gameweek']):
-                            $current_gw = $match['gameweek'];
-                            ?>
-                                    <div class="bg-white rounded-lg shadow p-4">
-                                        <h3 class="font-semibold text-lg mb-3">Gameweek <?php echo $match['gameweek']; ?></h3>
-                                <?php endif; ?>
+                <?php
+                $current_gw = null;
+                foreach ($upcoming_matches as $match):
+                    if ($current_gw !== $match['gameweek']):
+                        $current_gw = $match['gameweek'];
+                ?>
+                        <div class="bg-white rounded-lg shadow p-4">
+                            <h3 class="font-semibold text-lg mb-3">Gameweek <?php echo $match['gameweek']; ?></h3>
+                        <?php endif; ?>
 
-                                <div class="flex items-center justify-between p-3 border rounded-lg mb-2 last:mb-0">
-                                    <div class="flex items-center gap-4">
-                                        <div class="text-sm text-gray-500">
-                                            <?php echo date('M j, Y', strtotime($match['match_date'])); ?>
-                                        </div>
+                        <div class="flex items-center justify-between p-3 border rounded-lg mb-2 last:mb-0">
+                            <div class="flex items-center gap-4">
+                                <div class="text-sm text-gray-500">
+                                    <?php echo date('M j, Y', strtotime($match['match_date'])); ?>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span
+                                        class="font-medium <?php echo $match['home_team_id'] == $user_id ? 'text-blue-600' : ''; ?>">
+                                        <?php echo htmlspecialchars($match['home_team']); ?>
+                                    </span>
+                                    <span class="text-gray-400">vs</span>
+                                    <span
+                                        class="font-medium <?php echo $match['away_team_id'] == $user_id ? 'text-blue-600' : ''; ?>">
+                                        <?php echo htmlspecialchars($match['away_team']); ?>
+                                    </span>
+                                </div>
+                            </div>
+
+                            <?php if ($match['status'] === 'scheduled' && ($match['home_team_id'] == $user_id || $match['away_team_id'] == $user_id)): ?>
+                                <?php if ($match['gameweek'] == $current_gameweek): ?>
+                                    <?php if ($current_validation['is_valid']): ?>
+                                        <form method="POST" class="inline">
+                                            <input type="hidden" name="match_id" value="<?php echo $match['id']; ?>">
+                                            <button type="submit" name="simulate_match"
+                                                class="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700"
+                                                title="This will simulate all matches in gameweek <?php echo $match['gameweek']; ?>">
+                                                Play Gameweek <?php echo $match['gameweek']; ?>
+                                            </button>
+                                        </form>
+                                    <?php else: ?>
                                         <div class="flex items-center gap-2">
-                                            <span
-                                                class="font-medium <?php echo $match['home_team_id'] == $user_id ? 'text-blue-600' : ''; ?>">
-                                                <?php echo htmlspecialchars($match['home_team']); ?>
-                                            </span>
-                                            <span class="text-gray-400">vs</span>
-                                            <span
-                                                class="font-medium <?php echo $match['away_team_id'] == $user_id ? 'text-blue-600' : ''; ?>">
-                                                <?php echo htmlspecialchars($match['away_team']); ?>
-                                            </span>
+                                            <button disabled class="bg-gray-400 text-white px-3 py-1 rounded text-sm cursor-not-allowed"
+                                                title="Club not eligible - check team requirements">
+                                                Club Not Eligible
+                                            </button>
+                                            <a href="team.php" class="text-blue-600 hover:text-blue-800 text-sm">
+                                                Fix Issues
+                                            </a>
+                                        </div>
+                                    <?php endif; ?>
+                                <?php else: ?>
+                                    <div class="text-sm text-gray-500">
+                                        Gameweek <?php echo $match['gameweek']; ?>
+                                    </div>
+                                <?php endif; ?>
+                            <?php elseif ($match['status'] === 'completed'): ?>
+                                <div class="text-sm font-medium">
+                                    <?php echo $match['home_score']; ?> - <?php echo $match['away_score']; ?>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+
+                        <?php
+                        // Check if this is the last match of the gameweek
+                        $next_key = array_search($match, $upcoming_matches) + 1;
+                        if (!isset($upcoming_matches[$next_key]) || $upcoming_matches[$next_key]['gameweek'] !== $current_gw):
+                        ?>
+                        </div>
+                    <?php endif; ?>
+                <?php endforeach; ?>
+            <?php else: ?>
+                <div class="bg-white rounded-lg shadow p-8 text-center">
+                    <i data-lucide="calendar-x" class="w-12 h-12 text-gray-400 mx-auto mb-4"></i>
+                    <h3 class="text-lg font-medium text-gray-900 mb-2">No Upcoming Matches</h3>
+                    <p class="text-gray-600">The season has ended or no matches are scheduled.</p>
+                </div>
+            <?php endif; ?>
+        </div>
+    </div>
+
+    <!-- League History Tab -->
+    <div id="league-history-tab" class="tab-content hidden">
+        <div class="bg-white rounded-lg shadow overflow-hidden p-6">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">League History</h3>
+
+            <?php if (!empty($history_data)): ?>
+                <div class="space-y-4">
+                    <?php foreach ($history_data as $data): ?>
+                        <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                            <div class="flex items-center justify-between mb-3">
+                                <div>
+                                    <h4 class="text-xl font-bold text-gray-800">Season <?php echo htmlspecialchars($data['season']); ?></h4>
+                                    <p class="text-gray-600 text-sm">Completed</p>
+                                </div>
+                                <button class="text-blue-600 hover:text-blue-800 font-medium text-sm flex items-center gap-1" onclick="document.getElementById('history-details-<?php echo str_replace('/', '-', $data['season']); ?>').classList.toggle('hidden')">
+                                    Toggle Details <i data-lucide="chevron-down" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+                                <!-- Champion Info -->
+                                <div class="bg-yellow-50 p-3 rounded-lg border border-yellow-200">
+                                    <div class="text-xs text-yellow-800 font-bold uppercase mb-1">Champion</div>
+                                    <div class="flex items-center gap-2">
+                                        <i data-lucide="trophy" class="w-5 h-5 text-yellow-600"></i>
+                                        <div>
+                                            <div class="font-bold text-gray-900"><?php echo htmlspecialchars($data['champion']['name']); ?></div>
+                                            <div class="text-xs text-gray-600"><?php echo $data['champion']['points']; ?> pts • <?php echo $data['champion']['wins']; ?>W - <?php echo $data['champion']['draws']; ?>D - <?php echo $data['champion']['losses']; ?>L</div>
                                         </div>
                                     </div>
-
-                                    <?php if ($match['status'] === 'scheduled' && ($match['home_team_id'] == $user_id || $match['away_team_id'] == $user_id)): ?>
-                                            <?php if ($match['gameweek'] == $current_gameweek): ?>
-                                                    <?php if ($current_validation['is_valid']): ?>
-                                                            <form method="POST" class="inline">
-                                                                <input type="hidden" name="match_id" value="<?php echo $match['id']; ?>">
-                                                                <button type="submit" name="simulate_match"
-                                                                    class="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700"
-                                                                    title="This will simulate all matches in gameweek <?php echo $match['gameweek']; ?>">
-                                                                    Play Gameweek <?php echo $match['gameweek']; ?>
-                                                                </button>
-                                                            </form>
-                                                    <?php else: ?>
-                                                            <div class="flex items-center gap-2">
-                                                                <button disabled class="bg-gray-400 text-white px-3 py-1 rounded text-sm cursor-not-allowed"
-                                                                    title="Club not eligible - check team requirements">
-                                                                    Club Not Eligible
-                                                                </button>
-                                                                <a href="team.php" class="text-blue-600 hover:text-blue-800 text-sm">
-                                                                    Fix Issues
-                                                                </a>
-                                                            </div>
-                                                    <?php endif; ?>
-                                            <?php else: ?>
-                                                    <div class="text-sm text-gray-500">
-                                                        Gameweek <?php echo $match['gameweek']; ?>
-                                                    </div>
-                                            <?php endif; ?>
-                                    <?php elseif ($match['status'] === 'completed'): ?>
-                                            <div class="text-sm font-medium">
-                                                <?php echo $match['home_score']; ?> - <?php echo $match['away_score']; ?>
-                                            </div>
-                                    <?php endif; ?>
                                 </div>
 
-                                <?php
-                                // Check if this is the last match of the gameweek
-                                $next_key = array_search($match, $upcoming_matches) + 1;
-                                if (!isset($upcoming_matches[$next_key]) || $upcoming_matches[$next_key]['gameweek'] !== $current_gw):
-                                    ?>
+                                <!-- User Info -->
+                                <div class="<?php echo $data['user_team'] ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'; ?> p-3 rounded-lg border">
+                                    <div class="text-xs <?php echo $data['user_team'] ? 'text-blue-800' : 'text-gray-600'; ?> font-bold uppercase mb-1">Your Finish</div>
+                                    <?php if ($data['user_team']): ?>
+                                        <div class="flex items-center gap-2">
+                                            <div class="w-6 h-6 rounded-full flex items-center justify-center font-bold text-white text-xs <?php
+                                                                                                                                            if ($data['user_position'] == 1) echo 'bg-yellow-500';
+                                                                                                                                            elseif ($data['user_position'] <= 4) echo 'bg-green-600';
+                                                                                                                                            elseif ($data['user_position'] >= 18) echo 'bg-red-600';
+                                                                                                                                            else echo 'bg-blue-600';
+                                                                                                                                            ?>">
+                                                <?php echo $data['user_position']; ?>
+                                            </div>
+                                            <div>
+                                                <div class="font-bold text-gray-900">Position <?php echo $data['user_position']; ?></div>
+                                                <div class="text-xs text-gray-600"><?php echo $data['user_team']['points']; ?> pts • <?php echo $data['user_team']['wins']; ?>W - <?php echo $data['user_team']['draws']; ?>D - <?php echo $data['user_team']['losses']; ?>L</div>
+                                            </div>
+                                        </div>
+                                    <?php else: ?>
+                                        <div class="text-sm text-gray-500 italic">Did not participate</div>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+
+                            <!-- Detailed Standings (Hidden by default) -->
+                            <div id="history-details-<?php echo str_replace('/', '-', $data['season']); ?>" class="hidden mt-4 border-t pt-4">
+                                <div class="mb-6">
+                                    <h5 class="font-bold text-gray-800 mb-2 text-sm flex items-center gap-2">
+                                        <i data-lucide="list-ordered" class="w-4 h-4"></i> Final Standings
+                                    </h5>
+                                    <div class="overflow-x-auto max-h-60 overflow-y-auto border rounded-lg">
+                                        <table class="w-full text-sm">
+                                            <thead class="bg-gray-50 text-xs text-gray-500 uppercase sticky top-0">
+                                                <tr>
+                                                    <th class="px-2 py-1 text-left bg-gray-50">Pos</th>
+                                                    <th class="px-2 py-1 text-left bg-gray-50">Club</th>
+                                                    <th class="px-2 py-1 text-center bg-gray-50">P</th>
+                                                    <th class="px-2 py-1 text-center bg-gray-50">W</th>
+                                                    <th class="px-2 py-1 text-center bg-gray-50">D</th>
+                                                    <th class="px-2 py-1 text-center bg-gray-50">L</th>
+                                                    <th class="px-2 py-1 text-center bg-gray-50 font-bold">Pts</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="divide-y divide-gray-100">
+                                                <?php foreach ($data['standings'] as $index => $team): ?>
+                                                    <tr class="<?php echo $team['is_user'] ? 'bg-blue-50' : ''; ?>">
+                                                        <td class="px-2 py-1 font-medium"><?php echo $index + 1; ?></td>
+                                                        <td class="px-2 py-1 font-medium <?php echo $team['is_user'] ? 'text-blue-600' : ''; ?>">
+                                                            <?php echo htmlspecialchars($team['name']); ?>
+                                                        </td>
+                                                        <td class="px-2 py-1 text-center"><?php echo $team['matches_played']; ?></td>
+                                                        <td class="px-2 py-1 text-center"><?php echo $team['wins']; ?></td>
+                                                        <td class="px-2 py-1 text-center"><?php echo $team['draws']; ?></td>
+                                                        <td class="px-2 py-1 text-center"><?php echo $team['losses']; ?></td>
+                                                        <td class="px-2 py-1 text-center font-bold"><?php echo $team['points']; ?></td>
+                                                    </tr>
+                                                <?php endforeach; ?>
+                                            </tbody>
+                                        </table>
                                     </div>
-                            <?php endif; ?>
+                                </div>
+
+                                <!-- Match Results by Gameweek -->
+                                <div>
+                                    <h5 class="font-bold text-gray-800 mb-3 text-sm flex items-center gap-2">
+                                        <i data-lucide="calendar-days" class="w-4 h-4"></i> Season Results
+                                    </h5>
+
+                                    <?php if (!empty($data['matches_by_gameweek'])): ?>
+                                        <div class="space-y-4 max-h-96 overflow-y-auto pr-1">
+                                            <?php foreach ($data['matches_by_gameweek'] as $gw => $matches): ?>
+                                                <div class="bg-gray-50 rounded-lg p-3 border border-gray-100">
+                                                    <div class="font-bold text-xs text-gray-500 uppercase mb-2">Gameweek <?php echo $gw; ?></div>
+                                                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-2">
+                                                        <?php foreach ($matches as $match): ?>
+                                                            <div class="flex items-center justify-between bg-white p-2 rounded shadow-sm border border-gray-100 text-sm">
+                                                                <span class="w-5/12 text-right truncate text-gray-700 font-medium" title="<?php echo htmlspecialchars($match['home_team']); ?>">
+                                                                    <?php echo htmlspecialchars($match['home_team']); ?>
+                                                                </span>
+                                                                <span class="w-2/12 text-center font-bold bg-gray-100 text-gray-800 rounded px-1 py-0.5 mx-1 whitespace-nowrap">
+                                                                    <?php echo $match['home_score']; ?> - <?php echo $match['away_score']; ?>
+                                                                </span>
+                                                                <span class="w-5/12 text-left truncate text-gray-700 font-medium" title="<?php echo htmlspecialchars($match['away_team']); ?>">
+                                                                    <?php echo htmlspecialchars($match['away_team']); ?>
+                                                                </span>
+                                                            </div>
+                                                        <?php endforeach; ?>
+                                                    </div>
+                                                </div>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    <?php else: ?>
+                                        <div class="text-center py-4 text-gray-500 text-sm">No match data available for this season.</div>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        </div>
                     <?php endforeach; ?>
+                </div>
             <?php else: ?>
-                    <div class="bg-white rounded-lg shadow p-8 text-center">
-                        <i data-lucide="calendar-x" class="w-12 h-12 text-gray-400 mx-auto mb-4"></i>
-                        <h3 class="text-lg font-medium text-gray-900 mb-2">No Upcoming Matches</h3>
-                        <p class="text-gray-600">The season has ended or no matches are scheduled.</p>
+                <div class="text-center py-8">
+                    <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i data-lucide="book-open" class="w-8 h-8 text-gray-400"></i>
                     </div>
+                    <h4 class="text-lg font-medium text-gray-900 mb-1">No Past Seasons</h4>
+                    <p class="text-gray-500">History will appear here after the first season is completed.</p>
+                </div>
             <?php endif; ?>
         </div>
     </div>
@@ -1408,65 +1609,64 @@ startContent();
     <div id="history-tab" class="tab-content hidden">
         <div class="bg-white rounded-lg shadow overflow-hidden">
             <?php if (!empty($user_matches)): ?>
-                    <div class="overflow-x-auto">
-                        <table class="w-full">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Date</th>
-                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        GW</th>
-                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Opponent</th>
-                                    <th
-                                        class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        H/A</th>
-                                    <th
-                                        class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Result</th>
-                                    <th
-                                        class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Score</th>
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Date</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    GW</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Opponent</th>
+                                <th
+                                    class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    H/A</th>
+                                <th
+                                    class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Result</th>
+                                <th
+                                    class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Score</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            <?php foreach ($user_matches as $match): ?>
+                                <tr class="hover:bg-gray-50">
+                                    <td class="px-4 py-3 text-sm">
+                                        <?php echo date('M j, Y', strtotime($match['match_date'])); ?>
+                                    </td>
+                                    <td class="px-4 py-3 text-sm"><?php echo $match['gameweek']; ?></td>
+                                    <td class="px-4 py-3 text-sm font-medium">
+                                        <?php echo htmlspecialchars($match['opponent']); ?>
+                                    </td>
+                                    <td class="px-4 py-3 text-center text-sm">
+                                        <span
+                                            class="<?php echo $match['venue'] === 'H' ? 'text-blue-600' : 'text-gray-600'; ?>">
+                                            <?php echo $match['venue']; ?>
+                                        </span>
+                                    </td>
+                                    <td class="px-4 py-3 text-center">
+                                        <span class="px-2 py-1 text-xs font-medium rounded-full <?php
+                                                                                                echo $match['result'] === 'W' ? 'bg-green-100 text-green-800' : ($match['result'] === 'D' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800');
+                                                                                                ?>">
+                                            <?php echo $match['result']; ?>
+                                        </span>
+                                    </td>
+                                    <td class="px-4 py-3 text-center text-sm font-medium">
+                                        <?php echo $match['user_score']; ?> - <?php echo $match['opponent_score']; ?>
+                                    </td>
                                 </tr>
-                            </thead>
-                            <tbody class="bg-white divide-y divide-gray-200">
-                                <?php foreach ($user_matches as $match): ?>
-                                        <tr class="hover:bg-gray-50">
-                                            <td class="px-4 py-3 text-sm">
-                                                <?php echo date('M j, Y', strtotime($match['match_date'])); ?>
-                                            </td>
-                                            <td class="px-4 py-3 text-sm"><?php echo $match['gameweek']; ?></td>
-                                            <td class="px-4 py-3 text-sm font-medium">
-                                                <?php echo htmlspecialchars($match['opponent']); ?>
-                                            </td>
-                                            <td class="px-4 py-3 text-center text-sm">
-                                                <span
-                                                    class="<?php echo $match['venue'] === 'H' ? 'text-blue-600' : 'text-gray-600'; ?>">
-                                                    <?php echo $match['venue']; ?>
-                                                </span>
-                                            </td>
-                                            <td class="px-4 py-3 text-center">
-                                                <span class="px-2 py-1 text-xs font-medium rounded-full <?php
-                                                echo $match['result'] === 'W' ? 'bg-green-100 text-green-800' :
-                                                    ($match['result'] === 'D' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800');
-                                                ?>">
-                                                    <?php echo $match['result']; ?>
-                                                </span>
-                                            </td>
-                                            <td class="px-4 py-3 text-center text-sm font-medium">
-                                                <?php echo $match['user_score']; ?> - <?php echo $match['opponent_score']; ?>
-                                            </td>
-                                        </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
             <?php else: ?>
-                    <div class="p-8 text-center">
-                        <i data-lucide="history" class="w-12 h-12 text-gray-400 mx-auto mb-4"></i>
-                        <h3 class="text-lg font-medium text-gray-900 mb-2">No Match History</h3>
-                        <p class="text-gray-600">You haven't played any matches yet this season.</p>
-                    </div>
+                <div class="p-8 text-center">
+                    <i data-lucide="history" class="w-12 h-12 text-gray-400 mx-auto mb-4"></i>
+                    <h3 class="text-lg font-medium text-gray-900 mb-2">No Match History</h3>
+                    <p class="text-gray-600">You haven't played any matches yet this season.</p>
+                </div>
             <?php endif; ?>
         </div>
     </div>
@@ -1476,7 +1676,7 @@ startContent();
 
 <script>
     // Tab functionality
-    document.addEventListener('DOMContentLoaded', function () {
+    document.addEventListener('DOMContentLoaded', function() {
         const tabBtns = document.querySelectorAll('.tab-btn');
         const tabContents = document.querySelectorAll('.tab-content');
 
@@ -1531,7 +1731,9 @@ startContent();
                 }
 
                 // Clear session data and post-match rewards
-                fetch('api/clear_gameweek_results_api.php', { method: 'POST' });
+                fetch('api/clear_gameweek_results_api.php', {
+                    method: 'POST'
+                });
             }
         }
 
@@ -1551,14 +1753,16 @@ startContent();
                     window.history.replaceState({}, '', newUrl);
 
                     // Clear post-match rewards
-                    fetch('api/clear_gameweek_results_api.php', { method: 'POST' })
+                    fetch('api/clear_gameweek_results_api.php', {
+                            method: 'POST'
+                        })
                         .catch(error => console.log('Error clearing post-match rewards:', error));
                 }
             });
         });
 
         // Close gameweek results handler
-        document.getElementById('closeGameweekResults')?.addEventListener('click', function () {
+        document.getElementById('closeGameweekResults')?.addEventListener('click', function() {
             hideGameweekResults();
         });
 
@@ -1567,7 +1771,9 @@ startContent();
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.get('gameweek_completed') !== '1') {
                 // User navigated away from gameweek completed state, clear rewards
-                fetch('api/clear_gameweek_results_api.php', { method: 'POST' })
+                fetch('api/clear_gameweek_results_api.php', {
+                        method: 'POST'
+                    })
                     .catch(error => console.log('Error clearing post-match rewards:', error));
             }
         }
@@ -1576,7 +1782,7 @@ startContent();
         window.addEventListener('popstate', clearPostMatchRewardsIfIgnored);
 
         // Listen for page unload (user navigating to different page)
-        window.addEventListener('beforeunload', function () {
+        window.addEventListener('beforeunload', function() {
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.get('gameweek_completed') === '1') {
                 // User is leaving the gameweek completed page, clear rewards
@@ -1585,7 +1791,7 @@ startContent();
         });
 
         // Process nation call
-        document.getElementById('processNationCallBtn')?.addEventListener('click', function () {
+        document.getElementById('processNationCallBtn')?.addEventListener('click', function() {
             Swal.fire({
                 icon: 'question',
                 title: 'Process Nation Call?',
@@ -1611,11 +1817,11 @@ startContent();
 
                     // Process nation call
                     fetch('api/process_nation_call_api.php', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        }
-                    })
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            }
+                        })
                         .then(response => response.json())
                         .then(data => {
                             if (data.success) {
@@ -1675,7 +1881,7 @@ startContent();
         });
 
         // Process relegation
-        document.querySelector('button[name="process_relegation"]')?.addEventListener('click', function (e) {
+        document.querySelector('button[name="process_relegation"]')?.addEventListener('click', function(e) {
             e.preventDefault();
 
             Swal.fire({
@@ -1714,11 +1920,11 @@ startContent();
 
                     // Process relegation
                     fetch('api/process_relegation_api.php', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        }
-                    })
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            }
+                        })
                         .then(response => response.json())
                         .then(data => {
                             if (data.success) {
@@ -2063,14 +2269,14 @@ startContent();
 
         // Make API call to save player
         fetch('api/select_post_match_player_api.php', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                selected_index: selectedIndex
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    selected_index: selectedIndex
+                })
             })
-        })
             .then(response => response.json())
             .then(data => {
                 // Remove loading message
@@ -2214,10 +2420,11 @@ startContent();
 <?php
 endContent('League - Dream Team', 'league', true, false, true);
 
-function displayCreateLeaguePage($db, $next_season_id, $user, $is_update = false) {
+function displayCreateLeaguePage($db, $next_season_id, $user, $is_update = false)
+{
     startContent();
-    ?>
-    
+?>
+
     <div class="container mx-auto py-6">
         <!-- Header -->
         <div class="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden mb-6">
@@ -2259,7 +2466,7 @@ function displayCreateLeaguePage($db, $next_season_id, $user, $is_update = false
                                 <div class="text-xs text-blue-600">Your Team</div>
                             </div>
                         </div>
-                        
+
                         <!-- All 19 AI Teams -->
                         <?php foreach (FAKE_CLUBS as $index => $team_name): ?>
                             <div class="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
@@ -2349,15 +2556,15 @@ function displayCreateLeaguePage($db, $next_season_id, $user, $is_update = false
                         <?php endif; ?>
                     </p>
                 </div>
-                
+
                 <form method="POST" class="inline">
-                    <button type="submit" name="<?php echo $is_update ? 'update_league' : 'create_league'; ?>" 
-                            class="bg-green-600 text-white px-8 py-4 rounded-lg hover:bg-green-700 font-bold text-lg transition-colors flex items-center gap-3 mx-auto shadow-lg">
+                    <button type="submit" name="<?php echo $is_update ? 'update_league' : 'create_league'; ?>"
+                        class="bg-green-600 text-white px-8 py-4 rounded-lg hover:bg-green-700 font-bold text-lg transition-colors flex items-center gap-3 mx-auto shadow-lg">
                         <i data-lucide="trophy" class="w-6 h-6"></i>
                         <?php echo $is_update ? 'Update League ' : 'Create Elite League '; ?><?php echo $next_season_id; ?>
                     </button>
                 </form>
-                
+
                 <p class="text-sm text-gray-500 mt-4">
                     <?php echo $is_update ? 'This will create a new season with fresh teams and fixtures.' : 'This will create the full league structure with all teams and fixtures for the season.'; ?>
                 </p>
@@ -2365,7 +2572,7 @@ function displayCreateLeaguePage($db, $next_season_id, $user, $is_update = false
         </div>
     </div>
 
-    <?php
+<?php
     endContent('Create League - Dream Team');
 }
 ?>
