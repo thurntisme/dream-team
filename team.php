@@ -2068,9 +2068,9 @@ startContent();
                 }
 
                 // Show confirmation alert before buying player
-                const currentPlayer = selectedPlayers[currentSlotIdx];
+                const currentPlayer = isSelectingSubstitute ? substitutePlayers[currentSlotIdx] : selectedPlayers[currentSlotIdx];
                 const isReplacement = currentPlayer !== null;
-                const requiredPosition = getPositionForSlot(currentSlotIdx);
+                const requiredPosition = isSelectingSubstitute ? 'Substitute' : getPositionForSlot(currentSlotIdx);
 
                 let confirmTitle = isReplacement ? 'Replace Player?' : 'Buy Player?';
                 let confirmText = isReplacement
@@ -3982,6 +3982,47 @@ startContent();
     window.performPlayerSwitch = performPlayerSwitch;
     window.replaceStartingPlayer = replaceStartingPlayer;
     window.showPlayerInfo = showPlayerInfo;
+
+    // Quick search for substitute functionality
+    $('#quickSearchSubstitute').on('click', function() {
+        const maxSubstitutes = maxPlayers - 11;
+        
+        // Ensure substitutePlayers array has the correct length
+        while (substitutePlayers.length < maxSubstitutes) {
+            substitutePlayers.push(null);
+        }
+        
+        // Find the next available substitute slot
+        const availableSlot = substitutePlayers.findIndex(p => p === null);
+        
+        if (availableSlot === -1) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Substitutes Full',
+                text: `You already have the maximum number of substitutes (${maxSubstitutes}).`,
+                confirmButtonColor: '#3b82f6'
+            });
+            return;
+        }
+        
+        // Double-check that the slot is actually empty (safety check)
+        if (substitutePlayers[availableSlot] !== null && substitutePlayers[availableSlot] !== undefined) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Slot Not Empty',
+                text: 'The selected substitute slot is not empty. Please try again.',
+                confirmButtonColor: '#3b82f6'
+            });
+            return;
+        }
+        
+        // Set up for substitute selection
+        currentSlotIdx = availableSlot;
+        isSelectingSubstitute = true;
+        
+        // Open the player selection modal
+        openPlayerModal();
+    });
 
 </script>
 

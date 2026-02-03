@@ -45,14 +45,16 @@ User preferences and configuration settings.
 CREATE TABLE user_settings (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
-    setting_name TEXT NOT NULL,
-    setting_value TEXT NOT NULL,
+    setting_key TEXT NOT NULL,
+    setting_value TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id)
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE(user_id, setting_key)
 )
 ```
 
-**Purpose**: Stores user-specific settings and preferences.
+**Purpose**: Stores user-specific settings and preferences with unique constraint per user.
 
 ## Transfer System
 
@@ -120,12 +122,13 @@ CREATE TABLE young_players (
     position TEXT NOT NULL,
     potential_rating INTEGER NOT NULL,
     current_rating INTEGER NOT NULL,
-    development_stage TEXT NOT NULL,
-    contract_years INTEGER NOT NULL,
+    development_stage TEXT DEFAULT "academy",
+    contract_years INTEGER DEFAULT 3,
     value INTEGER NOT NULL,
-    training_focus TEXT,
+    training_focus TEXT DEFAULT "balanced",
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (club_id) REFERENCES users(id)
+    promoted_at DATETIME,
+    FOREIGN KEY (club_id) REFERENCES users(id) ON DELETE CASCADE
 )
 ```
 
@@ -134,8 +137,9 @@ CREATE TABLE young_players (
 **Key Fields**:
 - `potential_rating`: Maximum rating the player can achieve
 - `current_rating`: Player's current skill level
-- `development_stage`: "youth", "reserve", "first_team"
-- `training_focus`: Specific skill being developed
+- `development_stage`: "academy", "reserve", "first_team" (default: "academy")
+- `training_focus`: Specific skill being developed (default: "balanced")
+- `promoted_at`: Timestamp when player was promoted to first team
 
 ### young_player_bids
 Transfer bids for young players between clubs.
@@ -144,16 +148,19 @@ Transfer bids for young players between clubs.
 CREATE TABLE young_player_bids (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     young_player_id INTEGER NOT NULL,
-    bidder_id INTEGER NOT NULL,
+    bidder_club_id INTEGER NOT NULL,
+    owner_club_id INTEGER NOT NULL,
     bid_amount INTEGER NOT NULL,
     status TEXT DEFAULT "pending",
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (young_player_id) REFERENCES young_players(id),
-    FOREIGN KEY (bidder_id) REFERENCES users(id)
+    expires_at DATETIME NOT NULL,
+    FOREIGN KEY (young_player_id) REFERENCES young_players(id) ON DELETE CASCADE,
+    FOREIGN KEY (bidder_club_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (owner_club_id) REFERENCES users(id) ON DELETE CASCADE
 )
 ```
 
-**Purpose**: Handles transfer market for youth players.
+**Purpose**: Handles transfer market for youth players with expiration tracking.
 
 ## League System
 
@@ -325,18 +332,35 @@ Historical player performance data.
 CREATE TABLE player_stats (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
-    player_uuid TEXT NOT NULL,
-    season INTEGER NOT NULL,
+    player_id TEXT NOT NULL,
+    player_name TEXT NOT NULL,
+    position TEXT NOT NULL,
     matches_played INTEGER DEFAULT 0,
     goals INTEGER DEFAULT 0,
     assists INTEGER DEFAULT 0,
-    rating_average REAL DEFAULT 0.0,
+    yellow_cards INTEGER DEFAULT 0,
+    red_cards INTEGER DEFAULT 0,
+    total_rating REAL DEFAULT 0,
+    avg_rating REAL DEFAULT 0,
+    clean_sheets INTEGER DEFAULT 0,
+    saves INTEGER DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id)
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    UNIQUE(user_id, player_id)
 )
 ```
 
-**Purpose**: Stores player performance statistics across seasons.
+**Purpose**: Stores comprehensive player performance statistics.
+
+**Key Fields**:
+- `player_id`: Player UUID identifier
+- `yellow_cards`/`red_cards`: Disciplinary records
+- `total_rating`: Sum of all match ratings
+- `avg_rating`: Average match rating
+- `clean_sheets`: For goalkeepers - matches without conceding
+- `saves`: For goalkeepers - total saves made
+- Unique constraint ensures one record per player per user
 
 ## Communication Systems
 
@@ -347,17 +371,31 @@ User support and help requests.
 CREATE TABLE support_tickets (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
+    ticket_number TEXT UNIQUE NOT NULL,
+    priority TEXT DEFAULT "medium",
+    category TEXT NOT NULL,
     subject TEXT NOT NULL,
     message TEXT NOT NULL,
     status TEXT DEFAULT "open",
-    priority TEXT DEFAULT "normal",
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    last_response_at DATETIME,
+    admin_response TEXT,
+    resolution_notes TEXT,
     FOREIGN KEY (user_id) REFERENCES users(id)
 )
 ```
 
-**Purpose**: Manages user support requests and tickets.
+**Purpose**: Manages user support requests and tickets with tracking.
+
+**Key Fields**:
+- `ticket_number`: Unique ticket identifier for reference
+- `category`: Support category/type
+- `priority`: "low", "medium", "high", "urgent"
+- `status`: "open", "in_progress", "resolved", "closed"
+- `last_response_at`: Timestamp of last response
+- `admin_response`: Admin's response to the ticket
+- `resolution_notes`: Notes about how the ticket was resolved
 
 ### user_feedback
 User feedback and suggestions.
@@ -366,15 +404,28 @@ User feedback and suggestions.
 CREATE TABLE user_feedback (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
-    feedback_type TEXT NOT NULL,
+    category TEXT NOT NULL,
+    subject TEXT NOT NULL,
     message TEXT NOT NULL,
-    rating INTEGER,
+    status TEXT DEFAULT "pending",
+    reward_amount INTEGER DEFAULT 140,
+    reward_paid BOOLEAN DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    admin_response TEXT,
     FOREIGN KEY (user_id) REFERENCES users(id)
 )
 ```
 
-**Purpose**: Collects user feedback and feature suggestions.
+**Purpose**: Collects user feedback and feature suggestions with reward system.
+
+**Key Fields**:
+- `category`: Feedback category/type
+- `subject`: Feedback subject line
+- `status`: "pending", "reviewed", "resolved"
+- `reward_amount`: Budget reward for feedback (default: €140)
+- `reward_paid`: Whether reward has been paid to user
+- `admin_response`: Admin's response to the feedback
 
 ### news
 Club and game news articles.
@@ -383,16 +434,26 @@ Club and game news articles.
 CREATE TABLE news (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
+    category TEXT NOT NULL,
+    priority TEXT NOT NULL DEFAULT "normal",
     title TEXT NOT NULL,
     content TEXT NOT NULL,
-    news_type TEXT DEFAULT "general",
-    is_read BOOLEAN DEFAULT 0,
+    player_data TEXT,
+    actions TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    expires_at DATETIME NOT NULL,
     FOREIGN KEY (user_id) REFERENCES users(id)
 )
 ```
 
-**Purpose**: Manages news articles and notifications for users.
+**Purpose**: Manages news articles and notifications for users with expiration.
+
+**Key Fields**:
+- `category`: News category/type
+- `priority`: "low", "normal", "high", "urgent"
+- `player_data`: JSON data about related players
+- `actions`: JSON array of available actions for the news item
+- `expires_at`: When the news item expires and should be removed
 
 ## International System
 
@@ -403,20 +464,19 @@ National team call-ups for players.
 CREATE TABLE nation_calls (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
-    player_uuid TEXT NOT NULL,
-    nation TEXT NOT NULL,
-    call_type TEXT DEFAULT "friendly",
-    status TEXT DEFAULT "pending",
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    called_players TEXT NOT NULL,
+    total_reward INTEGER NOT NULL,
+    call_date DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id)
 )
 ```
 
-**Purpose**: Manages international call-ups for club players.
+**Purpose**: Manages international call-ups for club players and rewards.
 
 **Key Fields**:
-- `call_type`: "friendly", "qualifier", "tournament"
-- `status`: "pending", "accepted", "declined"
+- `called_players`: JSON array of players called up for international duty
+- `total_reward`: Total financial reward earned from nation calls
+- `call_date`: When the nation call occurred
 
 ## Stadium System
 
@@ -427,17 +487,23 @@ Club stadium information and customization.
 CREATE TABLE stadiums (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
-    name TEXT NOT NULL,
-    capacity INTEGER DEFAULT 50000,
-    atmosphere_level INTEGER DEFAULT 1,
-    facilities_level INTEGER DEFAULT 1,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    name TEXT DEFAULT "Home Stadium",
+    capacity INTEGER DEFAULT 10000,
+    level INTEGER DEFAULT 1,
+    facilities TEXT DEFAULT "{}",
+    last_upgrade DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id)
 )
 ```
 
 **Purpose**: Stores stadium information and upgrade levels.
+
+**Key Fields**:
+- `name`: Stadium name (default: "Home Stadium")
+- `capacity`: Stadium capacity (default: 10,000)
+- `level`: Stadium upgrade level
+- `facilities`: JSON object storing facility upgrades
+- `last_upgrade`: Timestamp of last stadium upgrade
 
 ## Database Relationships
 
