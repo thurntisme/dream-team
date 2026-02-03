@@ -38,8 +38,8 @@ try {
     $current_season = getCurrentSeason($db);
     
     // Check if league exists for current season
-    $stmt = $db->prepare('SELECT COUNT(*) as count FROM league_teams WHERE season = :season');
-    $stmt->bindValue(':season', $current_season, SQLITE3_INTEGER);
+    $stmt = $db->prepare('SELECT COUNT(*) as count FROM league_teams WHERE season LIKE :year_pattern');
+    $stmt->bindValue(':year_pattern', $current_season . '/%', SQLITE3_TEXT);
     $result = $stmt->execute();
     $row = $result->fetchArray(SQLITE3_ASSOC);
     $league_exists = $row['count'] > 0;
@@ -54,23 +54,30 @@ try {
             exit;
         }
 
+        // Get next season identifier
+        $next_season = getNextSeasonIdentifier($db);
+
         // Create league tables if they don't exist
         createLeagueTables($db);
         
         // Create league teams and fixtures
-        createLeagueTeams($db, $user_id, $current_season);
-        generateFixtures($db, $current_season);
+        createLeagueTeams($db, $user_id, $next_season);
+        generateFixtures($db, $next_season);
         
-        $_SESSION['success_message'] = 'League created successfully! Your season begins now.';
+        $_SESSION['success_message'] = "League {$next_season} created successfully! Your season begins now.";
         header('Location: league.php');
         exit;
     }
 
     // If no league exists, show create league page
     if (!$league_exists) {
-        displayCreateLeaguePage($db, $current_season, $user);
+        $next_season_id = getNextSeasonIdentifier($db);
+        displayCreateLeaguePage($db, $next_season_id, $user);
         exit;
     }
+    
+    // Get current season identifier for display
+    $current_season_id = getCurrentSeasonIdentifier($db);
 
     // Handle match simulation - simulate entire gameweek
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['simulate_match'])) {
@@ -94,7 +101,7 @@ try {
 
     // Handle relegation processing
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['process_relegation'])) {
-        $relegation_result = processRelegationPromotion($db, $current_season);
+        $relegation_result = processRelegationPromotion($db, $current_season_id);
 
         if ($relegation_result['success']) {
             $_SESSION['relegation_result'] = $relegation_result;
@@ -107,16 +114,16 @@ try {
     }
 
     // Get league standings
-    $standings = getLeagueStandings($db, $current_season);
+    $standings = getLeagueStandings($db, $current_season_id);
 
     // Get user's match history
-    $user_matches = getUserMatches($db, $user_id, $current_season);
+    $user_matches = getUserMatches($db, $user_id, $current_season_id);
 
     // Get upcoming matches for calendar
-    $upcoming_matches = getUpcomingMatches($db, $user_id, $current_season);
+    $upcoming_matches = getUpcomingMatches($db, $user_id, $current_season_id);
 
     // Get current gameweek
-    $current_gameweek = getCurrentGameweek($db, $current_season);
+    $current_gameweek = getCurrentGameweek($db, $current_season_id);
 
     // Get current validation status for display
     $current_validation = validateClubForLeague($user);
@@ -125,12 +132,12 @@ try {
     $season_status = checkSeasonEnd($db, $user_id);
 
     // Get league statistics
-    $top_scorers = getTopScorers($db, $current_season, 3);
-    $top_assists = getTopAssists($db, $current_season, 3);
-    $top_rated = getTopRatedPlayers($db, $current_season, 3);
-    $most_yellow_cards = getMostYellowCards($db, $current_season, 3);
-    $most_red_cards = getMostRedCards($db, $current_season, 3);
-    $top_goalkeepers = getTopGoalkeepers($db, $current_season, 3);
+    $top_scorers = getTopScorers($db, $current_season_id, 3);
+    $top_assists = getTopAssists($db, $current_season_id, 3);
+    $top_rated = getTopRatedPlayers($db, $current_season_id, 3);
+    $most_yellow_cards = getMostYellowCards($db, $current_season_id, 3);
+    $most_red_cards = getMostRedCards($db, $current_season_id, 3);
+    $top_goalkeepers = getTopGoalkeepers($db, $current_season_id, 3);
 
     // Calculate nation call availability
     $matchesPlayed = $user['matches_played'] ?? 0;
@@ -177,7 +184,7 @@ startContent();
             <i data-lucide="trophy" class="w-8 h-8 text-yellow-600"></i>
             <div>
                 <h1 class="text-2xl font-bold">Elite League</h1>
-                <p class="text-gray-600">Season <?php echo $current_season; ?> • Gameweek
+                <p class="text-gray-600">Season <?php echo $current_season_id; ?> • Gameweek
                     <?php echo $current_gameweek; ?>
                 </p>
             </div>
@@ -2156,7 +2163,7 @@ startContent();
 <?php
 endContent('League - Dream Team', 'league', true, false, true);
 
-function displayCreateLeaguePage($db, $current_season, $user) {
+function displayCreateLeaguePage($db, $next_season_id, $user) {
     startContent();
     ?>
     
@@ -2169,7 +2176,7 @@ function displayCreateLeaguePage($db, $current_season, $user) {
                         <i data-lucide="trophy" class="w-6 h-6"></i>
                     </div>
                     <div>
-                        <h1 class="text-2xl font-bold">Elite League <?php echo $current_season; ?></h1>
+                        <h1 class="text-2xl font-bold">Elite League <?php echo $next_season_id; ?></h1>
                         <p class="text-blue-100">Ready to start your league journey?</p>
                     </div>
                 </div>
@@ -2287,7 +2294,7 @@ function displayCreateLeaguePage($db, $current_season, $user) {
                     <button type="submit" name="create_league" 
                             class="bg-green-600 text-white px-8 py-4 rounded-lg hover:bg-green-700 font-bold text-lg transition-colors flex items-center gap-3 mx-auto shadow-lg">
                         <i data-lucide="trophy" class="w-6 h-6"></i>
-                        Create Elite League <?php echo $current_season; ?>
+                        Create Elite League <?php echo $next_season_id; ?>
                     </button>
                 </form>
                 

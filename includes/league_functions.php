@@ -183,6 +183,43 @@ function getCurrentSeason($db)
     return date('Y');
 }
 
+function getNextSeasonIdentifier($db)
+{
+    // Get the current year
+    $current_year = date('Y');
+    
+    // Get the highest season number for this year
+    $stmt = $db->prepare('SELECT MAX(season) as max_season FROM league_teams WHERE season LIKE :year_pattern');
+    $stmt->bindValue(':year_pattern', $current_year . '/%', SQLITE3_TEXT);
+    $result = $stmt->execute();
+    $row = $result->fetchArray(SQLITE3_ASSOC);
+    
+    if ($row['max_season']) {
+        // Extract the season number and increment
+        $parts = explode('/', $row['max_season']);
+        $season_num = intval($parts[1]) + 1;
+    } else {
+        // First season of the year
+        $season_num = 1;
+    }
+    
+    // Format: 2026/01, 2026/02, etc.
+    return sprintf('%d/%02d', $current_year, $season_num);
+}
+
+function getCurrentSeasonIdentifier($db)
+{
+    // Get the most recent season identifier
+    $current_year = date('Y');
+    
+    $stmt = $db->prepare('SELECT DISTINCT season FROM league_teams WHERE season LIKE :year_pattern ORDER BY season DESC LIMIT 1');
+    $stmt->bindValue(':year_pattern', $current_year . '/%', SQLITE3_TEXT);
+    $result = $stmt->execute();
+    $row = $result->fetchArray(SQLITE3_ASSOC);
+    
+    return $row['season'] ?? getNextSeasonIdentifier($db);
+}
+
 function getCurrentGameweek($db, $season)
 {
     $stmt = $db->prepare('SELECT MIN(gameweek) as gameweek FROM league_matches WHERE season = :season AND status = "scheduled"');
