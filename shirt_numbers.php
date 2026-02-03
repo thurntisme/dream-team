@@ -247,11 +247,12 @@ startContent();
                 <?php
                 $is_taken = in_array($i, $used_numbers);
                 $player_name = $is_taken ? $number_to_player[$i] : '';
-                $tooltip = $is_taken ? "Taken by " . htmlspecialchars($player_name) : 'Available';
+                $tooltip = $is_taken ? "Taken by " . htmlspecialchars($player_name) . " - Click to reassign" : 'Available - Click to assign';
                 ?>
                 <div class="relative group">
-                    <div class="w-full h-16 rounded-lg border-2 flex flex-col items-center justify-center text-xs font-medium transition-all duration-200 <?php echo $is_taken ? 'bg-red-50 border-red-200 text-red-800 hover:bg-red-100' : 'bg-green-50 border-green-200 text-green-800 hover:bg-green-100'; ?>"
-                        title="<?php echo $tooltip; ?>">
+                    <div class="w-full h-16 rounded-lg border-2 flex flex-col items-center justify-center text-xs font-medium transition-all duration-200 cursor-pointer <?php echo $is_taken ? 'bg-red-50 border-red-200 text-red-800 hover:bg-red-100' : 'bg-green-50 border-green-200 text-green-800 hover:bg-green-100'; ?>"
+                        title="<?php echo $tooltip; ?>"
+                        onclick="showPlayerSelectionModal(<?php echo $i; ?>, <?php echo $is_taken ? 'true' : 'false'; ?>)">
                         <div class="text-sm font-bold"><?php echo $i; ?></div>
                         <?php if ($is_taken): ?>
                             <div class="text-xs text-center leading-tight mt-1 px-1 truncate w-full" style="font-size: 10px;">
@@ -267,11 +268,11 @@ startContent();
         <div class="flex items-center gap-4 mt-4 text-sm">
             <div class="flex items-center gap-2">
                 <div class="w-4 h-4 bg-green-50 border border-green-200 rounded"></div>
-                <span class="text-gray-600">Available</span>
+                <span class="text-gray-600">Available (Click to assign)</span>
             </div>
             <div class="flex items-center gap-2">
                 <div class="w-4 h-4 bg-red-50 border border-red-200 rounded"></div>
-                <span class="text-gray-600">Taken</span>
+                <span class="text-gray-600">Taken (Click to reassign)</span>
             </div>
         </div>
     </div>
@@ -461,9 +462,34 @@ startContent();
     </div>
 </div>
 
+<!-- Player Selection Modal (for Number Usage Overview) -->
+<div id="playerSelectionModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+        <div class="sticky top-0 bg-white p-6 border-b border-gray-200">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-lg font-semibold" id="playerSelectionTitle">Select Player for Number</h3>
+                    <p class="text-sm text-gray-600 mt-1" id="playerSelectionSubtitle">Choose a player to assign this shirt number</p>
+                </div>
+                <button onclick="closePlayerSelectionModal()" class="text-gray-400 hover:text-gray-600">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="p-6">
+            <div id="playerSelectionList" class="space-y-3">
+                <!-- Players will be listed here -->
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
     // Available numbers from PHP
     const usedNumbers = <?php echo json_encode($used_numbers); ?>;
+    const teamPlayers = <?php echo json_encode($team); ?>;
+    const substitutePlayers = <?php echo json_encode($substitutes); ?>;
 
     function populateAvailableNumbers(currentNumber = null) {
         const select = document.getElementById('shirt_number');
@@ -527,6 +553,94 @@ startContent();
         document.getElementById('assignModal').classList.add('hidden');
     }
 
+    // Player Selection Modal Functions
+    function showPlayerSelectionModal(shirtNumber, isTaken = false) {
+        const actionType = isTaken ? 'Reassign' : 'Assign';
+        const actionSubtitle = isTaken ? 'Choose a different player to reassign this number' : 'Choose a player to assign this shirt number';
+        
+        document.getElementById('playerSelectionTitle').innerHTML = `${actionType} Shirt Number <span class="text-blue-600 font-bold">#${shirtNumber}</span>`;
+        document.getElementById('playerSelectionSubtitle').textContent = actionSubtitle;
+        
+        // Get all players
+        const allPlayers = [];
+        
+        // Add team players
+        teamPlayers.forEach((player, idx) => {
+            if (player) {
+                allPlayers.push({
+                    ...player,
+                    position: 'team',
+                    index: idx
+                });
+            }
+        });
+        
+        // Add substitute players
+        substitutePlayers.forEach((player, idx) => {
+            if (player) {
+                allPlayers.push({
+                    ...player,
+                    position: 'substitute',
+                    index: idx
+                });
+            }
+        });
+
+        // Render player list
+        const playerList = document.getElementById('playerSelectionList');
+        if (allPlayers.length === 0) {
+            playerList.innerHTML = '<div class="text-center py-8 text-gray-500"><p>No players available</p></div>';
+        } else {
+            playerList.innerHTML = allPlayers.map(player => {
+                const hasNumber = player.shirt_number !== undefined && player.shirt_number !== null;
+                const isCurrentNumber = hasNumber && player.shirt_number === shirtNumber;
+                
+                return `
+                    <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-blue-50 transition-colors cursor-pointer" onclick="assignNumberToPlayer('${player.uuid}', '${player.name}', '${player.position}', ${shirtNumber})">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center text-white font-bold">
+                                ${player.name.charAt(0)}
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-gray-900">${player.name}</h4>
+                                <div class="flex items-center gap-2 text-sm text-gray-600">
+                                    <span class="px-2 py-1 bg-gray-100 rounded">${player.position}</span>
+                                    <span>★${player.rating}</span>
+                                    ${isCurrentNumber ? `<span class="text-blue-600 font-medium">Current: #${player.shirt_number}</span>` : hasNumber ? `<span class="text-orange-600 font-medium">Has: #${player.shirt_number}</span>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-2xl font-bold text-blue-600">#${shirtNumber}</div>
+                            ${isCurrentNumber ? '<div class="text-xs text-blue-600 font-medium">Current</div>' : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        document.getElementById('playerSelectionModal').classList.remove('hidden');
+        lucide.createIcons();
+    }
+
+    function closePlayerSelectionModal() {
+        document.getElementById('playerSelectionModal').classList.add('hidden');
+    }
+
+    function assignNumberToPlayer(playerUuid, playerName, position, shirtNumber) {
+        // Create a form and submit it
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.innerHTML = `
+            <input type="hidden" name="player_uuid" value="${playerUuid}">
+            <input type="hidden" name="position" value="${position}">
+            <input type="hidden" name="shirt_number" value="${shirtNumber}">
+            <input type="hidden" name="assign_number" value="1">
+        `;
+        document.body.appendChild(form);
+        form.submit();
+    }
+
     // Close modal when clicking outside
     document.getElementById('assignModal').addEventListener('click', function (e) {
         if (e.target.id === 'assignModal') {
@@ -534,10 +648,17 @@ startContent();
         }
     });
 
+    document.getElementById('playerSelectionModal').addEventListener('click', function (e) {
+        if (e.target.id === 'playerSelectionModal') {
+            closePlayerSelectionModal();
+        }
+    });
+
     // Close modal with Escape key
     document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape') {
             closeAssignModal();
+            closePlayerSelectionModal();
         }
     });
 
