@@ -110,6 +110,179 @@ function displayLeagueMatch($match, $user_data, $opponent_data, $is_home, $oppon
     startContent();
     ?>
     
+    <script>
+        // Global formation modal function - defined early so onclick handlers can access it
+        window.showFormationModal = function(side, teamData) {
+            const team = JSON.parse(JSON.stringify(teamData));
+            const formation = team.formation || '4-4-2';
+            const teamPlayers = JSON.parse(team.team || '[]');
+            
+            // Formation data
+            const formations = {
+                '4-4-2': { roles: ['GK', 'LB', 'CB', 'CB', 'RB', 'LM', 'CM', 'CM', 'RM', 'ST', 'ST'] },
+                '4-3-3': { roles: ['GK', 'LB', 'CB', 'CB', 'RB', 'CDM', 'CM', 'CM', 'LW', 'ST', 'RW'] },
+                '3-5-2': { roles: ['GK', 'CB', 'CB', 'CB', 'LWB', 'CDM', 'CM', 'CAM', 'RWB', 'ST', 'ST'] },
+                '4-2-3-1': { roles: ['GK', 'LB', 'CB', 'CB', 'RB', 'CDM', 'CDM', 'LW', 'CAM', 'RW', 'ST'] },
+                '4-1-4-1': { roles: ['GK', 'LB', 'CB', 'CB', 'RB', 'CDM', 'LM', 'CM', 'CM', 'RM', 'ST'] },
+                '5-3-2': { roles: ['GK', 'LWB', 'CB', 'CB', 'CB', 'RWB', 'CM', 'CAM', 'CM', 'ST', 'ST'] },
+                '3-4-3': { roles: ['GK', 'CB', 'CB', 'CB', 'LM', 'CDM', 'CDM', 'RM', 'LW', 'ST', 'RW'] },
+                '4-3-2-1': { roles: ['GK', 'LB', 'CB', 'CB', 'RB', 'CDM', 'CM', 'CM', 'CAM', 'CAM', 'ST'] },
+                '4-5-1': { roles: ['GK', 'LB', 'CB', 'CB', 'RB', 'LM', 'CM', 'CM', 'CM', 'RM', 'ST'] }
+            };
+            
+            const formationRoles = formations[formation]?.roles || formations['4-4-2'].roles;
+            
+            // Build formation HTML with field visualization
+            let html = `
+                <div class="space-y-6">
+                    <!-- Formation Header -->
+                    <div class="bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="text-xl font-bold text-gray-900">${formation}</h3>
+                                <p class="text-sm text-gray-600">Team Formation Overview</p>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-sm text-gray-600">Players</div>
+                                <div class="text-2xl font-bold text-blue-600">${teamPlayers.filter(p => p).length}/11</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Field Visualization -->
+                    <div class="bg-gradient-to-b from-green-500 to-green-600 rounded-lg shadow-lg p-6 h-[500px] relative">
+                        <!-- Field Lines -->
+                        <div class="absolute inset-6 border-2 border-white border-opacity-40 rounded overflow-hidden">
+                            <!-- Center Line -->
+                            <div class="absolute top-1/2 left-0 right-0 h-0.5 bg-white opacity-40"></div>
+                            <!-- Center Circle -->
+                            <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-24 h-24 border-2 border-white border-opacity-40 rounded-full"></div>
+                            <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-2 h-2 bg-white opacity-40 rounded-full"></div>
+                        </div>
+                        
+                        <!-- Players on Field -->
+                        <div class="relative h-full">
+            `;
+            
+            // Render players on field
+            const positions = [
+                [50],                          // GK
+                [20, 40, 60, 80],             // Defense
+                [20, 40, 60, 80],             // Midfield
+                [35, 65]                       // Attack
+            ];
+            
+            let playerIdx = 0;
+            const positionColors = {
+                'GK': { bg: 'bg-amber-400', border: 'border-amber-500' },
+                'CB': { bg: 'bg-emerald-400', border: 'border-emerald-500' },
+                'LB': { bg: 'bg-emerald-400', border: 'border-emerald-500' },
+                'RB': { bg: 'bg-emerald-400', border: 'border-emerald-500' },
+                'LWB': { bg: 'bg-emerald-400', border: 'border-emerald-500' },
+                'RWB': { bg: 'bg-emerald-400', border: 'border-emerald-500' },
+                'CDM': { bg: 'bg-blue-400', border: 'border-blue-500' },
+                'CM': { bg: 'bg-blue-400', border: 'border-blue-500' },
+                'CAM': { bg: 'bg-blue-400', border: 'border-blue-500' },
+                'LM': { bg: 'bg-blue-400', border: 'border-blue-500' },
+                'RM': { bg: 'bg-blue-400', border: 'border-blue-500' },
+                'LW': { bg: 'bg-red-400', border: 'border-red-500' },
+                'RW': { bg: 'bg-red-400', border: 'border-red-500' },
+                'ST': { bg: 'bg-red-400', border: 'border-red-500' },
+                'CF': { bg: 'bg-red-400', border: 'border-red-500' }
+            };
+            
+            positions.forEach((line, lineIdx) => {
+                const yPos = 100 - ((lineIdx + 1) * (100 / (positions.length + 1)));
+                
+                line.forEach(xPos => {
+                    const player = teamPlayers[playerIdx];
+                    const role = formationRoles[playerIdx];
+                    const colors = positionColors[role] || positionColors['GK'];
+                    
+                    if (player) {
+                        html += `
+                            <div class="absolute cursor-pointer" style="left: ${xPos}%; top: ${yPos}%; transform: translate(-50%, -50%);">
+                                <div class="relative">
+                                    <div class="w-14 h-14 bg-white rounded-full flex flex-col items-center justify-center shadow-lg border-2 ${colors.border} overflow-hidden hover:ring-2 hover:ring-yellow-300 transition-all">
+                                        <div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-400 to-blue-600 text-white font-bold text-sm">
+                                            ${player.name.charAt(0)}
+                                        </div>
+                                    </div>
+                                    <div class="absolute -bottom-6 left-1/2 transform -translate-x-1/2 whitespace-nowrap">
+                                        <div class="text-white text-xs font-bold bg-black bg-opacity-70 px-2 py-1 rounded">${player.name}</div>
+                                    </div>
+                                    <div class="absolute -top-6 left-1/2 transform -translate-x-1/2 whitespace-nowrap">
+                                        <div class="text-white text-xs font-bold bg-black bg-opacity-70 px-2 py-1 rounded">${role}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        html += `
+                            <div class="absolute" style="left: ${xPos}%; top: ${yPos}%; transform: translate(-50%, -50%);">
+                                <div class="w-14 h-14 bg-white bg-opacity-20 rounded-full flex flex-col items-center justify-center border-2 border-white border-dashed">
+                                    <i data-lucide="plus" class="w-5 h-5 text-white"></i>
+                                </div>
+                                <div class="absolute -top-6 left-1/2 transform -translate-x-1/2 whitespace-nowrap">
+                                    <div class="text-white text-xs font-bold bg-black bg-opacity-70 px-2 py-1 rounded">${role}</div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                    
+                    playerIdx++;
+                });
+            });
+            
+            html += `
+                        </div>
+                    </div>
+                    
+                    <!-- Player Details -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            `;
+            
+            // Add player details
+            playerIdx = 0;
+            positions.forEach((line, lineIdx) => {
+                line.forEach(xPos => {
+                    const player = teamPlayers[playerIdx];
+                    const role = formationRoles[playerIdx];
+                    const colors = positionColors[role] || positionColors['GK'];
+                    
+                    if (player) {
+                        html += `
+                            <div class="bg-gray-50 rounded-lg p-3 border-l-4 ${colors.border}">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <div class="font-semibold text-gray-900">${player.name}</div>
+                                        <div class="text-xs text-gray-600">${player.position}</div>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="text-xs font-bold text-gray-700 bg-gray-200 px-2 py-1 rounded">${role}</div>
+                                        <div class="text-sm font-bold text-blue-600">★${player.rating}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                    
+                    playerIdx++;
+                });
+            });
+            
+            html += `
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('formationModalTitle').textContent = `${team.club_name || 'Team'} - ${formation}`;
+            document.getElementById('formationContent').innerHTML = html;
+            document.getElementById('formationModal').classList.remove('hidden');
+            lucide.createIcons();
+        };
+    </script>
+    
     <div class="container mx-auto py-6">
         <!-- Match Header -->
         <div class="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden mb-6">
@@ -142,22 +315,31 @@ function displayLeagueMatch($match, $user_data, $opponent_data, $is_home, $oppon
             <!-- Home Team -->
             <div class="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
                 <div class="bg-green-50 border-b border-green-200 p-4">
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 <?php echo $is_home ? 'bg-blue-600' : 'bg-gray-500'; ?> rounded-full flex items-center justify-center">
-                            <i data-lucide="<?php echo $is_home ? 'user' : 'users'; ?>" class="w-5 h-5 text-white"></i>
-                        </div>
-                        <div>
-                            <h3 class="font-bold text-lg <?php echo $is_home ? 'text-blue-600' : 'text-gray-700'; ?>">
-                                <?php echo htmlspecialchars($match['home_team_name']); ?>
-                            </h3>
-                            <div class="flex items-center gap-2 text-sm">
-                                <i data-lucide="home" class="w-4 h-4 text-green-600"></i>
-                                <span class="text-green-600 font-medium">HOME</span>
-                                <?php if ($is_home): ?>
-                                    <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-bold ml-2">YOUR TEAM</span>
-                                <?php endif; ?>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3 flex-1">
+                            <div class="w-10 h-10 <?php echo $is_home ? 'bg-blue-600' : 'bg-gray-500'; ?> rounded-full flex items-center justify-center">
+                                <i data-lucide="<?php echo $is_home ? 'user' : 'users'; ?>" class="w-5 h-5 text-white"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-lg <?php echo $is_home ? 'text-blue-600' : 'text-gray-700'; ?>">
+                                    <?php echo htmlspecialchars($match['home_team_name']); ?>
+                                </h3>
+                                <div class="flex items-center gap-2 text-sm">
+                                    <i data-lucide="home" class="w-4 h-4 text-green-600"></i>
+                                    <span class="text-green-600 font-medium">HOME</span>
+                                    <?php if ($is_home): ?>
+                                        <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-bold ml-2">YOUR TEAM</span>
+                                    <?php endif; ?>
+                                </div>
                             </div>
                         </div>
+                        <?php if ($is_home && $user_data): ?>
+                            <button onclick="showFormationModal('home', <?php echo htmlspecialchars(json_encode($user_data)); ?>)" 
+                                    class="bg-blue-100 text-blue-700 px-3 py-1 rounded text-xs font-medium hover:bg-blue-200 transition-colors flex items-center gap-1">
+                                <i data-lucide="grid-3x3" class="w-3 h-3"></i>
+                                Formation
+                            </button>
+                        <?php endif; ?>
                     </div>
                 </div>
                 <div class="p-4">
@@ -168,22 +350,37 @@ function displayLeagueMatch($match, $user_data, $opponent_data, $is_home, $oppon
             <!-- Away Team -->
             <div class="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
                 <div class="bg-orange-50 border-b border-orange-200 p-4">
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 <?php echo !$is_home ? 'bg-blue-600' : 'bg-gray-500'; ?> rounded-full flex items-center justify-center">
-                            <i data-lucide="<?php echo !$is_home ? 'user' : 'users'; ?>" class="w-5 h-5 text-white"></i>
-                        </div>
-                        <div>
-                            <h3 class="font-bold text-lg <?php echo !$is_home ? 'text-blue-600' : 'text-gray-700'; ?>">
-                                <?php echo htmlspecialchars($match['away_team_name']); ?>
-                            </h3>
-                            <div class="flex items-center gap-2 text-sm">
-                                <i data-lucide="plane" class="w-4 h-4 text-orange-600"></i>
-                                <span class="text-orange-600 font-medium">AWAY</span>
-                                <?php if (!$is_home): ?>
-                                    <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-bold ml-2">YOUR TEAM</span>
-                                <?php endif; ?>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3 flex-1">
+                            <div class="w-10 h-10 <?php echo !$is_home ? 'bg-blue-600' : 'bg-gray-500'; ?> rounded-full flex items-center justify-center">
+                                <i data-lucide="<?php echo !$is_home ? 'user' : 'users'; ?>" class="w-5 h-5 text-white"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-lg <?php echo !$is_home ? 'text-blue-600' : 'text-gray-700'; ?>">
+                                    <?php echo htmlspecialchars($match['away_team_name']); ?>
+                                </h3>
+                                <div class="flex items-center gap-2 text-sm">
+                                    <i data-lucide="plane" class="w-4 h-4 text-orange-600"></i>
+                                    <span class="text-orange-600 font-medium">AWAY</span>
+                                    <?php if (!$is_home): ?>
+                                        <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-bold ml-2">YOUR TEAM</span>
+                                    <?php endif; ?>
+                                </div>
                             </div>
                         </div>
+                        <?php if (!$is_home && $user_data): ?>
+                            <button onclick="showFormationModal('away', <?php echo htmlspecialchars(json_encode($user_data)); ?>)" 
+                                    class="bg-blue-100 text-blue-700 px-3 py-1 rounded text-xs font-medium hover:bg-blue-200 transition-colors flex items-center gap-1">
+                                <i data-lucide="grid-3x3" class="w-3 h-3"></i>
+                                Formation
+                            </button>
+                        <?php elseif ($is_home && ($opponent_data || $opponent_roster)): ?>
+                            <button onclick="showFormationModal('away', <?php echo htmlspecialchars(json_encode($opponent_data ?: ['team' => json_encode($opponent_roster), 'formation' => '4-4-2', 'club_name' => $match['away_team_name']])); ?>)" 
+                                    class="bg-blue-100 text-blue-700 px-3 py-1 rounded text-xs font-medium hover:bg-blue-200 transition-colors flex items-center gap-1">
+                                <i data-lucide="grid-3x3" class="w-3 h-3"></i>
+                                Formation
+                            </button>
+                        <?php endif; ?>
                     </div>
                 </div>
                 <div class="p-4">
@@ -218,6 +415,48 @@ function displayLeagueMatch($match, $user_data, $opponent_data, $is_home, $oppon
             </div>
         </div>
     </div>
+
+    <!-- Formation Modal -->
+    <div id="formationModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100]">
+        <div class="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-900" id="formationModalTitle">Team Formation</h2>
+                <button id="closeFormationModal" class="text-gray-500 hover:text-gray-700">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+            <div id="formationContent">
+                <!-- Formation will be rendered here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Close formation modal - attach listeners when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', attachFormationModalListeners);
+        } else {
+            attachFormationModalListeners();
+        }
+        
+        function attachFormationModalListeners() {
+            const closeBtn = document.getElementById('closeFormationModal');
+            if (closeBtn) {
+                closeBtn.addEventListener('click', function() {
+                    document.getElementById('formationModal').classList.add('hidden');
+                });
+            }
+            
+            const modal = document.getElementById('formationModal');
+            if (modal) {
+                modal.addEventListener('click', function(e) {
+                    if (e.target === this) {
+                        this.classList.add('hidden');
+                    }
+                });
+            }
+        }
+    </script>
 
     <?php showPlayerInfoModal(); ?>
 
@@ -1042,6 +1281,9 @@ function displayTeamLineup($team_data, $side, $league_roster = null) {
     $team = json_decode($team_data['team'], true) ?? [];
     $substitutes = json_decode($team_data['substitutes'], true) ?? [];
     $formation = $team_data['formation'] ?? '4-4-2';
+    
+    // Get formation roles for displaying positions
+    $formationRoles = FORMATIONS[$formation]['roles'] ?? FORMATIONS['4-4-2']['roles'];
 
     ?>
     <div class="space-y-4">
@@ -1062,13 +1304,17 @@ function displayTeamLineup($team_data, $side, $league_roster = null) {
                 <?php if (!empty($team)): ?>
                     <?php foreach ($team as $index => $player): ?>
                         <?php if ($player): ?>
+                            <?php 
+                            // Get the formation role for this position
+                            $formationRole = $formationRoles[$index] ?? $player['position'];
+                            ?>
                             <div class="flex items-center gap-3 p-2 bg-gray-50 rounded-lg cursor-pointer hover:bg-blue-50 transition-colors" onclick="showPlayerInfo(<?php echo htmlspecialchars(json_encode($player)); ?>)">
                                 <div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-bold">
                                     <?php echo $index + 1; ?>
                                 </div>
                                 <div class="flex-1">
                                     <div class="font-medium"><?php echo htmlspecialchars($player['name']); ?></div>
-                                    <div class="text-sm text-gray-600"><?php echo htmlspecialchars($player['position']); ?></div>
+                                    <div class="text-sm text-gray-600"><?php echo htmlspecialchars($formationRole); ?></div>
                                 </div>
                                 <div class="text-right">
                                     <div class="text-sm font-medium"><?php echo $player['rating']; ?></div>

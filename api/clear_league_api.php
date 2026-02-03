@@ -4,6 +4,7 @@ session_start();
 require_once '../config/config.php';
 require_once '../config/constants.php';
 require_once '../includes/auth_functions.php';
+require_once '../includes/league_functions.php';
 
 // Check if user is logged in
 if (!isLoggedIn()) {
@@ -22,19 +23,28 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 try {
     $db = getDbConnection();
     $user_id = $_SESSION['user_id'];
-    $current_season = date('Y');
 
-    // Get current season
-    $season_to_clear = isset($_POST['season']) ? intval($_POST['season']) : $current_season;
+    // Get season to clear from POST data
+    $season_to_clear = isset($_POST['season']) ? trim($_POST['season']) : null;
+    
+    if (!$season_to_clear) {
+        // If no season provided, get current season
+        $season_to_clear = getCurrentSeasonIdentifier($db);
+    }
+
+    // Delete all league team rosters for the season
+    $stmt = $db->prepare('DELETE FROM league_team_rosters WHERE season = :season');
+    $stmt->bindValue(':season', $season_to_clear, SQLITE3_TEXT);
+    $stmt->execute();
 
     // Delete all league matches for the season
     $stmt = $db->prepare('DELETE FROM league_matches WHERE season = :season');
-    $stmt->bindValue(':season', $season_to_clear, SQLITE3_INTEGER);
+    $stmt->bindValue(':season', $season_to_clear, SQLITE3_TEXT);
     $stmt->execute();
 
     // Delete all league teams for the season
     $stmt = $db->prepare('DELETE FROM league_teams WHERE season = :season');
-    $stmt->bindValue(':season', $season_to_clear, SQLITE3_INTEGER);
+    $stmt->bindValue(':season', $season_to_clear, SQLITE3_TEXT);
     $stmt->execute();
 
     $db->close();

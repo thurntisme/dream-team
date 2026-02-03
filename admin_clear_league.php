@@ -4,6 +4,7 @@ require_once 'config/config.php';
 require_once 'config/constants.php';
 require_once 'partials/layout.php';
 require_once 'includes/auth_functions.php';
+require_once 'includes/league_functions.php';
 
 // Check if user is logged in
 if (!isLoggedIn()) {
@@ -13,18 +14,20 @@ if (!isLoggedIn()) {
 
 $db = getDbConnection();
 $user_id = $_SESSION['user_id'];
-$current_season = date('Y');
+
+// Get current season identifier
+$current_season = getCurrentSeasonIdentifier($db);
 
 // Get league status
 $stmt = $db->prepare('SELECT COUNT(*) as count FROM league_teams WHERE season = :season');
-$stmt->bindValue(':season', $current_season, SQLITE3_INTEGER);
+$stmt->bindValue(':season', $current_season, SQLITE3_TEXT);
 $result = $stmt->execute();
 $row = $result->fetchArray(SQLITE3_ASSOC);
 $league_exists = $row['count'] > 0;
 
 // Get match count
 $stmt = $db->prepare('SELECT COUNT(*) as count FROM league_matches WHERE season = :season');
-$stmt->bindValue(':season', $current_season, SQLITE3_INTEGER);
+$stmt->bindValue(':season', $current_season, SQLITE3_TEXT);
 $result = $stmt->execute();
 $match_row = $result->fetchArray(SQLITE3_ASSOC);
 $match_count = $match_row['count'];
@@ -60,7 +63,7 @@ startContent();
         <div class="space-y-3">
             <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <span class="text-gray-700">Season:</span>
-                <span class="font-bold text-gray-900"><?php echo $current_season; ?></span>
+                <span class="font-bold text-gray-900"><?php echo htmlspecialchars($current_season); ?></span>
             </div>
             
             <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
@@ -91,7 +94,7 @@ startContent();
         
         <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
             <p class="text-red-800 text-sm">
-                <strong>Warning:</strong> This will permanently delete all league data for season <?php echo $current_season; ?>, including:
+                <strong>Warning:</strong> This will permanently delete all league data for season <?php echo htmlspecialchars($current_season); ?>, including:
             </p>
             <ul class="text-red-700 text-sm mt-2 ml-4 list-disc">
                 <li>All 40 teams (user team + 39 AI teams)</li>
@@ -107,7 +110,7 @@ startContent();
             <button id="clear-league-btn" 
                     class="w-full bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 font-bold transition-colors flex items-center justify-center gap-2">
                 <i data-lucide="trash-2" class="w-5 h-5"></i>
-                Clear League for Season <?php echo $current_season; ?>
+                Clear League for Season <?php echo htmlspecialchars($current_season); ?>
             </button>
         <?php else: ?>
             <div class="bg-gray-100 text-gray-600 px-6 py-3 rounded-lg text-center">
@@ -128,9 +131,10 @@ startContent();
 
 <script>
     document.getElementById('clear-league-btn')?.addEventListener('click', function() {
-        if (confirm('Are you absolutely sure? This will delete all league data for season <?php echo $current_season; ?>.\n\nThis action cannot be undone.')) {
+        const season = '<?php echo htmlspecialchars($current_season); ?>';
+        if (confirm('Are you absolutely sure? This will delete all league data for season ' + season + '.\n\nThis action cannot be undone.')) {
             const formData = new FormData();
-            formData.append('season', <?php echo $current_season; ?>);
+            formData.append('season', season);
 
             fetch('api/clear_league_api.php', {
                 method: 'POST',

@@ -132,12 +132,78 @@ function assignTeamRoster($db, $league_team_id, $season, $user_id = null)
     shuffle($all_players);
     $selected_players = array_slice($all_players, 0, 23);
     
-    // Assign positions to players (11 starting + 12 substitutes)
-    $roster = [];
-    $positions = ['GK', 'DEF', 'DEF', 'DEF', 'DEF', 'MID', 'MID', 'MID', 'MID', 'FWD', 'FWD', 'DEF', 'MID', 'MID', 'FWD', 'FWD', 'GK', 'DEF', 'MID', 'FWD', 'DEF', 'MID', 'FWD'];
+    // Organize players by their main position
+    $players_by_position = [
+        'GK' => [],
+        'DEF' => [],
+        'MID' => [],
+        'FWD' => []
+    ];
     
-    foreach ($selected_players as $index => $player) {
-        $player['position'] = $positions[$index] ?? 'MID';
+    foreach ($selected_players as $player) {
+        $pos = $player['position'] ?? 'MID';
+        
+        // Map specific positions to general categories
+        if (in_array($pos, ['LB', 'RB', 'CB'])) {
+            $players_by_position['DEF'][] = $player;
+        } elseif (in_array($pos, ['CAM', 'CM', 'CDM', 'LM', 'RM'])) {
+            $players_by_position['MID'][] = $player;
+        } elseif (in_array($pos, ['ST', 'CF', 'LW', 'RW'])) {
+            $players_by_position['FWD'][] = $player;
+        } else {
+            $players_by_position['MID'][] = $player;
+        }
+    }
+    
+    // Build roster respecting player positions
+    // Formation: 1 GK, 4 DEF, 4 MID, 2 FWD (starting 11) + 12 substitutes
+    $roster = [];
+    
+    // Add starting XI (11 players)
+    // 1 GK
+    for ($i = 0; $i < 1 && !empty($players_by_position['GK']); $i++) {
+        $player = array_pop($players_by_position['GK']);
+        $player['rating'] = rand(70, 95);
+        $player['fitness'] = 100;
+        $player['form'] = rand(5, 10);
+        $roster[] = $player;
+    }
+    
+    // 4 DEF
+    for ($i = 0; $i < 4 && !empty($players_by_position['DEF']); $i++) {
+        $player = array_pop($players_by_position['DEF']);
+        $player['rating'] = rand(70, 95);
+        $player['fitness'] = 100;
+        $player['form'] = rand(5, 10);
+        $roster[] = $player;
+    }
+    
+    // 4 MID
+    for ($i = 0; $i < 4 && !empty($players_by_position['MID']); $i++) {
+        $player = array_pop($players_by_position['MID']);
+        $player['rating'] = rand(70, 95);
+        $player['fitness'] = 100;
+        $player['form'] = rand(5, 10);
+        $roster[] = $player;
+    }
+    
+    // 2 FWD
+    for ($i = 0; $i < 2 && !empty($players_by_position['FWD']); $i++) {
+        $player = array_pop($players_by_position['FWD']);
+        $player['rating'] = rand(70, 95);
+        $player['fitness'] = 100;
+        $player['form'] = rand(5, 10);
+        $roster[] = $player;
+    }
+    
+    // Add substitutes (12 players) - fill remaining slots
+    $remaining_players = [];
+    foreach ($players_by_position as $position_players) {
+        $remaining_players = array_merge($remaining_players, $position_players);
+    }
+    
+    for ($i = 0; $i < 12 && !empty($remaining_players); $i++) {
+        $player = array_pop($remaining_players);
         $player['rating'] = rand(70, 95);
         $player['fitness'] = 100;
         $player['form'] = rand(5, 10);
