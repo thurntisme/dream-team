@@ -11,7 +11,7 @@ function initializeLeague($db, $user_id)
     // Check if league is already initialized for current season
     $current_season = date('Y');
     $stmt = $db->prepare('SELECT COUNT(*) as count FROM league_teams WHERE season = :season');
-    $stmt->bindValue(':season', $current_season, SQLITE3_INTEGER);
+    $stmt->bindValue(':season', $current_season, SQLITE3_TEXT);
     $result = $stmt->execute();
     $row = $result->fetchArray(SQLITE3_ASSOC);
 
@@ -27,7 +27,7 @@ function createLeagueTables($db)
     // League teams table (updated with division support)
     $sql = 'CREATE TABLE IF NOT EXISTS league_teams (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        season INTEGER NOT NULL,
+        season TEXT NOT NULL,
         user_id INTEGER,
         name TEXT NOT NULL,
         is_user BOOLEAN DEFAULT 0,
@@ -43,10 +43,21 @@ function createLeagueTables($db)
     )';
     $db->exec($sql);
 
+    // League team rosters table (23 players per team)
+    $sql = 'CREATE TABLE IF NOT EXISTS league_team_rosters (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        league_team_id INTEGER NOT NULL,
+        season TEXT NOT NULL,
+        player_data TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (league_team_id) REFERENCES league_teams(id)
+    )';
+    $db->exec($sql);
+
     // League matches table
     $sql = 'CREATE TABLE IF NOT EXISTS league_matches (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        season INTEGER NOT NULL,
+        season TEXT NOT NULL,
         gameweek INTEGER NOT NULL,
         home_team_id INTEGER NOT NULL,
         away_team_id INTEGER NOT NULL,
@@ -71,33 +82,83 @@ function createLeagueTeams($db, $user_id, $season)
 
     // Insert user's team in Elite League (Division 1)
     $stmt = $db->prepare('INSERT INTO league_teams (season, user_id, name, is_user, division) VALUES (:season, :user_id, :name, 1, 1)');
-    $stmt->bindValue(':season', $season, SQLITE3_INTEGER);
+    $stmt->bindValue(':season', $season, SQLITE3_TEXT);
     $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
     $stmt->bindValue(':name', $user['club_name'], SQLITE3_TEXT);
     $stmt->execute();
+    
+    // Get the user's team ID and assign roster
+    $user_team_id = $db->lastInsertRowid();
+    assignTeamRoster($db, $user_team_id, $season, $user_id);
 
     // Insert Elite League fake teams (Division 1) - 19 teams
     foreach (FAKE_CLUBS as $club_name) {
         $stmt = $db->prepare('INSERT INTO league_teams (season, name, is_user, division) VALUES (:season, :name, 0, 1)');
-        $stmt->bindValue(':season', $season, SQLITE3_INTEGER);
+        $stmt->bindValue(':season', $season, SQLITE3_TEXT);
         $stmt->bindValue(':name', $club_name, SQLITE3_TEXT);
         $stmt->execute();
+        
+        // Get the team ID and assign roster
+        $team_id = $db->lastInsertRowid();
+        assignTeamRoster($db, $team_id, $season, null);
     }
 
-    // Insert Championship fake teams (Division 2) - 24 teams
+    // Insert Pro League fake teams (Division 2) - 20 teams
     foreach (CHAMPIONSHIP_CLUBS as $club_name) {
         $stmt = $db->prepare('INSERT INTO league_teams (season, name, is_user, division) VALUES (:season, :name, 0, 2)');
-        $stmt->bindValue(':season', $season, SQLITE3_INTEGER);
+        $stmt->bindValue(':season', $season, SQLITE3_TEXT);
         $stmt->bindValue(':name', $club_name, SQLITE3_TEXT);
         $stmt->execute();
+        
+        // Get the team ID and assign roster
+        $team_id = $db->lastInsertRowid();
+        assignTeamRoster($db, $team_id, $season, null);
     }
+}
+
+/**
+ * Assign 23 random players to a league team
+ */
+function assignTeamRoster($db, $league_team_id, $season, $user_id = null)
+{
+    // Get all available players from the system
+    $all_players = getDefaultPlayers();
+    
+    if (empty($all_players)) {
+        return false;
+    }
+    
+    // Shuffle and select 23 random players
+    shuffle($all_players);
+    $selected_players = array_slice($all_players, 0, 23);
+    
+    // Assign positions to players (11 starting + 12 substitutes)
+    $roster = [];
+    $positions = ['GK', 'DEF', 'DEF', 'DEF', 'DEF', 'MID', 'MID', 'MID', 'MID', 'FWD', 'FWD', 'DEF', 'MID', 'MID', 'FWD', 'FWD', 'GK', 'DEF', 'MID', 'FWD', 'DEF', 'MID', 'FWD'];
+    
+    foreach ($selected_players as $index => $player) {
+        $player['position'] = $positions[$index] ?? 'MID';
+        $player['rating'] = rand(70, 95);
+        $player['fitness'] = 100;
+        $player['form'] = rand(5, 10);
+        $roster[] = $player;
+    }
+    
+    // Store roster in database
+    $stmt = $db->prepare('INSERT INTO league_team_rosters (league_team_id, season, player_data) VALUES (:league_team_id, :season, :player_data)');
+    $stmt->bindValue(':league_team_id', $league_team_id, SQLITE3_INTEGER);
+    $stmt->bindValue(':season', $season, SQLITE3_TEXT);
+    $stmt->bindValue(':player_data', json_encode($roster), SQLITE3_TEXT);
+    $result = $stmt->execute();
+    
+    return $result ? true : false;
 }
 
 function generateFixtures($db, $season)
 {
     // Get all Elite League teams for the season (Division 1 only)
     $stmt = $db->prepare('SELECT id FROM league_teams WHERE season = :season AND division = 1 ORDER BY id');
-    $stmt->bindValue(':season', $season, SQLITE3_INTEGER);
+    $stmt->bindValue(':season', $season, SQLITE3_TEXT);
     $result = $stmt->execute();
 
     $teams = [];
@@ -133,7 +194,7 @@ function generateFixtures($db, $season)
 
         foreach ($round_fixtures as $fixture) {
             $stmt = $db->prepare('INSERT INTO league_matches (season, gameweek, home_team_id, away_team_id, match_date) VALUES (:season, :gameweek, :home, :away, :date)');
-            $stmt->bindValue(':season', $season, SQLITE3_INTEGER);
+            $stmt->bindValue(':season', $season, SQLITE3_TEXT);
             $stmt->bindValue(':gameweek', $gameweek, SQLITE3_INTEGER);
             $stmt->bindValue(':home', $fixture[0], SQLITE3_INTEGER);
             $stmt->bindValue(':away', $fixture[1], SQLITE3_INTEGER);
@@ -166,7 +227,7 @@ function generateFixtures($db, $season)
 
         foreach ($round_fixtures as $fixture) {
             $stmt = $db->prepare('INSERT INTO league_matches (season, gameweek, home_team_id, away_team_id, match_date) VALUES (:season, :gameweek, :home, :away, :date)');
-            $stmt->bindValue(':season', $season, SQLITE3_INTEGER);
+            $stmt->bindValue(':season', $season, SQLITE3_TEXT);
             $stmt->bindValue(':gameweek', $gameweek, SQLITE3_INTEGER);
             $stmt->bindValue(':home', $fixture[0], SQLITE3_INTEGER);
             $stmt->bindValue(':away', $fixture[1], SQLITE3_INTEGER);
@@ -223,7 +284,7 @@ function getCurrentSeasonIdentifier($db)
 function getCurrentGameweek($db, $season)
 {
     $stmt = $db->prepare('SELECT MIN(gameweek) as gameweek FROM league_matches WHERE season = :season AND status = "scheduled"');
-    $stmt->bindValue(':season', $season, SQLITE3_INTEGER);
+    $stmt->bindValue(':season', $season, SQLITE3_TEXT);
     $result = $stmt->execute();
     $row = $result->fetchArray(SQLITE3_ASSOC);
 
@@ -241,7 +302,7 @@ function getLeagueStandings($db, $season)
     ORDER BY points DESC, goal_difference DESC, lt.goals_for DESC, lt.is_user DESC, lt.name ASC';
 
     $stmt = $db->prepare($sql);
-    $stmt->bindValue(':season', $season, SQLITE3_INTEGER);
+    $stmt->bindValue(':season', $season, SQLITE3_TEXT);
     $result = $stmt->execute();
 
     $standings = [];
@@ -256,7 +317,7 @@ function getUserMatches($db, $user_id, $season)
 {
     // Get user's team ID
     $stmt = $db->prepare('SELECT id FROM league_teams WHERE season = :season AND user_id = :user_id');
-    $stmt->bindValue(':season', $season, SQLITE3_INTEGER);
+    $stmt->bindValue(':season', $season, SQLITE3_TEXT);
     $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
     $result = $stmt->execute();
     $user_team = $result->fetchArray(SQLITE3_ASSOC);
@@ -300,7 +361,7 @@ function getUserMatches($db, $user_id, $season)
     ORDER BY lm.gameweek DESC, lm.match_date DESC';
 
     $stmt = $db->prepare($sql);
-    $stmt->bindValue(':season', $season, SQLITE3_INTEGER);
+    $stmt->bindValue(':season', $season, SQLITE3_TEXT);
     $stmt->bindValue(':team_id', $team_id, SQLITE3_INTEGER);
     $result = $stmt->execute();
 
@@ -316,7 +377,7 @@ function getUpcomingMatches($db, $user_id, $season)
 {
     // Get user's team ID
     $stmt = $db->prepare('SELECT id FROM league_teams WHERE season = :season AND user_id = :user_id');
-    $stmt->bindValue(':season', $season, SQLITE3_INTEGER);
+    $stmt->bindValue(':season', $season, SQLITE3_TEXT);
     $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
     $result = $stmt->execute();
     $user_team = $result->fetchArray(SQLITE3_ASSOC);
@@ -344,7 +405,7 @@ function getUpcomingMatches($db, $user_id, $season)
     ORDER BY lm.gameweek ASC, lm.match_date ASC';
 
     $stmt = $db->prepare($sql);
-    $stmt->bindValue(':season', $season, SQLITE3_INTEGER);
+    $stmt->bindValue(':season', $season, SQLITE3_TEXT);
     $stmt->bindValue(':current_gameweek', $current_gameweek, SQLITE3_INTEGER);
     $stmt->bindValue(':max_gameweek', $current_gameweek + 5, SQLITE3_INTEGER); // Show next 5 gameweeks
     $result = $stmt->execute();
@@ -570,7 +631,7 @@ function simulateGameweek($db, $match_id, $user_id)
 
     // Get user's team ID for tracking their match
     $stmt = $db->prepare('SELECT id FROM league_teams WHERE season = :season AND user_id = :user_id');
-    $stmt->bindValue(':season', $season, SQLITE3_INTEGER);
+    $stmt->bindValue(':season', $season, SQLITE3_TEXT);
     $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
     $result = $stmt->execute();
     $user_team = $result->fetchArray(SQLITE3_ASSOC);
@@ -584,7 +645,7 @@ function simulateGameweek($db, $match_id, $user_id)
         JOIN league_teams ht ON lm.home_team_id = ht.id
         JOIN league_teams at ON lm.away_team_id = at.id
         WHERE lm.season = :season AND lm.gameweek = :gameweek AND lm.status = "scheduled"');
-    $stmt->bindValue(':season', $season, SQLITE3_INTEGER);
+    $stmt->bindValue(':season', $season, SQLITE3_TEXT);
     $stmt->bindValue(':gameweek', $gameweek, SQLITE3_INTEGER);
     $result = $stmt->execute();
 
@@ -707,7 +768,7 @@ function simulateCurrentGameweek($db, $user_id, $season, $gameweek)
 {
     // Get user's team ID for tracking their match
     $stmt = $db->prepare('SELECT id FROM league_teams WHERE season = :season AND user_id = :user_id');
-    $stmt->bindValue(':season', $season, SQLITE3_INTEGER);
+    $stmt->bindValue(':season', $season, SQLITE3_TEXT);
     $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
     $result = $stmt->execute();
     $user_team = $result->fetchArray(SQLITE3_ASSOC);
@@ -721,7 +782,7 @@ function simulateCurrentGameweek($db, $user_id, $season, $gameweek)
         JOIN league_teams ht ON lm.home_team_id = ht.id
         JOIN league_teams at ON lm.away_team_id = at.id
         WHERE lm.season = :season AND lm.gameweek = :gameweek AND lm.status = "scheduled"');
-    $stmt->bindValue(':season', $season, SQLITE3_INTEGER);
+    $stmt->bindValue(':season', $season, SQLITE3_TEXT);
     $stmt->bindValue(':gameweek', $gameweek, SQLITE3_INTEGER);
     $result = $stmt->execute();
 
@@ -842,7 +903,7 @@ function hasUserMatchInGameweek($db, $user_id, $season, $gameweek)
 {
     // Get user's team ID
     $stmt = $db->prepare('SELECT id FROM league_teams WHERE season = :season AND user_id = :user_id');
-    $stmt->bindValue(':season', $season, SQLITE3_INTEGER);
+    $stmt->bindValue(':season', $season, SQLITE3_TEXT);
     $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
     $result = $stmt->execute();
     $user_team = $result->fetchArray(SQLITE3_ASSOC);
@@ -857,7 +918,7 @@ function hasUserMatchInGameweek($db, $user_id, $season, $gameweek)
                          WHERE season = :season AND gameweek = :gameweek 
                          AND (home_team_id = :team_id OR away_team_id = :team_id)
                          AND status = "scheduled"');
-    $stmt->bindValue(':season', $season, SQLITE3_INTEGER);
+    $stmt->bindValue(':season', $season, SQLITE3_TEXT);
     $stmt->bindValue(':gameweek', $gameweek, SQLITE3_INTEGER);
     $stmt->bindValue(':team_id', $team_id, SQLITE3_INTEGER);
     $result = $stmt->execute();
@@ -1232,7 +1293,7 @@ function getTopScorers($db, $season, $limit = 3)
     LIMIT :limit';
 
     $stmt = $db->prepare($sql);
-    $stmt->bindValue(':season', $season, SQLITE3_INTEGER);
+    $stmt->bindValue(':season', $season, SQLITE3_TEXT);
     $stmt->bindValue(':limit', $limit, SQLITE3_INTEGER);
     $result = $stmt->execute();
 
@@ -1262,7 +1323,7 @@ function getTopAssists($db, $season, $limit = 3)
     LIMIT :limit';
 
     $stmt = $db->prepare($sql);
-    $stmt->bindValue(':season', $season, SQLITE3_INTEGER);
+    $stmt->bindValue(':season', $season, SQLITE3_TEXT);
     $stmt->bindValue(':limit', $limit, SQLITE3_INTEGER);
     $result = $stmt->execute();
 
@@ -1294,7 +1355,7 @@ function getTopRatedPlayers($db, $season, $limit = 3)
     LIMIT :limit';
 
     $stmt = $db->prepare($sql);
-    $stmt->bindValue(':season', $season, SQLITE3_INTEGER);
+    $stmt->bindValue(':season', $season, SQLITE3_TEXT);
     $stmt->bindValue(':limit', $limit, SQLITE3_INTEGER);
     $result = $stmt->execute();
 
@@ -1324,7 +1385,7 @@ function getMostYellowCards($db, $season, $limit = 3)
     LIMIT :limit';
 
     $stmt = $db->prepare($sql);
-    $stmt->bindValue(':season', $season, SQLITE3_INTEGER);
+    $stmt->bindValue(':season', $season, SQLITE3_TEXT);
     $stmt->bindValue(':limit', $limit, SQLITE3_INTEGER);
     $result = $stmt->execute();
 
@@ -1354,7 +1415,7 @@ function getMostRedCards($db, $season, $limit = 3)
     LIMIT :limit';
 
     $stmt = $db->prepare($sql);
-    $stmt->bindValue(':season', $season, SQLITE3_INTEGER);
+    $stmt->bindValue(':season', $season, SQLITE3_TEXT);
     $stmt->bindValue(':limit', $limit, SQLITE3_INTEGER);
     $result = $stmt->execute();
 
@@ -1386,7 +1447,7 @@ function getTopGoalkeepers($db, $season, $limit = 3)
     LIMIT :limit';
 
     $stmt = $db->prepare($sql);
-    $stmt->bindValue(':season', $season, SQLITE3_INTEGER);
+    $stmt->bindValue(':season', $season, SQLITE3_TEXT);
     $stmt->bindValue(':limit', $limit, SQLITE3_INTEGER);
     $result = $stmt->execute();
 
@@ -1406,7 +1467,7 @@ function isSeasonComplete($db, $season)
                          SUM(CASE WHEN status = "completed" THEN 1 ELSE 0 END) as completed_matches
                          FROM league_matches 
                          WHERE season = :season');
-    $stmt->bindValue(':season', $season, SQLITE3_INTEGER);
+    $stmt->bindValue(':season', $season, SQLITE3_TEXT);
     $result = $stmt->execute();
     $row = $result->fetchArray(SQLITE3_ASSOC);
 
@@ -1427,7 +1488,7 @@ function getChampionshipStandings($db, $season)
     ORDER BY points DESC, goal_difference DESC, lt.goals_for DESC, lt.name ASC';
 
     $stmt = $db->prepare($sql);
-    $stmt->bindValue(':season', $season, SQLITE3_INTEGER);
+    $stmt->bindValue(':season', $season, SQLITE3_TEXT);
     $result = $stmt->execute();
 
     $standings = [];
@@ -1450,7 +1511,7 @@ function processRelegationPromotion($db, $season)
 
     // Check if relegation has already been processed for this season
     $stmt = $db->prepare('SELECT COUNT(*) as count FROM league_teams WHERE season = :next_season');
-    $stmt->bindValue(':next_season', $season + 1, SQLITE3_INTEGER);
+    $stmt->bindValue(':next_season', $season + 1, SQLITE3_TEXT);
     $result = $stmt->execute();
     $row = $result->fetchArray(SQLITE3_ASSOC);
 
@@ -1516,7 +1577,7 @@ function processRelegationPromotion($db, $season)
         $staying_premier_teams = array_slice($premier_standings, 0, 17);
         foreach ($staying_premier_teams as $team) {
             $stmt = $db->prepare('INSERT INTO league_teams (season, user_id, name, is_user, division) VALUES (:season, :user_id, :name, :is_user, 1)');
-            $stmt->bindValue(':season', $next_season, SQLITE3_INTEGER);
+            $stmt->bindValue(':season', $next_season, SQLITE3_TEXT);
             $stmt->bindValue(':user_id', $team['user_id'], SQLITE3_INTEGER);
             $stmt->bindValue(':name', $team['name'], SQLITE3_TEXT);
             $stmt->bindValue(':is_user', $team['is_user'], SQLITE3_INTEGER);
@@ -1526,7 +1587,7 @@ function processRelegationPromotion($db, $season)
         // 2. Promote top 3 Championship teams to Division 1
         foreach ($promoted_teams as $team) {
             $stmt = $db->prepare('INSERT INTO league_teams (season, user_id, name, is_user, division) VALUES (:season, :user_id, :name, :is_user, 1)');
-            $stmt->bindValue(':season', $next_season, SQLITE3_INTEGER);
+            $stmt->bindValue(':season', $next_season, SQLITE3_TEXT);
             $stmt->bindValue(':user_id', $team['user_id'], SQLITE3_INTEGER);
             $stmt->bindValue(':name', $team['name'], SQLITE3_TEXT);
             $stmt->bindValue(':is_user', $team['is_user'], SQLITE3_INTEGER);
@@ -1539,7 +1600,7 @@ function processRelegationPromotion($db, $season)
             foreach ($relegated_teams as $team) {
                 if ($team['is_user']) {
                     $stmt = $db->prepare('INSERT INTO league_teams (season, user_id, name, is_user, division) VALUES (:season, :user_id, :name, :is_user, 2)');
-                    $stmt->bindValue(':season', $next_season, SQLITE3_INTEGER);
+                    $stmt->bindValue(':season', $next_season, SQLITE3_TEXT);
                     $stmt->bindValue(':user_id', $team['user_id'], SQLITE3_INTEGER);
                     $stmt->bindValue(':name', $team['name'], SQLITE3_TEXT);
                     $stmt->bindValue(':is_user', $team['is_user'], SQLITE3_INTEGER);
@@ -1552,7 +1613,7 @@ function processRelegationPromotion($db, $season)
             $remaining_championship = array_slice($championship_standings, 3); // Teams 4-24 from Championship
             foreach ($remaining_championship as $team) {
                 $stmt = $db->prepare('INSERT INTO league_teams (season, user_id, name, is_user, division) VALUES (:season, :user_id, :name, :is_user, 2)');
-                $stmt->bindValue(':season', $next_season, SQLITE3_INTEGER);
+                $stmt->bindValue(':season', $next_season, SQLITE3_TEXT);
                 $stmt->bindValue(':user_id', $team['user_id'], SQLITE3_INTEGER);
                 $stmt->bindValue(':name', $team['name'], SQLITE3_TEXT);
                 $stmt->bindValue(':is_user', $team['is_user'], SQLITE3_INTEGER);
@@ -1563,7 +1624,7 @@ function processRelegationPromotion($db, $season)
             foreach ($relegated_teams as $team) {
                 if (!$team['is_user']) {
                     $stmt = $db->prepare('INSERT INTO league_teams (season, user_id, name, is_user, division) VALUES (:season, :user_id, :name, :is_user, 2)');
-                    $stmt->bindValue(':season', $next_season, SQLITE3_INTEGER);
+                    $stmt->bindValue(':season', $next_season, SQLITE3_TEXT);
                     $stmt->bindValue(':user_id', $team['user_id'], SQLITE3_INTEGER);
                     $stmt->bindValue(':name', $team['name'], SQLITE3_TEXT);
                     $stmt->bindValue(':is_user', $team['is_user'], SQLITE3_INTEGER);
@@ -1575,7 +1636,7 @@ function processRelegationPromotion($db, $season)
             $remaining_championship = array_slice($championship_standings, 3); // Teams 4-24 from Championship
             foreach ($remaining_championship as $team) {
                 $stmt = $db->prepare('INSERT INTO league_teams (season, user_id, name, is_user, division) VALUES (:season, :user_id, :name, :is_user, 2)');
-                $stmt->bindValue(':season', $next_season, SQLITE3_INTEGER);
+                $stmt->bindValue(':season', $next_season, SQLITE3_TEXT);
                 $stmt->bindValue(':user_id', $team['user_id'], SQLITE3_INTEGER);
                 $stmt->bindValue(':name', $team['name'], SQLITE3_TEXT);
                 $stmt->bindValue(':is_user', $team['is_user'], SQLITE3_INTEGER);
@@ -1585,7 +1646,7 @@ function processRelegationPromotion($db, $season)
             // Add relegated Elite League teams to Pro League
             foreach ($relegated_teams as $team) {
                 $stmt = $db->prepare('INSERT INTO league_teams (season, user_id, name, is_user, division) VALUES (:season, :user_id, :name, :is_user, 2)');
-                $stmt->bindValue(':season', $next_season, SQLITE3_INTEGER);
+                $stmt->bindValue(':season', $next_season, SQLITE3_TEXT);
                 $stmt->bindValue(':user_id', $team['user_id'], SQLITE3_INTEGER);
                 $stmt->bindValue(':name', $team['name'], SQLITE3_TEXT);
                 $stmt->bindValue(':is_user', $team['is_user'], SQLITE3_INTEGER);
@@ -1630,7 +1691,7 @@ function checkSeasonEnd($db, $user_id)
     if (isSeasonComplete($db, $current_season)) {
         // Check if next season already exists
         $stmt = $db->prepare('SELECT COUNT(*) as count FROM league_teams WHERE season = :next_season');
-        $stmt->bindValue(':next_season', $current_season + 1, SQLITE3_INTEGER);
+        $stmt->bindValue(':next_season', $current_season + 1, SQLITE3_TEXT);
         $result = $stmt->execute();
         $row = $result->fetchArray(SQLITE3_ASSOC);
 

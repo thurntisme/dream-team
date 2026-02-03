@@ -37,7 +37,7 @@ try {
     // Get current season
     $current_season = getCurrentSeason($db);
     
-    // Check if league exists for current season
+    // Check if league exists for current year
     $stmt = $db->prepare('SELECT COUNT(*) as count FROM league_teams WHERE season LIKE :year_pattern');
     $stmt->bindValue(':year_pattern', $current_season . '/%', SQLITE3_TEXT);
     $result = $stmt->execute();
@@ -69,15 +69,40 @@ try {
         exit;
     }
 
+    // Handle league update (for subsequent seasons)
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_league'])) {
+        // Re-validate club before league update
+        $club_validation = validateClubForLeague($user);
+        if (!$club_validation['is_valid']) {
+            $_SESSION['league_validation_errors'] = $club_validation['errors'];
+            header('Location: team.php?league_validation_failed=1');
+            exit;
+        }
+
+        // Get next season identifier
+        $next_season = getNextSeasonIdentifier($db);
+
+        // Create league teams and fixtures for new season
+        createLeagueTeams($db, $user_id, $next_season);
+        generateFixtures($db, $next_season);
+        
+        $_SESSION['success_message'] = "League {$next_season} updated successfully! New season begins now.";
+        header('Location: league.php');
+        exit;
+    }
+
     // If no league exists, show create league page
     if (!$league_exists) {
         $next_season_id = getNextSeasonIdentifier($db);
-        displayCreateLeaguePage($db, $next_season_id, $user);
+        displayCreateLeaguePage($db, $next_season_id, $user, false);
         exit;
     }
     
     // Get current season identifier for display
     $current_season_id = getCurrentSeasonIdentifier($db);
+    
+    // Check if this is a subsequent season (league exists and we can update)
+    $is_subsequent_season = $league_exists;
 
     // Handle match simulation - simulate entire gameweek
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['simulate_match'])) {
@@ -648,6 +673,32 @@ startContent();
             </div>
         </div>
         <?php unset($_SESSION['relegation_result']); ?>
+    <?php endif; ?>
+
+    <!-- Update League Button (for subsequent seasons) -->
+    <?php if ($season_status['season_complete'] && !$season_status['relegation_pending'] && $league_exists): ?>
+        <div class="mb-6 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-lg shadow-lg border border-purple-300 overflow-hidden">
+            <div class="p-6">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-4">
+                        <div class="w-16 h-16 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                            <i data-lucide="refresh-cw" class="w-8 h-8"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold">Ready for Next Season?</h3>
+                            <p class="text-purple-100">Create a new league season to continue your journey.</p>
+                        </div>
+                    </div>
+                    <form method="POST" class="inline">
+                        <button type="submit" name="update_league"
+                            class="bg-white text-purple-600 px-6 py-3 rounded-lg hover:bg-purple-50 font-bold transition-colors flex items-center gap-2">
+                            <i data-lucide="play" class="w-5 h-5"></i>
+                            Start New Season
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
     <?php endif; ?>
 
     <!-- Next Match Summary Box -->
@@ -2163,7 +2214,7 @@ startContent();
 <?php
 endContent('League - Dream Team', 'league', true, false, true);
 
-function displayCreateLeaguePage($db, $next_season_id, $user) {
+function displayCreateLeaguePage($db, $next_season_id, $user, $is_update = false) {
     startContent();
     ?>
     
@@ -2177,7 +2228,9 @@ function displayCreateLeaguePage($db, $next_season_id, $user) {
                     </div>
                     <div>
                         <h1 class="text-2xl font-bold">Elite League <?php echo $next_season_id; ?></h1>
-                        <p class="text-blue-100">Ready to start your league journey?</p>
+                        <p class="text-blue-100">
+                            <?php echo $is_update ? 'Ready to start a new season?' : 'Ready to start your league journey?'; ?>
+                        </p>
                     </div>
                 </div>
             </div>
@@ -2283,23 +2336,30 @@ function displayCreateLeaguePage($db, $next_season_id, $user) {
                     <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
                         <i data-lucide="play" class="w-8 h-8 text-green-600"></i>
                     </div>
-                    <h3 class="text-xl font-bold text-gray-900 mb-2">Ready to Start Your Season?</h3>
+                    <h3 class="text-xl font-bold text-gray-900 mb-2">
+                        <?php echo $is_update ? 'Start New Season' : 'Start Your League'; ?>
+                    </h3>
                     <p class="text-gray-600 mb-6">
-                        Create the league and begin your journey to become the Elite League champion!<br>
-                        Your team will be placed in the Elite League alongside 19 other competitive clubs.
+                        <?php if ($is_update): ?>
+                            Create a new season and begin competing again!<br>
+                            Your team will be placed in the Elite League alongside 19 other competitive clubs.
+                        <?php else: ?>
+                            Create the league and begin your journey to become the Elite League champion!<br>
+                            Your team will be placed in the Elite League alongside 19 other competitive clubs.
+                        <?php endif; ?>
                     </p>
                 </div>
                 
                 <form method="POST" class="inline">
-                    <button type="submit" name="create_league" 
+                    <button type="submit" name="<?php echo $is_update ? 'update_league' : 'create_league'; ?>" 
                             class="bg-green-600 text-white px-8 py-4 rounded-lg hover:bg-green-700 font-bold text-lg transition-colors flex items-center gap-3 mx-auto shadow-lg">
                         <i data-lucide="trophy" class="w-6 h-6"></i>
-                        Create Elite League <?php echo $next_season_id; ?>
+                        <?php echo $is_update ? 'Update League ' : 'Create Elite League '; ?><?php echo $next_season_id; ?>
                     </button>
                 </form>
                 
                 <p class="text-sm text-gray-500 mt-4">
-                    This will create the full league structure with all teams and fixtures for the season.
+                    <?php echo $is_update ? 'This will create a new season with fresh teams and fixtures.' : 'This will create the full league structure with all teams and fixtures for the season.'; ?>
                 </p>
             </div>
         </div>
