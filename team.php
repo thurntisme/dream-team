@@ -2689,6 +2689,12 @@ startContent();
                             <span class="text-gray-600">Primary Position:</span>
                             <span class="font-medium">${player.position}</span>
                         </div>
+                        ${(player.playablePositions && player.playablePositions.length > 0) ? `
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Playable Positions:</span>
+                            <span class="font-medium">${Array.isArray(player.playablePositions) ? player.playablePositions.join(', ') : player.playablePositions}</span>
+                        </div>
+                        ` : ''}
                         <div class="flex justify-between">
                             <span class="text-gray-600">Contract:</span>
                             <span class="font-medium">${contractRemaining} match${contractRemaining !== 1 ? 'es' : ''} remaining</span>
