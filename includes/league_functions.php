@@ -592,7 +592,7 @@ function simulateMatch($db, $match_id, $user_id)
     return true;
 }
 
-function getFanRevenueBreakdown($db, $user_id, $is_home, $total_revenue)
+function getFanRevenueBreakdown($db, $user_id, $is_home, $total_revenue, $previous_fans = null)
 {
     if ($total_revenue <= 0) {
         return [['description' => 'Fan Revenue', 'amount' => 0]];
@@ -604,7 +604,8 @@ function getFanRevenueBreakdown($db, $user_id, $is_home, $total_revenue)
     $result = $stmt->execute();
     $user_data = $result->fetchArray(SQLITE3_ASSOC);
 
-    $current_fans = $user_data['fans'] ?? 5000;
+    // Use previous_fans if provided, otherwise use current fans from DB
+    $current_fans = $previous_fans !== null ? $previous_fans : ($user_data['fans'] ?? 5000);
     $stadium_capacity = $user_data['capacity'] ?? 10000;
     $stadium_level = $user_data['level'] ?? 1;
 
@@ -694,7 +695,8 @@ function updateFansAfterMatch($db, $user_id, $user_score, $opponent_score, $is_h
     return [
         'fan_change' => $fan_change,
         'new_fans' => $new_fans,
-        'additional_revenue' => $additional_revenue
+        'additional_revenue' => $additional_revenue,
+        'previous_fans' => $current_fans
     ];
 }
 
@@ -818,7 +820,7 @@ function simulateGameweek($db, $match_id, $user_id)
         if ($fan_result['additional_revenue'] > 0) {
             $budget_earned += $fan_result['additional_revenue'];
             // Get detailed fan revenue breakdown
-            $fan_breakdown = getFanRevenueBreakdown($db, $user_id, $user_match_result['is_home'], $fan_result['additional_revenue']);
+            $fan_breakdown = getFanRevenueBreakdown($db, $user_id, $user_match_result['is_home'], $fan_result['additional_revenue'], $fan_result['previous_fans']);
             foreach ($fan_breakdown as $item) {
                 $budget_breakdown[] = $item;
             }
@@ -958,7 +960,7 @@ function simulateCurrentGameweek($db, $user_id, $season, $gameweek)
         if ($fan_result['additional_revenue'] > 0) {
             $budget_earned += $fan_result['additional_revenue'];
             // Get detailed fan revenue breakdown
-            $fan_breakdown = getFanRevenueBreakdown($db, $user_id, $user_match_result['is_home'], $fan_result['additional_revenue']);
+            $fan_breakdown = getFanRevenueBreakdown($db, $user_id, $user_match_result['is_home'], $fan_result['additional_revenue'], $fan_result['previous_fans']);
             foreach ($fan_breakdown as $item) {
                 $budget_breakdown[] = $item;
             }
