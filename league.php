@@ -1411,7 +1411,7 @@ startContent();
                         <thead class="bg-gray-50">
                             <tr>
                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Date</th>
+                                    Season</th>
                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     GW</th>
                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -1431,7 +1431,7 @@ startContent();
                             <?php foreach ($user_matches as $match): ?>
                                 <tr class="hover:bg-gray-50">
                                     <td class="px-4 py-3 text-sm">
-                                        <?php echo date('M j, Y', strtotime($match['match_date'])); ?>
+                                        <?php echo htmlspecialchars($match['season']); ?>
                                     </td>
                                     <td class="px-4 py-3 text-sm"><?php echo $match['gameweek']; ?></td>
                                     <td class="px-4 py-3 text-sm font-medium">

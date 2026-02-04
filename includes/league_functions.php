@@ -396,8 +396,8 @@ function getUserMatches($db, $user_id, $season)
     $sql = 'SELECT 
         lm.*,
         CASE 
-            WHEN lm.home_team_id = :team_id THEN ht.name 
-            ELSE at.name 
+            WHEN lm.home_team_id = :team_id THEN at.name 
+            ELSE ht.name 
         END as opponent,
         CASE 
             WHEN lm.home_team_id = :team_id THEN "H" 
