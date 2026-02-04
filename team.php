@@ -65,6 +65,11 @@ startContent();
 
     <div class="flex justify-center gap-4">
         <div class="lg:col-span-2 mt-4 flex justify-center gap-3">
+            <button id="bestLineup"
+                class="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 flex items-center gap-2">
+                <i data-lucide="wand-2" class="w-4 h-4"></i>
+                Best Line-up
+            </button>
             <button id="resetTeam"
                 class="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 flex items-center gap-2">
                 <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
@@ -86,6 +91,154 @@ startContent();
 <?php include 'components/player-recommendations-modal.php'; ?>
 
 <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
+<script>
+    // Best Line-up Logic
+    $('#bestLineup').click(function() {
+        // 1. Gather all current players (Starting + Subs)
+        let squad = [];
+        selectedPlayers.forEach(p => { if(p) squad.push(p); });
+        substitutePlayers.forEach(p => { if(p) squad.push(p); });
+        
+        // Remove duplicates if any (by uuid)
+        const uniqueSquad = [];
+        const seenUuids = new Set();
+        squad.forEach(p => {
+            const id = p.uuid || p.id;
+            if (id && !seenUuids.has(id)) {
+                seenUuids.add(id);
+                uniqueSquad.push(p);
+            } else if (!id) {
+                 uniqueSquad.push(p);
+            }
+        });
+        squad = uniqueSquad;
+
+        if (squad.length === 0) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'No Players',
+                text: 'You need players in your squad to generate a line-up.',
+            });
+            return;
+        }
+
+        const formation = $('#formation').val();
+        const roles = formations[formation].roles; // e.g. ['GK', 'LB', 'CB', ...]
+        
+        const newStarting = new Array(roles.length).fill(null);
+        const usedPlayerIds = new Set();
+
+        // 2. Fill Starting XI
+        roles.forEach((role, slotIdx) => {
+            // Filter candidates not yet used
+            let candidates = squad.filter(p => !usedPlayerIds.has(p.uuid || p.id));
+            
+            // Score candidates for this role
+            // Criteria: 
+            // - Fitness > 20
+            // - Form >= 6.5 (Good)
+            // - Position Match (Main or Playable)
+            
+            // I'll filter first by strict criteria
+            let strictCandidates = candidates.filter(p => {
+                const fitness = p.fitness !== undefined ? p.fitness : 100;
+                if (fitness <= 20) return false;
+                
+                const form = p.form !== undefined ? p.form : 7;
+                if (form < 6.5) return false; // 6.5 is "Good"
+
+                // Position Check
+                const isMain = p.position === role;
+                const isPlayable = p.playablePositions && (
+                    Array.isArray(p.playablePositions) ? p.playablePositions.includes(role) : p.playablePositions == role
+                );
+                return isMain || isPlayable;
+            });
+            
+            // If strict candidates exist, pick best by rating
+            if (strictCandidates.length > 0) {
+                strictCandidates.sort((a, b) => getEffectiveRating(b) - getEffectiveRating(a));
+                const best = strictCandidates[0];
+                newStarting[slotIdx] = best;
+                usedPlayerIds.add(best.uuid || best.id);
+            } else {
+                // Fallback: Relax Form/Fitness, but keep Position
+                let positionCandidates = candidates.filter(p => {
+                     const isMain = p.position === role;
+                     const isPlayable = p.playablePositions && (
+                        Array.isArray(p.playablePositions) ? p.playablePositions.includes(role) : p.playablePositions == role
+                    );
+                    return isMain || isPlayable;
+                });
+                
+                if (positionCandidates.length > 0) {
+                     positionCandidates.sort((a, b) => getEffectiveRating(b) - getEffectiveRating(a));
+                     const best = positionCandidates[0];
+                     newStarting[slotIdx] = best;
+                     usedPlayerIds.add(best.uuid || best.id);
+                } else {
+                    // Fallback: Best available player regardless of position (Out of Position)
+                     candidates.sort((a, b) => getEffectiveRating(b) - getEffectiveRating(a));
+                     if (candidates.length > 0) {
+                         const best = candidates[0];
+                         newStarting[slotIdx] = best;
+                         usedPlayerIds.add(best.uuid || best.id);
+                     }
+                }
+            }
+        });
+
+        // 3. Fill Substitutes with remaining players
+        const remainingPlayers = squad.filter(p => !usedPlayerIds.has(p.uuid || p.id));
+        // Sort remaining by rating
+        remainingPlayers.sort((a, b) => getEffectiveRating(b) - getEffectiveRating(a));
+        
+        const subCount = Math.max(substitutePlayers.length, 7);
+        const newSubs = new Array(subCount).fill(null);
+        
+        remainingPlayers.forEach((p, i) => {
+            if (i < subCount) newSubs[i] = p;
+        });
+
+        // Apply changes
+        selectedPlayers = newStarting;
+        substitutePlayers = newSubs;
+        
+        renderPlayers();
+        renderField();
+        renderSubstitutes();
+        
+        // Recalculate overview stats
+        let totalValue = 0;
+        let playerCount = 0;
+        let totalRating = 0;
+        let ratedPlayers = 0;
+
+        selectedPlayers.forEach(player => {
+            if (player) {
+                playerCount++;
+                totalValue += player.value || 0;
+                if (player.rating && player.rating > 0) {
+                    totalRating += player.rating;
+                    ratedPlayers++;
+                }
+            }
+        });
+        
+        updateClubOverviewStats(totalValue, playerCount, ratedPlayers > 0 ? totalRating / ratedPlayers : 0);
+        
+        Swal.fire({
+            icon: 'success',
+            title: 'Best Line-up Selected',
+            text: 'Your team has been optimized based on fitness, form, and positions.',
+            timer: 2000,
+            showConfirmButton: false,
+            toast: true,
+            position: 'top-end'
+        });
+    });
+
+</script>
 <script>
     const players = <?php echo json_encode(getDefaultPlayers()); ?>;
     let maxBudget = <?php echo $user_budget; ?>; // User's maximum budget
