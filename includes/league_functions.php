@@ -787,29 +787,29 @@ function simulateGameweek($db, $match_id, $user_id)
 
         // Base reward
         if ($user_score > $opponent_score) {
-            $base_reward = 5000000; // €5M for win
+            $base_reward = 800000;
             $budget_earned += $base_reward;
             $budget_breakdown[] = ['description' => 'Match Victory', 'amount' => $base_reward];
         } elseif ($user_score == $opponent_score) {
-            $base_reward = 2000000; // €2M for draw
+            $base_reward = 300000;
             $budget_earned += $base_reward;
             $budget_breakdown[] = ['description' => 'Match Draw', 'amount' => $base_reward];
         } else {
-            $base_reward = 1000000; // €1M for participation
+            $base_reward = 150000;
             $budget_earned += $base_reward;
             $budget_breakdown[] = ['description' => 'Match Participation', 'amount' => $base_reward];
         }
 
         // Goal bonus
         if ($user_score > 0) {
-            $goal_bonus = $user_score * 500000; // €500K per goal
+            $goal_bonus = $user_score * 100000;
             $budget_earned += $goal_bonus;
             $budget_breakdown[] = ['description' => "Goals Scored ({$user_score})", 'amount' => $goal_bonus];
         }
 
         // Home bonus
         if ($user_match_result['is_home']) {
-            $home_bonus = 1000000; // €1M home bonus
+            $home_bonus = 250000;
             $budget_earned += $home_bonus;
             $budget_breakdown[] = ['description' => 'Home Match Bonus', 'amount' => $home_bonus];
         }
@@ -927,29 +927,29 @@ function simulateCurrentGameweek($db, $user_id, $season, $gameweek)
 
         // Base reward
         if ($user_score > $opponent_score) {
-            $base_reward = 5000000; // €5M for win
+            $base_reward = 800000;
             $budget_earned += $base_reward;
             $budget_breakdown[] = ['description' => 'Match Victory', 'amount' => $base_reward];
         } elseif ($user_score == $opponent_score) {
-            $base_reward = 2000000; // €2M for draw
+            $base_reward = 300000;
             $budget_earned += $base_reward;
             $budget_breakdown[] = ['description' => 'Match Draw', 'amount' => $base_reward];
         } else {
-            $base_reward = 1000000; // €1M for participation
+            $base_reward = 150000;
             $budget_earned += $base_reward;
             $budget_breakdown[] = ['description' => 'Match Participation', 'amount' => $base_reward];
         }
 
         // Goal bonus
         if ($user_score > 0) {
-            $goal_bonus = $user_score * 500000; // €500K per goal
+            $goal_bonus = $user_score * 100000;
             $budget_earned += $goal_bonus;
             $budget_breakdown[] = ['description' => "Goals Scored ({$user_score})", 'amount' => $goal_bonus];
         }
 
         // Home bonus
         if ($user_match_result['is_home']) {
-            $home_bonus = 1000000; // €1M home bonus
+            $home_bonus = 250000;
             $budget_earned += $home_bonus;
             $budget_breakdown[] = ['description' => 'Home Match Bonus', 'amount' => $home_bonus];
         }
@@ -1945,29 +1945,29 @@ function calculateLeagueMatchRewards($match_result, $user_score, $opponent_score
 
     // Base reward based on match result
     if ($match_result === 'win') {
-        $base_reward = 5000000; // €5M for win
+        $base_reward = 800000;
         $rewards[] = ['description' => 'Match Victory', 'amount' => $base_reward];
         $total_budget += $base_reward;
     } elseif ($match_result === 'draw') {
-        $base_reward = 2000000; // €2M for draw
+        $base_reward = 300000;
         $rewards[] = ['description' => 'Match Draw', 'amount' => $base_reward];
         $total_budget += $base_reward;
     } else {
-        $base_reward = 1000000; // €1M for participation
+        $base_reward = 150000;
         $rewards[] = ['description' => 'Match Participation', 'amount' => $base_reward];
         $total_budget += $base_reward;
     }
 
     // Goal bonus
     if ($user_score > 0) {
-        $goal_bonus = $user_score * 500000; // €500K per goal
+        $goal_bonus = $user_score * 100000;
         $rewards[] = ['description' => "Goals Scored ({$user_score})", 'amount' => $goal_bonus];
         $total_budget += $goal_bonus;
     }
 
     // Home bonus
     if ($is_home) {
-        $home_bonus = 1000000; // €1M home bonus
+        $home_bonus = 250000;
         $rewards[] = ['description' => 'Home Match Bonus', 'amount' => $home_bonus];
         $total_budget += $home_bonus;
     }
