@@ -1322,7 +1322,27 @@ startContent();
 
         // Update basic info
         $('#selectedPlayerName').text(player.name);
-        $('#selectedPlayerPosition').text(player.position || 'Unknown');
+        
+        // Ensure playablePositions is available (fallback to global list if missing in saved player)
+        if (!player.playablePositions && typeof players !== 'undefined') {
+             const defaultPlayer = players.find(p => (p.uuid && p.uuid === player.uuid) || (p.id && p.id === player.id));
+             if (defaultPlayer && defaultPlayer.playablePositions) {
+                 player.playablePositions = defaultPlayer.playablePositions;
+             }
+        }
+
+        // Display Main Position | Playable Positions
+        let positionText = player.position || 'Unknown';
+        if (player.playablePositions) {
+            const playable = Array.isArray(player.playablePositions) 
+                ? player.playablePositions.join(',') 
+                : player.playablePositions;
+            
+            if (playable && playable.length > 0) {
+                positionText += ' | ' + playable;
+            }
+        }
+        $('#selectedPlayerPosition').text(positionText);
 
         // Update rating
         $('#selectedPlayerRating span').text(player.rating || 'N/A');
