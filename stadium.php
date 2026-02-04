@@ -253,7 +253,7 @@ startContent();
                     <div class="bg-blue-50 rounded-lg p-4 border border-blue-200">
                         <h4 class="font-semibold text-blue-900 mb-2">Fan System</h4>
                         <div class="text-sm text-blue-700 space-y-1">
-                            <p>• Fans attend home matches and generate €10 revenue per fan</p>
+                            <p>• Fans generate €10 revenue per match (Home & Away, limited by stadium capacity)</p>
                             <p>• Win matches to gain 50-200 new fans</p>
                             <p>• Lose matches and lose 25-100 fans</p>
                             <p>• Goal difference affects fan changes (+/- 10 fans per goal)</p>

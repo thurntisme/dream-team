@@ -901,7 +901,7 @@ function displayMatchResult($match_id)
         }
 
         // Get user's current data
-        $stmt = $db->prepare('SELECT budget, fans FROM users WHERE id = :id');
+        $stmt = $db->prepare('SELECT u.budget, u.fans, s.capacity, s.level FROM users u LEFT JOIN stadiums s ON u.id = s.user_id WHERE u.id = :id');
         $stmt->bindValue(':id', $user_id, SQLITE3_INTEGER);
         $result = $stmt->execute();
         $user_data = $result->fetchArray(SQLITE3_ASSOC);
@@ -921,6 +921,48 @@ function displayMatchResult($match_id)
 
         // Calculate match rewards
         $rewards = calculateLeagueMatchRewards($match_result, $user_score, $opponent_score, $is_home);
+
+        // Try to get results from session if available (most accurate)
+        $gameweek_results = $_SESSION['gameweek_results'] ?? null;
+
+        if ($gameweek_results && isset($gameweek_results['fan_change_info'])) {
+            // Use session data
+            $rewards['fan_change'] = $gameweek_results['fan_change_info']['fan_change'];
+            $rewards['budget_earned'] = $gameweek_results['budget_earned'];
+            $rewards['breakdown'] = $gameweek_results['budget_breakdown'];
+        } else {
+            // Fallback calculation if session data is missing
+            
+            // 1. Get Fan Revenue Breakdown
+            // Pass a positive value to ensure we get the breakdown (value doesn't matter for the breakdown generation)
+            $fan_breakdown = getFanRevenueBreakdown($db, $user_id, $is_home, 100);
+            
+            foreach ($fan_breakdown as $item) {
+                $rewards['breakdown'][] = $item;
+            }
+            
+            // Recalculate total budget
+            $total_budget = 0;
+            foreach ($rewards['breakdown'] as $item) {
+                $total_budget += $item['amount'];
+            }
+            $rewards['budget_earned'] = $total_budget;
+            
+            // 2. Estimate Fan Change (Approximation since actual random value is lost)
+            $fan_change = 0;
+            if ($match_result === 'win') {
+                $fan_change = 125; // Avg of 50-200
+            } elseif ($match_result === 'draw') {
+                $fan_change = 12; // Avg of -25-50
+            } else {
+                $fan_change = -62; // Avg of -100 to -25
+            }
+            
+            $goal_diff = $user_score - $opponent_score;
+            $fan_change += $goal_diff * 10;
+            
+            $rewards['fan_change'] = (int)$fan_change;
+        }
 
         // Check if mystery box has already been claimed
         $session_key = "mystery_box_claimed_{$match_id}_{$user_id}";

@@ -594,8 +594,8 @@ function simulateMatch($db, $match_id, $user_id)
 
 function getFanRevenueBreakdown($db, $user_id, $is_home, $total_revenue)
 {
-    if (!$is_home || $total_revenue <= 0) {
-        return [['description' => 'Stadium & Fan Revenue', 'amount' => $total_revenue]];
+    if ($total_revenue <= 0) {
+        return [['description' => 'Fan Revenue', 'amount' => 0]];
     }
 
     // Get detailed fan revenue breakdown
@@ -608,17 +608,28 @@ function getFanRevenueBreakdown($db, $user_id, $is_home, $total_revenue)
     $stadium_capacity = $user_data['capacity'] ?? 10000;
     $stadium_level = $user_data['level'] ?? 1;
 
-    $stadium_multipliers = [1 => 1.0, 2 => 1.2, 3 => 1.5, 4 => 1.8, 5 => 2.2];
-    $stadium_multiplier = $stadium_multipliers[$stadium_level] ?? 1.0;
+    $breakdown = [];
 
-    $attendance = min($current_fans, $stadium_capacity);
-    $fan_ticket_revenue = $attendance * 10;
-    $stadium_facility_revenue = 50000 * $stadium_multiplier;
+    // 1. Merchandise/Media Revenue (All matches, based on total fans)
+    $merch_revenue = $current_fans * 10;
+    $breakdown[] = ['description' => "Fan Engagement ({$current_fans} fans)", 'amount' => $merch_revenue];
 
-    return [
-        ['description' => "Ticket Sales ({$attendance} fans)", 'amount' => $fan_ticket_revenue],
-        ['description' => "Stadium Facilities (Level {$stadium_level})", 'amount' => $stadium_facility_revenue]
-    ];
+    // 2. Ticket Revenue (Home matches only, capped by capacity)
+    if ($is_home) {
+        $attendance = min($current_fans, $stadium_capacity);
+        $ticket_price = 30; // Average ticket price
+        $ticket_revenue = $attendance * $ticket_price;
+        $breakdown[] = ['description' => "Ticket Sales ({$attendance} attendance)", 'amount' => $ticket_revenue];
+
+        // 3. Stadium Facilities (Home matches only)
+        $stadium_multipliers = [1 => 1.0, 2 => 1.2, 3 => 1.5, 4 => 1.8, 5 => 2.2];
+        $stadium_multiplier = $stadium_multipliers[$stadium_level] ?? 1.0;
+        $stadium_facility_revenue = 50000 * $stadium_multiplier;
+        
+        $breakdown[] = ['description' => "Stadium Facilities (Level {$stadium_level})", 'amount' => $stadium_facility_revenue];
+    }
+
+    return $breakdown;
 }
 
 function updateFansAfterMatch($db, $user_id, $user_score, $opponent_score, $is_home)
@@ -633,19 +644,26 @@ function updateFansAfterMatch($db, $user_id, $user_score, $opponent_score, $is_h
     $stadium_capacity = $user_data['capacity'] ?? 10000;
     $stadium_level = $user_data['level'] ?? 1;
 
-    // Calculate additional revenue for home matches
+    // Calculate additional revenue
     $additional_revenue = 0;
+
+    // 1. Merchandise/Media Revenue (All matches)
+    $merch_revenue = $current_fans * 10; // €10 per fan
+    $additional_revenue += $merch_revenue;
+
+    // 2. Ticket Revenue & Facilities (Home matches only)
     if ($is_home) {
-        // Stadium revenue multipliers
+        // Ticket Sales
+        $attendance = min($current_fans, $stadium_capacity);
+        $ticket_price = 30; // €30 per ticket
+        $ticket_revenue = $attendance * $ticket_price;
+        $additional_revenue += $ticket_revenue;
+
+        // Stadium Facilities
         $stadium_multipliers = [1 => 1.0, 2 => 1.2, 3 => 1.5, 4 => 1.8, 5 => 2.2];
         $stadium_multiplier = $stadium_multipliers[$stadium_level] ?? 1.0;
-
-        // Calculate fan attendance and revenue
-        $attendance = min($current_fans, $stadium_capacity);
-        $fan_revenue = $attendance * 10; // €10 per fan
         $stadium_revenue = 50000 * $stadium_multiplier; // Base stadium revenue with multiplier
-
-        $additional_revenue = $fan_revenue + $stadium_revenue;
+        $additional_revenue += $stadium_revenue;
     }
 
     // Update fan count based on match result (randomly influenced)
@@ -1922,24 +1940,20 @@ function applySeasonEndRewards($db, $user_id, $rewards)
 function calculateLeagueMatchRewards($match_result, $user_score, $opponent_score, $is_home) {
     $rewards = [];
     $total_budget = 0;
-    $fan_change = 0;
 
     // Base reward based on match result
     if ($match_result === 'win') {
         $base_reward = 5000000; // €5M for win
         $rewards[] = ['description' => 'Match Victory', 'amount' => $base_reward];
         $total_budget += $base_reward;
-        $fan_change = rand(50, 200); // Win: gain 50-200 fans
     } elseif ($match_result === 'draw') {
         $base_reward = 2000000; // €2M for draw
         $rewards[] = ['description' => 'Match Draw', 'amount' => $base_reward];
         $total_budget += $base_reward;
-        $fan_change = rand(-25, 50); // Draw: gain/lose 0-50 fans
     } else {
         $base_reward = 1000000; // €1M for participation
         $rewards[] = ['description' => 'Match Participation', 'amount' => $base_reward];
         $total_budget += $base_reward;
-        $fan_change = rand(-100, -25); // Loss: lose 25-100 fans
     }
 
     // Goal bonus
@@ -1949,25 +1963,15 @@ function calculateLeagueMatchRewards($match_result, $user_score, $opponent_score
         $total_budget += $goal_bonus;
     }
 
-    // Goal difference affects fan change
-    $goal_diff = $user_score - $opponent_score;
-    $fan_change += $goal_diff * 10; // +/- 10 fans per goal difference
-
     // Home bonus
     if ($is_home) {
         $home_bonus = 1000000; // €1M home bonus
         $rewards[] = ['description' => 'Home Match Bonus', 'amount' => $home_bonus];
         $total_budget += $home_bonus;
-
-        // Stadium revenue for home matches
-        $stadium_revenue = 500000; // Base stadium revenue
-        $rewards[] = ['description' => 'Stadium Revenue', 'amount' => $stadium_revenue];
-        $total_budget += $stadium_revenue;
     }
 
     return [
         'budget_earned' => $total_budget,
-        'fan_change' => max(-100, min(200, $fan_change)), // Cap fan changes
         'breakdown' => $rewards
     ];
 }
