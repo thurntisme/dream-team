@@ -59,9 +59,12 @@ try {
             // Check if shirt number is already taken (excluding current player's number if reassigning)
             $number_taken = false;
             $taken_by = '';
+            $owner_index = null;
+            $owner_position = null;
+            $owner_uuid = null;
 
             // Check in team
-            foreach ($team as $player) {
+            foreach ($team as $idx => $player) {
                 if ($player && isset($player['shirt_number']) && $player['shirt_number'] == $shirt_number) {
                     // Skip if this is the current player's number during reassignment
                     if ($is_reassign && $player['uuid'] === $player_uuid) {
@@ -69,13 +72,16 @@ try {
                     }
                     $number_taken = true;
                     $taken_by = $player['name'];
+                    $owner_index = $idx;
+                    $owner_position = 'team';
+                    $owner_uuid = $player['uuid'];
                     break;
                 }
             }
 
             // Check in substitutes if not found in team
             if (!$number_taken) {
-                foreach ($substitutes as $player) {
+                foreach ($substitutes as $idx => $player) {
                     if ($player && isset($player['shirt_number']) && $player['shirt_number'] == $shirt_number) {
                         // Skip if this is the current player's number during reassignment
                         if ($is_reassign && $player['uuid'] === $player_uuid) {
@@ -83,51 +89,62 @@ try {
                         }
                         $number_taken = true;
                         $taken_by = $player['name'];
+                        $owner_index = $idx;
+                        $owner_position = 'substitute';
+                        $owner_uuid = $player['uuid'];
                         break;
                     }
                 }
             }
 
-            if ($number_taken) {
-                $_SESSION['error'] = "Shirt number $shirt_number is already taken by $taken_by";
-            } else {
-                // Assign the shirt number
-                $updated = false;
+            // Assign or reassign the shirt number
+            $updated = false;
 
-                if ($position === 'team') {
-                    for ($i = 0; $i < count($team); $i++) {
-                        if ($team[$i] && $team[$i]['uuid'] === $player_uuid) {
-                            $team[$i]['shirt_number'] = $shirt_number;
-                            $updated = true;
-                            break;
-                        }
-                    }
-                } else {
-                    for ($i = 0; $i < count($substitutes); $i++) {
-                        if ($substitutes[$i] && $substitutes[$i]['uuid'] === $player_uuid) {
-                            $substitutes[$i]['shirt_number'] = $shirt_number;
-                            $updated = true;
-                            break;
-                        }
+            // If taken by another player, remove from current owner first
+            if ($number_taken && $owner_uuid !== $player_uuid && $owner_index !== null && $owner_position !== null) {
+                if ($owner_position === 'team' && isset($team[$owner_index])) {
+                    unset($team[$owner_index]['shirt_number']);
+                } elseif ($owner_position === 'substitute' && isset($substitutes[$owner_index])) {
+                    unset($substitutes[$owner_index]['shirt_number']);
+                }
+            }
+
+            if ($position === 'team') {
+                for ($i = 0; $i < count($team); $i++) {
+                    if ($team[$i] && $team[$i]['uuid'] === $player_uuid) {
+                        $team[$i]['shirt_number'] = $shirt_number;
+                        $updated = true;
+                        break;
                     }
                 }
+            } else {
+                for ($i = 0; $i < count($substitutes); $i++) {
+                    if ($substitutes[$i] && $substitutes[$i]['uuid'] === $player_uuid) {
+                        $substitutes[$i]['shirt_number'] = $shirt_number;
+                        $updated = true;
+                        break;
+                    }
+                }
+            }
 
-                if ($updated) {
-                    // Update database
-                    $stmt = $db->prepare('UPDATE users SET team = :team, substitutes = :substitutes WHERE id = :user_id');
-                    $stmt->bindValue(':team', json_encode($team), SQLITE3_TEXT);
-                    $stmt->bindValue(':substitutes', json_encode($substitutes), SQLITE3_TEXT);
-                    $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
-                    $stmt->execute();
+            if ($updated) {
+                $stmt = $db->prepare('UPDATE users SET team = :team, substitutes = :substitutes WHERE id = :user_id');
+                $stmt->bindValue(':team', json_encode($team), SQLITE3_TEXT);
+                $stmt->bindValue(':substitutes', json_encode($substitutes), SQLITE3_TEXT);
+                $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+                $stmt->execute();
 
+                if ($number_taken && $owner_uuid !== $player_uuid) {
+                    $_SESSION['success'] = 'Shirt number reassigned successfully!';
+                } else {
                     if ($is_reassign) {
                         $_SESSION['success'] = 'Shirt number reassigned successfully!';
                     } else {
                         $_SESSION['success'] = 'Shirt number assigned successfully!';
                     }
-                } else {
-                    $_SESSION['error'] = 'Player not found in your squad';
                 }
+            } else {
+                $_SESSION['error'] = 'Player not found in your squad';
             }
         }
 
