@@ -1225,20 +1225,20 @@ function displayMatchResultPage($match, $is_home, $user_score, $opponent_score, 
                     // Generate all 3 rewards (one for each box)
                     const allRewards = [{
                             type: 'budget',
-                            amount: 500000,
-                            text: 'You received €500,000!',
+                            amount: 150000,
+                            text: 'You received €150,000!',
                             icon: '💰'
                         },
                         {
                             type: 'budget',
-                            amount: 750000,
-                            text: 'You received €750,000!',
+                            amount: 250000,
+                            text: 'You received €250,000!',
                             icon: '💰'
                         },
                         {
                             type: 'budget',
-                            amount: 1000000,
-                            text: 'You received €1,000,000!',
+                            amount: 350000,
+                            text: 'You received €350,000!',
                             icon: '💰'
                         },
                         {
@@ -1253,14 +1253,14 @@ function displayMatchResultPage($match, $is_home, $user_score, $opponent_score, 
                         },
                         {
                             type: 'budget',
-                            amount: 250000,
-                            text: 'You received €250,000!',
+                            amount: 100000,
+                            text: 'You received €100,000!',
                             icon: '💰'
                         },
                         {
                             type: 'fans',
-                            amount: 1000,
-                            text: 'You gained 1,000 new fans!',
+                            amount: 300,
+                            text: 'You gained 300 new fans!',
                             icon: '👥'
                         }
                     ];

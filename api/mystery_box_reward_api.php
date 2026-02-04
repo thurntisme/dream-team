@@ -121,7 +121,7 @@ try {
             // Check if user has space
             if ($current_players_count >= $max_players) {
                 // No space, give budget equivalent instead
-                $equivalent_budget = 1000000; // €1M equivalent
+                $equivalent_budget = 300000;
 
                 $stmt = $db->prepare('UPDATE users SET budget = budget + :amount WHERE id = :user_id');
                 $stmt->bindValue(':amount', $equivalent_budget, SQLITE3_INTEGER);
@@ -152,7 +152,7 @@ try {
 
                 if (empty($available_players)) {
                     // User owns all players (unlikely), give budget
-                    $equivalent_budget = 2000000; // €2M equivalent for completionist
+                    $equivalent_budget = 500000;
 
                     $stmt = $db->prepare('UPDATE users SET budget = budget + :amount WHERE id = :user_id');
                     $stmt->bindValue(':amount', $equivalent_budget, SQLITE3_INTEGER);
@@ -209,7 +209,7 @@ try {
         case 'item':
             // For item rewards, we could add training items
             // For now, we'll give a budget equivalent
-            $equivalent_budget = 500000; // €500K equivalent
+            $equivalent_budget = 150000;
 
             $stmt = $db->prepare('UPDATE users SET budget = budget + :amount WHERE id = :user_id');
             $stmt->bindValue(':amount', $equivalent_budget, SQLITE3_INTEGER);
