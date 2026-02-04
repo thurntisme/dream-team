@@ -120,7 +120,7 @@ try {
         // Store results in session for display
         $_SESSION['gameweek_results'] = $gameweek_results;
 
-        header('Location: league.php?tab=standings&gameweek_completed=1');
+        header('Location: league.php?tab=standings');
         exit;
     }
 
@@ -301,209 +301,6 @@ startContent();
                         Fix Team Setup
                     </a>
                 </div>
-            </div>
-        </div>
-    <?php endif; ?>
-
-    <!-- Gameweek Results -->
-    <?php if (isset($_GET['gameweek_completed']) && isset($_SESSION['gameweek_results'])): ?>
-        <?php
-        $results = $_SESSION['gameweek_results'];
-        // Don't clear session data yet - we'll clear it when user closes or changes tabs
-        ?>
-        <div id="gameweekResults" class="mb-6 bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
-            <!-- Header -->
-            <div class="bg-gradient-to-r from-green-500 to-green-600 text-white p-4">
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-3">
-                        <i data-lucide="trophy" class="w-6 h-6"></i>
-                        <div>
-                            <h3 class="text-lg font-bold">Gameweek <?php echo $results['gameweek']; ?> Results</h3>
-                            <p class="text-green-100">All matches completed</p>
-                        </div>
-                    </div>
-                    <button id="closeGameweekResults" class="text-white hover:text-green-200 transition-colors">
-                        <i data-lucide="x" class="w-5 h-5"></i>
-                    </button>
-                </div>
-            </div>
-
-            <div class="p-4">
-                <!-- User's Match Result (if they had one) -->
-                <?php if ($results['user_match']): ?>
-                    <div class="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                        <h4 class="font-semibold text-blue-900 mb-2 flex items-center gap-2">
-                            <i data-lucide="user" class="w-4 h-4"></i>
-                            Your Match Result
-                        </h4>
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center gap-4">
-                                <span
-                                    class="font-medium <?php echo $results['user_match']['is_home'] ? 'text-blue-600' : ''; ?>">
-                                    <?php echo htmlspecialchars($results['user_match']['home_team']); ?>
-                                </span>
-                                <div class="bg-white px-3 py-1 rounded border font-bold text-lg">
-                                    <?php echo $results['user_match']['home_score']; ?> -
-                                    <?php echo $results['user_match']['away_score']; ?>
-                                </div>
-                                <span
-                                    class="font-medium <?php echo !$results['user_match']['is_home'] ? 'text-blue-600' : ''; ?>">
-                                    <?php echo htmlspecialchars($results['user_match']['away_team']); ?>
-                                </span>
-                            </div>
-                            <div class="text-right">
-                                <?php
-                                $user_score = $results['user_match']['is_home'] ? $results['user_match']['home_score'] : $results['user_match']['away_score'];
-                                $opponent_score = $results['user_match']['is_home'] ? $results['user_match']['away_score'] : $results['user_match']['home_score'];
-
-                                if ($user_score > $opponent_score) {
-                                    echo '<span class="px-2 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">WIN</span>';
-                                } elseif ($user_score == $opponent_score) {
-                                    echo '<span class="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm font-medium">DRAW</span>';
-                                } else {
-                                    echo '<span class="px-2 py-1 bg-red-100 text-red-800 rounded-full text-sm font-medium">LOSS</span>';
-                                }
-                                ?>
-                            </div>
-                        </div>
-                    </div>
-                <?php endif; ?>
-
-                <!-- League Position & Budget Info -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                    <?php if ($results['user_position']): ?>
-                        <div class="p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                            <div class="flex items-center justify-between mb-2">
-                                <span class="font-medium text-gray-700 flex items-center gap-2">
-                                    <i data-lucide="trophy" class="w-4 h-4"></i>
-                                    League Position:
-                                </span>
-                                <div class="flex items-center gap-2">
-                                    <span class="text-2xl font-bold <?php
-                                                                    if ($results['user_position'] <= 4)
-                                                                        echo 'text-green-600'; // Champions League
-                                                                    elseif ($results['user_position'] <= 6)
-                                                                        echo 'text-blue-600'; // Europa League  
-                                                                    elseif ($results['user_position'] >= 18)
-                                                                        echo 'text-red-600'; // Relegation
-                                                                    else
-                                                                        echo 'text-gray-900';
-                                                                    ?>"><?php echo $results['user_position']; ?></span>
-                                    <span class="text-gray-500">/ 20</span>
-                                </div>
-                            </div>
-                            <div class="text-xs text-gray-600">
-                                <?php if ($results['user_position'] <= 4): ?>
-                                    <span class="text-green-600">Champions League qualification</span>
-                                <?php elseif ($results['user_position'] <= 6): ?>
-                                    <span class="text-blue-600">Europa League qualification</span>
-                                <?php elseif ($results['user_position'] >= 18): ?>
-                                    <span class="text-red-600">Relegation zone</span>
-                                <?php else: ?>
-                                    <span class="text-gray-600">Mid-table position</span>
-                                <?php endif; ?>
-                            </div>
-                        </div>
-                    <?php endif; ?>
-
-                    <?php if ($results['budget_earned'] > 0): ?>
-                        <div class="p-3 bg-green-50 border border-green-200 rounded-lg">
-                            <div class="flex items-center justify-between mb-2">
-                                <span class="font-medium text-green-700 flex items-center gap-2">
-                                    <i data-lucide="coins" class="w-4 h-4"></i>
-                                    Budget Earned:
-                                </span>
-                                <span class="text-2xl font-bold text-green-600">
-                                    +<?php echo formatMarketValue($results['budget_earned']); ?>
-                                </span>
-                            </div>
-
-                            <!-- Budget Breakdown -->
-                            <?php if (isset($results['budget_breakdown'])): ?>
-                                <div class="text-xs text-green-700 space-y-1 border-t border-green-200 pt-2">
-                                    <div class="font-medium mb-1">Breakdown:</div>
-                                    <?php foreach ($results['budget_breakdown'] as $item): ?>
-                                        <div class="flex justify-between">
-                                            <span><?php echo htmlspecialchars($item['description']); ?></span>
-                                            <span class="font-medium">+<?php echo formatMarketValue($item['amount']); ?></span>
-                                        </div>
-                                    <?php endforeach; ?>
-                                </div>
-                            <?php else: ?>
-                                <div class="text-xs text-green-600 mt-1">
-                                    Added to your club budget
-                                </div>
-                            <?php endif; ?>
-                        </div>
-                    <?php endif; ?>
-
-                    <?php if (isset($results['fan_change_info']) && $results['fan_change_info']): ?>
-                        <div class="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                            <div class="flex items-center justify-between mb-2">
-                                <span class="font-medium text-blue-700 flex items-center gap-2">
-                                    <i data-lucide="users" class="w-4 h-4"></i>
-                                    Fan Base:
-                                </span>
-                                <span class="text-lg font-bold text-blue-600">
-                                    <?php echo number_format($results['fan_change_info']['new_fans']); ?>
-                                </span>
-                            </div>
-                            <div class="text-xs text-blue-700">
-                                <?php
-                                $fan_change = $results['fan_change_info']['fan_change'];
-                                if ($fan_change > 0): ?>
-                                    <span class="text-green-600">+<?php echo number_format($fan_change); ?> new fans</span>
-                                <?php elseif ($fan_change < 0): ?>
-                                    <span class="text-red-600"><?php echo number_format($fan_change); ?> fans lost</span>
-                                <?php else: ?>
-                                    <span class="text-gray-600">No change in fan base</span>
-                                <?php endif; ?>
-                            </div>
-                        </div>
-                    <?php endif; ?>
-                </div>
-
-                <!-- Post-Match Player Selection Info -->
-                <?php if ($results['user_match']): ?>
-                    <div class="mb-4 p-3 bg-purple-50 border border-purple-200 rounded-lg">
-                        <div class="flex items-center gap-2 mb-2">
-                            <i data-lucide="gift" class="w-4 h-4 text-purple-600"></i>
-                            <span class="font-medium text-purple-800">Post-Match Reward Available</span>
-                        </div>
-                        <p class="text-sm text-purple-700">
-                            You can now choose 1 of 3 mystery boxes to reveal a random player reward!
-                            <span class="font-medium">Check above for the mystery box selection.</span>
-                        </p>
-                    </div>
-                <?php endif; ?>
-
-                <!-- All Match Results -->
-                <div class="space-y-2">
-                    <h4 class="font-semibold text-gray-900 mb-3">All Gameweek Results:</h4>
-                    <div class="grid gap-2 max-h-48 overflow-y-auto">
-                        <?php foreach ($results['all_results'] as $match): ?>
-                            <div class="flex items-center justify-between p-2 bg-gray-50 rounded text-sm">
-                                <div class="flex items-center gap-3 flex-1">
-                                    <span class="w-32 text-right"><?php echo htmlspecialchars($match['home_team']); ?></span>
-                                    <div class="bg-white px-2 py-1 rounded border font-medium min-w-[50px] text-center">
-                                        <?php echo $match['home_score']; ?> - <?php echo $match['away_score']; ?>
-                                    </div>
-                                    <span class="w-32"><?php echo htmlspecialchars($match['away_team']); ?></span>
-                                </div>
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
-                </div>
-            </div>
-        </div>
-    <?php elseif (isset($_GET['simulated'])): ?>
-        <!-- Fallback for old simulation method -->
-        <div class="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-            <div class="flex items-center gap-2">
-                <i data-lucide="check-circle" class="w-5 h-5 text-green-600"></i>
-                <span class="font-semibold text-green-800">
-                    Gameweek completed! Simulated <?php echo (int) $_GET['simulated']; ?> matches.
-                </span>
             </div>
         </div>
     <?php endif; ?>
@@ -1718,23 +1515,10 @@ startContent();
         }
 
         function hideGameweekResults() {
-            const gameweekResults = document.getElementById('gameweekResults');
-            if (gameweekResults) {
-                gameweekResults.style.display = 'none';
-
-                // Clear gameweek completed state from URL
-                const urlParams = new URLSearchParams(window.location.search);
-                if (urlParams.get('gameweek_completed') === '1') {
-                    urlParams.delete('gameweek_completed');
-                    const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
-                    window.history.replaceState({}, '', newUrl);
-                }
-
-                // Clear session data and post-match rewards
-                fetch('api/clear_gameweek_results_api.php', {
-                    method: 'POST'
-                });
-            }
+             // Clear session data and post-match rewards
+             fetch('api/clear_gameweek_results_api.php', {
+                 method: 'POST'
+             });
         }
 
         // Initialize active tab
@@ -1746,12 +1530,7 @@ startContent();
                 showTab(btn.dataset.tab);
 
                 // Clear gameweek completed state and post-match rewards when switching tabs
-                const urlParams = new URLSearchParams(window.location.search);
-                if (urlParams.get('gameweek_completed') === '1') {
-                    urlParams.delete('gameweek_completed');
-                    const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
-                    window.history.replaceState({}, '', newUrl);
-
+                if (document.getElementById('gameweek-signal')) {
                     // Clear post-match rewards
                     fetch('api/clear_gameweek_results_api.php', {
                             method: 'POST'
@@ -1762,16 +1541,15 @@ startContent();
         });
 
         // Close gameweek results handler
-        document.getElementById('closeGameweekResults')?.addEventListener('click', function() {
-            hideGameweekResults();
-        });
+        // document.getElementById('closeGameweekResults')?.addEventListener('click', function() {
+        //     hideGameweekResults();
+        // });
 
         // Clear post-match rewards when user navigates away from gameweek completed state
         function clearPostMatchRewardsIfIgnored() {
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('gameweek_completed') !== '1') {
-                // User navigated away from gameweek completed state, clear rewards
-                fetch('api/clear_gameweek_results_api.php', {
+            // User navigated away from gameweek completed state, clear rewards
+            if (document.getElementById('gameweek-signal')) {
+                 fetch('api/clear_gameweek_results_api.php', {
                         method: 'POST'
                     })
                     .catch(error => console.log('Error clearing post-match rewards:', error));
@@ -1783,8 +1561,7 @@ startContent();
 
         // Listen for page unload (user navigating to different page)
         window.addEventListener('beforeunload', function() {
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('gameweek_completed') === '1') {
+            if (document.getElementById('gameweek-signal')) {
                 // User is leaving the gameweek completed page, clear rewards
                 navigator.sendBeacon('api/clear_gameweek_results_api.php');
             }
@@ -1977,8 +1754,7 @@ startContent();
     });
 
     // Check for post-match player selection on page load only if gameweek was completed
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('gameweek_completed') === '1') {
+    if (document.getElementById('gameweek-signal')) {
         checkPostMatchPlayers();
     }
 
@@ -1997,8 +1773,7 @@ startContent();
 
     function showPostMatchNotification(players, timeRemaining) {
         // Only show notification if gameweek was completed
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get('gameweek_completed') !== '1') {
+        if (!document.getElementById('gameweek-signal')) {
             return;
         }
 

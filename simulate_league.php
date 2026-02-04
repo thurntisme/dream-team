@@ -30,6 +30,6 @@ try {
 }
 
 // Redirect back to league page with detailed results
-header('Location: league.php?tab=standings&gameweek_completed=1');
+header('Location: league.php?tab=standings');
 exit;
 ?>

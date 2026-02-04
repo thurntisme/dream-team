@@ -1154,7 +1154,7 @@ function displayMatchResultPage($match, $is_home, $user_score, $opponent_score, 
                 .then(data => {
                     if (data.success) {
                         // Redirect to league standings
-                        window.location.href = 'league.php?tab=standings&gameweek_completed=1';
+                        window.location.href = 'league.php?tab=standings';
                     } else {
                         console.error('Simulation failed:', data.message);
                         alert('Failed to simulate league: ' + data.message);
