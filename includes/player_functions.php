@@ -196,7 +196,12 @@ if (!function_exists('updatePlayerFitness')) {
 
         if ($played_match) {
             // Fitness decreases after playing
-            $fitness -= rand(5, 15);
+            $loss = rand(5, 15);
+            // Apply fitness coach reduction if present (value between 0 and 1)
+            if (isset($player['fitness_bonus']) && is_numeric($player['fitness_bonus'])) {
+                $loss = (int) round($loss * $player['fitness_bonus']);
+            }
+            $fitness -= $loss;
         } else {
             // Fitness recovers when resting
             $recovery = min(3 + ($days_since_last_match * 2), 10);
@@ -304,7 +309,7 @@ if (!function_exists('getFormStatus')) {
 if (!function_exists('getEffectiveRating')) {
     function getEffectiveRating($player)
     {
-        $base_rating = $player['rating'] ?? 70;
+        $base_rating = ($player['effective_rating'] ?? $player['rating'] ?? 70);
         $fitness = $player['fitness'] ?? 100;
         $form = $player['form'] ?? 7;
         $level = $player['level'] ?? 1;

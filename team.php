@@ -314,7 +314,7 @@ startContent();
 
     // Get effective player rating based on fitness and form
     function getEffectiveRating(player) {
-        const baseRating = player.rating || 70;
+        const baseRating = (player.effective_rating ?? player.rating) || 70;
         const fitness = player.fitness || 100;
         const form = player.form || 7;
 
