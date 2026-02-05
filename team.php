@@ -707,7 +707,7 @@ startContent();
         $('#totalTeamValue').text(formatMarketValue(totalValue));
         $('#remainingBudget').text(formatMarketValue(remainingBudget));
         const totalSquadSize = playerCount + substitutePlayers.filter(p => p !== null).length;
-        $('#playerCount').text(`${playerCount}/11 starting • ${totalSquadSize}/${maxPlayers} total`);
+        $('#playerCount').text(`${totalSquadSize}/${maxPlayers} players`);
 
         // Update budget bar
         $('#budgetBar').css('width', Math.min(budgetUsedPercentage, 100) + '%');

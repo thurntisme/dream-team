@@ -70,8 +70,14 @@ try {
             $current_substitutes = json_decode($user_data['substitutes'] ?? '[]', true) ?: [];
             $max_players = $user_data['max_players'] ?? 23;
 
-            // Check if team is full
-            $total_players = count($current_team) + count($current_substitutes);
+            // Check if team is full (count only non-null players)
+            $starting_players = is_array($current_team)
+                ? count(array_filter($current_team, function($p) { return $p !== null; }))
+                : 0;
+            $substitute_players = is_array($current_substitutes)
+                ? count(array_filter($current_substitutes, function($p) { return $p !== null; }))
+                : 0;
+            $total_players = $starting_players + $substitute_players;
             if ($total_players >= $max_players) {
                 throw new Exception('Your squad is full. Maximum players allowed: ' . $max_players);
             }
