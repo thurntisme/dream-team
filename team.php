@@ -246,6 +246,7 @@ startContent();
     const imageBaseUrl = '<?= PLAYER_IMAGES_BASE_PATH ?>';
 
     let selectedPlayerIdx = null; // Track which player is currently selected
+    let selectedSubIdx = null; // Track which substitute is currently selected
 
     let savedTeam = <?php echo $saved_team; ?>;
     let selectedPlayers = Array.isArray(savedTeam) && savedTeam.length > 0 ? savedTeam : [];
@@ -756,13 +757,14 @@ startContent();
         substitutePlayers.forEach((player, idx) => {
             if (player) {
                 const isCustom = player.isCustom || false;
-                const bgClass = 'bg-gray-50 border-gray-200';
+                const isSelected = selectedSubIdx === idx;
+                const bgClass = isSelected ? 'bg-blue-50 border-blue-300 ring-2 ring-blue-300' : 'bg-gray-50 border-gray-200';
                 const nameClass = isCustom ? 'font-medium text-purple-700' : 'font-medium';
                 const valueClass = isCustom ? 'text-sm text-purple-600 font-semibold' : 'text-sm text-green-600 font-semibold';
                 const customBadge = isCustom ? '<span class="text-xs text-purple-600 bg-purple-100 px-1 py-0.5 rounded ml-1">CUSTOM</span>' : '';
 
                 $list.append(`
-                    <div class="flex items-center justify-between p-2 border rounded ${bgClass} hover:bg-blue-50 transition-all duration-200">
+                    <div class="flex items-center justify-between p-2 border rounded ${bgClass} hover:bg-blue-50 transition-all duration-200 cursor-pointer" onclick="selectSubstitute(${idx})">
                         <div class="flex-1">
                             <div class="flex items-center gap-2">
                                 <div class="${nameClass}">${player.name}${customBadge}</div>
@@ -1293,6 +1295,20 @@ startContent();
         renderPlayers();
         renderField(); // Update field to show selection
         updateSelectedPlayerInfo(); // Update selected player info box
+    }
+    
+    // Function to select a substitute (highlight only)
+    function selectSubstitute(idx) {
+        selectedSubIdx = selectedSubIdx === idx ? null : idx; // Toggle selection
+        renderSubstitutes();
+
+        if (selectedSubIdx !== null) {
+            const player = substitutePlayers[selectedSubIdx];
+            if (player) {
+                // Reuse player info modal for substitutes
+                showPlayerInfo(player);
+            }
+        }
     }
 
     // Function to update selected player info box
@@ -1903,9 +1919,9 @@ startContent();
                                     ` : ''}
                                     
                                     <!-- Hover switch button for non-selected players -->
-                                    ${!isSelected && selectedPlayerIdx !== null ? `
+                                    ${!isSelected && (selectedPlayerIdx !== null || selectedSubIdx !== null) ? `
                                         <div class="absolute -bottom-2 left-1/2 transform -translate-x-1/2 hover-switch-btn opacity-0 transition-all duration-200">
-                                            <button onclick="switchPlayer(${idx})" class="w-7 h-7 bg-blue-500 hover:bg-blue-600 text-white rounded-full flex items-center justify-center shadow-lg transition-all duration-200 hover:scale-110" title="Switch with Selected Player">
+                                            <button onclick="${selectedPlayerIdx !== null ? `switchPlayer(${idx})` : `performPlayerSwitch(${idx}, ${selectedSubIdx})`}" class="w-7 h-7 bg-blue-500 hover:bg-blue-600 text-white rounded-full flex items-center justify-center shadow-lg transition-all duration-200 hover:scale-110" title="Switch with Selected Player">
                                                 <i data-lucide="arrow-left-right" class="w-3 h-3"></i>
                                             </button>
                                         </div>
@@ -1933,12 +1949,22 @@ startContent();
         // Click handlers
         $('.player-slot').click(function() {
             const idx = $(this).data('idx');
-            selectPlayer(idx);
+            if (selectedSubIdx !== null) {
+                performPlayerSwitch(idx, selectedSubIdx);
+                selectedSubIdx = null;
+            } else {
+                selectPlayer(idx);
+            }
         });
 
         $('.empty-slot').click(function() {
             const idx = $(this).data('idx');
-            choosePlayer(idx);
+            if (selectedSubIdx !== null) {
+                performPlayerSwitch(idx, selectedSubIdx);
+                selectedSubIdx = null;
+            } else {
+                choosePlayer(idx);
+            }
         });
 
         // Hover effects
@@ -1949,7 +1975,7 @@ startContent();
 
                 if (!isSelected) {
                     // Highlight border for non-selected players
-                    if (selectedPlayerIdx !== null) {
+                    if (selectedPlayerIdx !== null || selectedSubIdx !== null) {
                         // If there's a selected player, show switch-ready highlight
                         $(this).find('.player-circle').addClass('ring-2 ring-blue-400 ring-opacity-70');
                         $(this).find('.hover-switch-btn').removeClass('opacity-0').addClass('opacity-100');
