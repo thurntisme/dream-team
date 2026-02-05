@@ -11,6 +11,8 @@ if (!defined('DREAM_TEAM_APP')) {
     exit('Direct access not allowed');
 }
 
+require_once __DIR__ . '/league_functions.php';
+
 /**
  * Manage news items - clean expired and generate new ones
  */
@@ -126,7 +128,6 @@ if (!function_exists('getCurrentNewsItems')) {
 if (!function_exists('generateNewNewsItems')) {
     function generateNewNewsItems($db, $user_id, $maxItems)
     {
-        // Get user's team players for departure requests
         $stmt = $db->prepare('SELECT team, substitutes FROM users WHERE id = :id');
         $stmt->bindValue(':id', $user_id, SQLITE3_INTEGER);
         $result = $stmt->execute();
@@ -136,37 +137,32 @@ if (!function_exists('generateNewNewsItems')) {
         $substitutes = json_decode($userData['substitutes'] ?? '[]', true) ?: [];
         $allPlayers = array_merge(array_filter($team), array_filter($substitutes));
 
-        $generatedCount = 0;
-
-        // Collect all possible news items
         $possibleNews = [];
-
-        // Hot transfers
-        $hotTransfers = generateHotTransferNews();
-        $possibleNews = array_merge($possibleNews, $hotTransfers);
-
-        // Departure requests
+        $possibleNews = array_merge($possibleNews, generateHotTransferNews());
         if (!empty($allPlayers)) {
-            $departureRequests = generateDepartureRequestNews($allPlayers);
-            $possibleNews = array_merge($possibleNews, $departureRequests);
+            $possibleNews = array_merge($possibleNews, generateDepartureRequestNews($allPlayers));
+        }
+        $possibleNews = array_merge($possibleNews, generatePlayerInterestNews($user_id));
+
+        $opponentPreview = generateNextOpponentNews($db, $user_id);
+        $opponentPlayers = generateOpponentPlayersNews($db, $user_id);
+
+        $selectedNews = null;
+        if (!empty($opponentPreview)) {
+            $selectedNews = $opponentPreview[0];
+        } elseif (!empty($possibleNews)) {
+            $selectedNews = $possibleNews[array_rand($possibleNews)];
+        } elseif (!empty($opponentPlayers)) {
+            $selectedNews = $opponentPlayers[0];
         }
 
-        // Player interest
-        $interestedPlayers = generatePlayerInterestNews($user_id);
-        $possibleNews = array_merge($possibleNews, $interestedPlayers);
-
-        // If we have possible news, pick one randomly
-        if (!empty($possibleNews)) {
-            $selectedNews = $possibleNews[array_rand($possibleNews)];
-
-            // Check if we need to remove oldest item to make space
+        if ($selectedNews) {
             $stmt = $db->prepare('SELECT COUNT(*) as count FROM news WHERE user_id = :user_id');
             $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
             $result = $stmt->execute();
             $currentCount = $result->fetchArray(SQLITE3_ASSOC)['count'];
 
             if ($currentCount >= 6) {
-                // Remove the oldest news item
                 $stmt = $db->prepare('
                     DELETE FROM news 
                     WHERE user_id = :user_id 
@@ -181,7 +177,6 @@ if (!function_exists('generateNewNewsItems')) {
                 $stmt->execute();
             }
 
-            // Add the new news item
             saveNewsItem($db, $user_id, $selectedNews);
         }
     }
@@ -302,6 +297,141 @@ if (!function_exists('generateDepartureRequestNews')) {
     }
 }
 
+if (!function_exists('generateNextOpponentNews')) {
+    function generateNextOpponentNews($db, $user_id)
+    {
+        $news = [];
+        $season = getCurrentSeasonIdentifier($db);
+        $upcoming = getUpcomingMatches($db, $user_id, $season);
+        if (empty($upcoming)) {
+            return $news;
+        }
+        $nextMatch = null;
+        foreach ($upcoming as $m) {
+            if ($m['home_team_id'] == $user_id || $m['away_team_id'] == $user_id) {
+                $nextMatch = $m;
+                break;
+            }
+        }
+        if (!$nextMatch) {
+            return $news;
+        }
+        $isHome = $nextMatch['home_team_id'] == $user_id;
+        $opponentName = $isHome ? $nextMatch['away_team'] : $nextMatch['home_team'];
+        $venue = $isHome ? 'Home' : 'Away';
+        $gw = (int)($nextMatch['gameweek'] ?? 0);
+        $dateText = $nextMatch['match_date'] ?? 'TBD';
+        $standings = getLeagueStandings($db, $season);
+        $opponentTeam = null;
+        $opponentPos = null;
+        foreach ($standings as $idx => $team) {
+            if ($team['name'] === $opponentName) {
+                $opponentTeam = $team;
+                $opponentPos = $idx + 1;
+                break;
+            }
+        }
+        $userTeamPos = null;
+        foreach ($standings as $idx => $team) {
+            if (($team['user_id'] ?? null) == $user_id) {
+                $userTeamPos = $idx + 1;
+                break;
+            }
+        }
+        $oppPoints = $opponentTeam['points'] ?? null;
+        $oppGD = null;
+        if ($opponentTeam) {
+            $oppGD = ($opponentTeam['goals_for'] ?? 0) - ($opponentTeam['goals_against'] ?? 0);
+        }
+        $difficulty = null;
+        if ($opponentTeam) {
+            $difficulty = round(calculateTeamStrength($opponentTeam, false));
+        }
+        $title = 'Next Opponent: ' . $opponentName . ' (' . $venue . ')';
+        $parts = [];
+        $parts[] = 'Gameweek ' . $gw . ' on ' . $dateText . '.';
+        if ($opponentPos !== null) {
+            $parts[] = $opponentName . ' is ' . $opponentPos . 'th with ' . ($oppPoints ?? 0) . ' pts' . ($oppGD !== null ? ' (GD ' . $oppGD . ')' : '');
+        }
+        if ($userTeamPos !== null) {
+            $parts[] = 'Your club stands ' . $userTeamPos . 'th.';
+        }
+        if ($difficulty !== null) {
+            $parts[] = 'Expected difficulty: ' . $difficulty . '/100.';
+        }
+        $content = implode(' ', $parts);
+        $news[] = [
+            'category' => 'match_preview',
+            'priority' => 'normal',
+            'title' => $title,
+            'content' => $content,
+            'actions' => [
+                [
+                    'type' => 'view_league',
+                    'label' => 'View League',
+                    'icon' => 'calendar',
+                    'style' => 'bg-blue-600 text-white hover:bg-blue-700'
+                ]
+            ]
+        ];
+        return $news;
+    }
+}
+
+if (!function_exists('generateOpponentPlayersNews')) {
+    function generateOpponentPlayersNews($db, $user_id)
+    {
+        $news = [];
+        $season = getCurrentSeasonIdentifier($db);
+        $upcoming = getUpcomingMatches($db, $user_id, $season);
+        if (empty($upcoming)) {
+            return $news;
+        }
+        $nextMatch = null;
+        foreach ($upcoming as $m) {
+            if ($m['home_team_id'] == $user_id || $m['away_team_id'] == $user_id) {
+                $nextMatch = $m;
+                break;
+            }
+        }
+        if (!$nextMatch) {
+            return $news;
+        }
+        $isHome = $nextMatch['home_team_id'] == $user_id;
+        $opponentName = $isHome ? $nextMatch['away_team'] : $nextMatch['home_team'];
+        $players = getDefaultPlayers();
+        $candidates = array_filter($players, function ($p) {
+            return ($p['rating'] ?? 0) >= 85;
+        });
+        if (empty($candidates)) {
+            $candidates = $players;
+        }
+        shuffle($candidates);
+        $pickCount = min(2, max(1, rand(1, 2)));
+        $picked = array_slice($candidates, 0, $pickCount);
+        foreach ($picked as $player) {
+            $title = 'Opponent Key Player: ' . $player['name'] . ' (' . $player['position'] . ')';
+            $content = 'Scouting report: ' . $opponentName . ' are expected to feature ' . $player['name'] . ' (' . $player['position'] . ', ★' . ($player['rating'] ?? 0) . '). Keep an eye on their impact.';
+            $news[] = [
+                'category' => 'opponent_player',
+                'priority' => (($player['rating'] ?? 0) >= 90) ? 'high' : 'normal',
+                'title' => $title,
+                'content' => $content,
+                'player_data' => $player,
+                'actions' => [
+                    [
+                        'type' => 'view_league',
+                        'label' => 'View League',
+                        'icon' => 'calendar',
+                        'style' => 'bg-blue-600 text-white hover:bg-blue-700'
+                    ]
+                ]
+            ];
+        }
+        return $news;
+    }
+}
+
 /**
  * Generate news about players interested in joining
  */
@@ -378,9 +508,22 @@ if (!function_exists('getNewsCategoryStyle')) {
                 'text' => 'text-green-600',
                 'icon' => 'user-plus',
                 'badge' => 'bg-green-100 text-green-800'
+            ],
+            'match_preview' => [
+                'bg' => 'bg-blue-100',
+                'text' => 'text-blue-600',
+                'icon' => 'calendar',
+                'badge' => 'bg-blue-100 text-blue-800'
+            ],
+            'opponent_player' => [
+                'bg' => 'bg-indigo-100',
+                'text' => 'text-indigo-600',
+                'icon' => 'target',
+                'badge' => 'bg-indigo-100 text-indigo-800'
             ]
         ];
 
         return $styles[$category] ?? $styles['hot_transfer'];
     }
 }
+?>
