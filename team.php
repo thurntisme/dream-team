@@ -2057,26 +2057,11 @@ startContent();
                 return;
             }
 
-            // For team players: always show them if they match search (ignore position requirement)
-            if (isSelected && matchesSearch) {
-                matchingPlayers.push({
-                    player,
-                    idx,
-                    isSelected,
-                    isSelectedInStarting,
-                    isSelectedInSubs,
-                    showMainPosition: true // Flag to show main position instead of required position
-                });
-                addedPlayerUuids.add(player.uuid);
-                return;
-            }
-
-            // For non-team players: check if they can play in the required position
+            // Determine position match for both team and non-team players
             let matchesPosition = false;
             if (isSelectingSubstitute) {
                 matchesPosition = true; // Any position for substitutes
             } else {
-                // Check primary position or playablePositions array
                 const playablePositions = player.playablePositions || [player.position];
                 matchesPosition = playablePositions.includes(requiredPosition);
             }
@@ -2088,7 +2073,7 @@ startContent();
                     isSelected,
                     isSelectedInStarting,
                     isSelectedInSubs,
-                    showMainPosition: false
+                    showMainPosition: isSelected // Show main position for squad players
                 });
                 addedPlayerUuids.add(player.uuid);
             }

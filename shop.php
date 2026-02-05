@@ -402,9 +402,9 @@ startContent();
     }
 
     // Event listeners for tabs
-    document.getElementById('allItemsTab').addEventListener('click ', () => switchTab('allItems '));
-    document.getElementById('trainingTab').addEventListener('click ', () => switchTab('training '));
-    document.getElementById('financialTab').addEventListener('click ', () => switchTab('financial '));
+    document.getElementById('allItemsTab').addEventListener('click', () => switchTab('allItems'));
+    document.getElementById('trainingTab').addEventListener('click', () => switchTab('training'));
+    document.getElementById('financialTab').addEventListener('click', () => switchTab('financial'));
     document.getElementById('specialTab').addEventListener('click', () => switchTab('special'));
     document.getElementById('premiumTab').addEventListener('click', () => switchTab('premium'));
     document.getElementById('myItemsTab').addEventListener('click', () => switchTab('myItems'));
