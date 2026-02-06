@@ -1961,7 +1961,7 @@ startContent();
                                     <!-- Hover switch button for non-selected players -->
                                     ${!isSelected && (selectedPlayerIdx !== null || selectedSubIdx !== null) ? `
                                         <div class="absolute -bottom-2 left-1/2 transform -translate-x-1/2 hover-switch-btn opacity-0 transition-all duration-200">
-                                            <button onclick="${selectedPlayerIdx !== null ? `switchPlayer(${idx})` : `performPlayerSwitch(${idx}, ${selectedSubIdx})`}" class="w-7 h-7 bg-blue-500 hover:bg-blue-600 text-white rounded-full flex items-center justify-center shadow-lg transition-all duration-200 hover:scale-110" title="Switch with Selected Player">
+                                            <button onclick="event.stopPropagation(); ${selectedPlayerIdx !== null ? `switchPlayer(${idx})` : `performPlayerSwitch(${idx}, ${selectedSubIdx})`}" class="w-7 h-7 bg-blue-500 hover:bg-blue-600 text-white rounded-full flex items-center justify-center shadow-lg transition-all duration-200 hover:scale-110" title="Switch with Selected Player">
                                                 <i data-lucide="arrow-left-right" class="w-3 h-3"></i>
                                             </button>
                                         </div>
@@ -1989,12 +1989,7 @@ startContent();
         // Click handlers
         $('.player-slot').click(function() {
             const idx = $(this).data('idx');
-            if (selectedSubIdx !== null) {
-                performPlayerSwitch(idx, selectedSubIdx);
-                selectedSubIdx = null;
-            } else {
-                selectPlayer(idx);
-            }
+            selectPlayer(idx);
         });
 
         $('.empty-slot').click(function() {
@@ -2373,10 +2368,8 @@ startContent();
                 const isReplacement = currentPlayer !== null;
                 const requiredPosition = isSelectingSubstitute ? 'Substitute' : getPositionForSlot(currentSlotIdx);
 
-                let confirmTitle = isReplacement ? 'Replace Player?' : 'Buy Player?';
-                let confirmText = isReplacement ?
-                    `Replace ${currentPlayer.name} with ${player.name} for ${formatMarketValue(player.value || 0)}?` :
-                    `Buy ${player.name} (${requiredPosition}) for ${formatMarketValue(player.value || 0)}?`;
+                let confirmTitle = 'Buy Player?';
+                let confirmText = `Buy ${player.name} (${requiredPosition}) for ${formatMarketValue(player.value || 0)}?`;
 
                 Swal.fire({
                     title: confirmTitle,
@@ -2404,7 +2397,7 @@ startContent();
                                 </div>
                             </div>
                             
-                            ${isReplacement ? `
+                            ${isReplacement && !isSelectingSubstitute ? `
                             <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
                                 <h4 class="font-semibold text-yellow-900 mb-2">Current Player:</h4>
                                 <div class="space-y-1 text-sm">
@@ -2417,7 +2410,7 @@ startContent();
                                         <span class="font-medium text-green-600">${formatMarketValue(currentPlayer.value || 0)}</span>
                                     </div>
                                 </div>
-                                <p class="text-xs text-yellow-700 mt-2">This player will be removed from your team</p>
+                                <p class="text-xs text-yellow-700 mt-2">This player will be moved to substitutes</p>
                             </div>
                             ` : ''}
                             
@@ -2444,7 +2437,7 @@ startContent();
                     showCancelButton: true,
                     confirmButtonColor: '#10b981',
                     cancelButtonColor: '#6b7280',
-                    confirmButtonText: isReplacement ? '<i data-lucide="refresh-cw" class="w-4 h-4 inline mr-1"></i> Replace Player' : '<i data-lucide="shopping-cart" class="w-4 h-4 inline mr-1"></i> Buy Player',
+                    confirmButtonText: '<i data-lucide="shopping-cart" class="w-4 h-4 inline mr-1"></i> Buy Player',
                     cancelButtonText: 'Cancel',
                     customClass: {
                         popup: 'swal-wide'
@@ -2470,6 +2463,24 @@ startContent();
                         if (isSelectingSubstitute) {
                             substitutePlayers[currentSlotIdx] = ensurePlayerSalary(player);
                         } else {
+                            // If replacing a current player, move current player to substitutes
+                            if (isReplacement) {
+                                const maxSubstitutes = maxPlayers - 11;
+                                while (substitutePlayers.length < maxSubstitutes) {
+                                    substitutePlayers.push(null);
+                                }
+                                const emptySubIdx = substitutePlayers.findIndex(p => p === null);
+                                if (emptySubIdx === -1) {
+                                    Swal.fire({
+                                        icon: 'warning',
+                                        title: 'Substitutes Full',
+                                        text: 'No space available on the bench to move the current player.',
+                                        confirmButtonColor: '#3b82f6'
+                                    });
+                                    return;
+                                }
+                                substitutePlayers[emptySubIdx] = ensurePlayerSalary(currentPlayer);
+                            }
                             selectedPlayers[currentSlotIdx] = ensurePlayerSalary(player);
                         }
 
@@ -2500,10 +2511,11 @@ startContent();
                                 // Show success message
                                 Swal.fire({
                                     icon: 'success',
-                                    title: isReplacement ? 'Player Replaced!' : 'Player Purchased!',
+                                    title: 'Player Purchased!',
                                     html: `
                                         <div class="text-center">
                                             <p class="mb-2">${player.name} has been added to your ${isSelectingSubstitute ? 'substitutes' : 'team'}!</p>
+                                            ${(!isSelectingSubstitute && isReplacement) ? `<p class="text-sm text-gray-600">Moved ${currentPlayer.name} to substitutes.</p>` : ''}
                                             <p class="text-sm text-gray-600">Cost: ${formatMarketValue(player.value || 0)}</p>
                                             <p class="text-sm text-blue-600">Remaining Budget: ${formatMarketValue(response.new_budget)}</p>
                                         </div>
