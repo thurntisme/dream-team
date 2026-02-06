@@ -312,6 +312,21 @@ startContent();
         }
     }
 
+    function calculatePlayerSalaryJS(player) {
+        const baseSalary = player.base_salary ?? Math.max(1000, (player.value ?? 1000000) * 0.001);
+        const cardLevel = player.card_level ?? 1;
+        const salaryMultiplier = 1 + ((cardLevel - 1) * 0.2);
+        return Math.round(baseSalary * salaryMultiplier);
+    }
+
+    function ensurePlayerSalary(player) {
+        if (!player) return player;
+        if (!player.salary || player.salary <= 0) {
+            player.salary = calculatePlayerSalaryJS(player);
+        }
+        return player;
+    }
+
     // Get effective player rating based on fitness and form
     function getEffectiveRating(player) {
         const baseRating = (player.effective_rating ?? player.rating) || 70;
@@ -974,7 +989,7 @@ startContent();
 
     // Promote substitute to starting XI
     function promoteSubstitute(subIdx) {
-        const substitute = substitutePlayers[subIdx];
+        const substitute = ensurePlayerSalary(substitutePlayers[subIdx]);
 
         // Find empty slot in starting XI or ask user to replace
         const emptyStartingSlot = selectedPlayers.findIndex(p => p === null);
@@ -1216,8 +1231,8 @@ startContent();
 
     // Perform the actual player switch
     function performPlayerSwitch(startingIdx, subIdx) {
-        const startingPlayer = selectedPlayers[startingIdx];
-        const substitute = substitutePlayers[subIdx];
+        const startingPlayer = ensurePlayerSalary(selectedPlayers[startingIdx]);
+        const substitute = ensurePlayerSalary(substitutePlayers[subIdx]);
 
         // Swap players
         selectedPlayers[startingIdx] = substitute;
@@ -1585,8 +1600,8 @@ startContent();
         }
 
         // Switch positions between selected player and clicked player
-        const selectedPlayer = selectedPlayers[selectedPlayerIdx];
-        const clickedPlayer = selectedPlayers[idx];
+        const selectedPlayer = ensurePlayerSalary(selectedPlayers[selectedPlayerIdx]);
+        const clickedPlayer = ensurePlayerSalary(selectedPlayers[idx]);
 
         // Swap the players
         selectedPlayers[selectedPlayerIdx] = clickedPlayer;
@@ -2028,6 +2043,19 @@ startContent();
             const idx = $(this).data('idx');
             removePlayer(idx);
         });
+
+        // Click on field background to clear selection
+        $('#field-wrapper').off('click').on('click', function(e) {
+            const $t = $(e.target);
+            const clickedOnInteractive = $t.closest('.player-slot, .empty-slot, .action-buttons, .hover-switch-btn').length > 0;
+            if (!clickedOnInteractive) {
+                selectedPlayerIdx = null;
+                selectedSubIdx = null;
+                renderPlayers();
+                renderField();
+                updateSelectedPlayerInfo();
+            }
+        });
     }
 
     function openPlayerModal() {
@@ -2256,19 +2284,19 @@ startContent();
                     // Perform the switch
                     if (isSelectingSubstitute) {
                         // Moving to substitutes
-                        substitutePlayers[currentSlotIdx] = player;
+                        substitutePlayers[currentSlotIdx] = ensurePlayerSalary(player);
                         if (sourceIsSubstitute) {
-                            substitutePlayers[sourceIdx] = currentPlayer;
+                            substitutePlayers[sourceIdx] = ensurePlayerSalary(currentPlayer);
                         } else {
-                            selectedPlayers[sourceIdx] = currentPlayer;
+                            selectedPlayers[sourceIdx] = ensurePlayerSalary(currentPlayer);
                         }
                     } else {
                         // Moving to starting XI
-                        selectedPlayers[currentSlotIdx] = player;
+                        selectedPlayers[currentSlotIdx] = ensurePlayerSalary(player);
                         if (sourceIsSubstitute) {
-                            substitutePlayers[sourceIdx] = currentPlayer;
+                            substitutePlayers[sourceIdx] = ensurePlayerSalary(currentPlayer);
                         } else {
-                            selectedPlayers[sourceIdx] = currentPlayer;
+                            selectedPlayers[sourceIdx] = ensurePlayerSalary(currentPlayer);
                         }
                     }
 
@@ -2404,6 +2432,10 @@ startContent();
                                         <span class="text-gray-600">After Purchase:</span>
                                         <span class="font-medium text-green-600">${formatMarketValue(maxBudget - currentTeamValue - (player.value || 0))}</span>
                                     </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">Weekly Salary:</span>
+                                        <span class="font-medium text-blue-600">${formatMarketValue(calculatePlayerSalaryJS(player))}/week</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -2436,9 +2468,9 @@ startContent();
 
                         // Add player to team or substitutes
                         if (isSelectingSubstitute) {
-                            substitutePlayers[currentSlotIdx] = player;
+                            substitutePlayers[currentSlotIdx] = ensurePlayerSalary(player);
                         } else {
-                            selectedPlayers[currentSlotIdx] = player;
+                            selectedPlayers[currentSlotIdx] = ensurePlayerSalary(player);
                         }
 
                         // Save team and update budget
