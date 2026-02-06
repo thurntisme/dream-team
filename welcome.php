@@ -241,7 +241,7 @@ startContent();
                         </div>
                     <?php endif; ?>
                 </div>
-                <a href="<?php echo route('clubs'); ?>"
+                <a href="clubs.php"
                     class="block w-full bg-gray-100 text-gray-700 py-2 rounded-lg hover:bg-gray-200 text-center transition-colors">
                     <i data-lucide="eye" class="w-4 h-4 inline mr-1"></i>
                     View All Clubs

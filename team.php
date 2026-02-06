@@ -784,9 +784,7 @@ startContent();
                         <div class="flex items-center gap-1 ml-2">
                             ${selectedPlayers.findIndex(p => p === null) !== -1 ? `<button onclick="promoteSubstitute(${idx})" class="p-1 text-blue-600 hover:bg-blue-100 rounded transition-colors" title="Promote to Starting XI">
                                 <i data-lucide="arrow-up" class="w-4 h-4"></i>
-                            </button>` : `<button onclick="switchWithStartingPlayer(${idx})" class="p-1 text-orange-600 hover:bg-orange-100 rounded transition-colors" title="Switch with Starting Player">
-                                <i data-lucide="repeat" class="w-4 h-4"></i>
-                            </button>`}
+                            </button>` : ``}
                         </div>
                     </div>
                 `);
@@ -986,9 +984,14 @@ startContent();
             selectedPlayers[emptyStartingSlot] = substitute;
             substitutePlayers[subIdx] = null;
 
+            // Clear selections after promotion
+            selectedPlayerIdx = null;
+            selectedSubIdx = null;
+
             renderPlayers();
             renderField();
             renderSubstitutes();
+            updateSelectedPlayerInfo();
             updateClubStats();
 
             // Auto-save the changes to database
@@ -1220,9 +1223,14 @@ startContent();
         selectedPlayers[startingIdx] = substitute;
         substitutePlayers[subIdx] = startingPlayer;
 
+        // Clear selections after switch
+        selectedPlayerIdx = null;
+        selectedSubIdx = null;
+
         renderPlayers();
         renderField();
         renderSubstitutes();
+        updateSelectedPlayerInfo();
         updateClubStats();
 
         Swal.close();
@@ -1291,6 +1299,7 @@ startContent();
 
     // Function to select a player (highlight only)
     function selectPlayer(idx) {
+        selectedSubIdx = null; // Clear any substitute selection
         selectedPlayerIdx = selectedPlayerIdx === idx ? null : idx; // Toggle selection
         renderPlayers();
         renderField(); // Update field to show selection
@@ -1299,29 +1308,32 @@ startContent();
     
     // Function to select a substitute (highlight only)
     function selectSubstitute(idx) {
+        selectedPlayerIdx = null; // Unselect any starting XI player
         selectedSubIdx = selectedSubIdx === idx ? null : idx; // Toggle selection
         renderSubstitutes();
-
-        if (selectedSubIdx !== null) {
-            const player = substitutePlayers[selectedSubIdx];
-            if (player) {
-                // Reuse player info modal for substitutes
-                showPlayerInfo(player);
-            }
-        }
+        renderPlayers(); // Reflect unselection in list
+        renderField(); // Reflect unselection on field
+        updateSelectedPlayerInfo(); // Show selected substitute info in the box
     }
 
     // Function to update selected player info box
     function updateSelectedPlayerInfo() {
         const $infoBox = $('#selectedPlayerInfo');
 
-        if (selectedPlayerIdx === null) {
-            // No player selected, hide the info box
+        // Determine current selection context (team or substitute)
+        let player = null;
+        let context = null;
+        if (selectedPlayerIdx !== null) {
+            player = selectedPlayers[selectedPlayerIdx];
+            context = 'team';
+        } else if (selectedSubIdx !== null) {
+            player = substitutePlayers[selectedSubIdx];
+            context = 'substitute';
+        } else {
+            // No selection, hide info box
             $infoBox.addClass('hidden');
             return;
         }
-
-        const player = selectedPlayers[selectedPlayerIdx];
 
         if (!player) {
             // Empty slot selected, hide the info box
@@ -1412,16 +1424,27 @@ startContent();
         });
 
         $('#changePlayerBtn').off('click').on('click', function() {
-            choosePlayer(selectedPlayerIdx);
+            if (context === 'team') {
+                choosePlayer(selectedPlayerIdx);
+            } else {
+                // Open modal to choose a different substitute
+                currentSlotIdx = selectedSubIdx;
+                isSelectingSubstitute = true;
+                openPlayerModal();
+            }
         });
 
         $('#removePlayerBtn').off('click').on('click', function() {
-            removePlayer(selectedPlayerIdx);
+            if (context === 'team') {
+                removePlayer(selectedPlayerIdx);
+            } else {
+                removeSubstitute(selectedSubIdx);
+            }
         });
 
         // Update renew contract button
         $('#renewContractBtn').off('click').on('click', function() {
-            renewPlayerContract(player, selectedPlayerIdx);
+            renewPlayerContract(player, context === 'team' ? selectedPlayerIdx : selectedSubIdx);
         });
 
         // Reinitialize lucide icons
@@ -1571,10 +1594,12 @@ startContent();
 
         // Clear selection after switch
         selectedPlayerIdx = null;
+        selectedSubIdx = null;
 
         // Update display
         renderPlayers();
         renderField();
+        updateSelectedPlayerInfo();
         updateClubStats();
 
         // Show confirmation
@@ -2256,11 +2281,15 @@ startContent();
                         if (response.success) {
                             closeModal('playerModal');
                             isSelectingSubstitute = false;
+                            // Clear selections after switch
+                            selectedPlayerIdx = null;
+                            selectedSubIdx = null;
 
                             // Update displays
                             renderPlayers();
                             renderField();
                             renderSubstitutes();
+                            updateSelectedPlayerInfo();
 
                             // Show success message
                             Swal.fire({
