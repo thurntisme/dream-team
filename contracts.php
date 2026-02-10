@@ -9,14 +9,13 @@ require_once 'partials/layout.php';
 try {
     $db = getDbConnection();
 
-    // Get current user
-    $user_id = $_SESSION['user_id'];
-    $stmt = $db->prepare('SELECT * FROM users WHERE id = :id');
-    $stmt->bindValue(':id', $user_id, SQLITE3_INTEGER);
+    $user_uuid = $_SESSION['user_uuid'];
+    $stmt = $db->prepare('SELECT team, budget FROM user_club WHERE user_uuid = :uuid');
+    $stmt->bindValue(':uuid', $user_uuid, SQLITE3_TEXT);
     $result = $stmt->execute();
-    $user = $result->fetchArray(SQLITE3_ASSOC);
+    $club = $result->fetchArray(SQLITE3_ASSOC);
 
-    if (!$user) {
+    if (!$club) {
         header('Location: index.php');
         exit;
     }
@@ -34,9 +33,11 @@ try {
         } elseif ($salary_increase < 0 || $salary_increase > 100) {
             $_SESSION['error'] = 'Salary increase must be between 0% and 100%';
         } else {
-            // Get current team and substitutes
-            $team = json_decode($user['team'], true) ?: [];
-            $substitutes = json_decode($user['substitutes'], true) ?: [];
+            $full_team = json_decode($club['team'] ?? '[]', true) ?: [];
+            if (!is_array($full_team)) $full_team = [];
+            if (count($full_team) < 11) $full_team = array_pad($full_team, 11, null);
+            $team = array_slice($full_team, 0, 11);
+            $substitutes = array_slice($full_team, 11);
 
             $updated = false;
             $player_found = null;
@@ -59,15 +60,15 @@ try {
 
             if ($player_found) {
                 // Calculate new salary
-                $current_salary = $player_found['salary'] ?? ($player_found['value'] * 0.1); // 10% of value if no salary set
+                $current_salary = $player_found['salary'] ?? ($player_found['value'] * 0.1);
                 $new_salary = $current_salary * (1 + $salary_increase / 100);
 
                 // Calculate total cost
                 $total_cost = $new_salary * $contract_length;
 
                 // Check if user has enough budget
-                if ($user['budget'] < $total_cost) {
-                    $_SESSION['error'] = 'Insufficient budget. Need ' . formatMarketValue($total_cost) . ' but only have ' . formatMarketValue($user['budget']);
+                if (($club['budget'] ?? 0) < $total_cost) {
+                    $_SESSION['error'] = 'Insufficient budget. Need ' . formatMarketValue($total_cost) . ' but only have ' . formatMarketValue($club['budget'] ?? 0);
                 } else {
                     // Update player contract
                     $player_found['contract_matches'] = $contract_length * 38; // Assuming 38 matches per season
@@ -77,14 +78,17 @@ try {
                     $player_found['contract_years'] = $contract_length;
 
                     // Deduct cost from budget
-                    $new_budget = $user['budget'] - $total_cost;
+                    $new_budget = ($club['budget'] ?? 0) - $total_cost;
 
                     // Update database
-                    $stmt = $db->prepare('UPDATE users SET team = :team, substitutes = :substitutes, budget = :budget WHERE id = :user_id');
-                    $stmt->bindValue(':team', json_encode($team), SQLITE3_TEXT);
-                    $stmt->bindValue(':substitutes', json_encode($substitutes), SQLITE3_TEXT);
+                    $combined = $team;
+                    if (count($combined) < 11) $combined = array_pad($combined, 11, null);
+                    else $combined = array_slice($combined, 0, 11);
+                    $combined = array_merge($combined, $substitutes);
+                    $stmt = $db->prepare('UPDATE user_club SET team = :team, budget = :budget WHERE user_uuid = :uuid');
+                    $stmt->bindValue(':team', json_encode($combined), SQLITE3_TEXT);
                     $stmt->bindValue(':budget', $new_budget, SQLITE3_INTEGER);
-                    $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+                    $stmt->bindValue(':uuid', $user_uuid, SQLITE3_TEXT);
                     $stmt->execute();
 
                     $_SESSION['success'] = 'Contract renewed successfully! Cost: ' . formatMarketValue($total_cost);
@@ -104,8 +108,11 @@ try {
         $player_uuid = $_POST['player_uuid'];
         $position = $_POST['position'];
 
-        $team = json_decode($user['team'], true) ?: [];
-        $substitutes = json_decode($user['substitutes'], true) ?: [];
+        $full_team = json_decode($club['team'] ?? '[]', true) ?: [];
+        if (!is_array($full_team)) $full_team = [];
+        if (count($full_team) < 11) $full_team = array_pad($full_team, 11, null);
+        $team = array_slice($full_team, 0, 11);
+        $substitutes = array_slice($full_team, 11);
 
         $updated = false;
         $player_found = null;
@@ -131,10 +138,13 @@ try {
         }
 
         if ($updated) {
-            $stmt = $db->prepare('UPDATE users SET team = :team, substitutes = :substitutes WHERE id = :user_id');
-            $stmt->bindValue(':team', json_encode($team), SQLITE3_TEXT);
-            $stmt->bindValue(':substitutes', json_encode($substitutes), SQLITE3_TEXT);
-            $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+            $combined = $team;
+            if (count($combined) < 11) $combined = array_pad($combined, 11, null);
+            else $combined = array_slice($combined, 0, 11);
+            $combined = array_merge($combined, $substitutes);
+            $stmt = $db->prepare('UPDATE user_club SET team = :team WHERE user_uuid = :uuid');
+            $stmt->bindValue(':team', json_encode($combined), SQLITE3_TEXT);
+            $stmt->bindValue(':uuid', $user_uuid, SQLITE3_TEXT);
             $stmt->execute();
 
             $_SESSION['success'] = 'Contract terminated successfully!';
@@ -144,15 +154,16 @@ try {
         exit;
     }
 
-    // Refresh user data after potential updates
-    $stmt = $db->prepare('SELECT * FROM users WHERE id = :id');
-    $stmt->bindValue(':id', $user_id, SQLITE3_INTEGER);
+    $stmt = $db->prepare('SELECT team, budget FROM user_club WHERE user_uuid = :uuid');
+    $stmt->bindValue(':uuid', $user_uuid, SQLITE3_TEXT);
     $result = $stmt->execute();
-    $user = $result->fetchArray(SQLITE3_ASSOC);
+    $club = $result->fetchArray(SQLITE3_ASSOC);
 
-    // Get current team and substitutes
-    $team = json_decode($user['team'], true) ?: [];
-    $substitutes = json_decode($user['substitutes'], true) ?: [];
+    $full_team = json_decode($club['team'] ?? '[]', true) ?: [];
+    if (!is_array($full_team)) $full_team = [];
+    if (count($full_team) < 11) $full_team = array_pad($full_team, 11, null);
+    $team = array_slice($full_team, 0, 11);
+    $substitutes = array_slice($full_team, 11);
 
     // Calculate contract statistics
     $total_players = count(array_filter($team)) + count(array_filter($substitutes));
@@ -262,7 +273,7 @@ startContent();
                 </div>
                 <div>
                     <p class="text-sm text-gray-600">Available Budget</p>
-                    <p class="text-lg font-bold"><?php echo formatMarketValue($user['budget']); ?></p>
+                    <p class="text-lg font-bold"><?php echo formatMarketValue($club['budget'] ?? 0); ?></p>
                 </div>
             </div>
         </div>

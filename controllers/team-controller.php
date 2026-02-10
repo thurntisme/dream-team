@@ -45,11 +45,22 @@ class TeamController
             throw new Exception('User not found');
         }
 
+        // Split stored team (full squad) into lineup (first 11) and substitutes (rest)
+        $storedTeam = [];
+        if (isset($user['team']) && is_string($user['team'])) {
+            $decoded = json_decode($user['team'], true);
+            if (is_array($decoded)) {
+                $storedTeam = $decoded;
+            }
+        }
+        $lineup = array_slice($storedTeam, 0, 11);
+        $substitutes = array_slice($storedTeam, 11);
+
         return [
             'user' => $user,
             'saved_formation' => $user['formation'] ?? '4-4-2',
-            'saved_team' => $user['team'] ?? '[]',
-            'saved_substitutes' => '[]',
+            'saved_team' => json_encode($lineup),
+            'saved_substitutes' => json_encode($substitutes),
             'user_budget' => $user['budget'] ?? DEFAULT_BUDGET,
             'max_players' => $user['max_players'] ?? DEFAULT_MAX_PLAYERS
         ];
@@ -154,9 +165,37 @@ class TeamController
      */
     public function updateTeamInDatabase($teamData, $substitutesData)
     {
+        $combined = [];
+        if (is_array($teamData)) {
+            $combined = $teamData;
+        }
+        if (is_array($substitutesData) && count($substitutesData) > 0) {
+            if (count($combined) < 11) {
+                $combined = array_pad($combined, 11, null);
+            } else {
+                $combined = array_slice($combined, 0, 11);
+            }
+            $combined = array_merge($combined, $substitutesData);
+        } else {
+            if (count($combined) > 11) {
+                $combined = array_slice($combined, 0, 11);
+            }
+        }
+
+        $stmtMax = $this->db->prepare('SELECT max_players FROM user_club WHERE user_uuid = :user_uuid');
+        if ($stmtMax !== false) {
+            $stmtMax->bindValue(':user_uuid', $this->userId, SQLITE3_TEXT);
+            $resMax = $stmtMax->execute();
+            $rowMax = $resMax ? $resMax->fetchArray(SQLITE3_ASSOC) : [];
+            $maxPlayers = $rowMax['max_players'] ?? DEFAULT_MAX_PLAYERS;
+            if (is_numeric($maxPlayers) && $maxPlayers > 0 && count($combined) > (int)$maxPlayers) {
+                $combined = array_slice($combined, 0, (int)$maxPlayers);
+            }
+        }
+
         $stmt = $this->db->prepare('UPDATE user_club SET team = :team WHERE user_uuid = :user_uuid');
         if ($stmt !== false) {
-            $stmt->bindValue(':team', json_encode($teamData), SQLITE3_TEXT);
+            $stmt->bindValue(':team', json_encode($combined), SQLITE3_TEXT);
             $stmt->bindValue(':user_uuid', $this->userId, SQLITE3_TEXT);
             return $stmt->execute();
         }

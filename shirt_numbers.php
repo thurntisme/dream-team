@@ -9,14 +9,14 @@ require_once 'partials/layout.php';
 try {
     $db = getDbConnection();
 
-    // Get current user
-    $user_id = $_SESSION['user_id'];
-    $stmt = $db->prepare('SELECT * FROM users WHERE id = :id');
-    $stmt->bindValue(':id', $user_id, SQLITE3_INTEGER);
+    // Get current club (unified team stored in user_club.team)
+    $user_uuid = $_SESSION['user_uuid'];
+    $stmt = $db->prepare('SELECT team, max_players FROM user_club WHERE user_uuid = :uuid');
+    $stmt->bindValue(':uuid', $user_uuid, SQLITE3_TEXT);
     $result = $stmt->execute();
-    $user = $result->fetchArray(SQLITE3_ASSOC);
+    $club = $result->fetchArray(SQLITE3_ASSOC);
 
-    if (!$user) {
+    if (!$club) {
         header('Location: index.php');
         exit;
     }
@@ -32,9 +32,15 @@ try {
         if ($shirt_number < 1 || $shirt_number > 99) {
             $_SESSION['error'] = 'Shirt number must be between 1 and 99';
         } else {
-            // Get current team and substitutes
-            $team = json_decode($user['team'], true) ?: [];
-            $substitutes = json_decode($user['substitutes'], true) ?: [];
+            // Get current full squad, then split into team (first 11) and substitutes (rest)
+            $full_team = json_decode($club['team'] ?? '[]', true) ?: [];
+            if (!is_array($full_team)) $full_team = [];
+            // Ensure at least 11 entries for team
+            if (count($full_team) < 11) {
+                $full_team = array_pad($full_team, 11, null);
+            }
+            $team = array_slice($full_team, 0, 11);
+            $substitutes = array_slice($full_team, 11);
 
             // Get current player's shirt number if reassigning
             $current_player_number = null;
@@ -128,10 +134,18 @@ try {
             }
 
             if ($updated) {
-                $stmt = $db->prepare('UPDATE users SET team = :team, substitutes = :substitutes WHERE id = :user_id');
-                $stmt->bindValue(':team', json_encode($team), SQLITE3_TEXT);
-                $stmt->bindValue(':substitutes', json_encode($substitutes), SQLITE3_TEXT);
-                $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+                // Recombine into unified array: first 11 team, then substitutes
+                $combined = $team;
+                if (count($combined) < 11) {
+                    $combined = array_pad($combined, 11, null);
+                } else {
+                    $combined = array_slice($combined, 0, 11);
+                }
+                $combined = array_merge($combined, $substitutes);
+
+                $stmt = $db->prepare('UPDATE user_club SET team = :team WHERE user_uuid = :uuid');
+                $stmt->bindValue(':team', json_encode($combined), SQLITE3_TEXT);
+                $stmt->bindValue(':uuid', $user_uuid, SQLITE3_TEXT);
                 $stmt->execute();
 
                 if ($number_taken && $owner_uuid !== $player_uuid) {
@@ -157,8 +171,13 @@ try {
         $player_uuid = $_POST['player_uuid'];
         $position = $_POST['position'];
 
-        $team = json_decode($user['team'], true) ?: [];
-        $substitutes = json_decode($user['substitutes'], true) ?: [];
+        $full_team = json_decode($club['team'] ?? '[]', true) ?: [];
+        if (!is_array($full_team)) $full_team = [];
+        if (count($full_team) < 11) {
+            $full_team = array_pad($full_team, 11, null);
+        }
+        $team = array_slice($full_team, 0, 11);
+        $substitutes = array_slice($full_team, 11);
 
         $updated = false;
 
@@ -195,8 +214,13 @@ try {
     }
 
     // Get current team and substitutes
-    $team = json_decode($user['team'], true) ?: [];
-    $substitutes = json_decode($user['substitutes'], true) ?: [];
+    $full_team = json_decode($club['team'] ?? '[]', true) ?: [];
+    if (!is_array($full_team)) $full_team = [];
+    if (count($full_team) < 11) {
+        $full_team = array_pad($full_team, 11, null);
+    }
+    $team = array_slice($full_team, 0, 11);
+    $substitutes = array_slice($full_team, 11);
 
     // Get all used shirt numbers and create mapping to player names
     $used_numbers = [];

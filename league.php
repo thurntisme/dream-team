@@ -13,10 +13,22 @@ try {
 
     // Database tables are now created in install.php
 
-    // Get current user
-    $user_id = $_SESSION['user_id'];
-    $stmt = $db->prepare('SELECT * FROM users WHERE id = :id');
-    $stmt->bindValue(':id', $user_id, SQLITE3_INTEGER);
+    // Get current user by uuid and club details
+    $user_uuid = $_SESSION['user_uuid'];
+    $stmt = $db->prepare('
+        SELECT 
+            u.id,
+            u.uuid,
+            c.club_name,
+            c.formation,
+            c.team,
+            c.budget
+        FROM users u
+        LEFT JOIN user_club c ON c.user_uuid = u.uuid
+        WHERE u.uuid = :uuid
+        LIMIT 1
+    ');
+    $stmt->bindValue(':uuid', $user_uuid, SQLITE3_TEXT);
     $result = $stmt->execute();
     $user = $result->fetchArray(SQLITE3_ASSOC);
 
@@ -24,6 +36,8 @@ try {
         header('Location: index.php');
         exit;
     }
+
+    $user_id = (int)($user['id'] ?? 0);
 
     // Validate club eligibility for league
     $club_validation = validateClubForLeague($user);
@@ -61,7 +75,7 @@ try {
         createLeagueTables($db);
 
         // Create league teams and fixtures
-        createLeagueTeams($db, $user_id, $next_season);
+        createLeagueTeams($db, $user['uuid'], $next_season);
         generateFixtures($db, $next_season);
 
         $_SESSION['success_message'] = "League {$next_season} created successfully! Your season begins now.";
@@ -83,7 +97,7 @@ try {
         $next_season = getNextSeasonIdentifier($db);
 
         // Create league teams and fixtures for new season
-        createLeagueTeams($db, $user_id, $next_season);
+        createLeagueTeams($db, $user['uuid'], $next_season);
         generateFixtures($db, $next_season);
 
         $_SESSION['success_message'] = "League {$next_season} updated successfully! New season begins now.";

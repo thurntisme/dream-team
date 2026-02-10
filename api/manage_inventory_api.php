@@ -55,7 +55,7 @@ try {
 
     switch ($action) {
         case 'assign':
-            // Get user's formation and current team data
+            // Get user's full team (lineup + substitutes) and formation
             $stmt = $db->prepare('SELECT formation, team, max_players FROM user_club WHERE user_uuid = :user_uuid');
             $stmt->bindValue(':user_uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
             $result = $stmt->execute();
@@ -65,64 +65,50 @@ try {
                 throw new Exception('User not found');
             }
 
-            $saved_team = json_decode($user_data['team'] ?? '[]', true) ?: [];
+            $full_team = json_decode($user_data['team'] ?? '[]', true) ?: [];
             $formation = $user_data['formation'] ?? '4-4-2';
             $max_players = $user_data['max_players'] ?? 23;
 
-            // Determine total starting slots based on formation
-            $positions = FORMATIONS[$formation]['positions'] ?? [];
-            $total_slots = 0;
-            foreach ($positions as $line) {
-                $total_slots += count($line);
+            // Calculate lineup slot count (always 11)
+            $lineup_size = 11;
+            // Ensure array has at least 11 entries (lineup), pad with nulls
+            if (count($full_team) < $lineup_size) {
+                $full_team = array_pad($full_team, $lineup_size, null);
             }
 
-            // Initialize team array to formation slot size if empty
-            if (!is_array($saved_team) || count($saved_team) === 0) {
-                $saved_team = array_fill(0, $total_slots, null);
-            } else if (count($saved_team) < $total_slots) {
-                // Pad with nulls if team shorter than formation slots
-                $saved_team = array_pad($saved_team, $total_slots, null);
-            }
+            // Split into lineup and substitutes
+            $lineup = array_slice($full_team, 0, $lineup_size);
+            $subs = array_slice($full_team, $lineup_size);
 
-            // Count current starting players
-            $starting_players = count(array_filter($saved_team, function($p) { return $p !== null; }));
-            if ($starting_players >= $max_players) {
+            // Count total current players (non-null) across lineup and subs
+            $total_players = count(array_filter($lineup, fn($p) => $p !== null)) + count(array_filter($subs, fn($p) => $p !== null));
+            if ($total_players >= $max_players) {
                 throw new Exception('Your squad is full. Maximum players allowed: ' . $max_players);
             }
 
-            // Prevent duplicates by name
-            foreach ($saved_team as $existing_player) {
+            // Prevent duplicates across entire squad by name
+            foreach (array_merge($lineup, $subs) as $existing_player) {
                 if (
                     $existing_player && isset($existing_player['name']) &&
                     strtolower($existing_player['name']) === strtolower($player_data['name'])
                 ) {
-                    throw new Exception('You already have this player in your team');
+                    throw new Exception('You already have this player in your squad');
                 }
             }
 
             // Initialize player condition
             $player_data = initializePlayerCondition($player_data);
 
-            // Assign to first empty slot; if none, error
-            $assigned = false;
-            for ($i = 0; $i < $total_slots; $i++) {
-                if ($saved_team[$i] === null) {
-                    $saved_team[$i] = $player_data;
-                    $assigned = true;
-                    break;
-                }
-            }
+            // Append to substitutes list
+            $subs[] = $player_data;
 
-            if (!$assigned) {
-                throw new Exception('No empty slot in your starting lineup. Manage your team formation first.');
-            }
-
-            // Persist updated team
+            // Recombine and persist
+            $combined = array_merge($lineup, $subs);
             $stmt = $db->prepare('UPDATE user_club SET team = :team WHERE user_uuid = :user_uuid');
-            $stmt->bindValue(':team', json_encode($saved_team), SQLITE3_TEXT);
+            $stmt->bindValue(':team', json_encode($combined), SQLITE3_TEXT);
             $stmt->bindValue(':user_uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
             if (!$stmt->execute()) {
-                throw new Exception('Failed to add player to team: ' . $db->lastErrorMsg());
+                throw new Exception('Failed to add player to squad: ' . $db->lastErrorMsg());
             }
 
             // Mark inventory item as assigned

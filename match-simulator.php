@@ -29,22 +29,27 @@ function handleLeagueMatch($match_id)
 {
     try {
         $db = getDbConnection();
-        $user_id = $_SESSION['user_id'];
+        $user_uuid = $_SESSION['user_uuid'];
 
         // Get match details
         $stmt = $db->prepare('
             SELECT lm.*, 
-                   ht.name as home_team_name, ht.user_id as home_user_id,
-                   at.name as away_team_name, at.user_id as away_user_id
+                   ht.name as home_team_name, ht.user_uuid as home_user_uuid,
+                   at.name as away_team_name, at.user_uuid as away_user_uuid
             FROM league_matches lm
             JOIN league_teams ht ON lm.home_team_id = ht.id
             JOIN league_teams at ON lm.away_team_id = at.id
-            WHERE lm.id = :match_id AND lm.status = "scheduled"
-            AND (ht.user_id = :user_id OR at.user_id = :user_id)
+            WHERE lm.id = :match_id AND lm.status = \'scheduled\'
+            AND (ht.user_uuid = :user_uuid OR at.user_uuid = :user_uuid)
         ');
         $stmt->bindValue(':match_id', $match_id, SQLITE3_INTEGER);
-        $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+        $stmt->bindValue(':user_uuid', $user_uuid, SQLITE3_TEXT);
         $result = $stmt->execute();
+        if ($result === false) {
+            $_SESSION['error'] = 'Failed to load match details.';
+            header('Location: league.php');
+            exit;
+        }
         $match = $result->fetchArray(SQLITE3_ASSOC);
 
         if (!$match) {
@@ -54,13 +59,13 @@ function handleLeagueMatch($match_id)
         }
 
         // Determine user's role and get team data
-        $is_home = ($match['home_user_id'] == $user_id);
-        $opponent_user_id = $is_home ? $match['away_user_id'] : $match['home_user_id'];
+        $is_home = ($match['home_user_uuid'] === $user_uuid);
+        $opponent_user_uuid = $is_home ? $match['away_user_uuid'] : $match['home_user_uuid'];
         $opponent_team_id = $is_home ? $match['away_team_id'] : $match['home_team_id'];
 
         // Get user's team data
-        $stmt = $db->prepare('SELECT * FROM users WHERE id = :id');
-        $stmt->bindValue(':id', $user_id, SQLITE3_INTEGER);
+        $stmt = $db->prepare('SELECT * FROM users WHERE uuid = :uuid');
+        $stmt->bindValue(':uuid', $user_uuid, SQLITE3_TEXT);
         $result = $stmt->execute();
         $user_data = $result->fetchArray(SQLITE3_ASSOC);
 
@@ -68,9 +73,9 @@ function handleLeagueMatch($match_id)
         $opponent_data = null;
         $opponent_roster = null;
 
-        if ($opponent_user_id) {
-            $stmt = $db->prepare('SELECT * FROM users WHERE id = :id');
-            $stmt->bindValue(':id', $opponent_user_id, SQLITE3_INTEGER);
+        if ($opponent_user_uuid) {
+            $stmt = $db->prepare('SELECT * FROM users WHERE uuid = :uuid');
+            $stmt->bindValue(':uuid', $opponent_user_uuid, SQLITE3_TEXT);
             $result = $stmt->execute();
             $opponent_data = $result->fetchArray(SQLITE3_ASSOC);
         }
@@ -87,16 +92,28 @@ function handleLeagueMatch($match_id)
         // Handle match simulation
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['simulate_match'])) {
             // Simulate ALL matches in the current gameweek, including the user's match
-            $gameweek_results = simulateCurrentGameweek($db, $user_id, $match['season'], $match['gameweek']);
+            // Resolve numeric id for simulation functions that accept user_id
+            $stmtId = $db->prepare('SELECT id FROM users WHERE uuid = :uuid');
+            $stmtId->bindValue(':uuid', $user_uuid, SQLITE3_TEXT);
+            $resId = $stmtId->execute();
+            $rowId = $resId ? $resId->fetchArray(SQLITE3_ASSOC) : null;
+            $user_id_resolved = $rowId['id'] ?? null;
+
+            $gameweek_results = simulateCurrentGameweek($db, (int)$user_id_resolved, $match['season'], $match['gameweek']);
 
             // Store results in session just in case
             $_SESSION['gameweek_results'] = $gameweek_results;
 
             // Check if our match was simulated successfully
-            $stmt_check = $db->prepare("SELECT status FROM league_matches WHERE id = :id");
+        $stmt_check = $db->prepare("SELECT status FROM league_matches WHERE id = :id");
             $stmt_check->bindValue(':id', $match_id, SQLITE3_INTEGER);
             $res_check = $stmt_check->execute();
-            $row_check = $res_check->fetchArray(SQLITE3_ASSOC);
+        if ($res_check === false) {
+            $_SESSION['error'] = 'Failed to verify match status.';
+            header('Location: league.php');
+            exit;
+        }
+        $row_check = $res_check->fetchArray(SQLITE3_ASSOC);
 
             if ($row_check && $row_check['status'] === 'completed') {
                 // Redirect to match result page
@@ -876,22 +893,27 @@ function displayMatchResult($match_id)
 {
     try {
         $db = getDbConnection();
-        $user_id = $_SESSION['user_id'];
+        $user_uuid = $_SESSION['user_uuid'];
 
         // Get match details
         $stmt = $db->prepare('
             SELECT lm.*, 
-                   ht.name as home_team_name, ht.user_id as home_user_id,
-                   at.name as away_team_name, at.user_id as away_user_id
+                   ht.name as home_team_name, ht.user_uuid as home_user_uuid,
+                   at.name as away_team_name, at.user_uuid as away_user_uuid
             FROM league_matches lm
             JOIN league_teams ht ON lm.home_team_id = ht.id
             JOIN league_teams at ON lm.away_team_id = at.id
-            WHERE lm.id = :match_id AND lm.status = "completed"
-            AND (ht.user_id = :user_id OR at.user_id = :user_id)
+            WHERE lm.id = :match_id AND lm.status = \'completed\'
+            AND (ht.user_uuid = :user_uuid OR at.user_uuid = :user_uuid)
         ');
         $stmt->bindValue(':match_id', $match_id, SQLITE3_INTEGER);
-        $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+        $stmt->bindValue(':user_uuid', $user_uuid, SQLITE3_TEXT);
         $result = $stmt->execute();
+        if ($result === false) {
+            $_SESSION['error'] = 'Failed to load match result.';
+            header('Location: league.php');
+            exit;
+        }
         $match = $result->fetchArray(SQLITE3_ASSOC);
 
         if (!$match) {
@@ -901,13 +923,13 @@ function displayMatchResult($match_id)
         }
 
         // Get user's current data
-        $stmt = $db->prepare('SELECT u.budget, u.fans, s.capacity, s.level FROM users u LEFT JOIN stadiums s ON u.id = s.user_id WHERE u.id = :id');
-        $stmt->bindValue(':id', $user_id, SQLITE3_INTEGER);
+        $stmt = $db->prepare('SELECT u.budget, u.fans, s.capacity, s.level FROM users u LEFT JOIN stadiums s ON u.id = s.user_id WHERE u.uuid = :uuid');
+        $stmt->bindValue(':uuid', $user_uuid, SQLITE3_TEXT);
         $result = $stmt->execute();
         $user_data = $result->fetchArray(SQLITE3_ASSOC);
 
         // Determine user's role
-        $is_home = ($match['home_user_id'] == $user_id);
+        $is_home = ($match['home_user_uuid'] === $user_uuid);
         $user_score = $is_home ? $match['home_score'] : $match['away_score'];
         $opponent_score = $is_home ? $match['away_score'] : $match['home_score'];
 
@@ -935,7 +957,13 @@ function displayMatchResult($match_id)
             
             // 1. Get Fan Revenue Breakdown
             // Pass a positive value to ensure we get the breakdown (value doesn't matter for the breakdown generation)
-            $fan_breakdown = getFanRevenueBreakdown($db, $user_id, $is_home, 100);
+            // Resolve numeric id for functions expecting user_id
+            $stmtId = $db->prepare('SELECT id FROM users WHERE uuid = :uuid');
+            $stmtId->bindValue(':uuid', $user_uuid, SQLITE3_TEXT);
+            $resId = $stmtId->execute();
+            $rowId = $resId ? $resId->fetchArray(SQLITE3_ASSOC) : null;
+            $user_id_resolved = $rowId['id'] ?? null;
+            $fan_breakdown = getFanRevenueBreakdown($db, (int)$user_id_resolved, $is_home, 100);
             
             foreach ($fan_breakdown as $item) {
                 $rewards['breakdown'][] = $item;
