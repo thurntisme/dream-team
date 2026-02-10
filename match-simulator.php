@@ -9,11 +9,17 @@ require_once 'includes/league_functions.php';
 // Check if this is a league match or club challenge
 $match_id = $_GET['match_id'] ?? null;
 $match_result_id = $_GET['match_result'] ?? null;
+$match_uuid = $_GET['match_uuid'] ?? null;
+$match_result_uuid = $_GET['match_result_uuid'] ?? null;
 $opponent_id = $_GET['opponent'] ?? null;
 
-if ($match_result_id) {
+if ($match_result_uuid) {
+    displayMatchResultByUUID($match_result_uuid);
+} elseif ($match_result_id) {
     // This is a match result display
     displayMatchResult($match_result_id);
+} elseif ($match_uuid) {
+    handleLeagueMatchByUUID($match_uuid);
 } elseif ($match_id) {
     // This is a league match preview
     handleLeagueMatch($match_id);
@@ -137,6 +143,96 @@ function handleLeagueMatch($match_id)
 
         $db->close();
         displayLeagueMatch($match, $user_data, $opponent_data, $is_home, $opponent_roster);
+    } catch (Exception $e) {
+        error_log("League match error: " . $e->getMessage());
+        $_SESSION['error'] = 'An error occurred while loading the match.';
+        header('Location: league.php');
+        exit;
+    }
+}
+
+function handleLeagueMatchByUUID($match_uuid)
+{
+    try {
+        $db = getDbConnection();
+        $user_uuid = $_SESSION['user_uuid'];
+
+        $stmt = $db->prepare('
+            SELECT lm.*, 
+                   ht.name as home_team_name, ht.user_uuid as home_user_uuid,
+                   at.name as away_team_name, at.user_uuid as away_user_uuid
+            FROM league_matches lm
+            JOIN league_teams ht ON lm.home_team_id = ht.id
+            JOIN league_teams at ON lm.away_team_id = at.id
+            WHERE lm.uuid = :match_uuid AND lm.status = \'scheduled\'
+            AND (ht.user_uuid = :user_uuid OR at.user_uuid = :user_uuid)
+        ');
+        $stmt->bindValue(':match_uuid', $match_uuid, SQLITE3_TEXT);
+        $stmt->bindValue(':user_uuid', $user_uuid, SQLITE3_TEXT);
+        $result = $stmt->execute();
+        if ($result === false) {
+            $_SESSION['error'] = 'Failed to load match details.';
+            header('Location: league.php');
+            exit;
+        }
+        $match = $result->fetchArray(SQLITE3_ASSOC);
+
+        if (!$match) {
+            $_SESSION['error'] = 'Match not found or not available to play.';
+            header('Location: league.php');
+            exit;
+        }
+
+        $is_home = ($match['home_user_uuid'] === $user_uuid);
+        $opponent_user_uuid = $is_home ? $match['away_user_uuid'] : $match['home_user_uuid'];
+
+        // Get user team
+        $stmt = $db->prepare('SELECT name, club_name, formation, team, substitutes, budget FROM users WHERE uuid = :uuid');
+        $stmt->bindValue(':uuid', $user_uuid, SQLITE3_TEXT);
+        $result = $stmt->execute();
+        $user_data = $result->fetchArray(SQLITE3_ASSOC);
+
+        // Get opponent - for league matches, load roster from league_team_rosters
+        $stmt = $db->prepare('SELECT id FROM league_teams WHERE season = :season AND user_uuid = :uuid');
+        $stmt->bindValue(':season', $match['season'], SQLITE3_TEXT);
+        $stmt->bindValue(':uuid', $opponent_user_uuid, SQLITE3_TEXT);
+        $resTeam = $stmt->execute();
+        $rowTeam = $resTeam ? $resTeam->fetchArray(SQLITE3_ASSOC) : null;
+        $opponent_roster = null;
+        if ($rowTeam) {
+            $team_id = (int)$rowTeam['id'];
+            $stmt = $db->prepare('SELECT player_data FROM league_team_rosters WHERE league_team_id = :id AND season = :season');
+            $stmt->bindValue(':id', $team_id, SQLITE3_INTEGER);
+            $stmt->bindValue(':season', $match['season'], SQLITE3_TEXT);
+            $resRoster = $stmt->execute();
+            $rowRoster = $resRoster ? $resRoster->fetchArray(SQLITE3_ASSOC) : null;
+            if ($rowRoster) {
+                $opponent_roster = json_decode($rowRoster['player_data'], true);
+            }
+        }
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['simulate_match'])) {
+            $stmt_check = $db->prepare("SELECT status FROM league_matches WHERE uuid = :uuid");
+            $stmt_check->bindValue(':uuid', $match_uuid, SQLITE3_TEXT);
+            $res_check = $stmt_check->execute();
+            $row_check = $res_check ? $res_check->fetchArray(SQLITE3_ASSOC) : null;
+            if ($row_check && $row_check['status'] === 'scheduled') {
+                // Resolve numeric id for simulation
+                $stmt_id = $db->prepare("SELECT id FROM league_matches WHERE uuid = :uuid");
+                $stmt_id->bindValue(':uuid', $match_uuid, SQLITE3_TEXT);
+                $res_id = $stmt_id->execute();
+                $row_id = $res_id ? $res_id->fetchArray(SQLITE3_ASSOC) : null;
+                $match_id = (int)($row_id['id'] ?? 0);
+                if ($match_id > 0 && simulateMatch($db, $match_id, (int)$_SESSION['user_id'])) {
+                    header('Location: match-simulator.php?match_result_uuid=' . $match_uuid);
+                    exit;
+                }
+                $_SESSION['error'] = 'Failed to simulate match.';
+            }
+        }
+
+        $db->close();
+        displayLeagueMatch($match, $user_data, null, $is_home, null);
     } catch (Exception $e) {
         error_log("League match error: " . $e->getMessage());
         $_SESSION['error'] = 'An error occurred while loading the match.';
@@ -566,24 +662,48 @@ function displayLeagueMatch($match, $user_data, $opponent_data, $is_home, $oppon
             if (fitnessOverride) {
                 return true;
             }
-            const team = JSON.parse(teamData.team || '[]');
-            const substitutes = JSON.parse(teamData.substitutes || '[]');
-
-            // Combine all players
-            const allPlayers = [...team, ...substitutes];
-
-            // Find players with fitness < 20
-            const lowFitnessPlayers = allPlayers.filter(player =>
-                player && player.fitness !== undefined && player.fitness < 20
-            );
-
-            if (lowFitnessPlayers.length > 0) {
-                // Show warning modal
-                showFitnessWarning(lowFitnessPlayers);
-                return false; // Prevent form submission
+            if (typeof teamData === 'string') {
+                try {
+                    teamData = JSON.parse(teamData);
+                } catch (e) {
+                    teamData = {};
+                }
             }
-
-            return true; // Allow form submission
+            const parsePlayers = (src) => {
+                if (!src) return [];
+                if (Array.isArray(src)) return src;
+                if (typeof src === 'string') {
+                    try {
+                        const arr = JSON.parse(src);
+                        return Array.isArray(arr) ? arr : [];
+                    } catch (e) {
+                        return [];
+                    }
+                }
+                return [];
+            };
+            const team = parsePlayers(teamData.team);
+            const substitutes = parsePlayers(teamData.substitutes);
+            const allPlayers = [...team, ...substitutes];
+            const coerceFitness = (val) => {
+                if (val === undefined || val === null) return NaN;
+                if (typeof val === 'number') return val;
+                if (typeof val === 'string') {
+                    const m = val.match(/\d+/);
+                    return m ? Number(m[0]) : NaN;
+                }
+                return NaN;
+            };
+            const lowFitnessPlayers = allPlayers.filter((player) => {
+                if (!player || player.fitness === undefined || player.fitness === null) return false;
+                const f = coerceFitness(player.fitness);
+                return Number.isFinite(f) && f < 20;
+            });
+            if (lowFitnessPlayers.length > 0) {
+                showFitnessWarning(lowFitnessPlayers);
+                return false;
+            }
+            return true;
         }
 
         function showFitnessWarning(players) {
@@ -1029,6 +1149,27 @@ function displayMatchResult($match_id)
     } catch (Exception $e) {
         error_log("Match result error: " . $e->getMessage());
         $_SESSION['error'] = 'An error occurred while loading the match result.';
+        header('Location: league.php');
+        exit;
+    }
+}
+
+function displayMatchResultByUUID($match_uuid)
+{
+    try {
+        $db = getDbConnection();
+        $stmt = $db->prepare('SELECT id FROM league_matches WHERE uuid = :uuid');
+        $stmt->bindValue(':uuid', $match_uuid, SQLITE3_TEXT);
+        $res = $stmt->execute();
+        $row = $res ? $row = $res->fetchArray(SQLITE3_ASSOC) : null;
+        if (!$row) {
+            $_SESSION['error'] = 'Match not found.';
+            header('Location: league.php');
+            exit;
+        }
+        displayMatchResult((int)$row['id']);
+    } catch (Throwable $e) {
+        $_SESSION['error'] = 'Failed to load match result.';
         header('Location: league.php');
         exit;
     }

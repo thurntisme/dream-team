@@ -665,14 +665,37 @@ startContent();
                     </div>
 
                     <?php if ($next_match): ?>
-                        <form method="GET" action="match-simulator.php" class="inline">
-                            <input type="hidden" name="match_id" value="<?php echo $next_match['id']; ?>">
-                            <button type="submit"
-                                class="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 font-medium transition-colors flex items-center gap-2 shadow-md">
-                                <i data-lucide="play" class="w-4 h-4"></i>
-                                Play Match
-                            </button>
-                        </form>
+                        <button id="playMatchBtn"
+                            class="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 font-medium transition-colors flex items-center gap-2 shadow-md">
+                            <i data-lucide="play" class="w-4 h-4"></i>
+                            Play Match
+                        </button>
+                        <script>
+                            (function() {
+                                const btn = document.getElementById('playMatchBtn');
+                                if (!btn) return;
+                                btn.addEventListener('click', async function () {
+                                    btn.disabled = true;
+                                    btn.classList.add('opacity-50');
+                                    try {
+                                        const res = await fetch('api/generate_next_match_api.php', { method: 'POST' });
+                                        const json = await res.json();
+                                        if (json && json.ok && json.match_uuid) {
+                                            window.location.href = 'match-simulator.php?match_uuid=' + encodeURIComponent(json.match_uuid);
+                                        } else if (json && json.match_id) {
+                                            window.location.href = 'match-simulator.php?match_id=' + encodeURIComponent(json.match_id);
+                                        } else {
+                                            alert('Failed to prepare the match.');
+                                        }
+                                    } catch (e) {
+                                        alert('Network error preparing match.');
+                                    } finally {
+                                        btn.disabled = false;
+                                        btn.classList.remove('opacity-50');
+                                    }
+                                });
+                            })();
+                        </script>
                     <?php endif; ?>
                 </div>
             </div>

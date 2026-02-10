@@ -2,6 +2,7 @@
 // League system functions
 
 // League club names are now defined in config/constants.php
+require_once __DIR__ . '/utility_functions.php';
 
 function initializeLeague($db, $user_uuid)
 {
@@ -9,7 +10,7 @@ function initializeLeague($db, $user_uuid)
     createLeagueTables($db);
 
     // Check if league is already initialized for current season
-    $current_season = date('Y');
+    $current_season = getCurrentSeasonIdentifier($db);
     $stmt = $db->prepare('SELECT COUNT(*) as count FROM league_teams WHERE season = :season');
     $stmt->bindValue(':season', $current_season, SQLITE3_TEXT);
     $result = $stmt->execute();
@@ -63,6 +64,7 @@ function createLeagueTables($db)
             away_score INT NULL,
             status VARCHAR(20) DEFAULT "scheduled",
             match_date DATE NOT NULL,
+            uuid CHAR(16) NULL,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (home_team_id) REFERENCES league_teams(id),
             FOREIGN KEY (away_team_id) REFERENCES league_teams(id)
@@ -70,6 +72,7 @@ function createLeagueTables($db)
         $db->exec('CREATE INDEX IF NOT EXISTS idx_league_matches_season_week ON league_matches (season, gameweek)');
         $db->exec('CREATE INDEX IF NOT EXISTS idx_league_matches_home ON league_matches (home_team_id)');
         $db->exec('CREATE INDEX IF NOT EXISTS idx_league_matches_away ON league_matches (away_team_id)');
+        $db->exec('CREATE INDEX IF NOT EXISTS idx_league_matches_uuid ON league_matches (uuid)');
     } else {
         $sql = 'CREATE TABLE IF NOT EXISTS league_teams (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -111,14 +114,100 @@ function createLeagueTables($db)
             away_score INTEGER,
             status TEXT DEFAULT "scheduled",
             match_date DATE NOT NULL,
+            uuid TEXT NULL,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (home_team_id) REFERENCES league_teams(id),
             FOREIGN KEY (away_team_id) REFERENCES league_teams(id)
         )';
         $db->exec($sql);
-        $db->exec('CREATE INDEX IF NOT EXISTS idx_league_matches_season_week ON league_matches (season, gameweek)');
-        $db->exec('CREATE INDEX IF NOT EXISTS idx_league_matches_home ON league_matches (home_team_id)');
-        $db->exec('CREATE INDEX IF NOT EXISTS idx_league_matches_away ON league_matches (away_team_id)');
+        // Ensure indexes (MySQL-safe for uuid; others kept as-is)
+        try {
+            $stmtIdx = $db->prepare('SELECT COUNT(*) as c FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = :t AND index_name = :i');
+            if ($stmtIdx) {
+                $stmtIdx->bindValue(':t', 'league_matches', SQLITE3_TEXT);
+                $stmtIdx->bindValue(':i', 'idx_league_matches_season_week', SQLITE3_TEXT);
+                $resIdx = $stmtIdx->execute();
+                $rowIdx = $resIdx ? $resIdx->fetchArray(SQLITE3_ASSOC) : ['c' => 0];
+                if ((int)($rowIdx['c'] ?? 0) === 0) {
+                    $db->exec('CREATE INDEX idx_league_matches_season_week ON league_matches (season, gameweek)');
+                }
+                $stmtIdx->bindValue(':i', 'idx_league_matches_home', SQLITE3_TEXT);
+                $resIdx = $stmtIdx->execute();
+                $rowIdx = $resIdx ? $resIdx->fetchArray(SQLITE3_ASSOC) : ['c' => 0];
+                if ((int)($rowIdx['c'] ?? 0) === 0) {
+                    $db->exec('CREATE INDEX idx_league_matches_home ON league_matches (home_team_id)');
+                }
+                $stmtIdx->bindValue(':i', 'idx_league_matches_away', SQLITE3_TEXT);
+                $resIdx = $stmtIdx->execute();
+                $rowIdx = $resIdx ? $resIdx->fetchArray(SQLITE3_ASSOC) : ['c' => 0];
+                if ((int)($rowIdx['c'] ?? 0) === 0) {
+                    $db->exec('CREATE INDEX idx_league_matches_away ON league_matches (away_team_id)');
+                }
+            } else {
+                // SQLite fallback
+                $db->exec('CREATE INDEX IF NOT EXISTS idx_league_matches_season_week ON league_matches (season, gameweek)');
+                $db->exec('CREATE INDEX IF NOT EXISTS idx_league_matches_home ON league_matches (home_team_id)');
+                $db->exec('CREATE INDEX IF NOT EXISTS idx_league_matches_away ON league_matches (away_team_id)');
+            }
+        } catch (Throwable $e) {}
+        // Ensure uuid column
+        try {
+            $stmtCol = $db->prepare('SELECT COUNT(*) as c FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = :t AND column_name = :c');
+            if ($stmtCol) {
+                $stmtCol->bindValue(':t', 'league_matches', SQLITE3_TEXT);
+                $stmtCol->bindValue(':c', 'uuid', SQLITE3_TEXT);
+                $resCol = $stmtCol->execute();
+                $rowCol = $resCol ? $resCol->fetchArray(SQLITE3_ASSOC) : ['c' => 0];
+                if ((int)($rowCol['c'] ?? 0) === 0) {
+                    $db->exec('ALTER TABLE league_matches ADD COLUMN uuid CHAR(16) NULL');
+                }
+            } else {
+                // SQLite fallback
+                $res = $db->query("PRAGMA table_info(league_matches)");
+                $hasUuid = false;
+                while ($r = $res->fetchArray(SQLITE3_ASSOC)) {
+                    if (($r['name'] ?? '') === 'uuid') {
+                        $hasUuid = true;
+                        break;
+                    }
+                }
+                if (!$hasUuid) {
+                    $db->exec('ALTER TABLE league_matches ADD COLUMN uuid TEXT NULL');
+                }
+            }
+        } catch (Throwable $e) {}
+        // Ensure uuid index
+        try {
+            $stmtIdx = $db->prepare('SELECT COUNT(*) as c FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = :t AND index_name = :i');
+            if ($stmtIdx) {
+                $stmtIdx->bindValue(':t', 'league_matches', SQLITE3_TEXT);
+                $stmtIdx->bindValue(':i', 'idx_league_matches_uuid', SQLITE3_TEXT);
+                $resIdx = $stmtIdx->execute();
+                $rowIdx = $resIdx ? $resIdx->fetchArray(SQLITE3_ASSOC) : ['c' => 0];
+                if ((int)($rowIdx['c'] ?? 0) === 0) {
+                    $db->exec('CREATE INDEX idx_league_matches_uuid ON league_matches (uuid)');
+                }
+            } else {
+                // SQLite fallback
+                $db->exec('CREATE INDEX IF NOT EXISTS idx_league_matches_uuid ON league_matches (uuid)');
+            }
+        } catch (Throwable $e) {}
+        // Backfill missing uuids
+        try {
+            $stmt = $db->prepare('SELECT id, uuid FROM league_matches WHERE uuid IS NULL OR uuid = ""');
+            if ($stmt) {
+                $res = $stmt->execute();
+                while ($row = $res->fetchArray(SQLITE3_ASSOC)) {
+                    $u = generateUUID();
+                    $up = $db->prepare('UPDATE league_matches SET uuid = :uuid WHERE id = :id');
+                    if ($up) {
+                        $up->bindValue(':uuid', $u, SQLITE3_TEXT);
+                        $up->bindValue(':id', (int)$row['id'], SQLITE3_INTEGER);
+                        $up->execute();
+                    }
+                }
+            }
+        } catch (Throwable $e) {}
     }
 }
 
@@ -360,6 +449,24 @@ function generateFixtures($db, $season)
 
         $gameweek++;
     }
+
+    // Ensure all inserted matches have UUIDs
+    try {
+        $stmt = $db->prepare('SELECT id, uuid FROM league_matches WHERE season = :season AND (uuid IS NULL OR uuid = "")');
+        if ($stmt) {
+            $stmt->bindValue(':season', $season, SQLITE3_TEXT);
+            $res = $stmt->execute();
+            while ($row = $res->fetchArray(SQLITE3_ASSOC)) {
+                $u = generateUUID();
+                $up = $db->prepare('UPDATE league_matches SET uuid = :uuid WHERE id = :id');
+                if ($up) {
+                    $up->bindValue(':uuid', $u, SQLITE3_TEXT);
+                    $up->bindValue(':id', (int)$row['id'], SQLITE3_INTEGER);
+                    $up->execute();
+                }
+            }
+        }
+    } catch (Throwable $e) {}
 }
 
 function getCurrentSeason($db)
