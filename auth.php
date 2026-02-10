@@ -123,7 +123,7 @@ if ($action === 'register') {
         $_SESSION['expire_time'] = $session_expire_time;
         $_SESSION['last_activity'] = time();
 
-        $stmt = $db->prepare(DB_DRIVER === 'mysql' ? 'UPDATE users SET last_login = NOW() WHERE id = :id' : 'UPDATE users SET last_login = datetime("now") WHERE id = :id');
+        $stmt = $db->prepare('UPDATE users SET last_login = NOW() WHERE id = :id');
         if ($stmt !== false) {
             $stmt->bindValue(':id', $user['id'], SQLITE3_INTEGER);
             $stmt->execute();

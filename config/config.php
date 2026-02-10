@@ -116,14 +116,14 @@ function isDatabaseAvailable()
         }
         if ($exists) {
             try {
-                // Ensure users has uuid column and populate it
-                $db->exec('ALTER TABLE users ADD COLUMN uuid CHAR(36) NULL');
-                $db->exec('UPDATE users SET uuid = UUID() WHERE uuid IS NULL OR uuid = \"\"');
+                // Ensure users has uuid column and populate it (16-char, no hyphens)
+                $db->exec('ALTER TABLE users ADD COLUMN uuid CHAR(16) NULL');
+                $db->exec('UPDATE users SET uuid = SUBSTR(REPLACE(UUID(), \"-\", \"\"), 1, 16) WHERE uuid IS NULL OR uuid = \"\"');
 
-                // Ensure user_club table exists with user_uuid and no substitutes/matches_played
+                // Ensure user_club table exists with user_uuid (16-char) and no substitutes/matches_played
                 $db->exec('CREATE TABLE IF NOT EXISTS user_club (
                     id INT AUTO_INCREMENT PRIMARY KEY,
-                    user_uuid CHAR(36) NOT NULL,
+                    user_uuid CHAR(16) NOT NULL,
                     club_name VARCHAR(255) NULL,
                     formation VARCHAR(20) DEFAULT \"4-4-2\",
                     team TEXT,
@@ -171,6 +171,30 @@ function isDatabaseAvailable()
                                created_at
                         FROM users');
                 }
+
+                // Migration: if columns were previously CHAR(36), convert existing values to 16-char format
+                try {
+                    $resColsUsers = $db->query('SHOW COLUMNS FROM users LIKE \"uuid\"');
+                    $usersUuidType = null;
+                    if ($resColsUsers !== false) {
+                        $rowU = $resColsUsers->fetchArray(SQLITE3_ASSOC);
+                        $usersUuidType = $rowU['Type'] ?? ($rowU['type'] ?? null);
+                    }
+                    $resColsClub = $db->query('SHOW COLUMNS FROM user_club LIKE \"user_uuid\"');
+                    $clubUuidType = null;
+                    if ($resColsClub !== false) {
+                        $rowC = $resColsClub->fetchArray(SQLITE3_ASSOC);
+                        $clubUuidType = $rowC['Type'] ?? ($rowC['type'] ?? null);
+                    }
+                    if ($usersUuidType && stripos($usersUuidType, 'char(36)') !== false) {
+                        $db->exec('UPDATE users SET uuid = SUBSTR(REPLACE(uuid, \"-\", \"\"), 1, 16) WHERE uuid IS NOT NULL AND uuid != \"\" AND CHAR_LENGTH(uuid) != 16');
+                        $db->exec('ALTER TABLE users MODIFY COLUMN uuid CHAR(16) NULL');
+                    }
+                    if ($clubUuidType && stripos($clubUuidType, 'char(36)') !== false) {
+                        $db->exec('UPDATE user_club SET user_uuid = SUBSTR(REPLACE(user_uuid, \"-\", \"\"), 1, 16) WHERE user_uuid IS NOT NULL AND user_uuid != \"\" AND CHAR_LENGTH(user_uuid) != 16');
+                        $db->exec('ALTER TABLE user_club MODIFY COLUMN user_uuid CHAR(16) NOT NULL');
+                    }
+                } catch (Throwable $e) { }
             } catch (Throwable $e) {
             }
         }

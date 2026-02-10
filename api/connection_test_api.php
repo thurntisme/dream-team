@@ -3,8 +3,7 @@ require_once __DIR__ . '/../config/config.php';
 header('Content-Type: application/json');
 
 $response = [
-    'ok' => false,
-    'driver' => DB_DRIVER
+    'ok' => false
 ];
 
 try {
@@ -17,22 +16,16 @@ try {
         'mysql_password' => MYSQL_PASSWORD
     ];
 
-    $db = new DBAdapter(DB_DRIVER, $adapterConfig);
+    $db = new DBAdapter('mysql', $adapterConfig);
     $res = $db->query('SELECT 1');
     $response['ok'] = $res !== false;
 
-    if (DB_DRIVER === 'mysql') {
-        $response['details'] = [
-            'host' => MYSQL_HOST,
-            'port' => MYSQL_PORT,
-            'db' => MYSQL_DB,
-            'user' => MYSQL_USER
-        ];
-    } else {
-        $response['details'] = [
-            'db_file' => DB_FILE
-        ];
-    }
+    $response['details'] = [
+        'host' => MYSQL_HOST,
+        'port' => MYSQL_PORT,
+        'db' => MYSQL_DB,
+        'user' => MYSQL_USER
+    ];
 
     $db->close();
 } catch (Throwable $e) {

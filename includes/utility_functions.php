@@ -77,10 +77,7 @@ if (!function_exists('generateRandomString')) {
 if (!function_exists('generateUUID')) {
     function generateUUID()
     {
-        $data = random_bytes(16);
-        $data[6] = chr(ord($data[6]) & 0x0f | 0x40); // set version to 0100
-        $data[8] = chr(ord($data[8]) & 0x3f | 0x80); // set bits 6-7 to 10
-        return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($data), 4));
+        return bin2hex(random_bytes(8));
     }
 }
 
@@ -124,11 +121,7 @@ if (!function_exists('setUserSetting')) {
     {
         try {
             $db = getDbConnection();
-            if (DB_DRIVER === 'mysql') {
-                $stmt = $db->prepare('INSERT INTO user_settings (user_id, setting_key, setting_value, updated_at) VALUES (:user_id, :key, :value, NOW()) ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_at = NOW()');
-            } else {
-                $stmt = $db->prepare('INSERT OR REPLACE INTO user_settings (user_id, setting_key, setting_value, updated_at) VALUES (:user_id, :key, :value, datetime("now"))');
-            }
+            $stmt = $db->prepare('INSERT INTO user_settings (user_id, setting_key, setting_value, updated_at) VALUES (:user_id, :key, :value, NOW()) ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_at = NOW()');
             $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
             $stmt->bindValue(':key', $key, SQLITE3_TEXT);
             $stmt->bindValue(':value', $value, SQLITE3_TEXT);

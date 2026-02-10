@@ -12,41 +12,35 @@ $mode = $_POST['mode'] ?? 'all';
 $logs[] = ['type' => 'detail', 'message' => 'Seed mode: ' . $mode];
 
 try {
-    if (DB_DRIVER === 'mysql') {
-        $logs[] = ['type' => 'detail', 'message' => 'Checking MySQL connection'];
-        $dsn = 'mysql:host=' . MYSQL_HOST . ';port=' . MYSQL_PORT . ';charset=utf8mb4';
-        $pdo = new PDO($dsn, MYSQL_USER, MYSQL_PASSWORD, [
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            PDO::ATTR_EMULATE_PREPARES => false
-        ]);
-        $logs[] = ['type' => 'info', 'message' => 'MySQL connection OK'];
-        if (!empty(MYSQL_DB)) {
-            $logs[] = ['type' => 'detail', 'message' => 'Ensuring database "' . MYSQL_DB . '" exists'];
-            $pdo->exec('CREATE DATABASE IF NOT EXISTS `' . MYSQL_DB . '` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci');
-            $logs[] = ['type' => 'info', 'message' => 'Database ensured: ' . MYSQL_DB];
-        }
-    }
-    if (DB_DRIVER === 'sqlite') {
-        $logs[] = ['type' => 'detail', 'message' => 'Checking SQLite connection'];
+    $logs[] = ['type' => 'detail', 'message' => 'Checking MySQL connection'];
+    $dsn = 'mysql:host=' . MYSQL_HOST . ';port=' . MYSQL_PORT . ';charset=utf8mb4';
+    $pdo = new PDO($dsn, MYSQL_USER, MYSQL_PASSWORD, [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        PDO::ATTR_EMULATE_PREPARES => false
+    ]);
+    $logs[] = ['type' => 'info', 'message' => 'MySQL connection OK'];
+    if (!empty(MYSQL_DB)) {
+        $logs[] = ['type' => 'detail', 'message' => 'Ensuring database "' . MYSQL_DB . '" exists'];
+        $pdo->exec('CREATE DATABASE IF NOT EXISTS `' . MYSQL_DB . '` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci');
+        $logs[] = ['type' => 'info', 'message' => 'Database ensured: ' . MYSQL_DB];
     }
     $db = getDbConnection();
     $logs[] = ['type' => 'info', 'message' => 'Database adapter initialized'];
 
     // Create core tables needed for seeding
     $coreOk = true;
-    if (DB_DRIVER === 'mysql') {
-        $coreOk = $coreOk && $db->exec('CREATE TABLE IF NOT EXISTS users (
+    $coreOk = $coreOk && $db->exec('CREATE TABLE IF NOT EXISTS users (
             id INT AUTO_INCREMENT PRIMARY KEY,
             name VARCHAR(255) NOT NULL,
             email VARCHAR(255) NOT NULL UNIQUE,
             password VARCHAR(255) NOT NULL,
-            uuid CHAR(36) NULL,
+            uuid CHAR(16) NULL,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )');
-        $coreOk = $coreOk && $db->exec('CREATE TABLE IF NOT EXISTS user_club (
+    $coreOk = $coreOk && $db->exec('CREATE TABLE IF NOT EXISTS user_club (
             id INT AUTO_INCREMENT PRIMARY KEY,
-            user_uuid CHAR(36) NOT NULL,
+            user_uuid CHAR(16) NOT NULL,
             club_name VARCHAR(255) NULL,
             formation VARCHAR(20) DEFAULT "4-4-2",
             team TEXT,
@@ -60,7 +54,7 @@ try {
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             INDEX idx_user_club_user_uuid (user_uuid)
         )');
-        $coreOk = $coreOk && $db->exec('CREATE TABLE IF NOT EXISTS shop_items (
+    $coreOk = $coreOk && $db->exec('CREATE TABLE IF NOT EXISTS shop_items (
             id INT AUTO_INCREMENT PRIMARY KEY,
             name VARCHAR(255) NOT NULL,
             description TEXT NOT NULL,
@@ -72,7 +66,7 @@ try {
             duration INT DEFAULT 0,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )');
-        $coreOk = $coreOk && $db->exec('CREATE TABLE IF NOT EXISTS young_players (
+    $coreOk = $coreOk && $db->exec('CREATE TABLE IF NOT EXISTS young_players (
             id INT AUTO_INCREMENT PRIMARY KEY,
             club_id INT NOT NULL,
             name VARCHAR(255) NOT NULL,
@@ -86,45 +80,6 @@ try {
             training_focus VARCHAR(50) DEFAULT "balanced",
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )');
-    } else {
-        $coreOk = $coreOk && $db->exec('CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            email TEXT UNIQUE NOT NULL,
-            password TEXT NOT NULL,
-            club_name TEXT,
-            formation TEXT DEFAULT "4-4-2",
-            team TEXT,
-            budget INTEGER DEFAULT ' . DEFAULT_BUDGET . ',
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )');
-        $coreOk = $coreOk && $db->exec('CREATE TABLE IF NOT EXISTS shop_items (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            description TEXT NOT NULL,
-            price INTEGER NOT NULL,
-            effect_type TEXT NOT NULL,
-            effect_value TEXT NOT NULL,
-            category TEXT NOT NULL,
-            icon TEXT DEFAULT "package",
-            duration INTEGER DEFAULT 0,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )');
-        $coreOk = $coreOk && $db->exec('CREATE TABLE IF NOT EXISTS young_players (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            club_id INTEGER NOT NULL,
-            name TEXT NOT NULL,
-            age INTEGER NOT NULL,
-            position TEXT NOT NULL,
-            potential_rating INTEGER NOT NULL,
-            current_rating INTEGER NOT NULL,
-            development_stage TEXT DEFAULT "academy",
-            contract_years INTEGER DEFAULT 3,
-            value INTEGER NOT NULL,
-            training_focus TEXT DEFAULT "balanced",
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )');
-    }
     if ($coreOk) {
         $logs[] = ['type' => 'info', 'message' => 'Create tables successfully'];
     } else {
