@@ -85,8 +85,8 @@ try {
             SELECT lm.id, lm.uuid
             FROM league_matches lm
             WHERE lm.season = :season
-              AND lm.status = \'scheduled\'
-              AND (lm.home_team_id = :team_id OR lm.away_team_id = :team_id)
+            AND lm.status = \'scheduled\'
+            AND (lm.home_team_id = :team_id OR lm.away_team_id = :team_id)
             ORDER BY lm.gameweek ASC, lm.id ASC
             LIMIT 1
         ');
@@ -138,6 +138,17 @@ try {
                             createLeagueTeams($db, $user_uuid, $season);
                             generateFixtures($db, $season);
                         } catch (Throwable $e) {}
+                        // Reselect team_id for the new season
+                        $stmtTeam = $db->prepare('SELECT id FROM league_teams WHERE season = :season AND user_uuid = :uuid');
+                        if ($stmtTeam) {
+                            $stmtTeam->bindValue(':season', $season);
+                            $stmtTeam->bindValue(':uuid', $user_uuid);
+                            $resTeam = $stmtTeam->execute();
+                            $rowTeam = $resTeam ? $resTeam->fetchArray(SQLITE3_ASSOC) : null;
+                            if ($rowTeam) {
+                                $team_id = (int)$rowTeam['id'];
+                            }
+                        }
                         $stmtMatch = $db->prepare('
                             SELECT lm.id, lm.uuid
                             FROM league_matches lm
@@ -157,8 +168,37 @@ try {
                 }
             }
             if (!$rowMatch) {
-                echo json_encode(['ok' => false, 'error' => 'no_scheduled_match']);
-                exit;
+                $stmtOpp = $db->prepare('SELECT id FROM league_teams WHERE season = :season AND division = 1 AND id != :team_id ORDER BY id ASC LIMIT 1');
+                if ($stmtOpp) {
+                    $stmtOpp->bindValue(':season', $season);
+                    $stmtOpp->bindValue(':team_id', $team_id);
+                    $resOpp = $stmtOpp->execute();
+                    $rowOpp = $resOpp ? $resOpp->fetchArray(SQLITE3_ASSOC) : null;
+                    if ($rowOpp && isset($rowOpp['id'])) {
+                        $gw = 1;
+                        try {
+                            $gw = getCurrentGameweek($db, $season);
+                        } catch (Throwable $e) {}
+                        $date = date('Y-m-d');
+                        $stmtIns = $db->prepare('INSERT INTO league_matches (season, gameweek, home_team_id, away_team_id, match_date) VALUES (:season, :gameweek, :home, :away, :date)');
+                        if ($stmtIns) {
+                            $stmtIns->bindValue(':season', $season);
+                            $stmtIns->bindValue(':gameweek', $gw);
+                            $stmtIns->bindValue(':home', $team_id);
+                            $stmtIns->bindValue(':away', (int)$rowOpp['id']);
+                            $stmtIns->bindValue(':date', $date);
+                            $insRes = $stmtIns->execute();
+                            if ($insRes) {
+                                $newId = (int)$db->lastInsertRowID();
+                                $rowMatch = ['id' => $newId, 'uuid' => null];
+                            }
+                        }
+                    }
+                }
+                if (!$rowMatch) {
+                    echo json_encode(['ok' => false, 'error' => 'no_scheduled_match']);
+                    exit;
+                }
             }
         }
     }
