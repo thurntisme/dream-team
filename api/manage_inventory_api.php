@@ -40,13 +40,12 @@ if (empty($action) || $inventory_id <= 0 || !$player_data) {
 try {
     $db = getDbConnection();
 
-    // Start transaction
-    $db->exec('BEGIN TRANSACTION');
+    $db->exec('START TRANSACTION');
 
-    // Verify the inventory item belongs to the current user
-    $stmt = $db->prepare('SELECT * FROM player_inventory WHERE id = :id AND user_id = :user_id AND status = "available"');
+    // Verify the inventory item belongs to the current club
+    $stmt = $db->prepare('SELECT * FROM player_inventory WHERE id = :id AND club_uuid = (SELECT club_uuid FROM user_club WHERE user_uuid = :user_uuid) AND status = "available"');
     $stmt->bindValue(':id', $inventory_id, SQLITE3_INTEGER);
-    $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+    $stmt->bindValue(':user_uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
     $result = $stmt->execute();
     $inventory_item = $result->fetchArray(SQLITE3_ASSOC);
 
@@ -56,8 +55,8 @@ try {
 
     switch ($action) {
         case 'assign':
-            // Get user's current team data
-            $stmt = $db->prepare('SELECT team, max_players FROM user_club WHERE user_uuid = :user_uuid');
+            // Get user's formation and current team data
+            $stmt = $db->prepare('SELECT formation, team, max_players FROM user_club WHERE user_uuid = :user_uuid');
             $stmt->bindValue(':user_uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
             $result = $stmt->execute();
             $user_data = $result->fetchArray(SQLITE3_ASSOC);
@@ -66,24 +65,33 @@ try {
                 throw new Exception('User not found');
             }
 
-            $current_team = json_decode($user_data['team'] ?? '[]', true) ?: [];
-            $current_substitutes = [];
+            $saved_team = json_decode($user_data['team'] ?? '[]', true) ?: [];
+            $formation = $user_data['formation'] ?? '4-4-2';
             $max_players = $user_data['max_players'] ?? 23;
 
-            // Check if team is full (count only non-null players)
-            $starting_players = is_array($current_team)
-                ? count(array_filter($current_team, function($p) { return $p !== null; }))
-                : 0;
-            $substitute_players = is_array($current_substitutes)
-                ? count(array_filter($current_substitutes, function($p) { return $p !== null; }))
-                : 0;
-            $total_players = $starting_players + $substitute_players;
-            if ($total_players >= $max_players) {
+            // Determine total starting slots based on formation
+            $positions = FORMATIONS[$formation]['positions'] ?? [];
+            $total_slots = 0;
+            foreach ($positions as $line) {
+                $total_slots += count($line);
+            }
+
+            // Initialize team array to formation slot size if empty
+            if (!is_array($saved_team) || count($saved_team) === 0) {
+                $saved_team = array_fill(0, $total_slots, null);
+            } else if (count($saved_team) < $total_slots) {
+                // Pad with nulls if team shorter than formation slots
+                $saved_team = array_pad($saved_team, $total_slots, null);
+            }
+
+            // Count current starting players
+            $starting_players = count(array_filter($saved_team, function($p) { return $p !== null; }));
+            if ($starting_players >= $max_players) {
                 throw new Exception('Your squad is full. Maximum players allowed: ' . $max_players);
             }
 
-            // Check if player already exists in team
-            foreach ($current_team as $existing_player) {
+            // Prevent duplicates by name
+            foreach ($saved_team as $existing_player) {
                 if (
                     $existing_player && isset($existing_player['name']) &&
                     strtolower($existing_player['name']) === strtolower($player_data['name'])
@@ -92,24 +100,27 @@ try {
                 }
             }
 
-            foreach ($current_substitutes as $existing_player) {
-                if (
-                    $existing_player && isset($existing_player['name']) &&
-                    strtolower($existing_player['name']) === strtolower($player_data['name'])
-                ) {
-                    throw new Exception('You already have this player in your substitutes');
+            // Initialize player condition
+            $player_data = initializePlayerCondition($player_data);
+
+            // Assign to first empty slot; if none, error
+            $assigned = false;
+            for ($i = 0; $i < $total_slots; $i++) {
+                if ($saved_team[$i] === null) {
+                    $saved_team[$i] = $player_data;
+                    $assigned = true;
+                    break;
                 }
             }
 
-            // Initialize player condition and add to substitutes
-            $player_data = initializePlayerCondition($player_data);
-            $current_substitutes[] = $player_data;
+            if (!$assigned) {
+                throw new Exception('No empty slot in your starting lineup. Manage your team formation first.');
+            }
 
-            // Persist not supported: no substitutes column; update team unchanged to avoid error
+            // Persist updated team
             $stmt = $db->prepare('UPDATE user_club SET team = :team WHERE user_uuid = :user_uuid');
-            $stmt->bindValue(':team', json_encode($current_team), SQLITE3_TEXT);
+            $stmt->bindValue(':team', json_encode($saved_team), SQLITE3_TEXT);
             $stmt->bindValue(':user_uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
-
             if (!$stmt->execute()) {
                 throw new Exception('Failed to add player to team: ' . $db->lastErrorMsg());
             }
@@ -117,7 +128,6 @@ try {
             // Mark inventory item as assigned
             $stmt = $db->prepare('UPDATE player_inventory SET status = "assigned" WHERE id = :id');
             $stmt->bindValue(':id', $inventory_id, SQLITE3_INTEGER);
-
             if (!$stmt->execute()) {
                 throw new Exception('Failed to update inventory: ' . $db->lastErrorMsg());
             }

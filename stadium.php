@@ -5,7 +5,7 @@ require_once 'config/config.php';
 require_once 'config/constants.php';
 require_once 'partials/layout.php';
 
-if (!isset($_SESSION['user_id']) || !isset($_SESSION['club_name'])) {
+if (!isset($_SESSION['user_uuid'])) {
     header('Location: index.php');
     exit;
 }
@@ -13,60 +13,68 @@ if (!isset($_SESSION['user_id']) || !isset($_SESSION['club_name'])) {
 try {
     $db = getDbConnection();
 
-    // Get user's current data including budget and fans
-    $stmt = $db->prepare('SELECT budget, club_name, fans FROM users WHERE id = :user_id');
-    $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
-    $result = $stmt->execute();
-    $user_data = $result->fetchArray(SQLITE3_ASSOC);
+    $stmt = $db->prepare('SELECT budget, club_name, fans FROM user_club WHERE user_uuid = :uuid');
+    $user_data = ['budget' => 0, 'club_name' => '', 'fans' => 5000];
+    if ($stmt) {
+        $stmt->bindValue(':uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
+        $result = $stmt->execute();
+        $user_data = $result ? $result->fetchArray(SQLITE3_ASSOC) : $user_data;
+    }
     $user_budget = $user_data['budget'] ?? 0;
     $club_name = $user_data['club_name'] ?? '';
     $user_fans = $user_data['fans'] ?? 5000;
 
-    // Check if user has purchased stadium name change item
     try {
-        $stmt = $db->prepare(
-            'SELECT 1
-             FROM user_inventory ui
-             JOIN shop_items si ON ui.item_id = si.id
-             WHERE ui.user_id = :user_id
-               AND si.effect_type = "stadium_rename"
-               AND ui.quantity > 0
-             LIMIT 1'
-        );
+        $stmt = $db->prepare('SELECT 1 FROM user_inventory ui JOIN shop_items si ON ui.item_id = si.id WHERE ui.user_id = (SELECT id FROM users WHERE uuid = :uuid) AND si.effect_type = "stadium_rename" AND ui.quantity > 0 LIMIT 1');
 
-        if (!$stmt) {
-            throw new Exception('Prepare failed: ' . $db->lastErrorMsg());
+        if ($stmt) {
+            $stmt->bindValue(':uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
+            $result = $stmt->execute();
+            $can_rename_stadium = $result ? (bool) $result->fetchArray() : false;
+        } else {
+            $can_rename_stadium = false;
         }
-
-        $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
-
-        $result = $stmt->execute();
-        if (!$result) {
-            throw new Exception('Execute failed: ' . $db->lastErrorMsg());
-        }
-
-        $can_rename_stadium = (bool) $result->fetchArray();
 
     } catch (Exception $e) {
-        error_log('[canRenameStadium] ' . $e->getMessage());
-
         $can_rename_stadium = false;
     }
 
-    // Get or create stadium data
-    $stmt = $db->prepare('SELECT * FROM stadiums WHERE user_id = :user_id');
-    $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
-    $result = $stmt->execute();
-    $stadium_data = $result->fetchArray(SQLITE3_ASSOC);
+    $stmt = $db->prepare('SELECT * FROM stadiums WHERE user_id = (SELECT id FROM users WHERE uuid = :uuid)');
+    $stadium_data = null;
+    if ($stmt) {
+        $stmt->bindValue(':uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
+        $result = $stmt->execute();
+        $stadium_data = $result ? $result->fetchArray(SQLITE3_ASSOC) : null;
+    }
+    if (!$stadium_data) {
+        $ins = $db->prepare('INSERT INTO stadiums (user_id) VALUES ((SELECT id FROM users WHERE uuid = :uuid))');
+        if ($ins) {
+            $ins->bindValue(':uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
+            $ins->execute();
+            $stmt = $db->prepare('SELECT * FROM stadiums WHERE user_id = (SELECT id FROM users WHERE uuid = :uuid)');
+            if ($stmt) {
+                $stmt->bindValue(':uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
+                $result = $stmt->execute();
+                $stadium_data = $result ? $result->fetchArray(SQLITE3_ASSOC) : null;
+            }
+        }
+    }
+    if (!$stadium_data) {
+        $stadium_data = [
+            'name' => 'Home Stadium',
+            'capacity' => 10000,
+            'level' => 1,
+            'last_upgrade' => date('Y-m-d H:i:s')
+        ];
+    }
 
-    // Get current stadium rename item quantity for JavaScript
-    $stmt = $db->prepare('SELECT SUM(ui.quantity) as total_quantity FROM user_inventory ui 
-                         JOIN shop_items si ON ui.item_id = si.id 
-                         WHERE ui.user_id = :user_id AND si.effect_type = "stadium_rename" 
-                         AND ui.quantity > 0');
-    $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
-    $result = $stmt->execute();
-    $current_rename_quantity = $result->fetchArray(SQLITE3_ASSOC)['total_quantity'] ?? 0;
+    $stmt = $db->prepare('SELECT SUM(ui.quantity) as total_quantity FROM user_inventory ui JOIN shop_items si ON ui.item_id = si.id WHERE ui.user_id = (SELECT id FROM users WHERE uuid = :uuid) AND si.effect_type = "stadium_rename" AND ui.quantity > 0');
+    $current_rename_quantity = 0;
+    if ($stmt) {
+        $stmt->bindValue(':uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
+        $result = $stmt->execute();
+        $current_rename_quantity = $result ? ($result->fetchArray(SQLITE3_ASSOC)['total_quantity'] ?? 0) : 0;
+    }
 
     $db->close();
 
@@ -77,10 +85,9 @@ try {
 
 // Stadium upgrade costs and benefits are now defined in config/constants.php
 $stadium_levels = getStadiumLevels();
-
-$current_level = $stadium_data['level'];
-$current_stadium = $stadium_levels[$current_level];
-$next_level = $current_level < 5 ? $stadium_levels[$current_level + 1] : null;
+$current_level = (int)($stadium_data['level'] ?? 1);
+$current_stadium = $stadium_levels[$current_level] ?? $stadium_levels[1];
+$next_level = $current_level < 5 ? ($stadium_levels[$current_level + 1] ?? null) : null;
 
 // Start content capture
 startContent();

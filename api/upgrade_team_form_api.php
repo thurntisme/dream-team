@@ -115,7 +115,7 @@ if ($total_cost == 0) {
 }
 
 // Perform transaction
-$conn->exec('BEGIN TRANSACTION');
+$conn->exec('START TRANSACTION');
 
 try {
     // 1. Deduct budget

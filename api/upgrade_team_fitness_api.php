@@ -109,7 +109,7 @@ if ($total_cost == 0) {
 $new_budget = $current_budget - $total_cost;
 
 // SQLite transaction
-$conn->exec('BEGIN TRANSACTION');
+$conn->exec('START TRANSACTION');
 
 try {
     // Update user data (budget, team, substitutes) in one go

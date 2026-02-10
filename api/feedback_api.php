@@ -54,7 +54,7 @@ try {
             $total_reward = 1400;
 
             // Begin transaction
-            $db->exec('BEGIN TRANSACTION');
+            $db->exec('START TRANSACTION');
 
             try {
                 // Update feedback status

@@ -38,7 +38,7 @@ try {
     $db = getDbConnection();
 
     // Start transaction
-    $db->exec('BEGIN TRANSACTION');
+    $db->exec('START TRANSACTION');
 
     // Get user's current budget and max_players
     $stmt = $db->prepare('SELECT budget, max_players FROM users WHERE id = :user_id');

@@ -10,76 +10,24 @@ require_once 'partials/layout.php';
 try {
     $db = getDbConnection();
 
-    // Get current user's data
-    $stmt = $db->prepare('SELECT budget, team FROM users WHERE id = :user_id');
-    $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+    $stmt = $db->prepare('SELECT c.budget, c.team FROM user_club c INNER JOIN users u ON c.user_uuid = u.uuid WHERE u.uuid = :uuid');
+    $stmt->bindValue(':uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
     $result = $stmt->execute();
     $user_data = $result->fetchArray(SQLITE3_ASSOC);
 
     // Database tables are now created in install.php
 
-    if (DB_DRIVER === 'sqlite') {
-        try {
-            $result = $db->query("PRAGMA table_info(player_inventory)");
-            $columns = [];
-            while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
-                $columns[] = $row['name'];
-            }
-            if (!in_array('player_uuid', $columns)) {
-                $db->exec('ALTER TABLE player_inventory ADD COLUMN player_uuid TEXT DEFAULT ""');
-            }
-            if (!in_array('purchase_price', $columns)) {
-                $db->exec('ALTER TABLE player_inventory ADD COLUMN purchase_price INTEGER DEFAULT 0');
-            }
-            if (in_array('player_name', $columns) && in_array('player_uuid', $columns)) {
-                $stmt = $db->prepare('SELECT id, player_name, player_data FROM player_inventory WHERE player_uuid = "" AND player_name != ""');
-                $result = $stmt->execute();
-                while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
-                    $player_data = json_decode($row['player_data'], true);
-                    if ($player_data && isset($player_data['uuid'])) {
-                        $update_stmt = $db->prepare('UPDATE player_inventory SET player_uuid = :uuid WHERE id = :id');
-                        $update_stmt->bindValue(':uuid', $player_data['uuid'], SQLITE3_TEXT);
-                        $update_stmt->bindValue(':id', $row['id'], SQLITE3_INTEGER);
-                        $update_stmt->execute();
-                    }
-                }
-            }
-            $result = $db->query("PRAGMA table_info(transfer_bids)");
-            $bid_columns = [];
-            while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
-                $bid_columns[] = $row['name'];
-            }
-            if (!in_array('player_uuid', $bid_columns)) {
-                $db->exec('ALTER TABLE transfer_bids ADD COLUMN player_uuid TEXT DEFAULT ""');
-            }
-            if (in_array('player_name', $bid_columns) && in_array('player_uuid', $bid_columns)) {
-                $stmt = $db->prepare('SELECT id, player_name, player_data FROM transfer_bids WHERE player_uuid = "" AND player_name != ""');
-                $result = $stmt->execute();
-                while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
-                    $player_data = json_decode($row['player_data'], true);
-                    if ($player_data && isset($player_data['uuid'])) {
-                        $update_stmt = $db->prepare('UPDATE transfer_bids SET player_uuid = :uuid WHERE id = :id');
-                        $update_stmt->bindValue(':uuid', $player_data['uuid'], SQLITE3_TEXT);
-                        $update_stmt->bindValue(':id', $row['id'], SQLITE3_INTEGER);
-                        $update_stmt->execute();
-                    }
-                }
-            }
-        } catch (Exception $e) {
-        }
-    }
-
     // Get all available players from players.json (excluding players already in user's team)
     $all_players = getDefaultPlayers();
 
     // Get current user's team to exclude owned players
-    $stmt = $db->prepare('SELECT team, substitutes FROM users WHERE id = :user_id');
-    $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+    $stmt = $db->prepare('SELECT c.team FROM user_club c INNER JOIN users u ON c.user_uuid = u.uuid WHERE u.uuid = :uuid');
+    $stmt->bindValue(':uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
     $result = $stmt->execute();
     $user_team_data = $result->fetchArray(SQLITE3_ASSOC);
 
     $user_team = json_decode($user_team_data['team'] ?? '[]', true) ?: [];
-    $user_substitutes = json_decode($user_team_data['substitutes'] ?? '[]', true) ?: [];
+    $user_substitutes = [];
 
     // Get all player names that user already owns
     $owned_player_names = [];
@@ -111,8 +59,8 @@ try {
 
 
     // Get user's player inventory
-    $stmt = $db->prepare('SELECT * FROM player_inventory WHERE user_id = :user_id AND status = "available" ORDER BY purchase_date DESC');
-    $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+    $stmt = $db->prepare('SELECT * FROM player_inventory WHERE club_uuid = (SELECT club_uuid FROM user_club WHERE user_uuid = :uuid) AND status = "available" ORDER BY purchase_date DESC');
+    $stmt->bindValue(':uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
     $result = $stmt->execute();
 
     $player_inventory = [];

@@ -48,7 +48,7 @@ if (!$data) {
     $player_data = $data['player_data'] ?? null;
     $purchase_amount = (int) ($data['purchase_amount'] ?? 0);
 
-    if ($player_index === null || empty($player_uuid) || !$player_data || $purchase_amount <= 0) {
+    if ($player_index === null || (!$player_uuid && (!$player_data || empty($player_data['uuid'] ?? ''))) || !$player_data || $purchase_amount <= 0) {
         http_response_code(400);
         echo json_encode(['success' => false, 'message' => 'Invalid market purchase data']);
         exit;
@@ -61,11 +61,10 @@ try {
     $db = getDbConnection();
 
     // Start transaction
-    $db->exec('BEGIN TRANSACTION');
+    $db->exec('START TRANSACTION');
 
-    // Get user's current data
-    $stmt = $db->prepare('SELECT budget, team, substitutes, max_players FROM users WHERE id = :user_id');
-    $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+    $stmt = $db->prepare('SELECT budget, team, max_players FROM user_club WHERE user_uuid = :user_uuid');
+    $stmt->bindValue(':user_uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
     $result = $stmt->execute();
     $user_data = $result->fetchArray(SQLITE3_ASSOC);
 
@@ -86,7 +85,7 @@ try {
 
         // Check if player already exists in team or substitutes
         $current_team = json_decode($user_data['team'] ?? '[]', true) ?: [];
-        $current_substitutes = json_decode($user_data['substitutes'] ?? '[]', true) ?: [];
+        $current_substitutes = [];
 
         foreach ($current_team as $existing_player) {
             if (
@@ -106,10 +105,19 @@ try {
             }
         }
 
+        // Resolve and normalize player UUID to 16-char (strip hyphens)
+        $resolved_uuid = $player_data['uuid'] ?? $player_uuid;
+        $resolved_uuid = substr(str_replace('-', '', $resolved_uuid), 0, 16);
+        if (!$resolved_uuid) {
+            throw new Exception('Player UUID missing');
+        }
+        // Ensure player_data carries normalized uuid
+        $player_data['uuid'] = $resolved_uuid;
+
         // Check if player already exists in inventory
-        $stmt = $db->prepare('SELECT COUNT(*) as count FROM player_inventory WHERE user_id = :user_id AND player_uuid = :player_uuid AND status = "available"');
-        $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
-        $stmt->bindValue(':player_uuid', $player_data['uuid'] ?? '', SQLITE3_TEXT);
+        $stmt = $db->prepare('SELECT COUNT(*) as count FROM player_inventory WHERE club_uuid = (SELECT club_uuid FROM user_club WHERE user_uuid = :user_uuid) AND player_uuid = :player_uuid AND status = "available"');
+        $stmt->bindValue(':user_uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
+        $stmt->bindValue(':player_uuid', $resolved_uuid, SQLITE3_TEXT);
         $result = $stmt->execute();
         $inventory_check = $result->fetchArray(SQLITE3_ASSOC);
 
@@ -124,9 +132,34 @@ try {
         $player_data = initializePlayerCondition($player_data);
 
         // Add player to inventory instead of directly to team
-        $stmt = $db->prepare('INSERT INTO player_inventory (user_id, player_uuid, player_data, purchase_price) VALUES (:user_id, :player_uuid, :player_data, :purchase_price)');
-        $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
-        $stmt->bindValue(':player_uuid', $player_data['uuid'] ?? '', SQLITE3_TEXT);
+        // Resolve or initialize club_uuid
+        $stmtClub = $db->prepare('SELECT club_uuid FROM user_club WHERE user_uuid = :uuid');
+        if ($stmtClub === false) {
+            throw new Exception('Failed to resolve club: ' . $db->lastErrorMsg());
+        }
+        $stmtClub->bindValue(':uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
+        $resClub = $stmtClub->execute();
+        $rowClub = $resClub ? $resClub->fetchArray(SQLITE3_ASSOC) : null;
+        $clubUuidVal = $rowClub['club_uuid'] ?? '';
+        if ($clubUuidVal === '' || $clubUuidVal === null) {
+            $clubUuidVal = generateUUID();
+            $stmtSetClub = $db->prepare('UPDATE user_club SET club_uuid = :club_uuid WHERE user_uuid = :user_uuid');
+            if ($stmtSetClub === false) {
+                throw new Exception('Failed to initialize club: ' . $db->lastErrorMsg());
+            }
+            $stmtSetClub->bindValue(':club_uuid', $clubUuidVal, SQLITE3_TEXT);
+            $stmtSetClub->bindValue(':user_uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
+            if (!$stmtSetClub->execute()) {
+                throw new Exception('Failed to initialize club: ' . $db->lastErrorMsg());
+            }
+        }
+
+        $stmt = $db->prepare('INSERT INTO player_inventory (club_uuid, player_uuid, player_data, purchase_price) VALUES (:club_uuid, :player_uuid, :player_data, :purchase_price)');
+        if ($stmt === false) {
+            throw new Exception('Failed to prepare inventory insert: ' . $db->lastErrorMsg());
+        }
+        $stmt->bindValue(':club_uuid', $clubUuidVal, SQLITE3_TEXT);
+        $stmt->bindValue(':player_uuid', $resolved_uuid, SQLITE3_TEXT);
         $stmt->bindValue(':player_data', json_encode($player_data), SQLITE3_TEXT);
         $stmt->bindValue(':purchase_price', $cost, SQLITE3_INTEGER);
 
@@ -134,10 +167,10 @@ try {
             throw new Exception('Failed to add player to inventory: ' . $db->lastErrorMsg());
         }
 
-        // Update user's budget only
-        $stmt = $db->prepare('UPDATE users SET budget = :budget WHERE id = :user_id');
+        // Update club budget
+        $stmt = $db->prepare('UPDATE user_club SET budget = :budget WHERE user_uuid = :user_uuid');
         $stmt->bindValue(':budget', $new_budget, SQLITE3_INTEGER);
-        $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+        $stmt->bindValue(':user_uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
 
         if (!$stmt->execute()) {
             throw new Exception('Failed to update budget: ' . $db->lastErrorMsg());
@@ -158,13 +191,12 @@ try {
         // Calculate new budget
         $new_budget = $current_budget - $cost;
 
-        // Update user's team, substitutes, and budget
-        $stmt = $db->prepare('UPDATE users SET formation = :formation, team = :team, substitutes = :substitutes, budget = :budget WHERE id = :user_id');
+        // Update club formation, team, and budget (no substitutes column)
+        $stmt = $db->prepare('UPDATE user_club SET formation = :formation, team = :team, budget = :budget WHERE user_uuid = :user_uuid');
         $stmt->bindValue(':formation', $formation, SQLITE3_TEXT);
         $stmt->bindValue(':team', $team, SQLITE3_TEXT);
-        $stmt->bindValue(':substitutes', $substitutes, SQLITE3_TEXT);
         $stmt->bindValue(':budget', $new_budget, SQLITE3_INTEGER);
-        $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+        $stmt->bindValue(':user_uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
 
         if (!$stmt->execute()) {
             throw new Exception('Failed to update team and budget: ' . $db->lastErrorMsg());

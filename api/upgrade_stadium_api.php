@@ -86,7 +86,7 @@ try {
         $newCapacity = $stadiumLevels[$newLevel]['capacity'];
 
         // Begin transaction
-        $db->exec('BEGIN TRANSACTION');
+        $db->exec('START TRANSACTION');
 
         try {
             // Update user budget
@@ -143,7 +143,7 @@ try {
         }
 
         // Begin transaction for stadium rename
-        $db->exec('BEGIN TRANSACTION');
+        $db->exec('START TRANSACTION');
 
         try {
             // Check if user has purchased stadium name change item and get the first available item

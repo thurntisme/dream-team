@@ -157,7 +157,7 @@ try {
         }
 
         // Begin transaction
-        $db->exec('BEGIN TRANSACTION');
+        $db->exec('START TRANSACTION');
 
         try {
             // Transfer player

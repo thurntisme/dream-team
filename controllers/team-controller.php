@@ -157,7 +157,6 @@ class TeamController
         $stmt = $this->db->prepare('UPDATE user_club SET team = :team WHERE user_uuid = :user_uuid');
         if ($stmt !== false) {
             $stmt->bindValue(':team', json_encode($teamData), SQLITE3_TEXT);
-            $stmt->bindValue(':substitutes', json_encode($substitutesData), SQLITE3_TEXT);
             $stmt->bindValue(':user_uuid', $this->userId, SQLITE3_TEXT);
             return $stmt->execute();
         }

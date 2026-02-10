@@ -230,6 +230,30 @@ function isDatabaseAvailable()
                     $db->exec('ALTER TABLE club_staff DROP COLUMN user_id');
                     $db->exec('ALTER TABLE club_staff MODIFY COLUMN club_uuid CHAR(16) NOT NULL');
                 } catch (Throwable $e) { }
+
+                // Ensure player_inventory exists and migrate to club_uuid
+                try {
+                    $db->exec('CREATE TABLE IF NOT EXISTS player_inventory (
+                        id INT AUTO_INCREMENT PRIMARY KEY,
+                        club_uuid CHAR(16) NOT NULL,
+                        player_uuid CHAR(16) NOT NULL,
+                        player_data TEXT NOT NULL,
+                        purchase_price BIGINT NOT NULL,
+                        purchase_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        status VARCHAR(20) DEFAULT \"available\",
+                        INDEX idx_inventory_club_uuid (club_uuid),
+                        INDEX idx_inventory_player_uuid (player_uuid),
+                        INDEX idx_inventory_status (status)
+                    )');
+                    $db->exec('ALTER TABLE player_inventory ADD COLUMN club_uuid CHAR(16) NULL');
+                    $db->exec('UPDATE player_inventory pi
+                               JOIN users u ON pi.user_id = u.id
+                               JOIN user_club uc ON uc.user_uuid = u.uuid
+                               SET pi.club_uuid = uc.club_uuid
+                               WHERE pi.club_uuid IS NULL OR pi.club_uuid = \"\"');
+                    $db->exec('ALTER TABLE player_inventory DROP COLUMN user_id');
+                    $db->exec('ALTER TABLE player_inventory MODIFY COLUMN club_uuid CHAR(16) NOT NULL');
+                } catch (Throwable $e) { }
             } catch (Throwable $e) {
             }
         }

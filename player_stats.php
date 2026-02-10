@@ -9,7 +9,7 @@ require_once 'partials/layout.php';
 requireClubName('player_stats');
 
 $db = getDbConnection();
-$userId = $_SESSION['user_id'];
+$userUuid = $_SESSION['user_uuid'];
 
 // Database tables are now created in install.php
 
@@ -23,16 +23,17 @@ try {
     // Migration already done or table structure is correct
 }
 
-// Get user data
-$stmt = $db->prepare('SELECT * FROM users WHERE id = :id');
-$stmt->bindValue(':id', $userId, SQLITE3_INTEGER);
-$result = $stmt->execute();
-$user = $result->fetchArray(SQLITE3_ASSOC);
-
-// Get current team and substitutes
-$team = json_decode($user['team'] ?? '[]', true) ?: [];
-$substitutes = json_decode($user['substitutes'] ?? '[]', true) ?: [];
-$allPlayers = array_merge(array_filter($team), array_filter($substitutes));
+$stmt = $db->prepare('SELECT team FROM user_club WHERE user_uuid = :uuid');
+$team = [];
+$substitutes = [];
+$allPlayers = [];
+if ($stmt) {
+    $stmt->bindValue(':uuid', $userUuid, SQLITE3_TEXT);
+    $result = $stmt->execute();
+    $club = $result ? $result->fetchArray(SQLITE3_ASSOC) : null;
+    $team = json_decode($club['team'] ?? '[]', true) ?: [];
+    $allPlayers = array_filter($team);
+}
 
 // Initialize player stats for new players
 foreach ($allPlayers as $player) {
@@ -40,28 +41,37 @@ foreach ($allPlayers as $player) {
         continue;
 
     $playerId = $player['id'] ?? $player['name'];
-    $stmt = $db->prepare('INSERT OR IGNORE INTO player_stats (user_id, player_id, player_name, position) VALUES (:user_id, :player_id, :player_name, :position)');
-    $stmt->bindValue(':user_id', $userId, SQLITE3_INTEGER);
-    $stmt->bindValue(':player_id', $playerId, SQLITE3_TEXT);
-    $stmt->bindValue(':player_name', $player['name'], SQLITE3_TEXT);
-    $stmt->bindValue(':position', $player['position'] ?? 'Unknown', SQLITE3_TEXT);
-    $stmt->execute();
+    $stmt = $db->prepare('INSERT INTO player_stats (user_id, player_id, player_name, position) VALUES ((SELECT id FROM users WHERE uuid = :uuid), :player_id, :player_name, :position) ON DUPLICATE KEY UPDATE player_name = VALUES(player_name), position = VALUES(position)');
+    if ($stmt) {
+        $stmt->bindValue(':uuid', $userUuid, SQLITE3_TEXT);
+        $stmt->bindValue(':player_id', $playerId, SQLITE3_TEXT);
+        $stmt->bindValue(':player_name', $player['name'], SQLITE3_TEXT);
+        $stmt->bindValue(':position', $player['position'] ?? 'Unknown', SQLITE3_TEXT);
+        $stmt->execute();
+    }
 }
 
-// Get player statistics
-$stmt = $db->prepare('
+// Get player statistics (MySQL-compatible)
+$statsSql = '
     SELECT ps.*, 
-           CASE WHEN ps.matches_played > 0 THEN ROUND(CAST(ps.total_rating AS REAL) / ps.matches_played, 1) ELSE 0 END as calculated_avg_rating
+           CASE WHEN ps.matches_played > 0 THEN ROUND(ps.total_rating / ps.matches_played, 1) ELSE 0 END as calculated_avg_rating
     FROM player_stats ps 
-    WHERE ps.user_id = :user_id 
+    WHERE ps.user_id = (SELECT id FROM users WHERE uuid = :uuid) 
     ORDER BY ps.matches_played DESC, ps.goals DESC, ps.assists DESC
-');
-$stmt->bindValue(':user_id', $userId, SQLITE3_INTEGER);
-$result = $stmt->execute();
-
+';
+$stmt = $db->prepare($statsSql);
 $playerStats = [];
-while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
-    $playerStats[] = $row;
+if ($stmt) {
+    $stmt->bindValue(':uuid', $userUuid, SQLITE3_TEXT);
+    $result = $stmt->execute();
+    if ($result) {
+        while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+            $playerStats[] = $row;
+        }
+    }
+} else {
+    // Fallback: empty stats on prepare failure
+    $playerStats = [];
 }
 
 // Calculate team totals

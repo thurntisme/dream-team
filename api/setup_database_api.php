@@ -28,7 +28,6 @@ try {
     $db = getDbConnection();
     $logs[] = ['type' => 'info', 'message' => 'Database adapter initialized'];
 
-    // Create core tables needed for seeding
     $coreOk = true;
     $coreOk = $coreOk && $db->exec('CREATE TABLE IF NOT EXISTS users (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -38,7 +37,7 @@ try {
             uuid CHAR(16) NULL,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )');
-        $coreOk = $coreOk && $db->exec('CREATE TABLE IF NOT EXISTS user_club (
+    $coreOk = $coreOk && $db->exec('CREATE TABLE IF NOT EXISTS user_club (
             id INT AUTO_INCREMENT PRIMARY KEY,
             user_uuid CHAR(16) NOT NULL,
             club_uuid CHAR(16) NULL,
@@ -56,19 +55,6 @@ try {
             INDEX idx_user_club_user_uuid (user_uuid),
             INDEX idx_user_club_club_uuid (club_uuid)
         )');
-    $coreOk = $coreOk && $db->exec('CREATE TABLE IF NOT EXISTS club_staff (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            club_uuid CHAR(16) NOT NULL,
-            staff_type VARCHAR(50) NOT NULL,
-            name VARCHAR(255) NOT NULL,
-            level INT DEFAULT 1,
-            salary BIGINT NOT NULL,
-            contract_weeks INT DEFAULT 52,
-            contract_weeks_remaining INT DEFAULT 52,
-            hired_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-            bonus_applied_this_week TINYINT(1) DEFAULT 0,
-            INDEX idx_staff_club_uuid (club_uuid)
-        )');
     $coreOk = $coreOk && $db->exec('CREATE TABLE IF NOT EXISTS shop_items (
             id INT AUTO_INCREMENT PRIMARY KEY,
             name VARCHAR(255) NOT NULL,
@@ -79,20 +65,6 @@ try {
             category VARCHAR(50) NOT NULL,
             icon VARCHAR(50) DEFAULT "package",
             duration INT DEFAULT 0,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )');
-    $coreOk = $coreOk && $db->exec('CREATE TABLE IF NOT EXISTS young_players (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            club_id INT NOT NULL,
-            name VARCHAR(255) NOT NULL,
-            age INT NOT NULL,
-            position VARCHAR(10) NOT NULL,
-            potential_rating INT NOT NULL,
-            current_rating INT NOT NULL,
-            development_stage VARCHAR(20) DEFAULT "academy",
-            contract_years INT DEFAULT 3,
-            value BIGINT NOT NULL,
-            training_focus VARCHAR(50) DEFAULT "balanced",
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )');
     if ($coreOk) {
@@ -219,6 +191,53 @@ try {
             $ok = false;
             $logs[] = ['type' => 'error', 'message' => 'Clubs error: ' . $e->getMessage()];
         }
+    }
+
+    $postOk = true;
+    $postOk = $postOk && $db->exec('CREATE TABLE IF NOT EXISTS player_inventory (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            club_uuid CHAR(16) NOT NULL,
+            player_uuid CHAR(16) NOT NULL,
+            player_data TEXT NOT NULL,
+            purchase_price BIGINT NOT NULL,
+            purchase_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+            status VARCHAR(20) DEFAULT "available",
+            INDEX idx_inventory_club_uuid (club_uuid),
+            INDEX idx_inventory_player_uuid (player_uuid),
+            INDEX idx_inventory_status (status)
+        )');
+    $postOk = $postOk && $db->exec('CREATE TABLE IF NOT EXISTS club_staff (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            club_uuid CHAR(16) NOT NULL,
+            staff_type VARCHAR(50) NOT NULL,
+            name VARCHAR(255) NOT NULL,
+            level INT DEFAULT 1,
+            salary BIGINT NOT NULL,
+            contract_weeks INT DEFAULT 52,
+            contract_weeks_remaining INT DEFAULT 52,
+            hired_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+            bonus_applied_this_week TINYINT(1) DEFAULT 0,
+            INDEX idx_staff_club_uuid (club_uuid)
+        )');
+    $postOk = $postOk && $db->exec('CREATE TABLE IF NOT EXISTS young_players (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            club_id INT NOT NULL,
+            name VARCHAR(255) NOT NULL,
+            age INT NOT NULL,
+            position VARCHAR(10) NOT NULL,
+            potential_rating INT NOT NULL,
+            current_rating INT NOT NULL,
+            development_stage VARCHAR(20) DEFAULT "academy",
+            contract_years INT DEFAULT 3,
+            value BIGINT NOT NULL,
+            training_focus VARCHAR(50) DEFAULT "balanced",
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )');
+    if ($postOk) {
+        $logs[] = ['type' => 'info', 'message' => 'Post-club tables ensured'];
+    } else {
+        $ok = false;
+        $logs[] = ['type' => 'error', 'message' => 'Failed ensuring post-club tables: ' . $db->lastErrorMsg()];
     }
 
     $db->close();
