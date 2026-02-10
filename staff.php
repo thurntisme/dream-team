@@ -10,12 +10,12 @@ require_once 'partials/layout.php';
 try {
     $db = getDbConnection();
 
-    // Get user data
-    $stmt = $db->prepare('SELECT name, email, club_name, budget FROM users WHERE id = :id');
-    $stmt->bindValue(':id', $_SESSION['user_id'], SQLITE3_INTEGER);
+    $stmt = $db->prepare('SELECT u.name, u.email, c.club_name, c.budget, c.club_uuid FROM users u LEFT JOIN user_club c ON c.user_uuid = u.uuid WHERE u.uuid = :uuid');
+    $stmt->bindValue(':uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
     $result = $stmt->execute();
     $user = $result->fetchArray(SQLITE3_ASSOC);
     $user_budget = $user['budget'] ?? DEFAULT_BUDGET;
+    $club_uuid = $user['club_uuid'] ?? null;
 
     // Database tables are now created in install.php
 
@@ -35,8 +35,8 @@ try {
 
             if ($user_budget >= $cost) {
                 // Check if user already has this type of staff
-                $stmt = $db->prepare('SELECT COUNT(*) as count FROM club_staff WHERE user_id = :user_id AND staff_type = :staff_type');
-                $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+                $stmt = $db->prepare('SELECT COUNT(*) as count FROM club_staff WHERE club_uuid = :club_uuid AND staff_type = :staff_type');
+                $stmt->bindValue(':club_uuid', $club_uuid, SQLITE3_TEXT);
                 $stmt->bindValue(':staff_type', $staff_type, SQLITE3_TEXT);
                 $result = $stmt->execute();
                 $existing = $result->fetchArray(SQLITE3_ASSOC);
@@ -46,8 +46,8 @@ try {
                     $message_type = 'error';
                 } else {
                     // Hire staff
-                    $stmt = $db->prepare('INSERT INTO club_staff (user_id, staff_type, name, level, salary) VALUES (:user_id, :staff_type, :name, :level, :salary)');
-                    $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+                    $stmt = $db->prepare('INSERT INTO club_staff (club_uuid, staff_type, name, level, salary) VALUES (:club_uuid, :staff_type, :name, :level, :salary)');
+                    $stmt->bindValue(':club_uuid', $club_uuid, SQLITE3_TEXT);
                     $stmt->bindValue(':staff_type', $staff_type, SQLITE3_TEXT);
                     $stmt->bindValue(':name', $staff_name, SQLITE3_TEXT);
                     $stmt->bindValue(':level', $staff_level, SQLITE3_INTEGER);
@@ -56,9 +56,9 @@ try {
 
                     // Deduct cost from budget
                     $new_budget = $user_budget - $cost;
-                    $stmt = $db->prepare('UPDATE users SET budget = :budget WHERE id = :user_id');
+                    $stmt = $db->prepare('UPDATE user_club SET budget = :budget WHERE club_uuid = :club_uuid');
                     $stmt->bindValue(':budget', $new_budget, SQLITE3_INTEGER);
-                    $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+                    $stmt->bindValue(':club_uuid', $club_uuid, SQLITE3_TEXT);
                     $stmt->execute();
 
                     $user_budget = $new_budget;
@@ -73,9 +73,9 @@ try {
             $staff_id = (int) $_POST['staff_id'];
 
             // Get staff details for severance pay
-            $stmt = $db->prepare('SELECT * FROM club_staff WHERE id = :id AND user_id = :user_id');
+            $stmt = $db->prepare('SELECT * FROM club_staff WHERE id = :id AND club_uuid = :club_uuid');
             $stmt->bindValue(':id', $staff_id, SQLITE3_INTEGER);
-            $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+            $stmt->bindValue(':club_uuid', $club_uuid, SQLITE3_TEXT);
             $result = $stmt->execute();
             $staff = $result->fetchArray(SQLITE3_ASSOC);
 
@@ -85,16 +85,16 @@ try {
 
                 if ($user_budget >= $severance) {
                     // Fire staff
-                    $stmt = $db->prepare('DELETE FROM club_staff WHERE id = :id AND user_id = :user_id');
+                    $stmt = $db->prepare('DELETE FROM club_staff WHERE id = :id AND club_uuid = :club_uuid');
                     $stmt->bindValue(':id', $staff_id, SQLITE3_INTEGER);
-                    $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+                    $stmt->bindValue(':club_uuid', $club_uuid, SQLITE3_TEXT);
                     $stmt->execute();
 
                     // Deduct severance from budget
                     $new_budget = $user_budget - $severance;
-                    $stmt = $db->prepare('UPDATE users SET budget = :budget WHERE id = :user_id');
+                    $stmt = $db->prepare('UPDATE user_club SET budget = :budget WHERE club_uuid = :club_uuid');
                     $stmt->bindValue(':budget', $new_budget, SQLITE3_INTEGER);
-                    $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+                    $stmt->bindValue(':club_uuid', $club_uuid, SQLITE3_TEXT);
                     $stmt->execute();
 
                     $user_budget = $new_budget;
@@ -108,9 +108,9 @@ try {
         } elseif (isset($_POST['renew_contract'])) {
             $staff_id = (int) $_POST['staff_id'];
 
-            $stmt = $db->prepare('SELECT * FROM club_staff WHERE id = :id AND user_id = :user_id');
+            $stmt = $db->prepare('SELECT * FROM club_staff WHERE id = :id AND club_uuid = :club_uuid');
             $stmt->bindValue(':id', $staff_id, SQLITE3_INTEGER);
-            $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+            $stmt->bindValue(':club_uuid', $club_uuid, SQLITE3_TEXT);
             $result = $stmt->execute();
             $staff = $result->fetchArray(SQLITE3_ASSOC);
 
@@ -120,16 +120,16 @@ try {
 
                 if ($user_budget >= $renewal_cost) {
                     // Renew contract
-                    $stmt = $db->prepare('UPDATE club_staff SET contract_weeks_remaining = 52 WHERE id = :id AND user_id = :user_id');
+                    $stmt = $db->prepare('UPDATE club_staff SET contract_weeks_remaining = 52 WHERE id = :id AND club_uuid = :club_uuid');
                     $stmt->bindValue(':id', $staff_id, SQLITE3_INTEGER);
-                    $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+                    $stmt->bindValue(':club_uuid', $club_uuid, SQLITE3_TEXT);
                     $stmt->execute();
 
                     // Deduct cost from budget
                     $new_budget = $user_budget - $renewal_cost;
-                    $stmt = $db->prepare('UPDATE users SET budget = :budget WHERE id = :user_id');
+                    $stmt = $db->prepare('UPDATE user_club SET budget = :budget WHERE club_uuid = :club_uuid');
                     $stmt->bindValue(':budget', $new_budget, SQLITE3_INTEGER);
-                    $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+                    $stmt->bindValue(':club_uuid', $club_uuid, SQLITE3_TEXT);
                     $stmt->execute();
 
                     $user_budget = $new_budget;
@@ -149,9 +149,9 @@ try {
             error_log("Staff ID: $staff_id, New Level: $new_level, User ID: " . $_SESSION['user_id']);
             error_log("POST data: " . print_r($_POST, true));
 
-            $stmt = $db->prepare('SELECT * FROM club_staff WHERE id = :id AND user_id = :user_id');
+            $stmt = $db->prepare('SELECT * FROM club_staff WHERE id = :id AND club_uuid = :club_uuid');
             $stmt->bindValue(':id', $staff_id, SQLITE3_INTEGER);
-            $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+            $stmt->bindValue(':club_uuid', $club_uuid, SQLITE3_TEXT);
             $result = $stmt->execute();
             $staff = $result->fetchArray(SQLITE3_ASSOC);
 
@@ -178,19 +178,19 @@ try {
 
                 if ($user_budget >= $upgrade_cost) {
                     // Upgrade staff
-                    $stmt = $db->prepare('UPDATE club_staff SET level = :level, salary = :salary WHERE id = :id AND user_id = :user_id');
+                    $stmt = $db->prepare('UPDATE club_staff SET level = :level, salary = :salary WHERE id = :id AND club_uuid = :club_uuid');
                     $stmt->bindValue(':level', $new_level, SQLITE3_INTEGER);
                     $stmt->bindValue(':salary', $new_level_config['salary'], SQLITE3_INTEGER);
                     $stmt->bindValue(':id', $staff_id, SQLITE3_INTEGER);
-                    $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+                    $stmt->bindValue(':club_uuid', $club_uuid, SQLITE3_TEXT);
                     $upgrade_result = $stmt->execute();
 
                     if ($upgrade_result) {
                         // Deduct upgrade cost from budget
                         $new_budget = $user_budget - $upgrade_cost;
-                        $stmt = $db->prepare('UPDATE users SET budget = :budget WHERE id = :user_id');
+                        $stmt = $db->prepare('UPDATE user_club SET budget = :budget WHERE club_uuid = :club_uuid');
                         $stmt->bindValue(':budget', $new_budget, SQLITE3_INTEGER);
-                        $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+                        $stmt->bindValue(':club_uuid', $club_uuid, SQLITE3_TEXT);
                         $budget_result = $stmt->execute();
 
                         if ($budget_result) {
@@ -223,9 +223,9 @@ try {
             error_log("Staff ID: $staff_id, New Level: $new_level, User ID: " . $_SESSION['user_id']);
             error_log("POST data: " . print_r($_POST, true));
 
-            $stmt = $db->prepare('SELECT * FROM club_staff WHERE id = :id AND user_id = :user_id');
+            $stmt = $db->prepare('SELECT * FROM club_staff WHERE id = :id AND club_uuid = :club_uuid');
             $stmt->bindValue(':id', $staff_id, SQLITE3_INTEGER);
-            $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+            $stmt->bindValue(':club_uuid', $club_uuid, SQLITE3_TEXT);
             $result = $stmt->execute();
             $staff = $result->fetchArray(SQLITE3_ASSOC);
 
@@ -239,18 +239,18 @@ try {
                 $refund = (int) ($level_difference * 0.5);
 
                 // Downgrade staff
-                $stmt = $db->prepare('UPDATE club_staff SET level = :level, salary = :salary WHERE id = :id AND user_id = :user_id');
+                $stmt = $db->prepare('UPDATE club_staff SET level = :level, salary = :salary WHERE id = :id AND club_uuid = :club_uuid');
                 $stmt->bindValue(':level', $new_level, SQLITE3_INTEGER);
                 $stmt->bindValue(':salary', $new_level_config['salary'], SQLITE3_INTEGER);
                 $stmt->bindValue(':id', $staff_id, SQLITE3_INTEGER);
-                $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+                $stmt->bindValue(':club_uuid', $club_uuid, SQLITE3_TEXT);
                 $stmt->execute();
 
                 // Add refund to budget
                 $new_budget = $user_budget + $refund;
-                $stmt = $db->prepare('UPDATE users SET budget = :budget WHERE id = :user_id');
+                $stmt = $db->prepare('UPDATE user_club SET budget = :budget WHERE club_uuid = :club_uuid');
                 $stmt->bindValue(':budget', $new_budget, SQLITE3_INTEGER);
-                $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+                $stmt->bindValue(':club_uuid', $club_uuid, SQLITE3_TEXT);
                 $stmt->execute();
 
                 $user_budget = $new_budget;
@@ -261,8 +261,8 @@ try {
     }
 
     // Get current staff
-    $stmt = $db->prepare('SELECT * FROM club_staff WHERE user_id = :user_id ORDER BY staff_type, level DESC');
-    $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+    $stmt = $db->prepare('SELECT * FROM club_staff WHERE club_uuid = :club_uuid ORDER BY staff_type, level DESC');
+    $stmt->bindValue(':club_uuid', $club_uuid, SQLITE3_TEXT);
     $result = $stmt->execute();
 
     $current_staff = [];

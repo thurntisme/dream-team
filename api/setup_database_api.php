@@ -38,9 +38,10 @@ try {
             uuid CHAR(16) NULL,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )');
-    $coreOk = $coreOk && $db->exec('CREATE TABLE IF NOT EXISTS user_club (
+        $coreOk = $coreOk && $db->exec('CREATE TABLE IF NOT EXISTS user_club (
             id INT AUTO_INCREMENT PRIMARY KEY,
             user_uuid CHAR(16) NOT NULL,
+            club_uuid CHAR(16) NULL,
             club_name VARCHAR(255) NULL,
             formation VARCHAR(20) DEFAULT "4-4-2",
             team TEXT,
@@ -52,7 +53,21 @@ try {
             user_plan VARCHAR(20) DEFAULT "free",
             plan_expires_at DATETIME NULL,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            INDEX idx_user_club_user_uuid (user_uuid)
+            INDEX idx_user_club_user_uuid (user_uuid),
+            INDEX idx_user_club_club_uuid (club_uuid)
+        )');
+    $coreOk = $coreOk && $db->exec('CREATE TABLE IF NOT EXISTS club_staff (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            club_uuid CHAR(16) NOT NULL,
+            staff_type VARCHAR(50) NOT NULL,
+            name VARCHAR(255) NOT NULL,
+            level INT DEFAULT 1,
+            salary BIGINT NOT NULL,
+            contract_weeks INT DEFAULT 52,
+            contract_weeks_remaining INT DEFAULT 52,
+            hired_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+            bonus_applied_this_week TINYINT(1) DEFAULT 0,
+            INDEX idx_staff_club_uuid (club_uuid)
         )');
     $coreOk = $coreOk && $db->exec('CREATE TABLE IF NOT EXISTS shop_items (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -128,9 +143,10 @@ try {
                                 $resUuid = $stmtUuid->execute();
                                 $rowUuid = $resUuid ? $resUuid->fetchArray(SQLITE3_ASSOC) : null;
                                 $uuidVal = $rowUuid['uuid'] ?? null;
-                                $stmtClub = $db->prepare('INSERT INTO user_club (user_uuid, club_name, formation, team, budget, max_players) VALUES (:user_uuid, :club, :form, :team, :budget, 23)');
+                                $stmtClub = $db->prepare('INSERT INTO user_club (user_uuid, club_uuid, club_name, formation, team, budget, max_players) VALUES (:user_uuid, :club_uuid, :club, :form, :team, :budget, 23)');
                                 if ($stmtClub) {
                                     $stmtClub->bindValue(':user_uuid', $uuidVal, SQLITE3_TEXT);
+                                    $stmtClub->bindValue(':club_uuid', generateUUID(), SQLITE3_TEXT);
                                     $stmtClub->bindValue(':club', $adminName . ' FC', SQLITE3_TEXT);
                                     $stmtClub->bindValue(':form', '4-4-2', SQLITE3_TEXT);
                                     $stmtClub->bindValue(':team', '[]', SQLITE3_TEXT);

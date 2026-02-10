@@ -62,9 +62,10 @@ if ($action === 'register') {
         $_SESSION['last_activity'] = time();
 
         // Create default user_club row
-        $stmtClub = $db->prepare('INSERT INTO user_club (user_uuid, club_name, formation, team, budget, max_players) VALUES (:user_uuid, NULL, :form, :team, :budget, 23)');
+        $stmtClub = $db->prepare('INSERT INTO user_club (user_uuid, club_uuid, club_name, formation, team, budget, max_players) VALUES (:user_uuid, :club_uuid, NULL, :form, :team, :budget, 23)');
         if ($stmtClub !== false) {
             $stmtClub->bindValue(':user_uuid', $uuidVal, SQLITE3_TEXT);
+            $stmtClub->bindValue(':club_uuid', generateUUID(), SQLITE3_TEXT);
             $stmtClub->bindValue(':form', '4-4-2', SQLITE3_TEXT);
             $stmtClub->bindValue(':team', '[]', SQLITE3_TEXT);
             $stmtClub->bindValue(':budget', DEFAULT_BUDGET, SQLITE3_INTEGER);

@@ -124,6 +124,7 @@ function isDatabaseAvailable()
                 $db->exec('CREATE TABLE IF NOT EXISTS user_club (
                     id INT AUTO_INCREMENT PRIMARY KEY,
                     user_uuid CHAR(16) NOT NULL,
+                    club_uuid CHAR(16) NULL,
                     club_name VARCHAR(255) NULL,
                     formation VARCHAR(20) DEFAULT \"4-4-2\",
                     team TEXT,
@@ -135,7 +136,21 @@ function isDatabaseAvailable()
                     user_plan VARCHAR(20) DEFAULT \"free\",
                     plan_expires_at DATETIME NULL,
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    INDEX idx_user_club_user_uuid (user_uuid)
+                    INDEX idx_user_club_user_uuid (user_uuid),
+                    INDEX idx_user_club_club_uuid (club_uuid)
+                )');
+                $db->exec('CREATE TABLE IF NOT EXISTS club_staff (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    club_uuid CHAR(16) NOT NULL,
+                    staff_type VARCHAR(50) NOT NULL,
+                    name VARCHAR(255) NOT NULL,
+                    level INT DEFAULT 1,
+                    salary BIGINT NOT NULL,
+                    contract_weeks INT DEFAULT 52,
+                    contract_weeks_remaining INT DEFAULT 52,
+                    hired_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    bonus_applied_this_week TINYINT(1) DEFAULT 0,
+                    INDEX idx_staff_club_uuid (club_uuid)
                 )');
 
                 $cols = [];
@@ -156,8 +171,9 @@ function isDatabaseAvailable()
                     $hasClubRows = ((int)($rowC['c'] ?? 0)) > 0;
                 }
                 if (!$hasClubRows) {
-                    $db->exec('INSERT INTO user_club (user_uuid, club_name, formation, team, budget, max_players, fans, club_exp, club_level, user_plan, plan_expires_at, created_at)
-                        SELECT uuid, 
+                    $db->exec('INSERT INTO user_club (user_uuid, club_uuid, club_name, formation, team, budget, max_players, fans, club_exp, club_level, user_plan, plan_expires_at, created_at)
+                        SELECT uuid,
+                               SUBSTR(REPLACE(UUID(), \"-\", \"\"), 1, 16),
                                COALESCE(club_name, NULL), 
                                COALESCE(formation, \"4-4-2\"), 
                                COALESCE(team, \"[]\"), 
@@ -194,6 +210,25 @@ function isDatabaseAvailable()
                         $db->exec('UPDATE user_club SET user_uuid = SUBSTR(REPLACE(user_uuid, \"-\", \"\"), 1, 16) WHERE user_uuid IS NOT NULL AND user_uuid != \"\" AND CHAR_LENGTH(user_uuid) != 16');
                         $db->exec('ALTER TABLE user_club MODIFY COLUMN user_uuid CHAR(16) NOT NULL');
                     }
+                } catch (Throwable $e) { }
+
+                // Add club_uuid column for existing installations and populate values
+                try {
+                    $db->exec('ALTER TABLE user_club ADD COLUMN club_uuid CHAR(16) NULL');
+                    $db->exec('UPDATE user_club SET club_uuid = SUBSTR(REPLACE(UUID(), \"-\", \"\"), 1, 16) WHERE club_uuid IS NULL OR club_uuid = \"\"');
+                    $db->exec('ALTER TABLE user_club MODIFY COLUMN club_uuid CHAR(16) NULL');
+                } catch (Throwable $e) { }
+
+                // Migrate club_staff from user_id to club_uuid
+                try {
+                    $db->exec('ALTER TABLE club_staff ADD COLUMN club_uuid CHAR(16) NULL');
+                    $db->exec('UPDATE club_staff cs 
+                               JOIN users u ON cs.user_id = u.id 
+                               JOIN user_club uc ON uc.user_uuid = u.uuid
+                               SET cs.club_uuid = uc.club_uuid
+                               WHERE cs.club_uuid IS NULL OR cs.club_uuid = \"\"');
+                    $db->exec('ALTER TABLE club_staff DROP COLUMN user_id');
+                    $db->exec('ALTER TABLE club_staff MODIFY COLUMN club_uuid CHAR(16) NOT NULL');
                 } catch (Throwable $e) { }
             } catch (Throwable $e) {
             }

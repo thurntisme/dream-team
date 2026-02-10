@@ -16,7 +16,7 @@ if (!defined('DREAM_TEAM_APP')) {
 if (!function_exists('getUserStaff')) {
     function getUserStaff($db, $user_id)
     {
-        $stmt = $db->prepare('SELECT * FROM club_staff WHERE user_id = (SELECT id FROM users WHERE uuid = :uuid)');
+        $stmt = $db->prepare('SELECT * FROM club_staff WHERE club_uuid = (SELECT club_uuid FROM user_club WHERE user_uuid = :uuid)');
         $stmt->bindValue(':uuid', $user_id, SQLITE3_TEXT);
         $result = $stmt->execute();
 
@@ -99,14 +99,12 @@ if (!function_exists('calculateStaffSalaries')) {
 if (!function_exists('updateStaffContracts')) {
     function updateStaffContracts($db, $user_id)
     {
-        // Reduce contract weeks for all staff
-        $stmt = $db->prepare('UPDATE club_staff SET contract_weeks_remaining = contract_weeks_remaining - 1 WHERE user_id = :user_id AND contract_weeks_remaining > 0');
-        $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+        $stmt = $db->prepare('UPDATE club_staff SET contract_weeks_remaining = contract_weeks_remaining - 1 WHERE club_uuid = (SELECT club_uuid FROM user_club WHERE user_uuid = :uuid) AND contract_weeks_remaining > 0');
+        $stmt->bindValue(':uuid', $user_id, SQLITE3_TEXT);
         $stmt->execute();
 
-        // Get expired staff
-        $stmt = $db->prepare('SELECT * FROM club_staff WHERE user_id = :user_id AND contract_weeks_remaining <= 0');
-        $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+        $stmt = $db->prepare('SELECT * FROM club_staff WHERE club_uuid = (SELECT club_uuid FROM user_club WHERE user_uuid = :uuid) AND contract_weeks_remaining <= 0');
+        $stmt->bindValue(':uuid', $user_id, SQLITE3_TEXT);
         $result = $stmt->execute();
 
         $expired_staff = [];
@@ -114,10 +112,9 @@ if (!function_exists('updateStaffContracts')) {
             $expired_staff[] = $row;
         }
 
-        // Remove expired staff
         if (!empty($expired_staff)) {
-            $stmt = $db->prepare('DELETE FROM club_staff WHERE user_id = :user_id AND contract_weeks_remaining <= 0');
-            $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+            $stmt = $db->prepare('DELETE FROM club_staff WHERE club_uuid = (SELECT club_uuid FROM user_club WHERE user_uuid = :uuid) AND contract_weeks_remaining <= 0');
+            $stmt->bindValue(':uuid', $user_id, SQLITE3_TEXT);
             $stmt->execute();
         }
 

@@ -53,9 +53,10 @@ function seedFakeClubs()
                     $rowUuid = $resUuid ? $resUuid->fetchArray(SQLITE3_ASSOC) : null;
                     $uuidVal = $rowUuid['uuid'] ?? null;
                 }
-                $clubStmt = $db->prepare('INSERT INTO user_club (user_uuid, club_name, formation, team, budget, max_players) VALUES (:user_uuid, :club_name, :formation, :team, :budget, 23)');
+                $clubStmt = $db->prepare('INSERT INTO user_club (user_uuid, club_uuid, club_name, formation, team, budget, max_players) VALUES (:user_uuid, :club_uuid, :club_name, :formation, :team, :budget, 23)');
                 if ($clubStmt !== false) {
                     $clubStmt->bindValue(':user_uuid', $uuidVal, SQLITE3_TEXT);
+                    $clubStmt->bindValue(':club_uuid', generateUUID(), SQLITE3_TEXT);
                     $clubStmt->bindValue(':club_name', $club['name'], SQLITE3_TEXT);
                     $clubStmt->bindValue(':formation', $club['formation'], SQLITE3_TEXT);
                     $clubStmt->bindValue(':team', json_encode($team), SQLITE3_TEXT);
