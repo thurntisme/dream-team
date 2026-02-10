@@ -44,15 +44,27 @@ $userData = $result->fetchArray(SQLITE3_ASSOC);
 $userBudget = $userData['budget'] ?? 0;
 
 // Get user's pending bids
-$stmt = $db->prepare('
-    SELECT b.*, yp.name as player_name, yp.position, yp.age, yp.potential_rating, 
-           u.club_name as owner_club_name
-    FROM young_player_bids b
-    JOIN young_players yp ON b.young_player_id = yp.id
-    JOIN users u ON b.owner_club_id = u.id
-    WHERE b.bidder_club_id = :club_id AND b.status = "pending" AND b.expires_at > datetime("now")
-    ORDER BY b.created_at DESC
-');
+if (DB_DRIVER === 'mysql') {
+    $stmt = $db->prepare('
+        SELECT b.*, yp.name as player_name, yp.position, yp.age, yp.potential_rating, 
+               u.club_name as owner_club_name
+        FROM young_player_bids b
+        JOIN young_players yp ON b.young_player_id = yp.id
+        JOIN users u ON b.owner_club_id = u.id
+        WHERE b.bidder_club_id = :club_id AND b.status = "pending" AND b.expires_at > NOW()
+        ORDER BY b.created_at DESC
+    ');
+} else {
+    $stmt = $db->prepare('
+        SELECT b.*, yp.name as player_name, yp.position, yp.age, yp.potential_rating, 
+               u.club_name as owner_club_name
+        FROM young_player_bids b
+        JOIN young_players yp ON b.young_player_id = yp.id
+        JOIN users u ON b.owner_club_id = u.id
+        WHERE b.bidder_club_id = :club_id AND b.status = "pending" AND b.expires_at > datetime("now")
+        ORDER BY b.created_at DESC
+    ');
+}
 $stmt->bindValue(':club_id', $userId, SQLITE3_INTEGER);
 $result = $stmt->execute();
 $myBids = [];

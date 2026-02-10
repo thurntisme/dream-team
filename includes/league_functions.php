@@ -24,52 +24,102 @@ function initializeLeague($db, $user_id)
 
 function createLeagueTables($db)
 {
-    // League teams table (updated with division support)
-    $sql = 'CREATE TABLE IF NOT EXISTS league_teams (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        season TEXT NOT NULL,
-        user_id INTEGER,
-        name TEXT NOT NULL,
-        is_user BOOLEAN DEFAULT 0,
-        division INTEGER DEFAULT 1,
-        matches_played INTEGER DEFAULT 0,
-        wins INTEGER DEFAULT 0,
-        draws INTEGER DEFAULT 0,
-        losses INTEGER DEFAULT 0,
-        goals_for INTEGER DEFAULT 0,
-        goals_against INTEGER DEFAULT 0,
-        points INTEGER DEFAULT 0,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )';
-    $db->exec($sql);
-
-    // League team rosters table (23 players per team)
-    $sql = 'CREATE TABLE IF NOT EXISTS league_team_rosters (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        league_team_id INTEGER NOT NULL,
-        season TEXT NOT NULL,
-        player_data TEXT NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (league_team_id) REFERENCES league_teams(id)
-    )';
-    $db->exec($sql);
-
-    // League matches table
-    $sql = 'CREATE TABLE IF NOT EXISTS league_matches (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        season TEXT NOT NULL,
-        gameweek INTEGER NOT NULL,
-        home_team_id INTEGER NOT NULL,
-        away_team_id INTEGER NOT NULL,
-        home_score INTEGER,
-        away_score INTEGER,
-        status TEXT DEFAULT "scheduled",
-        match_date DATE NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (home_team_id) REFERENCES league_teams(id),
-        FOREIGN KEY (away_team_id) REFERENCES league_teams(id)
-    )';
-    $db->exec($sql);
+    if (defined('DB_DRIVER') && DB_DRIVER === 'mysql') {
+        $db->exec('CREATE TABLE IF NOT EXISTS league_teams (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            season VARCHAR(10) NOT NULL,
+            user_id INT NULL,
+            name VARCHAR(255) NOT NULL,
+            is_user TINYINT(1) DEFAULT 0,
+            division INT DEFAULT 1,
+            matches_played INT DEFAULT 0,
+            wins INT DEFAULT 0,
+            draws INT DEFAULT 0,
+            losses INT DEFAULT 0,
+            goals_for INT DEFAULT 0,
+            goals_against INT DEFAULT 0,
+            points INT DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )');
+        $db->exec('CREATE INDEX IF NOT EXISTS idx_league_teams_season ON league_teams (season)');
+        $db->exec('CREATE INDEX IF NOT EXISTS idx_league_teams_user ON league_teams (user_id)');
+        $db->exec('CREATE TABLE IF NOT EXISTS league_team_rosters (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            league_team_id INT NOT NULL,
+            season VARCHAR(10) NOT NULL,
+            player_data TEXT NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (league_team_id) REFERENCES league_teams(id)
+        )');
+        $db->exec('CREATE INDEX IF NOT EXISTS idx_league_team_rosters_team ON league_team_rosters (league_team_id)');
+        $db->exec('CREATE INDEX IF NOT EXISTS idx_league_team_rosters_season ON league_team_rosters (season)');
+        $db->exec('CREATE TABLE IF NOT EXISTS league_matches (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            season VARCHAR(10) NOT NULL,
+            gameweek INT NOT NULL,
+            home_team_id INT NOT NULL,
+            away_team_id INT NOT NULL,
+            home_score INT NULL,
+            away_score INT NULL,
+            status VARCHAR(20) DEFAULT "scheduled",
+            match_date DATE NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (home_team_id) REFERENCES league_teams(id),
+            FOREIGN KEY (away_team_id) REFERENCES league_teams(id)
+        )');
+        $db->exec('CREATE INDEX IF NOT EXISTS idx_league_matches_season_week ON league_matches (season, gameweek)');
+        $db->exec('CREATE INDEX IF NOT EXISTS idx_league_matches_home ON league_matches (home_team_id)');
+        $db->exec('CREATE INDEX IF NOT EXISTS idx_league_matches_away ON league_matches (away_team_id)');
+    } else {
+        $sql = 'CREATE TABLE IF NOT EXISTS league_teams (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            season TEXT NOT NULL,
+            user_id INTEGER,
+            name TEXT NOT NULL,
+            is_user BOOLEAN DEFAULT 0,
+            division INTEGER DEFAULT 1,
+            matches_played INTEGER DEFAULT 0,
+            wins INTEGER DEFAULT 0,
+            draws INTEGER DEFAULT 0,
+            losses INTEGER DEFAULT 0,
+            goals_for INTEGER DEFAULT 0,
+            goals_against INTEGER DEFAULT 0,
+            points INTEGER DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )';
+        $db->exec($sql);
+        $db->exec('CREATE INDEX IF NOT EXISTS idx_league_teams_season ON league_teams (season)');
+        $db->exec('CREATE INDEX IF NOT EXISTS idx_league_teams_user ON league_teams (user_id)');
+        $sql = 'CREATE TABLE IF NOT EXISTS league_team_rosters (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            league_team_id INTEGER NOT NULL,
+            season TEXT NOT NULL,
+            player_data TEXT NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (league_team_id) REFERENCES league_teams(id)
+        )';
+        $db->exec($sql);
+        $db->exec('CREATE INDEX IF NOT EXISTS idx_league_team_rosters_team ON league_team_rosters (league_team_id)');
+        $db->exec('CREATE INDEX IF NOT EXISTS idx_league_team_rosters_season ON league_team_rosters (season)');
+        $sql = 'CREATE TABLE IF NOT EXISTS league_matches (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            season TEXT NOT NULL,
+            gameweek INTEGER NOT NULL,
+            home_team_id INTEGER NOT NULL,
+            away_team_id INTEGER NOT NULL,
+            home_score INTEGER,
+            away_score INTEGER,
+            status TEXT DEFAULT "scheduled",
+            match_date DATE NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (home_team_id) REFERENCES league_teams(id),
+            FOREIGN KEY (away_team_id) REFERENCES league_teams(id)
+        )';
+        $db->exec($sql);
+        $db->exec('CREATE INDEX IF NOT EXISTS idx_league_matches_season_week ON league_matches (season, gameweek)');
+        $db->exec('CREATE INDEX IF NOT EXISTS idx_league_matches_home ON league_matches (home_team_id)');
+        $db->exec('CREATE INDEX IF NOT EXISTS idx_league_matches_away ON league_matches (away_team_id)');
+    }
 }
 
 function createLeagueTeams($db, $user_id, $season)

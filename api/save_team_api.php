@@ -20,19 +20,18 @@ $substitutes = $_POST['substitutes'] ?? '[]';
 try {
     $db = getDbConnection();
 
-    // Check if substitutes column exists, if not add it
-    $result = $db->query("PRAGMA table_info(users)");
-    $columns = [];
-    while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
-        $columns[] = $row['name'];
-    }
-
-    if (!in_array('substitutes', $columns)) {
-        $db->exec('ALTER TABLE users ADD COLUMN substitutes TEXT DEFAULT "[]"');
-    }
-
-    if (!in_array('max_players', $columns)) {
-        $db->exec('ALTER TABLE users ADD COLUMN max_players INTEGER DEFAULT 23');
+    if (DB_DRIVER === 'sqlite') {
+        $result = $db->query("PRAGMA table_info(users)");
+        $columns = [];
+        while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+            $columns[] = $row['name'];
+        }
+        if (!in_array('substitutes', $columns)) {
+            $db->exec('ALTER TABLE users ADD COLUMN substitutes TEXT DEFAULT "[]"');
+        }
+        if (!in_array('max_players', $columns)) {
+            $db->exec('ALTER TABLE users ADD COLUMN max_players INTEGER DEFAULT 23');
+        }
     }
 
     $stmt = $db->prepare('UPDATE users SET formation = :formation, team = :team, substitutes = :substitutes WHERE id = :id');

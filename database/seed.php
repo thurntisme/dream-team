@@ -149,15 +149,17 @@ function selectRandomPlayer($players, $budget)
 /**
  * Calculate total team value
  */
-function calculateTeamValue($team)
-{
-    $totalValue = 0;
-    foreach ($team as $player) {
-        if ($player) {
-            $totalValue += $player['value'];
+if (!function_exists('calculateTeamValue')) {
+    function calculateTeamValue($team)
+    {
+        $totalValue = 0;
+        foreach ($team as $player) {
+            if ($player) {
+                $totalValue += $player['value'] ?? 0;
+            }
         }
+        return $totalValue;
     }
-    return $totalValue;
 }
 
 /**

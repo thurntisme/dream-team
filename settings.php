@@ -38,9 +38,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'auto_save' => $autoSave
             ];
 
-            // Update each setting
             foreach ($settings as $key => $value) {
-                $stmt = $db->prepare('INSERT OR REPLACE INTO user_settings (user_id, setting_key, setting_value, updated_at) VALUES (:user_id, :key, :value, datetime("now"))');
+                if (DB_DRIVER === 'mysql') {
+                    $stmt = $db->prepare('INSERT INTO user_settings (user_id, setting_key, setting_value, updated_at) VALUES (:user_id, :key, :value, NOW()) ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_at = NOW()');
+                } else {
+                    $stmt = $db->prepare('INSERT OR REPLACE INTO user_settings (user_id, setting_key, setting_value, updated_at) VALUES (:user_id, :key, :value, datetime("now"))');
+                }
                 $stmt->bindValue(':user_id', $userId, SQLITE3_INTEGER);
                 $stmt->bindValue(':key', $key, SQLITE3_TEXT);
                 $stmt->bindValue(':value', $value, SQLITE3_TEXT);

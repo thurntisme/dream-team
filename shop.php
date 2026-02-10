@@ -25,12 +25,18 @@ try {
         $stmt->execute();
     }
 
-    // Check if shop_items table exists (should be created by install.php)
-    $result = $db->query("SELECT name FROM sqlite_master WHERE type='table' AND name='shop_items'");
-    if (!$result->fetchArray()) {
-        // Redirect to install if shop tables don't exist
-        header('Location: install.php');
-        exit;
+    if (DB_DRIVER === 'sqlite') {
+        $result = $db->query("SELECT name FROM sqlite_master WHERE type='table' AND name='shop_items'");
+        if (!$result->fetchArray()) {
+            header('Location: install.php');
+            exit;
+        }
+    } else {
+        $result = $db->query("SELECT 1 FROM shop_items LIMIT 1");
+        if ($result === false) {
+            header('Location: install.php');
+            exit;
+        }
     }
 
     // Get all shop items
@@ -43,12 +49,21 @@ try {
     }
 
     // Get user's active items
-    $stmt = $db->prepare('SELECT ui.*, si.name, si.description, si.effect_type, si.effect_value, si.icon 
+    if (DB_DRIVER === 'mysql') {
+        $stmt = $db->prepare('SELECT ui.*, si.name, si.description, si.effect_type, si.effect_value, si.icon 
+                         FROM user_inventory ui 
+                         JOIN shop_items si ON ui.item_id = si.id 
+                         WHERE ui.user_id = :user_id AND ui.quantity > 0 
+                         AND (ui.expires_at IS NULL OR ui.expires_at > NOW())
+                         ORDER BY ui.purchased_at DESC');
+    } else {
+        $stmt = $db->prepare('SELECT ui.*, si.name, si.description, si.effect_type, si.effect_value, si.icon 
                          FROM user_inventory ui 
                          JOIN shop_items si ON ui.item_id = si.id 
                          WHERE ui.user_id = :user_id AND ui.quantity > 0 
                          AND (ui.expires_at IS NULL OR ui.expires_at > datetime("now"))
                          ORDER BY ui.purchased_at DESC');
+    }
     $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
     $result = $stmt->execute();
 

@@ -148,7 +148,7 @@ if (!function_exists('promoteYoungPlayer')) {
             $stmt->execute();
 
             // Update young player status
-            $stmt = $db->prepare('UPDATE young_players SET development_stage = "promoted", promoted_at = datetime("now") WHERE id = :id');
+            $stmt = $db->prepare(DB_DRIVER === 'mysql' ? 'UPDATE young_players SET development_stage = "promoted", promoted_at = NOW() WHERE id = :id' : 'UPDATE young_players SET development_stage = "promoted", promoted_at = datetime("now") WHERE id = :id');
             $stmt->bindValue(':id', $young_player_id, SQLITE3_INTEGER);
             $stmt->execute();
 
@@ -228,15 +228,27 @@ if (!function_exists('getClubYoungPlayerBids')) {
         try {
             $db = getDbConnection();
 
-            $stmt = $db->prepare('
-                SELECT b.*, yp.name as player_name, yp.position, yp.age, yp.potential_rating, 
-                       u.club_name as bidder_club_name, u.name as bidder_name
-                FROM young_player_bids b
-                JOIN young_players yp ON b.young_player_id = yp.id
-                JOIN users u ON b.bidder_club_id = u.id
-                WHERE b.owner_club_id = :club_id AND b.status = "pending" AND b.expires_at > datetime("now")
-                ORDER BY b.created_at DESC
-            ');
+            if (DB_DRIVER === 'mysql') {
+                $stmt = $db->prepare('
+                    SELECT b.*, yp.name as player_name, yp.position, yp.age, yp.potential_rating, 
+                           u.club_name as bidder_club_name, u.name as bidder_name
+                    FROM young_player_bids b
+                    JOIN young_players yp ON b.young_player_id = yp.id
+                    JOIN users u ON b.bidder_club_id = u.id
+                    WHERE b.owner_club_id = :club_id AND b.status = "pending" AND b.expires_at > NOW()
+                    ORDER BY b.created_at DESC
+                ');
+            } else {
+                $stmt = $db->prepare('
+                    SELECT b.*, yp.name as player_name, yp.position, yp.age, yp.potential_rating, 
+                           u.club_name as bidder_club_name, u.name as bidder_name
+                    FROM young_player_bids b
+                    JOIN young_players yp ON b.young_player_id = yp.id
+                    JOIN users u ON b.bidder_club_id = u.id
+                    WHERE b.owner_club_id = :club_id AND b.status = "pending" AND b.expires_at > datetime("now")
+                    ORDER BY b.created_at DESC
+                ');
+            }
             $stmt->bindValue(':club_id', $club_id, SQLITE3_INTEGER);
 
             $result = $stmt->execute();

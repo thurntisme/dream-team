@@ -12,8 +12,10 @@ if (version_compare(PHP_VERSION, '7.4.0') < 0) {
 }
 
 // Check SQLite extension
-if (!extension_loaded('sqlite3')) {
-    $errors[] = 'SQLite3 extension is not loaded';
+if (DB_DRIVER === 'sqlite') {
+    if (!extension_loaded('sqlite3')) {
+        $errors[] = 'SQLite3 extension is not loaded';
+    }
 }
 
 // Get current configuration
@@ -22,80 +24,358 @@ $db_file = $config['db_file'] ?? 'database/dreamteam.db';
 $app_name = $config['app_name'] ?? 'Dream Team';
 
 // Check database status
-$db_exists = file_exists($db_file);
+$db_exists = DB_DRIVER === 'sqlite' ? file_exists($db_file) : true;
 $table_exists = false;
 $has_users = false;
 $is_ready = false;
 
 if ($db_exists) {
     try {
-        $db = new SQLite3($db_file);
-
-        // Check if users table exists
-        $result = $db->query("SELECT name FROM sqlite_master WHERE type='table' AND name='users'");
-        $table_exists = $result->fetchArray() !== false;
-
-        if ($table_exists) {
-            // Check if there are any users
-            $result = $db->query("SELECT COUNT(*) as count FROM users");
-            $row = $result->fetchArray(SQLITE3_ASSOC);
-            $has_users = $row['count'] > 0;
+        if (DB_DRIVER === 'sqlite') {
+            $db = new SQLite3($db_file);
+            $result = $db->query("SELECT name FROM sqlite_master WHERE type='table' AND name='users'");
+            $table_exists = $result->fetchArray() !== false;
+            if ($table_exists) {
+                $result = $db->query("SELECT COUNT(*) as count FROM users");
+                $row = $result->fetchArray(SQLITE3_ASSOC);
+                $has_users = $row['count'] > 0;
+            }
+            $db->close();
+        } else {
+            $db = getDbConnection();
+            $check = $db->query("SELECT 1 FROM users LIMIT 1");
+            $table_exists = $check !== false;
+            if ($table_exists) {
+                $stmt = $db->query("SELECT COUNT(*) as count FROM users");
+                if ($stmt) {
+                    $row = $stmt->fetchArray(SQLITE3_ASSOC);
+                    $has_users = $row && isset($row['count']) ? ((int)$row['count'] > 0) : false;
+                }
+            }
+            $db->close();
         }
-
-        $db->close();
-        $is_ready = $db_exists && $table_exists && $has_users;
+        $is_ready = $table_exists && $has_users;
     } catch (Exception $e) {
         $errors[] = 'Database error: ' . $e->getMessage();
     }
 }
 
-// Handle configuration save
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_config'])) {
-    $new_config = [
-        'db_file' => $_POST['db_file'] ?? 'database/dreamteam.db',
-        'app_name' => $_POST['app_name'] ?? 'Dream Team'
-    ];
-
-    if (saveConfig($new_config)) {
-        $success[] = 'Configuration saved successfully';
-        $config = $new_config;
-        $db_file = $config['db_file'];
-        $app_name = $config['app_name'];
-
-        // Recheck database status with new config
-        $db_exists = file_exists($db_file);
-        $table_exists = false;
-        $has_users = false;
-        $is_ready = false;
-
-        if ($db_exists) {
-            try {
-                $db = new SQLite3($db_file);
-                $result = $db->query("SELECT name FROM sqlite_master WHERE type='table' AND name='users'");
-                $table_exists = $result->fetchArray() !== false;
-
-                if ($table_exists) {
-                    $result = $db->query("SELECT COUNT(*) as count FROM users");
-                    $row = $result->fetchArray(SQLITE3_ASSOC);
-                    $has_users = $row['count'] > 0;
-                }
-
-                $db->close();
-                $is_ready = $db_exists && $table_exists && $has_users;
-            } catch (Exception $e) {
-                $errors[] = 'Database error: ' . $e->getMessage();
-            }
+// Configuration via environment variables only; no web-based DB config
+$step = isset($_POST['step']) ? (int)$_POST['step'] : (isset($_GET['step']) ? (int)$_GET['step'] : 1);
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['test_conn'])) {
+    try {
+        $ok = false;
+        $msg = '';
+        if (DB_DRIVER === 'sqlite') {
+            $db = new SQLite3($db_file);
+            $r = $db->query('SELECT 1');
+            $ok = $r !== false;
+            $db->close();
+        } else {
+            $db = getDbConnection();
+            $r = $db->query('SELECT 1');
+            $ok = $r !== false;
+            $db->close();
         }
-    } else {
-        $errors[] = 'Failed to save configuration';
+        if (!empty($_POST['ajax'])) {
+            header('Content-Type: application/json');
+            echo json_encode(['ok' => $ok]);
+            exit;
+        }
+        if ($ok) $success[] = 'Database connection successful';
+        else $errors[] = 'Database connection failed';
+    } catch (Exception $e) {
+        if (!empty($_POST['ajax'])) {
+            header('Content-Type: application/json');
+            echo json_encode(['ok' => false, 'error' => $e->getMessage()]);
+            exit;
+        } else {
+            $errors[] = 'Database connection failed: ' . $e->getMessage();
+        }
     }
 }
 
 // Handle installation
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install'])) {
     try {
-        // Create/connect to database
-        $db = new SQLite3($db_file);
+        if (DB_DRIVER === 'mysql') {
+            $db = getDbConnection();
+            $ensureIdx = function($table, $index, $columns) use ($db) {
+                $stmt = $db->prepare('SELECT COUNT(*) as c FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = :t AND index_name = :i');
+                if ($stmt) {
+                    $stmt->bindValue(':t', $table, SQLITE3_TEXT);
+                    $stmt->bindValue(':i', $index, SQLITE3_TEXT);
+                    $res = $stmt->execute();
+                    $row = $res ? $res->fetchArray(SQLITE3_ASSOC) : ['c' => 0];
+                    if ((int)($row['c'] ?? 0) === 0) {
+                        $db->exec('CREATE INDEX ' . $index . ' ON ' . $table . ' (' . $columns . ')');
+                    }
+                }
+            };
+            $ok = true;
+            $ok = $ok && $db->exec('CREATE TABLE IF NOT EXISTS users (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(255) NOT NULL,
+                email VARCHAR(255) NOT NULL UNIQUE,
+                password VARCHAR(255) NOT NULL,
+                club_name VARCHAR(255) NULL,
+                formation VARCHAR(20) DEFAULT "4-4-2",
+                team TEXT,
+                substitutes TEXT,
+                budget BIGINT DEFAULT ' . DEFAULT_BUDGET . ',
+                max_players INT DEFAULT 23,
+                fans INT DEFAULT 5000,
+                club_exp INT DEFAULT 0,
+                club_level INT DEFAULT 1,
+                matches_played INT DEFAULT 0,
+                user_plan VARCHAR(50) DEFAULT "free",
+                plan_expires_at DATETIME NULL,
+                last_login DATETIME NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )');
+            $ok = $ok && $db->exec('CREATE TABLE IF NOT EXISTS user_settings (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                setting_key VARCHAR(100) NOT NULL,
+                setting_value TEXT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uniq_user_setting (user_id, setting_key),
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            )');
+            $ok = $ok && $db->exec('CREATE TABLE IF NOT EXISTS stadiums (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                name VARCHAR(255) DEFAULT "Home Stadium",
+                capacity INT DEFAULT 10000,
+                level INT DEFAULT 1,
+                facilities TEXT,
+                last_upgrade DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            )');
+            $ok = $ok && $db->exec('CREATE TABLE IF NOT EXISTS transfer_bids (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                bidder_id INT NOT NULL,
+                owner_id INT NOT NULL,
+                player_index INT NOT NULL,
+                player_uuid VARCHAR(64) NOT NULL,
+                bid_amount BIGINT NOT NULL,
+                status VARCHAR(20) DEFAULT "pending",
+                bid_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+                response_time DATETIME NULL,
+                FOREIGN KEY (bidder_id) REFERENCES users(id),
+                FOREIGN KEY (owner_id) REFERENCES users(id)
+            )');
+            $ensureIdx('transfer_bids', 'idx_transfer_bids_bidder', 'bidder_id');
+            $ensureIdx('transfer_bids', 'idx_transfer_bids_owner', 'owner_id');
+            $ensureIdx('transfer_bids', 'idx_transfer_bids_uuid', 'player_uuid');
+            $ok = $ok && $db->exec('CREATE TABLE IF NOT EXISTS player_inventory (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                player_uuid VARCHAR(64) NOT NULL,
+                player_data TEXT NOT NULL,
+                purchase_price BIGINT NOT NULL,
+                purchase_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+                status VARCHAR(20) DEFAULT "available",
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            )');
+            $ensureIdx('player_inventory', 'idx_player_inventory_user', 'user_id');
+            $ensureIdx('player_inventory', 'idx_player_inventory_status', 'status');
+            $ok = $ok && $db->exec('CREATE TABLE IF NOT EXISTS scouting_reports (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                player_uuid VARCHAR(64) NOT NULL,
+                scouted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                report_quality INT DEFAULT 1,
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            )');
+            $ensureIdx('scouting_reports', 'idx_scouting_reports_user', 'user_id');
+            $ensureIdx('scouting_reports', 'idx_scouting_reports_uuid', 'player_uuid');
+            $ok = $ok && $db->exec('CREATE TABLE IF NOT EXISTS shop_items (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(255) NOT NULL,
+                description TEXT NOT NULL,
+                price BIGINT NOT NULL,
+                effect_type VARCHAR(50) NOT NULL,
+                effect_value TEXT NOT NULL,
+                category VARCHAR(50) NOT NULL,
+                icon VARCHAR(50) DEFAULT "package",
+                duration INT DEFAULT 0,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )');
+            $ok = $ok && $db->exec('CREATE TABLE IF NOT EXISTS user_inventory (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                item_id INT NOT NULL,
+                purchased_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                expires_at DATETIME NULL,
+                quantity INT DEFAULT 1,
+                FOREIGN KEY (user_id) REFERENCES users(id),
+                FOREIGN KEY (item_id) REFERENCES shop_items(id)
+            )');
+            $ensureIdx('user_inventory', 'idx_user_inventory_user', 'user_id');
+            $ensureIdx('user_inventory', 'idx_user_inventory_expires', 'expires_at');
+            $ok = $ok && $db->exec('CREATE TABLE IF NOT EXISTS club_staff (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                staff_type VARCHAR(50) NOT NULL,
+                name VARCHAR(255) NOT NULL,
+                level INT DEFAULT 1,
+                salary BIGINT NOT NULL,
+                contract_weeks INT DEFAULT 52,
+                contract_weeks_remaining INT DEFAULT 52,
+                hired_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+                bonus_applied_this_week TINYINT(1) DEFAULT 0,
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            )');
+            $ok = $ok && $db->exec('CREATE TABLE IF NOT EXISTS young_players (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                club_id INT NOT NULL,
+                name VARCHAR(255) NOT NULL,
+                age INT NOT NULL,
+                position VARCHAR(10) NOT NULL,
+                potential_rating INT NOT NULL,
+                current_rating INT NOT NULL,
+                development_stage VARCHAR(20) DEFAULT "academy",
+                contract_years INT DEFAULT 3,
+                value BIGINT NOT NULL,
+                training_focus VARCHAR(50) DEFAULT "balanced",
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                promoted_at DATETIME NULL,
+                FOREIGN KEY (club_id) REFERENCES users(id) ON DELETE CASCADE
+            )');
+            $ensureIdx('young_players', 'idx_young_players_club', 'club_id');
+            $ok = $ok && $db->exec('CREATE TABLE IF NOT EXISTS young_player_bids (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                young_player_id INT NOT NULL,
+                bidder_club_id INT NOT NULL,
+                owner_club_id INT NOT NULL,
+                bid_amount BIGINT NOT NULL,
+                status VARCHAR(20) DEFAULT "pending",
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                expires_at DATETIME NOT NULL,
+                FOREIGN KEY (young_player_id) REFERENCES young_players(id) ON DELETE CASCADE,
+                FOREIGN KEY (bidder_club_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY (owner_club_id) REFERENCES users(id) ON DELETE CASCADE
+            )');
+            $ok = $ok && $db->exec('CREATE TABLE IF NOT EXISTS nation_calls (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                called_players TEXT NOT NULL,
+                total_reward BIGINT NOT NULL,
+                call_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            )');
+            $ok = $ok && $db->exec('CREATE TABLE IF NOT EXISTS news (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                category VARCHAR(50) NOT NULL,
+                priority VARCHAR(20) NOT NULL DEFAULT "normal",
+                title VARCHAR(255) NOT NULL,
+                content TEXT NOT NULL,
+                player_data TEXT NULL,
+                actions TEXT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                expires_at DATETIME NOT NULL,
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            )');
+            $ensureIdx('news', 'idx_news_user', 'user_id');
+            $ensureIdx('news', 'idx_news_expires', 'expires_at');
+            $ok = $ok && $db->exec('CREATE TABLE IF NOT EXISTS player_stats (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                player_id VARCHAR(64) NOT NULL,
+                player_name VARCHAR(255) NOT NULL,
+                position VARCHAR(10) NOT NULL,
+                matches_played INT DEFAULT 0,
+                goals INT DEFAULT 0,
+                assists INT DEFAULT 0,
+                yellow_cards INT DEFAULT 0,
+                red_cards INT DEFAULT 0,
+                total_rating DOUBLE DEFAULT 0,
+                avg_rating DOUBLE DEFAULT 0,
+                clean_sheets INT DEFAULT 0,
+                saves INT DEFAULT 0,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uniq_user_player (user_id, player_id),
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            )');
+            $ok = $ok && $db->exec('CREATE TABLE IF NOT EXISTS support_tickets (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                ticket_number VARCHAR(64) UNIQUE NOT NULL,
+                priority VARCHAR(20) DEFAULT "medium",
+                category VARCHAR(50) NOT NULL,
+                subject VARCHAR(255) NOT NULL,
+                message TEXT NOT NULL,
+                status VARCHAR(20) DEFAULT "open",
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                last_response_at DATETIME NULL,
+                admin_response TEXT NULL,
+                resolution_notes TEXT NULL,
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            )');
+            // Seed shop items if empty
+            $result = $db->query('SELECT COUNT(*) as count FROM shop_items');
+            $row = $result ? $result->fetchArray(SQLITE3_ASSOC) : ['count' => 0];
+            $count = isset($row['count']) ? (int)$row['count'] : 0;
+            if ($count === 0) {
+                $default_items = [
+                    ['Training Camp', 'Boost all players rating by +2 for 7 days', 5000000, 'player_boost', '{"rating": 2}', 'training', 'dumbbell', 7],
+                    ['Fitness Coach', 'Reduce injury risk by 50% for 14 days', 3000000, 'injury_protection', '{"reduction": 0.5}', 'training', 'heart-pulse', 14],
+                    ['Skill Academy', 'Boost specific position players by +3 rating for 5 days', 4000000, 'position_boost', '{"rating": 3}', 'training', 'graduation-cap', 5],
+                    ['Sponsorship Deal', 'Increase budget by €10M instantly', 8000000, 'budget_boost', '{"amount": 10000000}', 'financial', 'handshake', 0],
+                    ['Stadium Upgrade', 'Generate €500K daily for 30 days', 15000000, 'daily_income', '{"amount": 500000}', 'financial', 'building', 30],
+                    ['Merchandise Boost', 'Increase transfer sale prices by 20% for 14 days', 6000000, 'sale_boost', '{"multiplier": 1.2}', 'financial', 'shopping-bag', 14],
+                    ['Lucky Charm', 'Increase chance of successful transfers by 25%', 2500000, 'transfer_luck', '{"boost": 0.25}', 'special', 'clover', 10],
+                    ['Scout Network', 'Reveal hidden player stats for 7 days', 3500000, 'player_insight', '{"enabled": true}', 'special', 'search', 7],
+                    ['Energy Drink', 'Boost team performance by 15% for next 3 matches', 1500000, 'match_boost', '{"performance": 0.15, "matches": 3}', 'special', 'zap', 0],
+                    ['Golden Boot', 'Permanently increase striker ratings by +1', 20000000, 'permanent_boost', '{"position": "ST", "rating": 1}', 'premium', 'award', 0],
+                    ['Tactical Genius', 'Unlock advanced formations for 30 days', 12000000, 'formation_unlock', '{"advanced": true}', 'premium', 'brain', 30],
+                    ['Club Legend', 'Attract better players in transfers for 21 days', 18000000, 'player_attraction', '{"quality_boost": 0.3}', 'premium', 'star', 21],
+                    ['Youth Academy', 'Permanently increase squad size by +2 players', 25000000, 'squad_expansion', '{"players": 2}', 'premium', 'users', 0],
+                    ['Training Facilities', 'Permanently increase squad size by +3 players', 35000000, 'squad_expansion', '{"players": 3}', 'premium', 'building-2', 0],
+                    ['Elite Academy', 'Permanently increase squad size by +5 players', 50000000, 'squad_expansion', '{"players": 5}', 'premium', 'graduation-cap', 0],
+                    ['Stadium Name Change', 'Allows you to change your stadium name', 2000000, 'stadium_rename', '{"enabled": true}', 'special', 'edit-3', 0]
+                ];
+                $ins = $db->prepare('INSERT INTO shop_items (name, description, price, effect_type, effect_value, category, icon, duration) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+                if ($ins === false) {
+                    $errors[] = 'Failed to prepare shop items insert: ' . $db->lastErrorMsg();
+                } else {
+                    foreach ($default_items as $item) {
+                        $ins->bindValue(1, $item[0], SQLITE3_TEXT);
+                        $ins->bindValue(2, $item[1], SQLITE3_TEXT);
+                        $ins->bindValue(3, $item[2], SQLITE3_INTEGER);
+                        $ins->bindValue(4, $item[3], SQLITE3_TEXT);
+                        $ins->bindValue(5, $item[4], SQLITE3_TEXT);
+                        $ins->bindValue(6, $item[5], SQLITE3_TEXT);
+                        $ins->bindValue(7, $item[6], SQLITE3_TEXT);
+                        $ins->bindValue(8, $item[7], SQLITE3_INTEGER);
+                        $exec = $ins->execute();
+                        if ($exec === false) {
+                            $errors[] = 'Failed to insert shop item ' . $item[0] . ': ' . $db->lastErrorMsg();
+                        }
+                    }
+                    $success[] = 'MySQL shop items seeded successfully (' . count($default_items) . ' items)';
+                }
+            }
+            // League tables via shared function
+            require_once 'includes/league_functions.php';
+            createLeagueTables($db);
+
+            if ($ok) {
+                $success[] = 'MySQL tables created successfully';
+                $table_exists = true;
+                $is_ready = $table_exists && $has_users;
+            } else {
+                $errors[] = 'Failed creating MySQL tables';
+            }
+            $db->close();
+        } else {
+            // Create/connect to database
+            $db = new SQLite3($db_file);
 
         // Create users table
         $sql = 'CREATE TABLE IF NOT EXISTS users (
@@ -193,6 +473,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install'])) {
                 FOREIGN KEY (bidder_id) REFERENCES users(id),
                 FOREIGN KEY (owner_id) REFERENCES users(id)
             )');
+            $db->exec('CREATE INDEX IF NOT EXISTS idx_transfer_bids_bidder ON transfer_bids (bidder_id)');
+            $db->exec('CREATE INDEX IF NOT EXISTS idx_transfer_bids_owner ON transfer_bids (owner_id)');
+            $db->exec('CREATE INDEX IF NOT EXISTS idx_transfer_bids_uuid ON transfer_bids (player_uuid)');
 
             $db->exec('CREATE TABLE IF NOT EXISTS player_inventory (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -204,6 +487,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install'])) {
                 status TEXT DEFAULT "available",
                 FOREIGN KEY (user_id) REFERENCES users(id)
             )');
+            $db->exec('CREATE INDEX IF NOT EXISTS idx_player_inventory_user ON player_inventory (user_id)');
+            $db->exec('CREATE INDEX IF NOT EXISTS idx_player_inventory_status ON player_inventory (status)');
 
             // Scouting system table
             $db->exec('CREATE TABLE IF NOT EXISTS scouting_reports (
@@ -214,6 +499,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install'])) {
                 report_quality INTEGER DEFAULT 1,
                 FOREIGN KEY (user_id) REFERENCES users (id)
             )');
+            $db->exec('CREATE INDEX IF NOT EXISTS idx_scouting_reports_user ON scouting_reports (user_id)');
+            $db->exec('CREATE INDEX IF NOT EXISTS idx_scouting_reports_uuid ON scouting_reports (player_uuid)');
 
             // Migration: Handle column changes and add missing columns
             try {
@@ -310,6 +597,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install'])) {
                 FOREIGN KEY (user_id) REFERENCES users (id),
                 FOREIGN KEY (item_id) REFERENCES shop_items (id)
             )');
+            $db->exec('CREATE INDEX IF NOT EXISTS idx_user_inventory_user ON user_inventory (user_id)');
+            $db->exec('CREATE INDEX IF NOT EXISTS idx_user_inventory_expires ON user_inventory (expires_at)');
 
             // Staff system table
             $db->exec('CREATE TABLE IF NOT EXISTS club_staff (
@@ -430,6 +719,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install'])) {
                 promoted_at DATETIME,
                 FOREIGN KEY (club_id) REFERENCES users (id) ON DELETE CASCADE
             )');
+            $db->exec('CREATE INDEX IF NOT EXISTS idx_young_players_club ON young_players (club_id)');
 
             // Young player bids table
             $db->exec('CREATE TABLE IF NOT EXISTS young_player_bids (
@@ -498,6 +788,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install'])) {
                 expires_at DATETIME NOT NULL,
                 FOREIGN KEY (user_id) REFERENCES users (id)
             )');
+            $db->exec('CREATE INDEX IF NOT EXISTS idx_news_user ON news (user_id)');
+            $db->exec('CREATE INDEX IF NOT EXISTS idx_news_expires ON news (expires_at)');
 
             // Player stats table
             $db->exec('CREATE TABLE IF NOT EXISTS player_stats (
@@ -569,6 +861,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install'])) {
         }
 
         $db->close();
+        }
 
     } catch (Exception $e) {
         $errors[] = 'Installation failed: ' . $e->getMessage();
@@ -654,6 +947,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['repair'])) {
     }
 }
 
+// Handle admin creation (Step 3)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['complete_admin'])) {
+    try {
+        $name = trim($_POST['admin_name'] ?? '');
+        $email = trim($_POST['admin_email'] ?? '');
+        $password = $_POST['admin_password'] ?? '';
+        if ($name === '' || $email === '' || $password === '') {
+            $errors[] = 'Admin name, email, and password are required';
+        } else {
+            $db = getDbConnection();
+            $stmt = $db->prepare('SELECT COUNT(*) as c FROM users WHERE email = :email');
+            if ($stmt === false) {
+                $errors[] = 'Failed to prepare uniqueness check: ' . $db->lastErrorMsg();
+            } else {
+                $stmt->bindValue(':email', $email, SQLITE3_TEXT);
+                $res = $stmt->execute();
+                $row = $res ? $res->fetchArray(SQLITE3_ASSOC) : ['c' => 0];
+                if ((int)($row['c'] ?? 0) > 0) {
+                    $errors[] = 'Email already exists';
+                } else {
+                    $ins = $db->prepare('INSERT INTO users (name, email, password, club_name, formation, team, budget) VALUES (:name, :email, :password, :club_name, :formation, :team, :budget)');
+                    if ($ins === false) {
+                        $errors[] = 'Failed to prepare admin insert: ' . $db->lastErrorMsg();
+                    } else {
+                        $ins->bindValue(':name', $name, SQLITE3_TEXT);
+                        $ins->bindValue(':email', $email, SQLITE3_TEXT);
+                        $ins->bindValue(':password', password_hash($password, PASSWORD_DEFAULT), SQLITE3_TEXT);
+                        $ins->bindValue(':club_name', $name . ' FC', SQLITE3_TEXT);
+                        $ins->bindValue(':formation', '4-4-2', SQLITE3_TEXT);
+                        $ins->bindValue(':team', '[]', SQLITE3_TEXT);
+                        $ins->bindValue(':budget', DEFAULT_BUDGET, SQLITE3_INTEGER);
+                        $exec = $ins->execute();
+                        if ($exec === false) {
+                            $errors[] = 'Failed to create admin user: ' . $db->lastErrorMsg();
+                        } else {
+                            $success[] = 'Admin user created successfully';
+                            $has_users = true;
+                            $is_ready = $table_exists && $has_users;
+                        }
+                    }
+                }
+            }
+            $db->close();
+        }
+    } catch (Exception $e) {
+        $errors[] = 'Admin creation error: ' . $e->getMessage();
+    }
+}
+
 require_once 'partials/layout.php';
 
 // Start content capture
@@ -734,28 +1076,58 @@ startContent();
 
         <!-- Configuration Form -->
         <?php if (empty($errors) && !$is_ready): ?>
-            <form method="POST" class="mb-8">
-                <div class="border-t pt-6">
-                    <h2 class="text-xl font-semibold mb-4">Configuration</h2>
+            <div class="mb-6 flex gap-2 text-sm">
+                <span class="px-3 py-1 rounded <?php echo ($step===1)?'bg-blue-600 text-white':'border'; ?> cursor-default pointer-events-none">1. Environment & Connection</span>
+                <span class="px-3 py-1 rounded <?php echo ($step===2)?'bg-blue-600 text-white':'border'; ?> cursor-default pointer-events-none">2. Setup Database</span>
+                <span class="px-3 py-1 rounded <?php echo ($step===3)?'bg-blue-600 text-white':'border'; ?> cursor-default pointer-events-none">3. Admin</span>
+                <span class="px-3 py-1 rounded <?php echo ($step===4)?'bg-blue-600 text-white':'border'; ?> cursor-default pointer-events-none">4. Finish</span>
+            </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                        <div>
-                            <label class="block text-sm font-medium mb-1">Application Name</label>
-                            <input type="text" name="app_name" value="<?php echo htmlspecialchars($app_name); ?>"
-                                class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                placeholder="Dream Team">
+            <?php if ($step === 1): ?>
+                <div class="mb-8 border-t pt-6">
+                    <h2 class="text-xl font-semibold mb-4">Environment Configuration</h2>
+                    <p class="text-sm text-gray-600 mb-4">Database settings are managed via environment variables (.env). Review the current values:</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="bg-gray-50 p-3 rounded border">
+                            <div class="text-xs text-gray-500">DB_DRIVER</div>
+                            <div class="font-mono text-sm"><?php echo htmlspecialchars(DB_DRIVER); ?></div>
                         </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">Database File</label>
-                            <input type="text" name="db_file" value="<?php echo htmlspecialchars($db_file); ?>"
-                                class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                placeholder="database/dreamteam.db">
+                        <div class="bg-gray-50 p-3 rounded border">
+                            <div class="text-xs text-gray-500">DB_FILE</div>
+                            <div class="font-mono text-sm"><?php echo htmlspecialchars(DB_FILE); ?></div>
+                        </div>
+                        <div class="bg-gray-50 p-3 rounded border">
+                            <div class="text-xs text-gray-500">MYSQL_HOST</div>
+                            <div class="font-mono text-sm"><?php echo htmlspecialchars(MYSQL_HOST); ?></div>
+                        </div>
+                        <div class="bg-gray-50 p-3 rounded border">
+                            <div class="text-xs text-gray-500">MYSQL_PORT</div>
+                            <div class="font-mono text-sm"><?php echo htmlspecialchars(MYSQL_PORT); ?></div>
+                        </div>
+                        <div class="bg-gray-50 p-3 rounded border">
+                            <div class="text-xs text-gray-500">MYSQL_DB</div>
+                            <div class="font-mono text-sm"><?php echo htmlspecialchars(MYSQL_DB); ?></div>
+                        </div>
+                        <div class="bg-gray-50 p-3 rounded border">
+                            <div class="text-xs text-gray-500">MYSQL_USER</div>
+                            <div class="font-mono text-sm"><?php echo htmlspecialchars(MYSQL_USER); ?></div>
                         </div>
                     </div>
+                    <div class="mt-4 text-sm text-gray-600">
+                        Edit <span class="font-mono">.env</span> and restart the server to change these values.
+                    </div>
+                    <div class="mt-4">
+                        <h3 class="text-lg font-semibold mb-2">Connection Test</h3>
+                        <p class="text-sm text-gray-600 mb-4">Verify database connectivity using current environment settings.</p>
+                        <form method="POST" id="connTestForm" class="flex gap-3 items-center">
+                            <input type="hidden" name="step" value="1">
+                            <button type="submit" name="test_conn" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">Test Connection</button>
+                            <a href="?step=2" class="inline-block px-6 py-2 rounded-lg border">Next</a>
+                        </form>
+                    </div>
                 </div>
-            </form>
+            <?php endif; ?>
         <?php endif; ?>
-
         <!-- Database Status -->
         <div class="mb-8">
             <h2 class="text-xl font-semibold mb-4">Database Status</h2>
@@ -839,60 +1211,60 @@ startContent();
                     </div>
                 </div>
             <?php else: ?>
-                <!-- Installation form -->
-                <form method="POST" class="space-y-6">
-                    <div class="border-t pt-6">
-                        <h2 class="text-xl font-semibold mb-4">
-                            <?php echo ($db_exists && $table_exists) ? 'Complete Setup' : 'Install Database'; ?>
-                        </h2>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                            <div>
-                                <label class="block text-sm font-medium mb-1">Admin Name
-                                    <?php echo !$has_users ? '(Required)' : '(Optional)'; ?>
-                                </label>
-                                <input type="text" name="admin_name" <?php echo !$has_users ? 'required' : ''; ?> class="w-full
-                        px-3 py-2 border rounded-lg focus:outline-none focus:ring-2
-                        focus:ring-blue-500" placeholder="Admin User">
+                <?php if ($step === 2): ?>
+                    <form method="POST" class="space-y-6">
+                        <div class="border-t pt-6">
+                            <h2 class="text-xl font-semibold mb-4">Setup Database (Install + Seed)</h2>
+                            <div class="flex gap-3 flex-wrap">
+                                <input type="hidden" name="step" value="2">
+                                <button type="button" id="runSetupBtn" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">Run Setup</button>
+                                <a href="?step=1" class="inline-block px-6 py-2 rounded-lg border">Back</a>
+                                <a href="?step=3" class="inline-block px-6 py-2 rounded-lg border">Next</a>
                             </div>
-                            <div>
-                                <label class="block text-sm font-medium mb-1">Admin Email
-                                    <?php echo !$has_users ? '(Required)' : '(Optional)'; ?>
-                                </label>
-                                <input type="email" name="admin_email" <?php echo !$has_users ? 'required' : ''; ?> class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2
-                        focus:ring-blue-500" placeholder="admin@example.com">
-                            </div>
-                            <div class="md:col-span-2">
-                                <label class="block text-sm font-medium mb-1">Admin Password
-                                    <?php echo !$has_users ? '(Required)' : '(Optional)'; ?>
-                                </label>
-                                <input type="password" name="admin_password" <?php echo !$has_users ? 'required' : ''; ?> class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2
-                        focus:ring-blue-500" placeholder="Password">
+                            <div class="mt-4">
+                                <h3 class="text-lg font-semibold mb-2">Logs</h3>
+                                <ul id="setupLogs" class="text-sm space-y-1 bg-gray-50 p-3 rounded border"></ul>
                             </div>
                         </div>
-
-                        <div class="flex gap-3 flex-wrap">
-                            <button type="submit" name="install"
-                                class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">
-                                <?php echo ($db_exists && $table_exists) ? 'Complete Setup' : 'Install'; ?>
-                            </button>
-
-                            <button type="submit" name="repair" class="bg-yellow-600 text-white px-6 py-2 rounded-lg
-                        hover:bg-yellow-700">
-                                Repair Database
-                            </button>
-
-                            <?php if ($db_exists && $table_exists): ?>
-                                <button type="button" id="resetDatabaseBtn" class="bg-red-600 text-white px-6 py-2 rounded-lg
-                        hover:bg-red-700">
-                                    Reset Database
-                                </button>
-
-
-                            <?php endif; ?>
-
+                    </form>
+                <?php elseif ($step === 3): ?>
+                    <form method="POST" class="space-y-6">
+                        <div class="border-t pt-6">
+                            <h2 class="text-xl font-semibold mb-4">Create Admin User</h2>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">Admin Name <?php echo !$has_users ? '(Required)' : '(Optional)'; ?></label>
+                                    <input type="text" name="admin_name" <?php echo !$has_users ? 'required' : ''; ?> class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Admin User">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">Admin Email <?php echo !$has_users ? '(Required)' : '(Optional)'; ?></label>
+                                    <input type="email" name="admin_email" <?php echo !$has_users ? 'required' : ''; ?> class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="admin@example.com">
+                                </div>
+                                <div class="md:col-span-2">
+                                    <label class="block text-sm font-medium mb-1">Admin Password <?php echo !$has_users ? '(Required)' : '(Optional)'; ?></label>
+                                    <input type="password" name="admin_password" <?php echo !$has_users ? 'required' : ''; ?> class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Password">
+                                </div>
+                            </div>
+                            <div class="flex gap-3 flex-wrap">
+                                <input type="hidden" name="step" value="3">
+                                <button type="submit" name="complete_admin" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">Create Admin</button>
+                                <a href="?step=2" class="inline-block px-6 py-2 rounded-lg border">Back</a>
+                                <a href="?step=4" class="inline-block px-6 py-2 rounded-lg border">Next</a>
+                            </div>
+                        </div>
+                    </form>
+                <?php elseif ($step === 4): ?>
+                    <div class="border-t pt-6">
+                        <h2 class="text-xl font-semibold mb-4">Finish</h2>
+                        <div class="flex justify-center gap-3 flex-wrap">
+                            <a href="index.php" class="inline-flex items-center gap-2 bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 font-semibold">
+                                <i data-lucide="play" class="w-5 h-5"></i>
+                                Go to <?php echo htmlspecialchars($app_name); ?>
+                            </a>
+                            <a href="?step=3" class="inline-block px-6 py-2 rounded-lg border">Back</a>
                         </div>
                     </div>
-                </form>
+                <?php endif; ?>
             <?php endif; ?>
         <?php endif; ?>
 
@@ -1049,9 +1421,7 @@ startContent();
                             </div>
                         `,
                         confirmButtonColor: '#16a34a',
-                        confirmButtonText: 'Start Playing!'
-                    }).then(() => {
-                        window.location.href = 'index.php';
+                        confirmButtonText: 'Close'
                     });
                 }
             });
@@ -1104,9 +1474,7 @@ startContent();
                             </div>
                         `,
                         confirmButtonColor: '#10b981',
-                        confirmButtonText: 'Go to Login'
-                    }).then(() => {
-                        window.location.href = 'index.php';
+                        confirmButtonText: 'Close'
                     });
                 }
             });
@@ -1166,11 +1534,103 @@ startContent();
                             </div>
                         `,
                         confirmButtonColor: '#7c3aed',
-                        confirmButtonText: 'Great!'
+                        confirmButtonText: 'Close'
                     });
                 }
             });
         });
+
+        // Async connection test
+        (function () {
+            const form = document.getElementById('connTestForm');
+            if (!form) return;
+            form.addEventListener('submit', function (e) {
+                e.preventDefault();
+                fetch('api/connection_test_api.php', { method: 'POST' })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data && data.ok) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Connection Successful',
+                                text: 'Database connection works with current .env settings.',
+                                confirmButtonColor: '#16a34a'
+                            });
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Connection Failed',
+                                text: (data && data.error) ? data.error : 'Could not connect using current .env settings.',
+                                confirmButtonColor: '#ef4444'
+                            });
+                        }
+                    })
+                    .catch(err => {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Connection Failed',
+                            text: String(err),
+                            confirmButtonColor: '#ef4444'
+                        });
+                    });
+            });
+        })();
+
+        // Setup Database (Install + Seed) with logs
+        (function () {
+            const btn = document.getElementById('runSetupBtn');
+            const logsEl = document.getElementById('setupLogs');
+            if (!btn || !logsEl) return;
+            btn.addEventListener('click', function () {
+                btn.disabled = true;
+                logsEl.innerHTML = '';
+                const li = (msg, cls) => {
+                    const el = document.createElement('li');
+                    el.textContent = msg;
+                    if (cls) el.className = cls;
+                    logsEl.appendChild(el);
+                };
+                li('Starting setup...', 'text-gray-700');
+                fetch('api/setup_database_api.php', { method: 'POST' })
+                    .then(r => r.json())
+                    .then(data => {
+                        const entries = Array.isArray(data.logs) ? data.logs : [];
+                        entries.forEach(entry => {
+                            const cls = entry.type === 'error' ? 'text-red-600'
+                                : entry.type === 'detail' ? 'text-gray-600'
+                                : 'text-green-700';
+                            li(entry.message, cls);
+                        });
+                        if (data.ok) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Setup Completed',
+                                text: 'Create tables, shop items, and demo clubs completed successfully.',
+                                confirmButtonColor: '#16a34a'
+                            });
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Setup Finished With Errors',
+                                text: 'Check logs for details.',
+                                confirmButtonColor: '#ef4444'
+                            });
+                        }
+                    })
+                    .catch(err => {
+                        li(String(err), 'text-red-600');
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Setup Failed',
+                            text: String(err),
+                            confirmButtonColor: '#ef4444'
+                        });
+                    })
+                    .finally(() => {
+                        btn.disabled = false;
+                    });
+            });
+        })();
     </script>
 </div>
 </div>

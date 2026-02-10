@@ -49,20 +49,37 @@ if (!function_exists('updatePlayerStatistics')) {
                 }
 
                 // Update or insert player statistics
-                $stmt = $db->prepare('
-                    INSERT INTO player_stats (user_id, player_id, player_name, position, matches_played, goals, assists, yellow_cards, red_cards, total_rating, clean_sheets, saves)
-                    VALUES (:user_id, :player_id, :player_name, :position, 1, :goals, :assists, :yellow_cards, :red_cards, :rating, :clean_sheets, :saves)
-                    ON CONFLICT(user_id, player_id) DO UPDATE SET
-                        matches_played = matches_played + 1,
-                        goals = goals + :goals,
-                        assists = assists + :assists,
-                        yellow_cards = yellow_cards + :yellow_cards,
-                        red_cards = red_cards + :red_cards,
-                        total_rating = total_rating + :rating,
-                        clean_sheets = clean_sheets + :clean_sheets,
-                        saves = saves + :saves,
-                        updated_at = datetime("now")
-                ');
+                if (DB_DRIVER === 'mysql') {
+                    $stmt = $db->prepare('
+                        INSERT INTO player_stats (user_id, player_id, player_name, position, matches_played, goals, assists, yellow_cards, red_cards, total_rating, clean_sheets, saves)
+                        VALUES (:user_id, :player_id, :player_name, :position, 1, :goals, :assists, :yellow_cards, :red_cards, :rating, :clean_sheets, :saves)
+                        ON DUPLICATE KEY UPDATE
+                            matches_played = matches_played + 1,
+                            goals = goals + VALUES(goals),
+                            assists = assists + VALUES(assists),
+                            yellow_cards = yellow_cards + VALUES(yellow_cards),
+                            red_cards = red_cards + VALUES(red_cards),
+                            total_rating = total_rating + VALUES(total_rating),
+                            clean_sheets = clean_sheets + VALUES(clean_sheets),
+                            saves = saves + VALUES(saves),
+                            updated_at = NOW()
+                    ');
+                } else {
+                    $stmt = $db->prepare('
+                        INSERT INTO player_stats (user_id, player_id, player_name, position, matches_played, goals, assists, yellow_cards, red_cards, total_rating, clean_sheets, saves)
+                        VALUES (:user_id, :player_id, :player_name, :position, 1, :goals, :assists, :yellow_cards, :red_cards, :rating, :clean_sheets, :saves)
+                        ON CONFLICT(user_id, player_id) DO UPDATE SET
+                            matches_played = matches_played + 1,
+                            goals = goals + :goals,
+                            assists = assists + :assists,
+                            yellow_cards = yellow_cards + :yellow_cards,
+                            red_cards = red_cards + :red_cards,
+                            total_rating = total_rating + :rating,
+                            clean_sheets = clean_sheets + :clean_sheets,
+                            saves = saves + :saves,
+                            updated_at = datetime("now")
+                    ');
+                }
 
                 $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
                 $stmt->bindValue(':player_id', $playerId, SQLITE3_TEXT);

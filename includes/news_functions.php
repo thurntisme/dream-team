@@ -72,7 +72,11 @@ if (!function_exists('manageNewsItems')) {
 if (!function_exists('cleanExpiredNews')) {
     function cleanExpiredNews($db, $user_id)
     {
-        $stmt = $db->prepare('DELETE FROM news WHERE user_id = :user_id AND expires_at < datetime("now")');
+        if (DB_DRIVER === 'mysql') {
+            $stmt = $db->prepare('DELETE FROM news WHERE user_id = :user_id AND expires_at < NOW()');
+        } else {
+            $stmt = $db->prepare('DELETE FROM news WHERE user_id = :user_id AND expires_at < datetime("now")');
+        }
         $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
         $stmt->execute();
     }
@@ -84,13 +88,23 @@ if (!function_exists('cleanExpiredNews')) {
 if (!function_exists('getCurrentNewsItems')) {
     function getCurrentNewsItems($db, $user_id)
     {
-        $stmt = $db->prepare('
-            SELECT * FROM news 
-            WHERE user_id = :user_id AND expires_at > datetime("now")
-            ORDER BY 
-                CASE WHEN priority = "high" THEN 1 ELSE 2 END,
-                created_at DESC
-        ');
+        if (DB_DRIVER === 'mysql') {
+            $stmt = $db->prepare('
+                SELECT * FROM news 
+                WHERE user_id = :user_id AND expires_at > NOW()
+                ORDER BY 
+                    CASE WHEN priority = "high" THEN 1 ELSE 2 END,
+                    created_at DESC
+            ');
+        } else {
+            $stmt = $db->prepare('
+                SELECT * FROM news 
+                WHERE user_id = :user_id AND expires_at > datetime("now")
+                ORDER BY 
+                    CASE WHEN priority = "high" THEN 1 ELSE 2 END,
+                    created_at DESC
+            ');
+        }
         $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
         $result = $stmt->execute();
 

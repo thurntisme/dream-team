@@ -190,10 +190,17 @@ if (!function_exists('saveNationCallRecord')) {
     function saveNationCallRecord($db, $user_id, $calledPlayers, $totalReward)
     {
         try {
-            $stmt = $db->prepare('
-                INSERT INTO nation_calls (user_id, called_players, total_reward, call_date)
-                VALUES (:user_id, :called_players, :total_reward, datetime("now"))
-            ');
+            if (DB_DRIVER === 'mysql') {
+                $stmt = $db->prepare('
+                    INSERT INTO nation_calls (user_id, called_players, total_reward, call_date)
+                    VALUES (:user_id, :called_players, :total_reward, NOW())
+                ');
+            } else {
+                $stmt = $db->prepare('
+                    INSERT INTO nation_calls (user_id, called_players, total_reward, call_date)
+                    VALUES (:user_id, :called_players, :total_reward, datetime("now"))
+                ');
+            }
 
             $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
             $stmt->bindValue(':called_players', json_encode($calledPlayers), SQLITE3_TEXT);

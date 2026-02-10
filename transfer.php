@@ -18,72 +18,55 @@ try {
 
     // Database tables are now created in install.php
 
-    // Migration: Handle column changes and add missing columns
-    try {
-        // Check existing columns in player_inventory
-        $result = $db->query("PRAGMA table_info(player_inventory)");
-        $columns = [];
-        while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
-            $columns[] = $row['name'];
-        }
-
-        // Add player_uuid column if it doesn't exist
-        if (!in_array('player_uuid', $columns)) {
-            $db->exec('ALTER TABLE player_inventory ADD COLUMN player_uuid TEXT DEFAULT ""');
-        }
-
-        // Add purchase_price column if it doesn't exist
-        if (!in_array('purchase_price', $columns)) {
-            $db->exec('ALTER TABLE player_inventory ADD COLUMN purchase_price INTEGER DEFAULT 0');
-        }
-
-        // Migrate data from player_name to player_uuid if needed
-        if (in_array('player_name', $columns) && in_array('player_uuid', $columns)) {
-            // Get all records with empty player_uuid but have player_name
-            $stmt = $db->prepare('SELECT id, player_name, player_data FROM player_inventory WHERE player_uuid = "" AND player_name != ""');
-            $result = $stmt->execute();
-
+    if (DB_DRIVER === 'sqlite') {
+        try {
+            $result = $db->query("PRAGMA table_info(player_inventory)");
+            $columns = [];
             while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
-                $player_data = json_decode($row['player_data'], true);
-                if ($player_data && isset($player_data['uuid'])) {
-                    // Update with UUID from player_data
-                    $update_stmt = $db->prepare('UPDATE player_inventory SET player_uuid = :uuid WHERE id = :id');
-                    $update_stmt->bindValue(':uuid', $player_data['uuid'], SQLITE3_TEXT);
-                    $update_stmt->bindValue(':id', $row['id'], SQLITE3_INTEGER);
-                    $update_stmt->execute();
+                $columns[] = $row['name'];
+            }
+            if (!in_array('player_uuid', $columns)) {
+                $db->exec('ALTER TABLE player_inventory ADD COLUMN player_uuid TEXT DEFAULT ""');
+            }
+            if (!in_array('purchase_price', $columns)) {
+                $db->exec('ALTER TABLE player_inventory ADD COLUMN purchase_price INTEGER DEFAULT 0');
+            }
+            if (in_array('player_name', $columns) && in_array('player_uuid', $columns)) {
+                $stmt = $db->prepare('SELECT id, player_name, player_data FROM player_inventory WHERE player_uuid = "" AND player_name != ""');
+                $result = $stmt->execute();
+                while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+                    $player_data = json_decode($row['player_data'], true);
+                    if ($player_data && isset($player_data['uuid'])) {
+                        $update_stmt = $db->prepare('UPDATE player_inventory SET player_uuid = :uuid WHERE id = :id');
+                        $update_stmt->bindValue(':uuid', $player_data['uuid'], SQLITE3_TEXT);
+                        $update_stmt->bindValue(':id', $row['id'], SQLITE3_INTEGER);
+                        $update_stmt->execute();
+                    }
                 }
             }
-        }
-
-        // Check transfer_bids table
-        $result = $db->query("PRAGMA table_info(transfer_bids)");
-        $bid_columns = [];
-        while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
-            $bid_columns[] = $row['name'];
-        }
-
-        // Add player_uuid column to transfer_bids if it doesn't exist
-        if (!in_array('player_uuid', $bid_columns)) {
-            $db->exec('ALTER TABLE transfer_bids ADD COLUMN player_uuid TEXT DEFAULT ""');
-        }
-
-        // Migrate transfer_bids data from player_name to player_uuid if needed
-        if (in_array('player_name', $bid_columns) && in_array('player_uuid', $bid_columns)) {
-            $stmt = $db->prepare('SELECT id, player_name, player_data FROM transfer_bids WHERE player_uuid = "" AND player_name != ""');
-            $result = $stmt->execute();
-
+            $result = $db->query("PRAGMA table_info(transfer_bids)");
+            $bid_columns = [];
             while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
-                $player_data = json_decode($row['player_data'], true);
-                if ($player_data && isset($player_data['uuid'])) {
-                    $update_stmt = $db->prepare('UPDATE transfer_bids SET player_uuid = :uuid WHERE id = :id');
-                    $update_stmt->bindValue(':uuid', $player_data['uuid'], SQLITE3_TEXT);
-                    $update_stmt->bindValue(':id', $row['id'], SQLITE3_INTEGER);
-                    $update_stmt->execute();
+                $bid_columns[] = $row['name'];
+            }
+            if (!in_array('player_uuid', $bid_columns)) {
+                $db->exec('ALTER TABLE transfer_bids ADD COLUMN player_uuid TEXT DEFAULT ""');
+            }
+            if (in_array('player_name', $bid_columns) && in_array('player_uuid', $bid_columns)) {
+                $stmt = $db->prepare('SELECT id, player_name, player_data FROM transfer_bids WHERE player_uuid = "" AND player_name != ""');
+                $result = $stmt->execute();
+                while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+                    $player_data = json_decode($row['player_data'], true);
+                    if ($player_data && isset($player_data['uuid'])) {
+                        $update_stmt = $db->prepare('UPDATE transfer_bids SET player_uuid = :uuid WHERE id = :id');
+                        $update_stmt->bindValue(':uuid', $player_data['uuid'], SQLITE3_TEXT);
+                        $update_stmt->bindValue(':id', $row['id'], SQLITE3_INTEGER);
+                        $update_stmt->execute();
+                    }
                 }
             }
+        } catch (Exception $e) {
         }
-    } catch (Exception $e) {
-        // Migration failed, but continue - table might be new
     }
 
     // Get all available players from players.json (excluding players already in user's team)
