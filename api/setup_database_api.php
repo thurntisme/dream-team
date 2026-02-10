@@ -8,20 +8,30 @@ header('Content-Type: application/json');
 
 $logs = [];
 $ok = true;
+$mode = $_POST['mode'] ?? 'all';
+$logs[] = ['type' => 'detail', 'message' => 'Seed mode: ' . $mode];
 
 try {
     if (DB_DRIVER === 'mysql') {
+        $logs[] = ['type' => 'detail', 'message' => 'Checking MySQL connection'];
         $dsn = 'mysql:host=' . MYSQL_HOST . ';port=' . MYSQL_PORT . ';charset=utf8mb4';
         $pdo = new PDO($dsn, MYSQL_USER, MYSQL_PASSWORD, [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
             PDO::ATTR_EMULATE_PREPARES => false
         ]);
+        $logs[] = ['type' => 'info', 'message' => 'MySQL connection OK'];
         if (!empty(MYSQL_DB)) {
+            $logs[] = ['type' => 'detail', 'message' => 'Ensuring database "' . MYSQL_DB . '" exists'];
             $pdo->exec('CREATE DATABASE IF NOT EXISTS `' . MYSQL_DB . '` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci');
+            $logs[] = ['type' => 'info', 'message' => 'Database ensured: ' . MYSQL_DB];
         }
     }
+    if (DB_DRIVER === 'sqlite') {
+        $logs[] = ['type' => 'detail', 'message' => 'Checking SQLite connection'];
+    }
     $db = getDbConnection();
+    $logs[] = ['type' => 'info', 'message' => 'Database adapter initialized'];
 
     // Create core tables needed for seeding
     $coreOk = true;
@@ -118,45 +128,101 @@ try {
         $logs[] = ['type' => 'error', 'message' => 'League tables error: ' . $e->getMessage()];
     }
 
-    // Seed shop items
-    try {
-        ob_start();
-        $seedShopOk = seedShopItems();
-        $out = trim(ob_get_clean());
-        if ($seedShopOk) {
-            $logs[] = ['type' => 'info', 'message' => 'Insert shop items successfully'];
+    // Create admin if provided
+    $adminName = trim($_POST['admin_name'] ?? '');
+    $adminEmail = trim($_POST['admin_email'] ?? '');
+    $adminPassword = $_POST['admin_password'] ?? '';
+    if ($adminName !== '' || $adminEmail !== '' || $adminPassword !== '') {
+        if ($adminName === '' || $adminEmail === '' || $adminPassword === '') {
+            $ok = false;
+            $logs[] = ['type' => 'error', 'message' => 'Admin name, email, and password are required'];
         } else {
-            // Could already exist; still log output
-            $logs[] = ['type' => 'info', 'message' => 'Shop items seeding skipped or failed'];
-        }
-        if ($out !== '') {
-            foreach (explode("\n", $out) as $line) {
-                $logs[] = ['type' => 'detail', 'message' => $line];
+            try {
+                $check = $db->prepare('SELECT COUNT(*) as c FROM users WHERE email = :email');
+                if ($check) {
+                    $check->bindValue(':email', $adminEmail, SQLITE3_TEXT);
+                    $res = $check->execute();
+                    $row = $res ? $res->fetchArray(SQLITE3_ASSOC) : ['c' => 0];
+                    if ((int)($row['c'] ?? 0) > 0) {
+                        $logs[] = ['type' => 'detail', 'message' => 'Admin already exists: ' . $adminEmail];
+                    } else {
+                        $stmt = $db->prepare('INSERT INTO users (name, email, password, club_name, formation, team, budget) VALUES (:name, :email, :password, :club, :form, :team, :budget)');
+                        if ($stmt) {
+                            $stmt->bindValue(':name', $adminName, SQLITE3_TEXT);
+                            $stmt->bindValue(':email', $adminEmail, SQLITE3_TEXT);
+                            $stmt->bindValue(':password', password_hash($adminPassword, PASSWORD_DEFAULT), SQLITE3_TEXT);
+                            $stmt->bindValue(':club', $adminName . ' FC', SQLITE3_TEXT);
+                            $stmt->bindValue(':form', '4-4-2', SQLITE3_TEXT);
+                            $stmt->bindValue(':team', '[]', SQLITE3_TEXT);
+                            $stmt->bindValue(':budget', DEFAULT_BUDGET, SQLITE3_INTEGER);
+                            $ins = $stmt->execute();
+                            if ($ins) {
+                                $logs[] = ['type' => 'info', 'message' => 'Admin user created'];
+                            } else {
+                                $ok = false;
+                                $logs[] = ['type' => 'error', 'message' => 'Failed to create admin user: ' . $db->lastErrorMsg()];
+                            }
+                        } else {
+                            $ok = false;
+                            $logs[] = ['type' => 'error', 'message' => 'Failed to prepare admin insert: ' . $db->lastErrorMsg()];
+                        }
+                    }
+                } else {
+                    $ok = false;
+                    $logs[] = ['type' => 'error', 'message' => 'Failed to prepare admin uniqueness check: ' . $db->lastErrorMsg()];
+                }
+            } catch (Throwable $e) {
+                $ok = false;
+                $logs[] = ['type' => 'error', 'message' => 'Admin creation error: ' . $e->getMessage()];
             }
         }
-    } catch (Throwable $e) {
-        $ok = false;
-        $logs[] = ['type' => 'error', 'message' => 'Shop items error: ' . $e->getMessage()];
+    } else {
+        $logs[] = ['type' => 'detail', 'message' => 'Admin inputs not provided; skipping admin creation'];
+    }
+
+    // Seed shop items
+    if ($mode === 'shop' || $mode === 'all') {
+        try {
+            ob_start();
+            $seedShopOk = seedShopItems();
+            $out = trim(ob_get_clean());
+            if ($seedShopOk) {
+                $logs[] = ['type' => 'info', 'message' => 'Insert shop items successfully'];
+            } else {
+                // Could already exist; still log output
+                $logs[] = ['type' => 'info', 'message' => 'Shop items seeding skipped or failed'];
+            }
+            if ($out !== '') {
+                foreach (explode("\n", $out) as $line) {
+                    $logs[] = ['type' => 'detail', 'message' => $line];
+                }
+            }
+        } catch (Throwable $e) {
+            $ok = false;
+            $logs[] = ['type' => 'error', 'message' => 'Shop items error: ' . $e->getMessage()];
+        }
     }
 
     // Seed demo clubs
-    try {
-        ob_start();
-        $seedClubsOk = seedFakeClubs();
-        $out = trim(ob_get_clean());
-        if ($seedClubsOk) {
-            $logs[] = ['type' => 'info', 'message' => 'Create clubs successfully'];
-        } else {
-            $logs[] = ['type' => 'info', 'message' => 'Club seeding skipped or failed'];
-        }
-        if ($out !== '') {
-            foreach (explode("\n", $out) as $line) {
-                $logs[] = ['type' => 'detail', 'message' => $line];
+    if ($mode === 'clubs' || $mode === 'all') {
+        try {
+            ob_start();
+            $seedClubsOk = seedFakeClubs();
+            $out = trim(ob_get_clean());
+            if ($seedClubsOk) {
+                $logs[] = ['type' => 'info', 'message' => 'Create clubs successfully'];
+            } else {
+                $logs[] = ['type' => 'info', 'message' => 'Club seeding skipped or failed'];
             }
+            if ($out !== '') {
+                foreach (explode("\n", $out) as $line) {
+                    $logs[] = ['type' => 'detail', 'message' => $line];
+                }
+            }
+        } catch (Throwable $e) {
+            $ok = false;
+            $logs[] = ['type' => 'error', 'message' => 'Clubs error: ' . $e->getMessage()];
         }
-    } catch (Throwable $e) {
-        $ok = false;
-        $logs[] = ['type' => 'error', 'message' => 'Clubs error: ' . $e->getMessage()];
     }
 
     $db->close();

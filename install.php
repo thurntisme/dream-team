@@ -3,6 +3,393 @@
 require_once 'config/config.php';
 require_once 'config/constants.php';
 
+$__ui_errors = [];
+$__ui_messages = [];
+$__ui_seeded = false;
+
+function __write_env($pairs)
+{
+    $env = __DIR__ . '/.env';
+    $existing = [];
+    if (file_exists($env)) {
+        $lines = file($env, FILE_IGNORE_NEW_LINES);
+        foreach ($lines as $line) {
+            $t = ltrim($line);
+            if ($t === '' || $t[0] === '#') {
+                continue;
+            }
+            $parts = explode('=', $line, 2);
+            if (count($parts) === 2) {
+                $existing[$parts[0]] = $parts[1];
+            }
+        }
+    }
+    foreach ($pairs as $k => $v) {
+        $existing[$k] = $v;
+    }
+    $buf = '';
+    foreach ($existing as $k => $v) {
+        $buf .= $k . '=' . $v . "\n";
+    }
+    file_put_contents($env, $buf);
+}
+
+function __create_tables_simple($db, $driver)
+{
+    $ok = true;
+    if ($driver === 'mysql') {
+        $ok = $ok && $db->exec('CREATE TABLE IF NOT EXISTS users (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            email VARCHAR(255) NOT NULL UNIQUE,
+            password VARCHAR(255) NOT NULL,
+            club_name VARCHAR(255) NULL,
+            formation VARCHAR(20) DEFAULT "4-4-2",
+            team TEXT,
+            budget BIGINT DEFAULT ' . DEFAULT_BUDGET . ',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )');
+        $ok = $ok && $db->exec('CREATE TABLE IF NOT EXISTS shop_items (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            description TEXT NOT NULL,
+            price BIGINT NOT NULL,
+            effect_type VARCHAR(50) NOT NULL,
+            effect_value TEXT NOT NULL,
+            category VARCHAR(50) NOT NULL,
+            icon VARCHAR(50) DEFAULT "package",
+            duration INT DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )');
+    } else {
+        $ok = $ok && $db->exec('CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            email TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL,
+            club_name TEXT,
+            formation TEXT DEFAULT "4-4-2",
+            team TEXT,
+            budget INTEGER DEFAULT ' . DEFAULT_BUDGET . ',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )');
+        $ok = $ok && $db->exec('CREATE TABLE IF NOT EXISTS shop_items (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            description TEXT NOT NULL,
+            price INTEGER NOT NULL,
+            effect_type TEXT NOT NULL,
+            effect_value TEXT NOT NULL,
+            category TEXT NOT NULL,
+            icon TEXT DEFAULT "package",
+            duration INTEGER DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )');
+    }
+    return $ok;
+}
+
+function __seed_shop_items_simple($db, $driver, &$messages)
+{
+    $count = 0;
+    if ($driver === 'mysql') {
+        $res = $db->query('SELECT COUNT(*) as count FROM shop_items');
+        if ($res) {
+            $row = $res->fetchArray(SQLITE3_ASSOC);
+            if ($row && isset($row['count'])) {
+                $count = (int)$row['count'];
+            }
+        }
+    } else {
+        $res = $db->query('SELECT COUNT(*) as count FROM shop_items');
+        if ($res) {
+            $row = $res->fetchArray(SQLITE3_ASSOC);
+            if ($row && isset($row['count'])) {
+                $count = (int)$row['count'];
+            }
+        }
+    }
+    if ($count > 0) {
+        $messages[] = 'Shop items already exist, skipping seeding';
+        return true;
+    }
+    $items = [
+        ['Training Camp', 'Boost all players rating by +2 for 7 days', 5000000, 'player_boost', '{"rating": 2}', 'training', 'dumbbell', 7],
+        ['Fitness Coach', 'Reduce injury risk by 50% for 14 days', 3000000, 'injury_protection', '{"reduction": 0.5}', 'training', 'heart-pulse', 14],
+        ['Sponsorship Deal', 'Increase budget by €10M instantly', 8000000, 'budget_boost', '{"amount": 10000000}', 'financial', 'handshake', 0]
+    ];
+    if ($driver === 'mysql') {
+        foreach ($items as $it) {
+            $stmt = $db->prepare('INSERT INTO shop_items (name, description, price, effect_type, effect_value, category, icon, duration) VALUES (:n, :d, :p, :et, :ev, :c, :i, :du)');
+            if ($stmt === false) {
+                return false;
+            }
+            $stmt->bindValue(':n', $it[0], SQLITE3_TEXT);
+            $stmt->bindValue(':d', $it[1], SQLITE3_TEXT);
+            $stmt->bindValue(':p', $it[2], SQLITE3_INTEGER);
+            $stmt->bindValue(':et', $it[3], SQLITE3_TEXT);
+            $stmt->bindValue(':ev', $it[4], SQLITE3_TEXT);
+            $stmt->bindValue(':c', $it[5], SQLITE3_TEXT);
+            $stmt->bindValue(':i', $it[6], SQLITE3_TEXT);
+            $stmt->bindValue(':du', $it[7], SQLITE3_INTEGER);
+            $stmt->execute();
+        }
+    } else {
+        $ins = $db->prepare('INSERT INTO shop_items (name, description, price, effect_type, effect_value, category, icon, duration) VALUES (:n, :d, :p, :et, :ev, :c, :i, :du)');
+        if ($ins === false) {
+            return false;
+        }
+        foreach ($items as $it) {
+            $ins->bindValue(':n', $it[0], SQLITE3_TEXT);
+            $ins->bindValue(':d', $it[1], SQLITE3_TEXT);
+            $ins->bindValue(':p', $it[2], SQLITE3_INTEGER);
+            $ins->bindValue(':et', $it[3], SQLITE3_TEXT);
+            $ins->bindValue(':ev', $it[4], SQLITE3_TEXT);
+            $ins->bindValue(':c', $it[5], SQLITE3_TEXT);
+            $ins->bindValue(':i', $it[6], SQLITE3_TEXT);
+            $ins->bindValue(':du', $it[7], SQLITE3_INTEGER);
+            $ins->execute();
+        }
+    }
+    $messages[] = 'Seeded basic shop items (' . count($items) . ')';
+    return true;
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['start_setup'])) {
+    $driver = $_POST['driver'] ?? 'sqlite';
+    $seed = !empty($_POST['seed']);
+    try {
+        if ($driver === 'mysql') {
+            $host = trim($_POST['mysql_host'] ?? '127.0.0.1');
+            $port = trim($_POST['mysql_port'] ?? '3306');
+            $dbName = trim($_POST['mysql_db'] ?? '');
+            $user = trim($_POST['mysql_user'] ?? '');
+            $pass = trim($_POST['mysql_password'] ?? '');
+            if ($dbName === '' || $user === '') {
+                throw new Exception('MySQL database and user are required');
+            }
+            $dsn = 'mysql:host=' . $host . ';port=' . $port . ';charset=utf8mb4';
+            $pdo = new PDO($dsn, $user, $pass, [
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                PDO::ATTR_EMULATE_PREPARES => false
+            ]);
+            $pdo->exec('CREATE DATABASE IF NOT EXISTS `' . $dbName . '` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci');
+            __write_env([
+                'DB_DRIVER' => 'mysql',
+                'MYSQL_HOST' => $host,
+                'MYSQL_PORT' => $port,
+                'MYSQL_DB' => $dbName,
+                'MYSQL_USER' => $user,
+                'MYSQL_PASSWORD' => $pass
+            ]);
+            $adapterConfig = [
+                'db_file' => '',
+                'mysql_host' => $host,
+                'mysql_port' => $port,
+                'mysql_db' => $dbName,
+                'mysql_user' => $user,
+                'mysql_password' => $pass
+            ];
+            $db = new DBAdapter('mysql', $adapterConfig);
+        } else {
+            $file = trim($_POST['sqlite_file'] ?? (__DIR__ . '/database/dreamteam.db'));
+            $dir = dirname($file);
+            if (!is_dir($dir)) {
+                mkdir($dir, 0755, true);
+            }
+            __write_env([
+                'DB_DRIVER' => 'sqlite',
+                'DB_FILE' => $file
+            ]);
+            $adapterConfig = [
+                'db_file' => $file,
+                'mysql_host' => '',
+                'mysql_port' => '',
+                'mysql_db' => '',
+                'mysql_user' => '',
+                'mysql_password' => ''
+            ];
+            $db = new DBAdapter('sqlite', $adapterConfig);
+        }
+        if (__create_tables_simple($db, $driver)) {
+            $__ui_messages[] = 'Create tables successfully';
+        } else {
+            $__ui_errors[] = 'Failed creating tables';
+        }
+        $adminName = trim($_POST['admin_name'] ?? '');
+        $adminEmail = trim($_POST['admin_email'] ?? '');
+        $adminPassword = $_POST['admin_password'] ?? '';
+        if ($adminName !== '' && $adminEmail !== '' && $adminPassword !== '') {
+            $stmt = $db->prepare('INSERT INTO users (name, email, password, club_name, formation, team, budget) VALUES (:name, :email, :password, :club, :form, :team, :budget)');
+            if ($stmt === false) {
+                $__ui_errors[] = 'Failed to prepare admin insert';
+            } else {
+                $stmt->bindValue(':name', $adminName, SQLITE3_TEXT);
+                $stmt->bindValue(':email', $adminEmail, SQLITE3_TEXT);
+                $stmt->bindValue(':password', password_hash($adminPassword, PASSWORD_DEFAULT), SQLITE3_TEXT);
+                $stmt->bindValue(':club', $adminName . ' FC', SQLITE3_TEXT);
+                $stmt->bindValue(':form', '4-4-2', SQLITE3_TEXT);
+                $stmt->bindValue(':team', '[]', SQLITE3_TEXT);
+                $stmt->bindValue(':budget', DEFAULT_BUDGET, SQLITE3_INTEGER);
+                $exec = $stmt->execute();
+                if ($exec) {
+                    $__ui_messages[] = 'Admin user created successfully';
+                } else {
+                    $__ui_errors[] = 'Failed to create admin user';
+                }
+            }
+        } else {
+            $__ui_messages[] = 'Admin inputs empty, skipping admin creation';
+        }
+        if ($seed) {
+            if (__seed_shop_items_simple($db, $driver, $__ui_messages)) {
+                $__ui_seeded = true;
+            } else {
+                $__ui_errors[] = 'Seeding failed';
+            }
+        }
+        $db->close();
+    } catch (Throwable $e) {
+        $__ui_errors[] = $e->getMessage();
+    }
+}
+
+if (false) {
+    ?>
+    <!doctype html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <title>Installer</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <style>
+            body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background:#f8fafc; margin:0; }
+            .container { max-width: 800px; margin: 40px auto; background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:24px; }
+            h1 { margin:0 0 16px; font-size:24px; }
+            fieldset { border:1px solid #e5e7eb; border-radius:8px; margin-bottom:16px; }
+            legend { padding:0 8px; font-weight:600; }
+            label { display:block; font-size:14px; margin:8px 0 4px; }
+            input[type=text], input[type=password], input[type=email] { width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; }
+            .row { display:flex; gap:12px; }
+            .row > div { flex:1; }
+            .actions { display:flex; gap:12px; align-items:center; margin-top:16px; }
+            .btn { background:#2563eb; color:#fff; border:none; padding:10px 16px; border-radius:8px; cursor:pointer; }
+            .btn:disabled { opacity:.6; cursor:not-allowed; }
+            .note { color:#64748b; font-size:13px; }
+            .list { margin:12px 0; padding:0; list-style:none; }
+            .list li { margin:4px 0; font-size:14px; }
+            .error { color:#b91c1c; }
+            .ok { color:#166534; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>Installer</h1>
+            <?php if (!empty($__ui_errors)): ?>
+                <ul class="list">
+                    <?php foreach ($__ui_errors as $m): ?>
+                        <li class="error">• <?php echo htmlspecialchars($m); ?></li>
+                    <?php endforeach; ?>
+                </ul>
+            <?php endif; ?>
+            <?php if (!empty($__ui_messages)): ?>
+                <ul class="list">
+                    <?php foreach ($__ui_messages as $m): ?>
+                        <li class="ok">• <?php echo htmlspecialchars($m); ?></li>
+                    <?php endforeach; ?>
+                </ul>
+            <?php endif; ?>
+            <form method="post">
+                <input type="hidden" name="start_setup" value="1">
+                <fieldset>
+                    <legend>Database Configuration</legend>
+                    <label>Driver</label>
+                    <div class="row">
+                        <div>
+                            <label><input type="radio" name="driver" value="sqlite" <?php echo (($_POST['driver'] ?? 'sqlite') === 'sqlite') ? 'checked' : '' ?>> SQLite</label>
+                        </div>
+                        <div>
+                            <label><input type="radio" name="driver" value="mysql" <?php echo (($_POST['driver'] ?? 'sqlite') === 'mysql') ? 'checked' : '' ?>> MySQL</label>
+                        </div>
+                    </div>
+                    <div id="sqliteFields" style="margin-top:8px; <?php echo (($_POST['driver'] ?? 'sqlite') === 'mysql') ? 'display:none' : '' ?>">
+                        <label>SQLite file path</label>
+                        <input type="text" name="sqlite_file" value="<?php echo htmlspecialchars($_POST['sqlite_file'] ?? (__DIR__ . '/database/dreamteam.db')); ?>">
+                        <div class="note">Example: d:/code/dream-team/database/dreamteam.db</div>
+                    </div>
+                    <div id="mysqlFields" style="margin-top:8px; <?php echo (($_POST['driver'] ?? 'sqlite') === 'mysql') ? '' : 'display:none' ?>">
+                        <div class="row">
+                            <div>
+                                <label>Host</label>
+                                <input type="text" name="mysql_host" value="<?php echo htmlspecialchars($_POST['mysql_host'] ?? '127.0.0.1'); ?>">
+                            </div>
+                            <div>
+                                <label>Port</label>
+                                <input type="text" name="mysql_port" value="<?php echo htmlspecialchars($_POST['mysql_port'] ?? '3306'); ?>">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div>
+                                <label>Database</label>
+                                <input type="text" name="mysql_db" value="<?php echo htmlspecialchars($_POST['mysql_db'] ?? 'dreamteam'); ?>">
+                            </div>
+                            <div>
+                                <label>User</label>
+                                <input type="text" name="mysql_user" value="<?php echo htmlspecialchars($_POST['mysql_user'] ?? 'root'); ?>">
+                            </div>
+                        </div>
+                        <label>Password</label>
+                        <input type="password" name="mysql_password" value="<?php echo htmlspecialchars($_POST['mysql_password'] ?? ''); ?>">
+                    </div>
+                </fieldset>
+
+                <fieldset>
+                    <legend>Admin User</legend>
+                    <div class="row">
+                        <div>
+                            <label>Name</label>
+                            <input type="text" name="admin_name" value="<?php echo htmlspecialchars($_POST['admin_name'] ?? ''); ?>">
+                        </div>
+                        <div>
+                            <label>Email</label>
+                            <input type="email" name="admin_email" value="<?php echo htmlspecialchars($_POST['admin_email'] ?? ''); ?>">
+                        </div>
+                    </div>
+                    <label>Password</label>
+                    <input type="password" name="admin_password" value="<?php echo htmlspecialchars($_POST['admin_password'] ?? ''); ?>">
+                </fieldset>
+
+                <div class="actions">
+                    <label><input type="checkbox" name="seed" <?php echo !empty($_POST['seed']) ? 'checked' : '' ?>> Seed data</label>
+                    <button type="submit" class="btn">Start</button>
+                </div>
+            </form>
+        </div>
+        <script>
+            const sqliteRadio = document.querySelector('input[name="driver"][value="sqlite"]');
+            const mysqlRadio = document.querySelector('input[name="driver"][value="mysql"]');
+            const sqliteFields = document.getElementById('sqliteFields');
+            const mysqlFields = document.getElementById('mysqlFields');
+            function sync() {
+                if (sqliteRadio.checked) {
+                    sqliteFields.style.display = '';
+                    mysqlFields.style.display = 'none';
+                } else {
+                    sqliteFields.style.display = 'none';
+                    mysqlFields.style.display = '';
+                }
+            }
+            sqliteRadio.addEventListener('change', sync);
+            mysqlRadio.addEventListener('change', sync);
+            sync();
+        </script>
+    </body>
+    </html>
+    <?php
+    exit;
+}
+
 $errors = [];
 $success = [];
 
@@ -1076,12 +1463,6 @@ startContent();
 
         <!-- Configuration Form -->
         <?php if (empty($errors) && !$is_ready): ?>
-            <div class="mb-6 flex gap-2 text-sm">
-                <span class="px-3 py-1 rounded <?php echo ($step===1)?'bg-blue-600 text-white':'border'; ?> cursor-default pointer-events-none">1. Environment & Connection</span>
-                <span class="px-3 py-1 rounded <?php echo ($step===2)?'bg-blue-600 text-white':'border'; ?> cursor-default pointer-events-none">2. Setup Database</span>
-                <span class="px-3 py-1 rounded <?php echo ($step===3)?'bg-blue-600 text-white':'border'; ?> cursor-default pointer-events-none">3. Admin</span>
-                <span class="px-3 py-1 rounded <?php echo ($step===4)?'bg-blue-600 text-white':'border'; ?> cursor-default pointer-events-none">4. Finish</span>
-            </div>
 
             <?php if ($step === 1): ?>
                 <div class="mb-8 border-t pt-6">
@@ -1116,13 +1497,127 @@ startContent();
                     <div class="mt-4 text-sm text-gray-600">
                         Edit <span class="font-mono">.env</span> and restart the server to change these values.
                     </div>
+                    <div class="mt-6">
+                        <h3 class="text-lg font-semibold mb-2">Database Inputs</h3>
+                        <div class="text-sm text-gray-600 mb-3">Display-only inputs for review.</div>
+                        <div class="mb-3 flex gap-4">
+                            <label class="inline-flex items-center gap-2">
+                                <input type="radio" name="ui_driver" value="sqlite" <?php echo DB_DRIVER === 'sqlite' ? 'checked' : ''; ?>>
+                                <span>SQLite</span>
+                            </label>
+                            <label class="inline-flex items-center gap-2">
+                                <input type="radio" name="ui_driver" value="mysql" <?php echo DB_DRIVER === 'mysql' ? 'checked' : ''; ?>>
+                                <span>MySQL</span>
+                            </label>
+                        </div>
+                        <div id="uiSqlite" class="grid grid-cols-1 gap-3 <?php echo DB_DRIVER === 'mysql' ? 'hidden' : ''; ?>">
+                            <div>
+                                <label class="block text-sm font-medium mb-1">DB_FILE</label>
+                                <input type="text" class="w-full px-3 py-2 border rounded-lg" value="<?php echo htmlspecialchars(DB_FILE); ?>" readonly>
+                            </div>
+                        </div>
+                        <div id="uiMysql" class="grid grid-cols-1 md:grid-cols-2 gap-3 <?php echo DB_DRIVER === 'sqlite' ? 'hidden' : ''; ?>">
+                            <div>
+                                <label class="block text-sm font-medium mb-1">MYSQL_HOST</label>
+                                <input type="text" class="w-full px-3 py-2 border rounded-lg" value="<?php echo htmlspecialchars(MYSQL_HOST); ?>" readonly>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">MYSQL_PORT</label>
+                                <input type="text" class="w-full px-3 py-2 border rounded-lg" value="<?php echo htmlspecialchars(MYSQL_PORT); ?>" readonly>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">MYSQL_DB</label>
+                                <input type="text" class="w-full px-3 py-2 border rounded-lg" value="<?php echo htmlspecialchars(MYSQL_DB); ?>" readonly>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">MYSQL_USER</label>
+                                <input type="text" class="w-full px-3 py-2 border rounded-lg" value="<?php echo htmlspecialchars(MYSQL_USER); ?>" readonly>
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium mb-1">MYSQL_PASSWORD</label>
+                                <input type="password" class="w-full px-3 py-2 border rounded-lg" value="<?php echo htmlspecialchars(MYSQL_PASSWORD); ?>" readonly>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-6">
+                        <h3 class="text-lg font-semibold mb-2">Seed Data Configuration</h3>
+                        <p class="text-sm text-gray-600 mb-4">Display-only preview of available demo seed options.</p>
+                        <div class="space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                <label class="flex items-center gap-2 p-3 border rounded-lg">
+                                    <input type="radio" name="ui_seed_mode" value="none">
+                                    <span class="text-sm">None</span>
+                                </label>
+                                <label class="flex items-center gap-2 p-3 border rounded-lg">
+                                    <input type="radio" name="ui_seed_mode" value="shop">
+                                    <span class="text-sm">Shop Items</span>
+                                </label>
+                                <label class="flex items-center gap-2 p-3 border rounded-lg">
+                                    <input type="radio" name="ui_seed_mode" value="clubs">
+                                    <span class="text-sm">Demo Clubs</span>
+                                </label>
+                                <label class="flex items-center gap-2 p-3 border rounded-lg md:col-span-3">
+                                    <input type="radio" name="ui_seed_mode" value="all">
+                                    <span class="text-sm">Everything (Clubs + Shop Items)</span>
+                                </label>
+                            </div>
+                            <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                <div class="font-semibold text-blue-800 mb-2">Demo Clubs</div>
+                                <div class="text-sm text-blue-700">
+                                    <div class="mb-2">Total: <?php echo count(DEMO_CLUBS); ?> clubs</div>
+                                    <ul class="list-disc list-inside">
+                                        <?php foreach (array_slice(DEMO_CLUBS, 0, 5) as $club): ?>
+                                            <li><?php echo htmlspecialchars($club['name']); ?> (<?php echo htmlspecialchars($club['formation']); ?>)</li>
+                                        <?php endforeach; ?>
+                                        <?php if (count(DEMO_CLUBS) > 5): ?>
+                                            <li>... and <?php echo count(DEMO_CLUBS) - 5; ?> more</li>
+                                        <?php endif; ?>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="bg-purple-50 border border-purple-200 rounded-lg p-3">
+                                <div class="font-semibold text-purple-800 mb-2">Shop Items</div>
+                                <div class="text-sm text-purple-700">
+                                    <ul class="list-disc list-inside">
+                                        <li>Training Items — player performance boosts</li>
+                                        <li>Financial Items — budget and income boosts</li>
+                                        <li>Special Items — unique advantages</li>
+                                        <li>Premium Items — permanent upgrades</li>
+                                        <li>Squad Expansion — increase team size</li>
+                                        <li>Stadium Items — customization</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="text-sm text-gray-600">
+                                Actual seeding is performed in Step 2 or via the Seed buttons when ready.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-6">
+                        <h3 class="text-lg font-semibold mb-2">Admin Configuration</h3>
+                        <p class="text-sm text-gray-600 mb-4">Provide admin details now; they will be used in Step 3.</p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Admin Name</label>
+                                <input id="ui_admin_name" type="text" class="w-full px-3 py-2 border rounded-lg" placeholder="Admin User">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Admin Email</label>
+                                <input id="ui_admin_email" type="email" class="w-full px-3 py-2 border rounded-lg" placeholder="admin@example.com">
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium mb-1">Admin Password</label>
+                                <input id="ui_admin_password" type="password" class="w-full px-3 py-2 border rounded-lg" placeholder="Password">
+                            </div>
+                        </div>
+                        <div class="text-sm text-gray-600 mt-3">Inputs persist locally until admin creation.</div>
+                    </div>
                     <div class="mt-4">
-                        <h3 class="text-lg font-semibold mb-2">Connection Test</h3>
-                        <p class="text-sm text-gray-600 mb-4">Verify database connectivity using current environment settings.</p>
+                        <h3 class="text-lg font-semibold mb-2">Setup</h3>
+                        <p class="text-sm text-gray-600 mb-4">Run database setup with progress logs (connection, database, tables, seed).</p>
                         <form method="POST" id="connTestForm" class="flex gap-3 items-center">
                             <input type="hidden" name="step" value="1">
-                            <button type="submit" name="test_conn" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">Test Connection</button>
-                            <a href="?step=2" class="inline-block px-6 py-2 rounded-lg border">Next</a>
+                            <button type="submit" id="setupBtnStep1" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">Setup</button>
                         </form>
                     </div>
                 </div>
@@ -1175,38 +1670,11 @@ startContent();
                             </p>
                         </div>
 
-                        <div class="flex justify-center gap-3 flex-wrap">
-                            <a href="index.php"
-                                class="inline-flex items-center gap-2 bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 font-semibold">
+                        <div class="flex justify-center">
+                            <a href="index.php" class="inline-flex items-center gap-2 bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 font-semibold">
                                 <i data-lucide="play" class="w-5 h-5"></i>
                                 Go to <?php echo htmlspecialchars($app_name); ?>
                             </a>
-
-                            <button type="button" id="seedAllBtn"
-                                class="inline-flex items-center gap-2 bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 font-semibold">
-                                <i data-lucide="database" class="w-5 h-5"></i>
-                                Seed Demo Data
-                            </button>
-
-                            <button type="button" id="seedClubsBtn"
-                                class="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm">
-                                <i data-lucide="users" class="w-4 h-4"></i>
-                                Clubs Only
-                            </button>
-
-                            <button type="button" id="seedShopBtn"
-                                class="inline-flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 text-sm">
-                                <i data-lucide="shopping-bag" class="w-4 h-4"></i>
-                                Shop Only
-                            </button>
-
-                            <form method="POST" class="inline">
-                                <button type="button" id="resetSystemBtn"
-                                    class="bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700">
-                                    Reset System
-                                </button>
-
-                            </form>
                         </div>
                     </div>
                 </div>
@@ -1540,40 +2008,134 @@ startContent();
             });
         });
 
-        // Async connection test
+        // Step 1 Setup with popup logs
         (function () {
             const form = document.getElementById('connTestForm');
-            if (!form) return;
+            const btn = document.getElementById('setupBtnStep1');
+            if (!form || !btn) return;
             form.addEventListener('submit', function (e) {
                 e.preventDefault();
-                fetch('api/connection_test_api.php', { method: 'POST' })
+                const name = (document.getElementById('ui_admin_name')?.value || '').trim();
+                const email = (document.getElementById('ui_admin_email')?.value || '').trim();
+                const password = (document.getElementById('ui_admin_password')?.value || '');
+                const emailOk = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email);
+                if (!name || !email || !password || !emailOk) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Admin Configuration Required',
+                        text: !emailOk ? 'Provide a valid admin email' : 'Admin name, email, and password are required',
+                        confirmButtonColor: '#ef4444'
+                    });
+                    return;
+                }
+                const seedMode = localStorage.getItem('seed_mode') || 'all';
+                Swal.fire({
+                    title: 'Running Setup',
+                    html: '<ul id=\"swLogs\" class=\"text-sm text-left space-y-1\"></ul>',
+                    didOpen: () => {
+                        const ul = document.getElementById('swLogs');
+                        if (ul) {
+                            const li = document.createElement('li');
+                            li.textContent = 'Starting setup...';
+                            li.className = 'text-gray-700';
+                            ul.appendChild(li);
+                        }
+                    },
+                    showConfirmButton: false,
+                    allowOutsideClick: false
+                });
+                fetch('api/setup_database_api.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({ 
+                        mode: seedMode,
+                        admin_name: name,
+                        admin_email: email,
+                        admin_password: password
+                    })
+                })
                     .then(r => r.json())
                     .then(data => {
-                        if (data && data.ok) {
-                            Swal.fire({
-                                icon: 'success',
-                                title: 'Connection Successful',
-                                text: 'Database connection works with current .env settings.',
-                                confirmButtonColor: '#16a34a'
-                            });
-                        } else {
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'Connection Failed',
-                                text: (data && data.error) ? data.error : 'Could not connect using current .env settings.',
-                                confirmButtonColor: '#ef4444'
-                            });
-                        }
+                        const entries = Array.isArray(data.logs) ? data.logs : [];
+                        const html = ['<div class=\"text-left\"><ul class=\"text-sm space-y-1\">'];
+                        entries.forEach(entry => {
+                            const cls = entry.type === 'error' ? 'text-red-600'
+                                : entry.type === 'detail' ? 'text-gray-600'
+                                : 'text-green-700';
+                            html.push('<li class=\"' + cls + '\">' + (entry.message || '') + '</li>');
+                        });
+                        html.push('</ul></div>');
+                        Swal.fire({
+                            icon: data.ok ? 'success' : 'error',
+                            title: data.ok ? 'Setup Completed' : 'Setup Finished With Errors',
+                            html: html.join(''),
+                            confirmButtonColor: data.ok ? '#16a34a' : '#ef4444',
+                            confirmButtonText: data.ok ? 'Start Playing' : 'Close'
+                        }).then((result) => {
+                            if (data.ok && result.isConfirmed) {
+                                window.location.href = 'index.php';
+                            }
+                        });
                     })
                     .catch(err => {
                         Swal.fire({
                             icon: 'error',
-                            title: 'Connection Failed',
+                            title: 'Setup Failed',
                             text: String(err),
                             confirmButtonColor: '#ef4444'
                         });
                     });
             });
+        })();
+        (function () {
+            const radios = document.querySelectorAll('input[name="ui_driver"]');
+            const uiSqlite = document.getElementById('uiSqlite');
+            const uiMysql = document.getElementById('uiMysql');
+            const sync = () => {
+                let val = 'sqlite';
+                radios.forEach(r => { if (r.checked) val = r.value; });
+                if (val === 'sqlite') {
+                    uiSqlite.classList.remove('hidden');
+                    uiMysql.classList.add('hidden');
+                } else {
+                    uiMysql.classList.remove('hidden');
+                    uiSqlite.classList.add('hidden');
+                }
+            };
+            radios.forEach(r => r.addEventListener('change', sync));
+            sync();
+        })();
+        (function () {
+            const n = document.getElementById('ui_admin_name');
+            const e = document.getElementById('ui_admin_email');
+            const p = document.getElementById('ui_admin_password');
+            const apply = () => {
+                n.value = localStorage.getItem('admin_name') || '';
+                e.value = localStorage.getItem('admin_email') || '';
+                p.value = localStorage.getItem('admin_password') || '';
+            };
+            const save = () => {
+                localStorage.setItem('admin_name', n.value || '');
+                localStorage.setItem('admin_email', e.value || '');
+                localStorage.setItem('admin_password', p.value || '');
+            };
+            if (n && e && p) {
+                apply();
+                n.addEventListener('input', save);
+                e.addEventListener('input', save);
+                p.addEventListener('input', save);
+            }
+            const nameField = document.querySelector('input[name="admin_name"]');
+            const emailField = document.querySelector('input[name="admin_email"]');
+            const passField = document.querySelector('input[name="admin_password"]');
+            if (nameField || emailField || passField) {
+                const ln = localStorage.getItem('admin_name');
+                const le = localStorage.getItem('admin_email');
+                const lp = localStorage.getItem('admin_password');
+                if (nameField && ln) nameField.value = ln;
+                if (emailField && le) emailField.value = le;
+                if (passField && lp) passField.value = lp;
+            }
         })();
 
         // Setup Database (Install + Seed) with logs
@@ -1591,7 +2153,12 @@ startContent();
                     logsEl.appendChild(el);
                 };
                 li('Starting setup...', 'text-gray-700');
-                fetch('api/setup_database_api.php', { method: 'POST' })
+                const seedMode = localStorage.getItem('seed_mode') || 'all';
+                fetch('api/setup_database_api.php', { 
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: new URLSearchParams({ mode: seedMode })
+                    })
                     .then(r => r.json())
                     .then(data => {
                         const entries = Array.isArray(data.logs) ? data.logs : [];
@@ -1606,7 +2173,12 @@ startContent();
                                 icon: 'success',
                                 title: 'Setup Completed',
                                 text: 'Create tables, shop items, and demo clubs completed successfully.',
-                                confirmButtonColor: '#16a34a'
+                                confirmButtonColor: '#16a34a',
+                                confirmButtonText: 'Start Playing'
+                            }).then((result) => {
+                                if (result.isConfirmed) {
+                                    window.location.href = 'index.php';
+                                }
                             });
                         } else {
                             Swal.fire({
@@ -1630,6 +2202,28 @@ startContent();
                         btn.disabled = false;
                     });
             });
+        })();
+        (function () {
+            const radios = document.querySelectorAll('input[name="ui_seed_mode"]');
+            const saved = localStorage.getItem('seed_mode') || 'all';
+            let found = false;
+            radios.forEach(r => {
+                if (r.value === saved) {
+                    r.checked = true;
+                    found = true;
+                }
+            });
+            if (!found) {
+                const all = Array.from(radios).find(r => r.value === 'all');
+                if (all) all.checked = true;
+            }
+            const sync = () => {
+                let v = 'all';
+                radios.forEach(r => { if (r.checked) v = r.value; });
+                localStorage.setItem('seed_mode', v);
+            };
+            radios.forEach(r => r.addEventListener('change', sync));
+            sync();
         })();
     </script>
 </div>
