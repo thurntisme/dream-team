@@ -41,11 +41,24 @@ try {
             name VARCHAR(255) NOT NULL,
             email VARCHAR(255) NOT NULL UNIQUE,
             password VARCHAR(255) NOT NULL,
+            uuid CHAR(36) NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )');
+        $coreOk = $coreOk && $db->exec('CREATE TABLE IF NOT EXISTS user_club (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_uuid CHAR(36) NOT NULL,
             club_name VARCHAR(255) NULL,
             formation VARCHAR(20) DEFAULT "4-4-2",
             team TEXT,
             budget BIGINT DEFAULT ' . DEFAULT_BUDGET . ',
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            max_players INT DEFAULT 23,
+            fans INT DEFAULT 5000,
+            club_exp INT DEFAULT 0,
+            club_level INT DEFAULT 1,
+            user_plan VARCHAR(20) DEFAULT "free",
+            plan_expires_at DATETIME NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_user_club_user_uuid (user_uuid)
         )');
         $coreOk = $coreOk && $db->exec('CREATE TABLE IF NOT EXISTS shop_items (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -146,17 +159,29 @@ try {
                     if ((int)($row['c'] ?? 0) > 0) {
                         $logs[] = ['type' => 'detail', 'message' => 'Admin already exists: ' . $adminEmail];
                     } else {
-                        $stmt = $db->prepare('INSERT INTO users (name, email, password, club_name, formation, team, budget) VALUES (:name, :email, :password, :club, :form, :team, :budget)');
+                        $stmt = $db->prepare('INSERT INTO users (name, email, password, uuid) VALUES (:name, :email, :password, :uuid)');
                         if ($stmt) {
                             $stmt->bindValue(':name', $adminName, SQLITE3_TEXT);
                             $stmt->bindValue(':email', $adminEmail, SQLITE3_TEXT);
                             $stmt->bindValue(':password', password_hash($adminPassword, PASSWORD_DEFAULT), SQLITE3_TEXT);
-                            $stmt->bindValue(':club', $adminName . ' FC', SQLITE3_TEXT);
-                            $stmt->bindValue(':form', '4-4-2', SQLITE3_TEXT);
-                            $stmt->bindValue(':team', '[]', SQLITE3_TEXT);
-                            $stmt->bindValue(':budget', DEFAULT_BUDGET, SQLITE3_INTEGER);
+                            $stmt->bindValue(':uuid', generateUUID(), SQLITE3_TEXT);
                             $ins = $stmt->execute();
                             if ($ins) {
+                                $adminId = $db->lastInsertRowID();
+                                $stmtUuid = $db->prepare('SELECT uuid FROM users WHERE id = :id');
+                                $stmtUuid->bindValue(':id', (int)$adminId, SQLITE3_INTEGER);
+                                $resUuid = $stmtUuid->execute();
+                                $rowUuid = $resUuid ? $resUuid->fetchArray(SQLITE3_ASSOC) : null;
+                                $uuidVal = $rowUuid['uuid'] ?? null;
+                                $stmtClub = $db->prepare('INSERT INTO user_club (user_uuid, club_name, formation, team, budget, max_players) VALUES (:user_uuid, :club, :form, :team, :budget, 23)');
+                                if ($stmtClub) {
+                                    $stmtClub->bindValue(':user_uuid', $uuidVal, SQLITE3_TEXT);
+                                    $stmtClub->bindValue(':club', $adminName . ' FC', SQLITE3_TEXT);
+                                    $stmtClub->bindValue(':form', '4-4-2', SQLITE3_TEXT);
+                                    $stmtClub->bindValue(':team', '[]', SQLITE3_TEXT);
+                                    $stmtClub->bindValue(':budget', DEFAULT_BUDGET, SQLITE3_INTEGER);
+                                    $stmtClub->execute();
+                                }
                                 $logs[] = ['type' => 'info', 'message' => 'Admin user created'];
                             } else {
                                 $ok = false;

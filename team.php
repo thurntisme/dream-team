@@ -8,7 +8,7 @@ require_once 'controllers/team-controller.php';
 
 try {
     // Initialize team controller
-    $teamController = new TeamController($_SESSION['user_id']);
+    $teamController = new TeamController($_SESSION['user_uuid'] ?? $_SESSION['user_id']);
 
     // Process all team data using the controller
     $teamData = $teamController->processTeamData();

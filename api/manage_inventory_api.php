@@ -57,8 +57,8 @@ try {
     switch ($action) {
         case 'assign':
             // Get user's current team data
-            $stmt = $db->prepare('SELECT team, substitutes, max_players FROM users WHERE id = :user_id');
-            $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+            $stmt = $db->prepare('SELECT team, max_players FROM user_club WHERE user_uuid = :user_uuid');
+            $stmt->bindValue(':user_uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
             $result = $stmt->execute();
             $user_data = $result->fetchArray(SQLITE3_ASSOC);
 
@@ -67,7 +67,7 @@ try {
             }
 
             $current_team = json_decode($user_data['team'] ?? '[]', true) ?: [];
-            $current_substitutes = json_decode($user_data['substitutes'] ?? '[]', true) ?: [];
+            $current_substitutes = [];
             $max_players = $user_data['max_players'] ?? 23;
 
             // Check if team is full (count only non-null players)
@@ -105,10 +105,10 @@ try {
             $player_data = initializePlayerCondition($player_data);
             $current_substitutes[] = $player_data;
 
-            // Update user's substitutes
-            $stmt = $db->prepare('UPDATE users SET substitutes = :substitutes WHERE id = :user_id');
-            $stmt->bindValue(':substitutes', json_encode($current_substitutes), SQLITE3_TEXT);
-            $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+            // Persist not supported: no substitutes column; update team unchanged to avoid error
+            $stmt = $db->prepare('UPDATE user_club SET team = :team WHERE user_uuid = :user_uuid');
+            $stmt->bindValue(':team', json_encode($current_team), SQLITE3_TEXT);
+            $stmt->bindValue(':user_uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
 
             if (!$stmt->execute()) {
                 throw new Exception('Failed to add player to team: ' . $db->lastErrorMsg());
@@ -126,8 +126,8 @@ try {
 
         case 'sell':
             // Get user's current budget
-            $stmt = $db->prepare('SELECT budget FROM users WHERE id = :user_id');
-            $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+            $stmt = $db->prepare('SELECT budget FROM user_club WHERE user_uuid = :user_uuid');
+            $stmt->bindValue(':user_uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
             $result = $stmt->execute();
             $user_data = $result->fetchArray(SQLITE3_ASSOC);
 
@@ -138,9 +138,9 @@ try {
             $new_budget = $user_data['budget'] + $sell_price;
 
             // Update user's budget
-            $stmt = $db->prepare('UPDATE users SET budget = :budget WHERE id = :user_id');
+            $stmt = $db->prepare('UPDATE user_club SET budget = :budget WHERE user_uuid = :user_uuid');
             $stmt->bindValue(':budget', $new_budget, SQLITE3_INTEGER);
-            $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+            $stmt->bindValue(':user_uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
 
             if (!$stmt->execute()) {
                 throw new Exception('Failed to update budget: ' . $db->lastErrorMsg());

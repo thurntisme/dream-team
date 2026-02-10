@@ -116,6 +116,28 @@ function isDatabaseAvailable()
         }
         if ($exists) {
             try {
+                // Ensure users has uuid column and populate it
+                $db->exec('ALTER TABLE users ADD COLUMN uuid CHAR(36) NULL');
+                $db->exec('UPDATE users SET uuid = UUID() WHERE uuid IS NULL OR uuid = \"\"');
+
+                // Ensure user_club table exists with user_uuid and no substitutes/matches_played
+                $db->exec('CREATE TABLE IF NOT EXISTS user_club (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_uuid CHAR(36) NOT NULL,
+                    club_name VARCHAR(255) NULL,
+                    formation VARCHAR(20) DEFAULT \"4-4-2\",
+                    team TEXT,
+                    budget BIGINT DEFAULT ' . DEFAULT_BUDGET . ',
+                    max_players INT DEFAULT 23,
+                    fans INT DEFAULT 5000,
+                    club_exp INT DEFAULT 0,
+                    club_level INT DEFAULT 1,
+                    user_plan VARCHAR(20) DEFAULT \"free\",
+                    plan_expires_at DATETIME NULL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    INDEX idx_user_club_user_uuid (user_uuid)
+                )');
+
                 $cols = [];
                 $resCols = $db->query('SHOW COLUMNS FROM users');
                 if ($resCols !== false) {
@@ -126,36 +148,28 @@ function isDatabaseAvailable()
                         }
                     }
                 }
-                $ensureSql = [];
-                if (!in_array('substitutes', $cols, true)) {
-                    $ensureSql[] = 'ALTER TABLE users ADD COLUMN substitutes TEXT';
+                // If user_club is empty, migrate core club data from users (if present)
+                $hasClubRows = false;
+                $resClubCount = $db->query('SELECT COUNT(*) AS c FROM user_club');
+                if ($resClubCount !== false) {
+                    $rowC = $resClubCount->fetchArray(SQLITE3_ASSOC);
+                    $hasClubRows = ((int)($rowC['c'] ?? 0)) > 0;
                 }
-                if (!in_array('max_players', $cols, true)) {
-                    $ensureSql[] = 'ALTER TABLE users ADD COLUMN max_players INT DEFAULT 23';
-                }
-                if (!in_array('fans', $cols, true)) {
-                    $ensureSql[] = 'ALTER TABLE users ADD COLUMN fans INT DEFAULT 5000';
-                }
-                if (!in_array('club_exp', $cols, true)) {
-                    $ensureSql[] = 'ALTER TABLE users ADD COLUMN club_exp INT DEFAULT 0';
-                }
-                if (!in_array('club_level', $cols, true)) {
-                    $ensureSql[] = 'ALTER TABLE users ADD COLUMN club_level INT DEFAULT 1';
-                }
-                if (!in_array('matches_played', $cols, true)) {
-                    $ensureSql[] = 'ALTER TABLE users ADD COLUMN matches_played INT DEFAULT 0';
-                }
-                if (!in_array('user_plan', $cols, true)) {
-                    $ensureSql[] = 'ALTER TABLE users ADD COLUMN user_plan VARCHAR(20) DEFAULT \"free\"';
-                }
-                if (!in_array('plan_expires_at', $cols, true)) {
-                    $ensureSql[] = 'ALTER TABLE users ADD COLUMN plan_expires_at DATETIME NULL';
-                }
-                if (!in_array('last_login', $cols, true)) {
-                    $ensureSql[] = 'ALTER TABLE users ADD COLUMN last_login DATETIME NULL';
-                }
-                foreach ($ensureSql as $sql) {
-                    $db->exec($sql);
+                if (!$hasClubRows) {
+                    $db->exec('INSERT INTO user_club (user_uuid, club_name, formation, team, budget, max_players, fans, club_exp, club_level, user_plan, plan_expires_at, created_at)
+                        SELECT uuid, 
+                               COALESCE(club_name, NULL), 
+                               COALESCE(formation, \"4-4-2\"), 
+                               COALESCE(team, \"[]\"), 
+                               COALESCE(budget, ' . DEFAULT_BUDGET . '), 
+                               COALESCE(max_players, 23), 
+                               COALESCE(fans, 5000), 
+                               COALESCE(club_exp, 0), 
+                               COALESCE(club_level, 1), 
+                               COALESCE(user_plan, \"free\"), 
+                               plan_expires_at, 
+                               created_at
+                        FROM users');
                 }
             } catch (Throwable $e) {
             }

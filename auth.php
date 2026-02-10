@@ -25,11 +25,12 @@ if ($action === 'register') {
     $email = $_POST['email'] ?? '';
     $password = password_hash($_POST['password'] ?? '', PASSWORD_DEFAULT);
 
-    $stmt = $db->prepare('INSERT INTO users (name, email, password) VALUES (:name, :email, :password)');
+    $stmt = $db->prepare('INSERT INTO users (name, email, password, uuid) VALUES (:name, :email, :password, :uuid)');
     if ($stmt !== false) {
         $stmt->bindValue(':name', $name, SQLITE3_TEXT);
         $stmt->bindValue(':email', $email, SQLITE3_TEXT);
         $stmt->bindValue(':password', $password, SQLITE3_TEXT);
+        $stmt->bindValue(':uuid', generateUUID(), SQLITE3_TEXT);
     }
 
     if ($stmt !== false && $stmt->execute()) {
@@ -44,11 +45,31 @@ if ($action === 'register') {
 
         // Store user session data
         $_SESSION['user_id'] = $db->lastInsertRowID();
+        // Fetch uuid for the new user
+        $stmtUuid = $db->prepare('SELECT uuid FROM users WHERE id = :id');
+        $uuidVal = null;
+        if ($stmtUuid !== false) {
+            $stmtUuid->bindValue(':id', $_SESSION['user_id'], SQLITE3_INTEGER);
+            $resUuid = $stmtUuid->execute();
+            $rowUuid = $resUuid ? $resUuid->fetchArray(SQLITE3_ASSOC) : null;
+            $uuidVal = $rowUuid['uuid'] ?? null;
+        }
+        $_SESSION['user_uuid'] = $uuidVal;
         $_SESSION['user_name'] = $name;
         $_SESSION['club_name'] = null; // New users don't have club names yet
         $_SESSION['login_time'] = time();
         $_SESSION['expire_time'] = $session_expire_time;
         $_SESSION['last_activity'] = time();
+
+        // Create default user_club row
+        $stmtClub = $db->prepare('INSERT INTO user_club (user_uuid, club_name, formation, team, budget, max_players) VALUES (:user_uuid, NULL, :form, :team, :budget, 23)');
+        if ($stmtClub !== false) {
+            $stmtClub->bindValue(':user_uuid', $uuidVal, SQLITE3_TEXT);
+            $stmtClub->bindValue(':form', '4-4-2', SQLITE3_TEXT);
+            $stmtClub->bindValue(':team', '[]', SQLITE3_TEXT);
+            $stmtClub->bindValue(':budget', DEFAULT_BUDGET, SQLITE3_INTEGER);
+            $stmtClub->execute();
+        }
 
         echo json_encode([
             'success' => true,
@@ -87,8 +108,17 @@ if ($action === 'register') {
 
         // Store user session data
         $_SESSION['user_id'] = $user['id'];
+        $_SESSION['user_uuid'] = $user['uuid'] ?? null;
         $_SESSION['user_name'] = $user['name'];
-        $_SESSION['club_name'] = $user['club_name'];
+        // Fetch club_name from user_club
+        $clubRow = null;
+        $stmtClub = $db->prepare('SELECT club_name FROM user_club WHERE user_uuid = :user_uuid');
+        if ($stmtClub !== false) {
+            $stmtClub->bindValue(':user_uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
+            $resClub = $stmtClub->execute();
+            $clubRow = $resClub ? $resClub->fetchArray(SQLITE3_ASSOC) : null;
+        }
+        $_SESSION['club_name'] = $clubRow['club_name'] ?? null;
         $_SESSION['login_time'] = time();
         $_SESSION['expire_time'] = $session_expire_time;
         $_SESSION['last_activity'] = time();

@@ -24,10 +24,17 @@ class TeamController
      */
     public function getUserTeamData()
     {
-        $stmt = $this->db->prepare('SELECT name, email, club_name, formation, team, substitutes, budget, max_players, created_at FROM users WHERE id = :id LIMIT 1');
-        var_dump($this->db);
+        $stmt = $this->db->prepare('
+            SELECT 
+                u.name, u.email, u.created_at,
+                c.club_name, c.formation, c.team, c.budget, c.max_players
+            FROM users u
+            LEFT JOIN user_club c ON c.user_uuid = u.uuid
+            WHERE u.uuid = :uuid
+            LIMIT 1
+        ');
         if ($stmt !== false) {
-            $stmt->bindValue(':id', $this->userId, SQLITE3_INTEGER);
+            $stmt->bindValue(':uuid', $this->userId, SQLITE3_TEXT);
             $result = $stmt->execute();
             $user = $result ? $result->fetchArray(SQLITE3_ASSOC) : null;
         } else {
@@ -42,7 +49,7 @@ class TeamController
             'user' => $user,
             'saved_formation' => $user['formation'] ?? '4-4-2',
             'saved_team' => $user['team'] ?? '[]',
-            'saved_substitutes' => $user['substitutes'] ?? '[]',
+            'saved_substitutes' => '[]',
             'user_budget' => $user['budget'] ?? DEFAULT_BUDGET,
             'max_players' => $user['max_players'] ?? DEFAULT_MAX_PLAYERS
         ];
@@ -55,7 +62,7 @@ class TeamController
     {
         if ($maxPlayers === null) {
             $maxPlayers = DEFAULT_MAX_PLAYERS;
-            $stmt = $this->db->prepare('UPDATE users SET max_players = :max_players WHERE id = :user_id');
+            $stmt = $this->db->prepare('UPDATE user_club SET max_players = :max_players WHERE user_uuid = (SELECT uuid FROM users WHERE id = :user_id)');
             if ($stmt !== false) {
                 $stmt->bindValue(':max_players', $maxPlayers, SQLITE3_INTEGER);
                 $stmt->bindValue(':user_id', $this->userId, SQLITE3_INTEGER);
@@ -70,7 +77,7 @@ class TeamController
      */
     public function getTotalClubsCount()
     {
-        $stmt = $this->db->prepare('SELECT COUNT(*) as total_clubs FROM users WHERE club_name IS NOT NULL AND club_name != ""');
+        $stmt = $this->db->prepare('SELECT COUNT(*) as total_clubs FROM user_club WHERE club_name IS NOT NULL AND club_name != ""');
         if ($stmt !== false) {
             $result = $stmt->execute();
             $row = $result ? $result->fetchArray(SQLITE3_ASSOC) : ['total_clubs' => 0];
@@ -147,11 +154,11 @@ class TeamController
      */
     public function updateTeamInDatabase($teamData, $substitutesData)
     {
-        $stmt = $this->db->prepare('UPDATE users SET team = :team, substitutes = :substitutes WHERE id = :user_id');
+        $stmt = $this->db->prepare('UPDATE user_club SET team = :team WHERE user_uuid = :user_uuid');
         if ($stmt !== false) {
             $stmt->bindValue(':team', json_encode($teamData), SQLITE3_TEXT);
             $stmt->bindValue(':substitutes', json_encode($substitutesData), SQLITE3_TEXT);
-            $stmt->bindValue(':user_id', $this->userId, SQLITE3_INTEGER);
+            $stmt->bindValue(':user_uuid', $this->userId, SQLITE3_TEXT);
             return $stmt->execute();
         }
         return false;
@@ -199,19 +206,20 @@ class TeamController
     public function getUserRanking(int $teamValue): int
     {
         $sql = '
-        SELECT team 
-        FROM users 
-        WHERE club_name IS NOT NULL 
-          AND club_name != "" 
-          AND id != :user_id
-    ';
+            SELECT uc.team 
+            FROM user_club uc
+            INNER JOIN users u ON uc.user_uuid = u.uuid
+            WHERE uc.club_name IS NOT NULL 
+              AND uc.club_name != "" 
+              AND u.uuid != :user_uuid
+        ';
 
         $stmt = $this->db->prepare($sql);
         if (!$stmt) {
             return 1;
         }
 
-        $stmt->bindValue(':user_id', $this->userId, SQLITE3_INTEGER);
+        $stmt->bindValue(':user_uuid', $this->userId, SQLITE3_TEXT);
         $result = $stmt->execute();
         if (!$result) {
             return 1;
@@ -303,9 +311,9 @@ class TeamController
      */
     public function getClubLevelData()
     {
-        $stmt = $this->db->prepare('SELECT club_level, club_exp FROM users WHERE id = :user_id');
+        $stmt = $this->db->prepare('SELECT club_level, club_exp FROM user_club WHERE user_uuid = :user_uuid');
         if ($stmt !== false) {
-            $stmt->bindValue(':user_id', $this->userId, SQLITE3_INTEGER);
+            $stmt->bindValue(':user_uuid', $this->userId, SQLITE3_TEXT);
             $result = $stmt->execute();
             $clubData = $result ? $result->fetchArray(SQLITE3_ASSOC) : [];
         } else {

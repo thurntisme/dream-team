@@ -68,8 +68,8 @@ if (!function_exists('addClubExp')) {
                 }
 
                 // Get current exp and level
-                $stmt = $db->prepare('SELECT club_exp, club_level FROM users WHERE id = :user_id');
-                $stmt->bindValue(':user_id', $userId, SQLITE3_INTEGER);
+                $stmt = $db->prepare('SELECT club_exp, club_level FROM user_club WHERE user_uuid = :user_uuid');
+                $stmt->bindValue(':user_uuid', $_SESSION['user_uuid'] ?? null, SQLITE3_TEXT);
                 $result = $stmt->execute();
                 $userData = $result->fetchArray(SQLITE3_ASSOC);
 
@@ -83,10 +83,10 @@ if (!function_exists('addClubExp')) {
                 $newLevel = getLevelFromExp($newExp);
 
                 // Update database
-                $stmt = $db->prepare('UPDATE users SET club_exp = :exp, club_level = :level WHERE id = :user_id');
+                $stmt = $db->prepare('UPDATE user_club SET club_exp = :exp, club_level = :level WHERE user_uuid = :user_uuid');
                 $stmt->bindValue(':exp', $newExp, SQLITE3_INTEGER);
                 $stmt->bindValue(':level', $newLevel, SQLITE3_INTEGER);
-                $stmt->bindValue(':user_id', $userId, SQLITE3_INTEGER);
+                $stmt->bindValue(':user_uuid', $_SESSION['user_uuid'] ?? null, SQLITE3_TEXT);
                 $stmt->execute();
 
                 if ($shouldCloseDb) {

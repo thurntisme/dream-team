@@ -22,12 +22,13 @@ if (!function_exists('getUserPlan')) {
     {
         try {
             $db = getDbConnection();
-            $stmt = $db->prepare('SELECT user_plan, plan_expires_at FROM users WHERE id = :user_id');
+            $stmt = $db->prepare('SELECT user_plan, plan_expires_at FROM user_club WHERE user_uuid = :user_uuid');
             if ($stmt === false) {
                 $db->close();
                 return null;
             }
-            $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+            $userUuid = $_SESSION['user_uuid'] ?? null;
+            $stmt->bindValue(':user_uuid', $userUuid, SQLITE3_TEXT);
             $result = $stmt->execute();
             if ($result === false) {
                 $db->close();
@@ -151,7 +152,7 @@ if (!function_exists('upgradeUserPlan')) {
                 $expires_at = date('Y-m-d H:i:s', strtotime('+' . $plan['duration_days'] . ' days'));
             }
 
-            $stmt = $db->prepare('UPDATE users SET user_plan = :plan, plan_expires_at = :expires_at WHERE id = :user_id');
+            $stmt = $db->prepare('UPDATE user_club SET user_plan = :plan, plan_expires_at = :expires_at WHERE user_uuid = (SELECT uuid FROM users WHERE id = :user_id)');
             if ($stmt === false) {
                 $db->close();
                 return false;

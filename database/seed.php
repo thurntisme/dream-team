@@ -33,21 +33,35 @@ function seedFakeClubs()
         $seededCount = 0;
 
         foreach ($clubs as $club) {
-            // Create user account
-            $stmt = $db->prepare('INSERT INTO users (name, email, password, club_name, formation, team, budget) VALUES (:name, :email, :password, :club_name, :formation, :team, :budget)');
-
-            // Generate team for this club
             $team = generateRealisticTeam($players, $club['formation'], $club['budget']);
-
-            $stmt->bindValue(':name', $club['manager'], SQLITE3_TEXT);
-            $stmt->bindValue(':email', $club['email'], SQLITE3_TEXT);
-            $stmt->bindValue(':password', password_hash($club['password'], PASSWORD_DEFAULT), SQLITE3_TEXT);
-            $stmt->bindValue(':club_name', $club['name'], SQLITE3_TEXT);
-            $stmt->bindValue(':formation', $club['formation'], SQLITE3_TEXT);
-            $stmt->bindValue(':team', json_encode($team), SQLITE3_TEXT);
-            $stmt->bindValue(':budget', $club['budget'], SQLITE3_INTEGER);
-
-            if ($stmt->execute()) {
+            $userStmt = $db->prepare('INSERT INTO users (name, email, password, uuid) VALUES (:name, :email, :password, :uuid)');
+            if ($userStmt === false) {
+                echo "❌ Failed to prepare user insert for {$club['name']}\n";
+                continue;
+            }
+            $userStmt->bindValue(':name', $club['manager'], SQLITE3_TEXT);
+            $userStmt->bindValue(':email', $club['email'], SQLITE3_TEXT);
+            $userStmt->bindValue(':password', password_hash($club['password'], PASSWORD_DEFAULT), SQLITE3_TEXT);
+            $userStmt->bindValue(':uuid', generateUUID(), SQLITE3_TEXT);
+            if ($userStmt->execute()) {
+                $newUserId = $db->lastInsertRowID();
+                $stmtUuid = $db->prepare('SELECT uuid FROM users WHERE id = :id');
+                $uuidVal = null;
+                if ($stmtUuid !== false) {
+                    $stmtUuid->bindValue(':id', (int)$newUserId, SQLITE3_INTEGER);
+                    $resUuid = $stmtUuid->execute();
+                    $rowUuid = $resUuid ? $resUuid->fetchArray(SQLITE3_ASSOC) : null;
+                    $uuidVal = $rowUuid['uuid'] ?? null;
+                }
+                $clubStmt = $db->prepare('INSERT INTO user_club (user_uuid, club_name, formation, team, budget, max_players) VALUES (:user_uuid, :club_name, :formation, :team, :budget, 23)');
+                if ($clubStmt !== false) {
+                    $clubStmt->bindValue(':user_uuid', $uuidVal, SQLITE3_TEXT);
+                    $clubStmt->bindValue(':club_name', $club['name'], SQLITE3_TEXT);
+                    $clubStmt->bindValue(':formation', $club['formation'], SQLITE3_TEXT);
+                    $clubStmt->bindValue(':team', json_encode($team), SQLITE3_TEXT);
+                    $clubStmt->bindValue(':budget', $club['budget'], SQLITE3_INTEGER);
+                    $clubStmt->execute();
+                }
                 $seededCount++;
                 echo "✅ Created club: {$club['name']} (Manager: {$club['manager']})\n";
                 echo "   Formation: {$club['formation']} | Budget: €" . number_format($club['budget'] / 1000000, 0) . "M\n";
@@ -339,7 +353,7 @@ function seedYoungPlayers()
         }
 
         // Get all clubs
-        $stmt = $db->prepare('SELECT id, club_name FROM users WHERE club_name IS NOT NULL');
+        $stmt = $db->prepare('SELECT id, club_name FROM user_club WHERE club_name IS NOT NULL AND club_name != ""');
         $result = $stmt->execute();
         $clubs = [];
         while ($club = $result->fetchArray(SQLITE3_ASSOC)) {

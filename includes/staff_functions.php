@@ -16,8 +16,8 @@ if (!defined('DREAM_TEAM_APP')) {
 if (!function_exists('getUserStaff')) {
     function getUserStaff($db, $user_id)
     {
-        $stmt = $db->prepare('SELECT * FROM club_staff WHERE user_id = :user_id');
-        $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+        $stmt = $db->prepare('SELECT * FROM club_staff WHERE user_id = (SELECT id FROM users WHERE uuid = :uuid)');
+        $stmt->bindValue(':uuid', $user_id, SQLITE3_TEXT);
         $result = $stmt->execute();
 
         $staff = [];
@@ -356,7 +356,7 @@ if (!function_exists('processWeeklyStaffMaintenance')) {
 
         if ($total_salary > 0) {
             // Get current budget
-            $stmt = $db->prepare('SELECT budget FROM users WHERE id = :user_id');
+        $stmt = $db->prepare('SELECT budget FROM user_club WHERE user_id = :user_id');
             $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
             $result = $stmt->execute();
             $user_data = $result->fetchArray(SQLITE3_ASSOC);
@@ -364,7 +364,7 @@ if (!function_exists('processWeeklyStaffMaintenance')) {
             if ($user_data && $user_data['budget'] >= $total_salary) {
                 // Deduct salaries
                 $new_budget = $user_data['budget'] - $total_salary;
-                $stmt = $db->prepare('UPDATE users SET budget = :budget WHERE id = :user_id');
+                $stmt = $db->prepare('UPDATE user_club SET budget = :budget WHERE user_id = :user_id');
                 $stmt->bindValue(':budget', $new_budget, SQLITE3_INTEGER);
                 $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
                 $stmt->execute();
@@ -484,7 +484,7 @@ if (!function_exists('processDailyInjuryRecovery')) {
     function processDailyInjuryRecovery($db, $user_id)
     {
         // Get user data
-        $stmt = $db->prepare('SELECT team, substitutes FROM users WHERE id = :user_id');
+        $stmt = $db->prepare('SELECT team, substitutes FROM user_club WHERE user_id = :user_id');
         $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
         $result = $stmt->execute();
         $user = $result->fetchArray(SQLITE3_ASSOC);
@@ -557,7 +557,7 @@ if (!function_exists('processDailyInjuryRecovery')) {
         }
 
         // Update database
-        $stmt = $db->prepare('UPDATE users SET team = :team, substitutes = :substitutes WHERE id = :user_id');
+        $stmt = $db->prepare('UPDATE user_club SET team = :team, substitutes = :substitutes WHERE user_id = :user_id');
         $stmt->bindValue(':team', json_encode($team), SQLITE3_TEXT);
         $stmt->bindValue(':substitutes', json_encode($substitutes), SQLITE3_TEXT);
         $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);

@@ -17,10 +17,10 @@ $club_name = $_POST['club_name'] ?? '';
 try {
     $db = getDbConnection();
 
-    $stmt = $db->prepare('UPDATE users SET club_name = :club_name WHERE id = :id');
+    $stmt = $db->prepare('UPDATE user_club SET club_name = :club_name WHERE user_uuid = :user_uuid');
     if ($stmt !== false) {
         $stmt->bindValue(':club_name', $club_name, SQLITE3_TEXT);
-        $stmt->bindValue(':id', $_SESSION['user_id'], SQLITE3_INTEGER);
+        $stmt->bindValue(':user_uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
     }
 
     if ($stmt !== false && $stmt->execute()) {

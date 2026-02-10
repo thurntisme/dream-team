@@ -14,15 +14,15 @@ try {
     $db = getDbConnection();
 
     // Get user's club info
-    $stmt = $db->prepare('SELECT club_name, formation, team FROM users WHERE id = :id');
-    $stmt->bindValue(':id', $_SESSION['user_id'], SQLITE3_INTEGER);
+    $stmt = $db->prepare('SELECT club_name, formation, team FROM user_club WHERE user_uuid = :user_uuid');
+    $stmt->bindValue(':user_uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
     $result = $stmt->execute();
     $user_club = $result->fetchArray(SQLITE3_ASSOC);
     $has_club = !empty($user_club['club_name']);
 
     // Get other clubs (exclude current user) - ordered by team value
-    $stmt = $db->prepare('SELECT club_name, name, team FROM users WHERE club_name IS NOT NULL AND club_name != "" AND id != :user_id');
-    $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+    $stmt = $db->prepare('SELECT c.club_name, u.name, c.team FROM user_club c JOIN users u ON c.user_uuid = u.uuid WHERE c.club_name IS NOT NULL AND c.club_name != "" AND u.uuid != :user_uuid');
+    $stmt->bindValue(':user_uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
     $result = $stmt->execute();
     $other_clubs = [];
     while ($row = $result->fetchArray(SQLITE3_ASSOC)) {

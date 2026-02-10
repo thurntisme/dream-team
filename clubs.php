@@ -12,9 +12,9 @@ try {
     $db = getDbConnection();
 
     // Get current user's data for budget validation
-    $stmt = $db->prepare('SELECT budget, team, club_level FROM users WHERE id = :user_id');
+    $stmt = $db->prepare('SELECT c.budget, c.team, c.club_level FROM users u LEFT JOIN user_club c ON c.user_uuid = u.uuid WHERE u.uuid = :user_uuid');
     if ($stmt !== false) {
-        $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+        $stmt->bindValue(':user_uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
         $result = $stmt->execute();
         $user_data = $result ? $result->fetchArray(SQLITE3_ASSOC) : null;
     } else {
@@ -25,9 +25,9 @@ try {
     }
 
     // Get all clubs except current user's club
-    $stmt = $db->prepare('SELECT id, name, email, club_name, formation, team, budget, created_at FROM users WHERE id != :current_user_id');
+    $stmt = $db->prepare('SELECT u.id, u.name, u.email, c.club_name, c.formation, c.team, c.budget, u.created_at FROM users u JOIN user_club c ON c.user_uuid = u.uuid WHERE u.uuid != :user_uuid AND c.club_name IS NOT NULL AND c.club_name != ""');
     if ($stmt !== false) {
-        $stmt->bindValue(':current_user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+        $stmt->bindValue(':user_uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
         $result = $stmt->execute();
     } else {
         $result = false;

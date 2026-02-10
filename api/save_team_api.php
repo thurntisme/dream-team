@@ -20,25 +20,10 @@ $substitutes = $_POST['substitutes'] ?? '[]';
 try {
     $db = getDbConnection();
 
-    if (DB_DRIVER === 'sqlite') {
-        $result = $db->query("PRAGMA table_info(users)");
-        $columns = [];
-        while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
-            $columns[] = $row['name'];
-        }
-        if (!in_array('substitutes', $columns)) {
-            $db->exec('ALTER TABLE users ADD COLUMN substitutes TEXT DEFAULT "[]"');
-        }
-        if (!in_array('max_players', $columns)) {
-            $db->exec('ALTER TABLE users ADD COLUMN max_players INTEGER DEFAULT 23');
-        }
-    }
-
-    $stmt = $db->prepare('UPDATE users SET formation = :formation, team = :team, substitutes = :substitutes WHERE id = :id');
+    $stmt = $db->prepare('UPDATE user_club SET formation = :formation, team = :team WHERE user_uuid = :user_uuid');
     $stmt->bindValue(':formation', $formation, SQLITE3_TEXT);
     $stmt->bindValue(':team', $team, SQLITE3_TEXT);
-    $stmt->bindValue(':substitutes', $substitutes, SQLITE3_TEXT);
-    $stmt->bindValue(':id', $_SESSION['user_id'], SQLITE3_INTEGER);
+    $stmt->bindValue(':user_uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
 
     if ($stmt->execute()) {
         // Award experience for team management
