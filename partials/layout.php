@@ -36,13 +36,17 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true, $sk
         try {
             $db = getDbConnection();
             $stmt = $db->prepare('SELECT budget, fans, club_level, club_exp FROM users WHERE id = :user_id');
-            $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
-            $result = $stmt->execute();
-            $userData = $result->fetchArray(SQLITE3_ASSOC);
-            $userBudget = $userData['budget'] ?? 0;
-            $userFans = $userData['fans'] ?? 5000;
-            $clubLevel = $userData['club_level'] ?? 1;
-            $clubExp = $userData['club_exp'] ?? 0;
+            if ($stmt !== false) {
+                $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+                $result = $stmt->execute();
+                if ($result) {
+                    $userData = $result->fetchArray(SQLITE3_ASSOC);
+                    $userBudget = $userData['budget'] ?? 0;
+                    $userFans = $userData['fans'] ?? 5000;
+                    $clubLevel = $userData['club_level'] ?? 1;
+                    $clubExp = $userData['club_exp'] ?? 0;
+                }
+            }
 
             $db->close();
         } catch (Exception $e) {

@@ -29,7 +29,8 @@ try {
     $club_exp = $teamData['club_exp'];
     $level_name = $teamData['level_name'];
 } catch (Exception $e) {
-    header('Location: install.php');
+    var_dump($e->getMessage());
+    // header('Location: install.php');
     exit;
 }
 

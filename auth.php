@@ -26,11 +26,13 @@ if ($action === 'register') {
     $password = password_hash($_POST['password'] ?? '', PASSWORD_DEFAULT);
 
     $stmt = $db->prepare('INSERT INTO users (name, email, password) VALUES (:name, :email, :password)');
-    $stmt->bindValue(':name', $name, SQLITE3_TEXT);
-    $stmt->bindValue(':email', $email, SQLITE3_TEXT);
-    $stmt->bindValue(':password', $password, SQLITE3_TEXT);
+    if ($stmt !== false) {
+        $stmt->bindValue(':name', $name, SQLITE3_TEXT);
+        $stmt->bindValue(':email', $email, SQLITE3_TEXT);
+        $stmt->bindValue(':password', $password, SQLITE3_TEXT);
+    }
 
-    if ($stmt->execute()) {
+    if ($stmt !== false && $stmt->execute()) {
         // Clear any existing session data
         session_unset();
 
@@ -61,9 +63,13 @@ if ($action === 'register') {
     $password = $_POST['password'] ?? '';
 
     $stmt = $db->prepare('SELECT * FROM users WHERE email = :email');
-    $stmt->bindValue(':email', $email, SQLITE3_TEXT);
-    $result = $stmt->execute();
-    $user = $result->fetchArray(SQLITE3_ASSOC);
+    if ($stmt !== false) {
+        $stmt->bindValue(':email', $email, SQLITE3_TEXT);
+        $result = $stmt->execute();
+    } else {
+        $result = false;
+    }
+    $user = $result ? $result->fetchArray(SQLITE3_ASSOC) : null;
 
     if ($user && password_verify($password, $user['password'])) {
         // Clear all existing session data before setting new session
@@ -88,8 +94,10 @@ if ($action === 'register') {
         $_SESSION['last_activity'] = time();
 
         $stmt = $db->prepare(DB_DRIVER === 'mysql' ? 'UPDATE users SET last_login = NOW() WHERE id = :id' : 'UPDATE users SET last_login = datetime("now") WHERE id = :id');
-        $stmt->bindValue(':id', $user['id'], SQLITE3_INTEGER);
-        $stmt->execute();
+        if ($stmt !== false) {
+            $stmt->bindValue(':id', $user['id'], SQLITE3_INTEGER);
+            $stmt->execute();
+        }
 
         echo json_encode([
             'success' => true,

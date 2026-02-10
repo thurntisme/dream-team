@@ -18,26 +18,34 @@ try {
     $db = getDbConnection();
 
     $stmt = $db->prepare('UPDATE users SET club_name = :club_name WHERE id = :id');
-    $stmt->bindValue(':club_name', $club_name, SQLITE3_TEXT);
-    $stmt->bindValue(':id', $_SESSION['user_id'], SQLITE3_INTEGER);
+    if ($stmt !== false) {
+        $stmt->bindValue(':club_name', $club_name, SQLITE3_TEXT);
+        $stmt->bindValue(':id', $_SESSION['user_id'], SQLITE3_INTEGER);
+    }
 
-    if ($stmt->execute()) {
+    if ($stmt !== false && $stmt->execute()) {
         $_SESSION['club_name'] = $club_name;
         
         // Database tables are now created in install.php
         
         // Check if stadium already exists for this user
         $stmt = $db->prepare('SELECT COUNT(*) as count FROM stadiums WHERE user_id = :user_id');
-        $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
-        $result = $stmt->execute();
-        $stadium_exists = $result->fetchArray(SQLITE3_ASSOC)['count'] > 0;
+        if ($stmt !== false) {
+            $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+            $result = $stmt->execute();
+            $stadium_exists = $result ? ($result->fetchArray(SQLITE3_ASSOC)['count'] > 0) : false;
+        } else {
+            $stadium_exists = false;
+        }
         
         // Create default stadium if it doesn't exist
         if (!$stadium_exists) {
             $stmt = $db->prepare('INSERT INTO stadiums (user_id, name) VALUES (:user_id, :name)');
-            $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
-            $stmt->bindValue(':name', $club_name . ' Stadium', SQLITE3_TEXT);
-            $stmt->execute();
+            if ($stmt !== false) {
+                $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+                $stmt->bindValue(':name', $club_name . ' Stadium', SQLITE3_TEXT);
+                $stmt->execute();
+            }
         }
         
         echo json_encode(['success' => true]);

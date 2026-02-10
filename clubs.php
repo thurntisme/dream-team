@@ -13,17 +13,28 @@ try {
 
     // Get current user's data for budget validation
     $stmt = $db->prepare('SELECT budget, team, club_level FROM users WHERE id = :user_id');
-    $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
-    $result = $stmt->execute();
-    $user_data = $result->fetchArray(SQLITE3_ASSOC);
+    if ($stmt !== false) {
+        $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+        $result = $stmt->execute();
+        $user_data = $result ? $result->fetchArray(SQLITE3_ASSOC) : null;
+    } else {
+        $user_data = null;
+    }
+    if (!$user_data) {
+        $user_data = ['budget' => 0, 'team' => '[]', 'club_level' => 1];
+    }
 
     // Get all clubs except current user's club
     $stmt = $db->prepare('SELECT id, name, email, club_name, formation, team, budget, created_at FROM users WHERE id != :current_user_id');
-    $stmt->bindValue(':current_user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
-    $result = $stmt->execute();
+    if ($stmt !== false) {
+        $stmt->bindValue(':current_user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+        $result = $stmt->execute();
+    } else {
+        $result = false;
+    }
 
     $clubs = [];
-    while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+    while ($result && ($row = $result->fetchArray(SQLITE3_ASSOC))) {
         // Calculate team value for sorting
         $row['team_value'] = calculateTeamValue($row['team']);
         $clubs[] = $row;

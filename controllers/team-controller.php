@@ -24,10 +24,15 @@ class TeamController
      */
     public function getUserTeamData()
     {
-        $stmt = $this->db->prepare('SELECT name, email, club_name, formation, team, substitutes, budget, max_players, created_at FROM users WHERE id = :id');
-        $stmt->bindValue(':id', $this->userId, SQLITE3_INTEGER);
-        $result = $stmt->execute();
-        $user = $result->fetchArray(SQLITE3_ASSOC);
+        $stmt = $this->db->prepare('SELECT name, email, club_name, formation, team, substitutes, budget, max_players, created_at FROM users WHERE id = :id LIMIT 1');
+        var_dump($this->db);
+        if ($stmt !== false) {
+            $stmt->bindValue(':id', $this->userId, SQLITE3_INTEGER);
+            $result = $stmt->execute();
+            $user = $result ? $result->fetchArray(SQLITE3_ASSOC) : null;
+        } else {
+            $user = null;
+        }
 
         if (!$user) {
             throw new Exception('User not found');
@@ -51,9 +56,11 @@ class TeamController
         if ($maxPlayers === null) {
             $maxPlayers = DEFAULT_MAX_PLAYERS;
             $stmt = $this->db->prepare('UPDATE users SET max_players = :max_players WHERE id = :user_id');
-            $stmt->bindValue(':max_players', $maxPlayers, SQLITE3_INTEGER);
-            $stmt->bindValue(':user_id', $this->userId, SQLITE3_INTEGER);
-            $stmt->execute();
+            if ($stmt !== false) {
+                $stmt->bindValue(':max_players', $maxPlayers, SQLITE3_INTEGER);
+                $stmt->bindValue(':user_id', $this->userId, SQLITE3_INTEGER);
+                $stmt->execute();
+            }
         }
         return $maxPlayers;
     }
@@ -64,8 +71,12 @@ class TeamController
     public function getTotalClubsCount()
     {
         $stmt = $this->db->prepare('SELECT COUNT(*) as total_clubs FROM users WHERE club_name IS NOT NULL AND club_name != ""');
-        $result = $stmt->execute();
-        return $result->fetchArray(SQLITE3_ASSOC)['total_clubs'];
+        if ($stmt !== false) {
+            $result = $stmt->execute();
+            $row = $result ? $result->fetchArray(SQLITE3_ASSOC) : ['total_clubs' => 0];
+            return (int)($row['total_clubs'] ?? 0);
+        }
+        return 0;
     }
 
     /**
@@ -137,10 +148,13 @@ class TeamController
     public function updateTeamInDatabase($teamData, $substitutesData)
     {
         $stmt = $this->db->prepare('UPDATE users SET team = :team, substitutes = :substitutes WHERE id = :user_id');
-        $stmt->bindValue(':team', json_encode($teamData), SQLITE3_TEXT);
-        $stmt->bindValue(':substitutes', json_encode($substitutesData), SQLITE3_TEXT);
-        $stmt->bindValue(':user_id', $this->userId, SQLITE3_INTEGER);
-        return $stmt->execute();
+        if ($stmt !== false) {
+            $stmt->bindValue(':team', json_encode($teamData), SQLITE3_TEXT);
+            $stmt->bindValue(':substitutes', json_encode($substitutesData), SQLITE3_TEXT);
+            $stmt->bindValue(':user_id', $this->userId, SQLITE3_INTEGER);
+            return $stmt->execute();
+        }
+        return false;
     }
 
     /**
@@ -182,24 +196,58 @@ class TeamController
     /**
      * Get user's current ranking
      */
-    public function getUserRanking($teamValue)
+    public function getUserRanking(int $teamValue): int
     {
-        $stmt = $this->db->prepare('SELECT COUNT(*) + 1 as ranking FROM users WHERE club_name IS NOT NULL AND club_name != "" AND id != :user_id AND (
-            SELECT COALESCE(SUM(
-                CASE 
-                    WHEN json_extract(value, "$.value") IS NOT NULL 
-                    THEN CAST(json_extract(value, "$.value") AS INTEGER)
-                    ELSE 0 
-                END
-            ), 0)
-            FROM json_each(COALESCE(team, "[]"))
-        ) > :team_value');
+        $sql = '
+        SELECT team 
+        FROM users 
+        WHERE club_name IS NOT NULL 
+          AND club_name != "" 
+          AND id != :user_id
+    ';
+
+        $stmt = $this->db->prepare($sql);
+        if (!$stmt) {
+            return 1;
+        }
 
         $stmt->bindValue(':user_id', $this->userId, SQLITE3_INTEGER);
-        $stmt->bindValue(':team_value', $teamValue, SQLITE3_INTEGER);
         $result = $stmt->execute();
+        if (!$result) {
+            return 1;
+        }
 
-        return $result->fetchArray(SQLITE3_ASSOC)['ranking'];
+        $greaterCount = 0;
+
+        while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+            if ($this->getTeamTotalValue($row['team'] ?? '[]') > $teamValue) {
+                $greaterCount++;
+            }
+        }
+
+        return $greaterCount + 1;
+    }
+
+    private function getTeamTotalValue($teamJson): int
+    {
+        if (!is_string($teamJson)) {
+            return 0;
+        }
+
+        $players = json_decode($teamJson, true);
+        if (!is_array($players)) {
+            return 0;
+        }
+
+        $sum = 0;
+
+        foreach ($players as $player) {
+            if (isset($player['value'])) {
+                $sum += (int) $player['value'];
+            }
+        }
+
+        return $sum;
     }
 
     /**
@@ -256,9 +304,13 @@ class TeamController
     public function getClubLevelData()
     {
         $stmt = $this->db->prepare('SELECT club_level, club_exp FROM users WHERE id = :user_id');
-        $stmt->bindValue(':user_id', $this->userId, SQLITE3_INTEGER);
-        $result = $stmt->execute();
-        $clubData = $result->fetchArray(SQLITE3_ASSOC);
+        if ($stmt !== false) {
+            $stmt->bindValue(':user_id', $this->userId, SQLITE3_INTEGER);
+            $result = $stmt->execute();
+            $clubData = $result ? $result->fetchArray(SQLITE3_ASSOC) : [];
+        } else {
+            $clubData = [];
+        }
 
         $club_level = $clubData['club_level'] ?? 1;
         $club_exp = $clubData['club_exp'] ?? 0;
@@ -278,7 +330,7 @@ class TeamController
     {
         $startTime = microtime(true);
         debug_info("Starting team data processing", ['user_id' => $this->userId]);
-        
+
         // Get user data
         $userData = $this->getUserTeamData();
         $userData['max_players'] = $this->ensureMaxPlayersSet($userData['max_players']);
@@ -324,14 +376,14 @@ class TeamController
             'club_exp' => $clubLevelData['club_exp'],
             'level_name' => $clubLevelData['level_name']
         ]);
-        
+
         debug_performance("Team data processing", $startTime, [
             'user_id' => $this->userId,
             'team_value' => $teamValue,
             'player_count' => count(array_filter($teamData ?: [], fn($p) => $p !== null)),
             'ranking' => $ranking
         ]);
-        
+
         return $result;
     }
 }

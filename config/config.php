@@ -45,9 +45,9 @@ if (file_exists($envFile)) {
 }
 
 // Database configuration
-define('DB_FILE', getenv('DB_FILE') ?: __DIR__ . '/../database/dreamteam.db');
 define('APP_NAME', getenv('APP_NAME') ?: 'Dream Team');
-define('DB_DRIVER', getenv('DB_DRIVER') ?: 'sqlite');
+define('DB_DRIVER', 'mysql');
+define('DB_FILE', __DIR__ . '/../database/dreamteam.db');
 define('MYSQL_HOST', getenv('MYSQL_HOST') ?: '127.0.0.1');
 define('MYSQL_PORT', getenv('MYSQL_PORT') ?: '3306');
 define('MYSQL_DB', getenv('MYSQL_DB') ?: '');
@@ -91,70 +91,77 @@ function getDbConnection()
 function isDatabaseAvailable()
 {
     try {
-        if (DB_DRIVER === 'sqlite') {
-            if (!file_exists(DB_FILE)) {
-                return false;
-            }
-
-            $db = new SQLite3(DB_FILE);
-
-            $result = $db->query("SELECT name FROM sqlite_master WHERE type='table' AND name='users'");
-            $tableExists = $result->fetchArray() !== false;
-
-            if ($tableExists) {
-                $result = $db->query("PRAGMA table_info(users)");
-                $columns = [];
-                while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
-                    $columns[] = $row['name'];
-                }
-
-                if (!in_array('substitutes', $columns)) {
-                    $db->exec('ALTER TABLE users ADD COLUMN substitutes TEXT DEFAULT "[]"' );
-                }
-
-                if (!in_array('max_players', $columns)) {
-                    $db->exec('ALTER TABLE users ADD COLUMN max_players INTEGER DEFAULT 23');
-                }
-
-                if (!in_array('user_plan', $columns)) {
-                    $db->exec('ALTER TABLE users ADD COLUMN user_plan TEXT DEFAULT "free"');
-                }
-
-                if (!in_array('plan_expires_at', $columns)) {
-                    $db->exec('ALTER TABLE users ADD COLUMN plan_expires_at DATETIME');
-                }
-
-            }
-
-            $db->close();
-            return $tableExists;
-        } else {
-            if (empty(MYSQL_DB) || empty(MYSQL_USER)) {
-                return false;
-            }
-            $adapterConfig = [
-                'db_file' => DB_FILE,
-                'mysql_host' => MYSQL_HOST,
-                'mysql_port' => MYSQL_PORT,
-                'mysql_db' => MYSQL_DB,
-                'mysql_user' => MYSQL_USER,
-                'mysql_password' => MYSQL_PASSWORD
-            ];
-            try {
-                $db = new DBAdapter(DB_DRIVER, $adapterConfig);
-            } catch (Throwable $e) {
-                return false;
-            }
-            $exists = false;
-            try {
-                $res = $db->query('SELECT 1 FROM users LIMIT 1');
-                $exists = $res !== false;
-            } catch (Throwable $e) {
-                $exists = false;
-            }
-            $db->close();
-            return $exists;
+        if (empty(MYSQL_DB) || empty(MYSQL_USER)) {
+            return false;
         }
+        $adapterConfig = [
+            'db_file' => DB_FILE,
+            'mysql_host' => MYSQL_HOST,
+            'mysql_port' => MYSQL_PORT,
+            'mysql_db' => MYSQL_DB,
+            'mysql_user' => MYSQL_USER,
+            'mysql_password' => MYSQL_PASSWORD
+        ];
+        try {
+            $db = new DBAdapter(DB_DRIVER, $adapterConfig);
+        } catch (Throwable $e) {
+            return false;
+        }
+        $exists = false;
+        try {
+            $res = $db->query('SELECT 1 FROM users LIMIT 1');
+            $exists = $res !== false;
+        } catch (Throwable $e) {
+            $exists = false;
+        }
+        if ($exists) {
+            try {
+                $cols = [];
+                $resCols = $db->query('SHOW COLUMNS FROM users');
+                if ($resCols !== false) {
+                    while ($row = $resCols->fetchArray(SQLITE3_ASSOC)) {
+                        $field = $row['Field'] ?? ($row['field'] ?? null);
+                        if ($field !== null) {
+                            $cols[] = $field;
+                        }
+                    }
+                }
+                $ensureSql = [];
+                if (!in_array('substitutes', $cols, true)) {
+                    $ensureSql[] = 'ALTER TABLE users ADD COLUMN substitutes TEXT';
+                }
+                if (!in_array('max_players', $cols, true)) {
+                    $ensureSql[] = 'ALTER TABLE users ADD COLUMN max_players INT DEFAULT 23';
+                }
+                if (!in_array('fans', $cols, true)) {
+                    $ensureSql[] = 'ALTER TABLE users ADD COLUMN fans INT DEFAULT 5000';
+                }
+                if (!in_array('club_exp', $cols, true)) {
+                    $ensureSql[] = 'ALTER TABLE users ADD COLUMN club_exp INT DEFAULT 0';
+                }
+                if (!in_array('club_level', $cols, true)) {
+                    $ensureSql[] = 'ALTER TABLE users ADD COLUMN club_level INT DEFAULT 1';
+                }
+                if (!in_array('matches_played', $cols, true)) {
+                    $ensureSql[] = 'ALTER TABLE users ADD COLUMN matches_played INT DEFAULT 0';
+                }
+                if (!in_array('user_plan', $cols, true)) {
+                    $ensureSql[] = 'ALTER TABLE users ADD COLUMN user_plan VARCHAR(20) DEFAULT \"free\"';
+                }
+                if (!in_array('plan_expires_at', $cols, true)) {
+                    $ensureSql[] = 'ALTER TABLE users ADD COLUMN plan_expires_at DATETIME NULL';
+                }
+                if (!in_array('last_login', $cols, true)) {
+                    $ensureSql[] = 'ALTER TABLE users ADD COLUMN last_login DATETIME NULL';
+                }
+                foreach ($ensureSql as $sql) {
+                    $db->exec($sql);
+                }
+            } catch (Throwable $e) {
+            }
+        }
+        $db->close();
+        return $exists;
     } catch (Exception $e) {
         return false;
     }

@@ -23,8 +23,16 @@ if (!function_exists('getUserPlan')) {
         try {
             $db = getDbConnection();
             $stmt = $db->prepare('SELECT user_plan, plan_expires_at FROM users WHERE id = :user_id');
+            if ($stmt === false) {
+                $db->close();
+                return null;
+            }
             $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
             $result = $stmt->execute();
+            if ($result === false) {
+                $db->close();
+                return null;
+            }
             $userData = $result->fetchArray(SQLITE3_ASSOC);
             $db->close();
 
@@ -144,6 +152,10 @@ if (!function_exists('upgradeUserPlan')) {
             }
 
             $stmt = $db->prepare('UPDATE users SET user_plan = :plan, plan_expires_at = :expires_at WHERE id = :user_id');
+            if ($stmt === false) {
+                $db->close();
+                return false;
+            }
             $stmt->bindValue(':plan', $plan_key, SQLITE3_TEXT);
             $stmt->bindValue(':expires_at', $expires_at, SQLITE3_TEXT);
             $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
