@@ -48,8 +48,8 @@ function handleLeagueMatch($match_id)
             WHERE lm.id = :match_id AND lm.status = \'scheduled\'
             AND (ht.user_uuid = :user_uuid OR at.user_uuid = :user_uuid)
         ');
-        $stmt->bindValue(':match_id', $match_id, SQLITE3_INTEGER);
-        $stmt->bindValue(':user_uuid', $user_uuid, SQLITE3_TEXT);
+        $stmt->bindValue(':match_id', $match_id);
+        $stmt->bindValue(':user_uuid', $user_uuid);
         $result = $stmt->execute();
         if ($result === false) {
             $_SESSION['error'] = 'Failed to load match details.';
@@ -70,8 +70,8 @@ function handleLeagueMatch($match_id)
         $opponent_team_id = $is_home ? $match['away_team_id'] : $match['home_team_id'];
 
         // Get user's team data
-        $stmt = $db->prepare('SELECT * FROM users WHERE uuid = :uuid');
-        $stmt->bindValue(':uuid', $user_uuid, SQLITE3_TEXT);
+        $stmt = $db->prepare('SELECT u.name, c.club_name, c.formation, c.team, c.budget FROM users u LEFT JOIN user_club c ON c.user_uuid = u.uuid WHERE u.uuid = :uuid');
+        $stmt->bindValue(':uuid', $user_uuid);
         $result = $stmt->execute();
         $user_data = $result->fetchArray(SQLITE3_ASSOC);
 
@@ -80,15 +80,15 @@ function handleLeagueMatch($match_id)
         $opponent_roster = null;
 
         if ($opponent_user_uuid) {
-            $stmt = $db->prepare('SELECT * FROM users WHERE uuid = :uuid');
-            $stmt->bindValue(':uuid', $opponent_user_uuid, SQLITE3_TEXT);
+            $stmt = $db->prepare('SELECT u.name, c.club_name, c.formation, c.team, c.budget FROM users u LEFT JOIN user_club c ON c.user_uuid = u.uuid WHERE u.uuid = :uuid');
+            $stmt->bindValue(':uuid', $opponent_user_uuid);
             $result = $stmt->execute();
             $opponent_data = $result->fetchArray(SQLITE3_ASSOC);
         }
 
         // Get opponent's league roster (for both user and AI teams)
         $stmt = $db->prepare('SELECT player_data FROM league_team_rosters WHERE league_team_id = :team_id ORDER BY id DESC LIMIT 1');
-        $stmt->bindValue(':team_id', $opponent_team_id, SQLITE3_INTEGER);
+        $stmt->bindValue(':team_id', $opponent_team_id);
         $result = $stmt->execute();
         $roster_row = $result->fetchArray(SQLITE3_ASSOC);
         if ($roster_row) {
@@ -100,7 +100,7 @@ function handleLeagueMatch($match_id)
             // Simulate ALL matches in the current gameweek, including the user's match
             // Resolve numeric id for simulation functions that accept user_id
             $stmtId = $db->prepare('SELECT id FROM users WHERE uuid = :uuid');
-            $stmtId->bindValue(':uuid', $user_uuid, SQLITE3_TEXT);
+            $stmtId->bindValue(':uuid', $user_uuid);
             $resId = $stmtId->execute();
             $rowId = $resId ? $resId->fetchArray(SQLITE3_ASSOC) : null;
             $user_id_resolved = $rowId['id'] ?? null;
@@ -112,7 +112,7 @@ function handleLeagueMatch($match_id)
 
             // Check if our match was simulated successfully
             $stmt_check = $db->prepare("SELECT status FROM league_matches WHERE id = :id");
-            $stmt_check->bindValue(':id', $match_id, SQLITE3_INTEGER);
+            $stmt_check->bindValue(':id', $match_id);
             $res_check = $stmt_check->execute();
             if ($res_check === false) {
                 $_SESSION['error'] = 'Failed to verify match status.';
@@ -130,7 +130,7 @@ function handleLeagueMatch($match_id)
                 simulateMatch($db, (int)$match_id, (int)$user_id_resolved);
                 // Re-check status
                 $stmt_check2 = $db->prepare("SELECT status FROM league_matches WHERE id = :id");
-                $stmt_check2->bindValue(':id', $match_id, SQLITE3_INTEGER);
+                $stmt_check2->bindValue(':id', $match_id);
                 $res_check2 = $stmt_check2->execute();
                 $row_check2 = $res_check2 ? $res_check2->fetchArray(SQLITE3_ASSOC) : null;
                 if ($row_check2 && $row_check2['status'] === 'completed') {
@@ -167,8 +167,8 @@ function handleLeagueMatchByUUID($match_uuid)
             WHERE lm.uuid = :match_uuid AND lm.status = \'scheduled\'
             AND (ht.user_uuid = :user_uuid OR at.user_uuid = :user_uuid)
         ');
-        $stmt->bindValue(':match_uuid', $match_uuid, SQLITE3_TEXT);
-        $stmt->bindValue(':user_uuid', $user_uuid, SQLITE3_TEXT);
+        $stmt->bindValue(':match_uuid', $match_uuid);
+        $stmt->bindValue(':user_uuid', $user_uuid);
         $result = $stmt->execute();
         if ($result === false) {
             $_SESSION['error'] = 'Failed to load match details.';
@@ -187,23 +187,23 @@ function handleLeagueMatchByUUID($match_uuid)
         $opponent_user_uuid = $is_home ? $match['away_user_uuid'] : $match['home_user_uuid'];
 
         // Get user team
-        $stmt = $db->prepare('SELECT name, club_name, formation, team, substitutes, budget FROM users WHERE uuid = :uuid');
-        $stmt->bindValue(':uuid', $user_uuid, SQLITE3_TEXT);
+        $stmt = $db->prepare('SELECT u.name, c.club_name, c.formation, c.team, c.budget FROM users u LEFT JOIN user_club c ON c.user_uuid = u.uuid WHERE u.uuid = :uuid');
+        $stmt->bindValue(':uuid', $user_uuid);
         $result = $stmt->execute();
         $user_data = $result->fetchArray(SQLITE3_ASSOC);
 
         // Get opponent - for league matches, load roster from league_team_rosters
         $stmt = $db->prepare('SELECT id FROM league_teams WHERE season = :season AND user_uuid = :uuid');
-        $stmt->bindValue(':season', $match['season'], SQLITE3_TEXT);
-        $stmt->bindValue(':uuid', $opponent_user_uuid, SQLITE3_TEXT);
+        $stmt->bindValue(':season', $match['season']);
+        $stmt->bindValue(':uuid', $opponent_user_uuid);
         $resTeam = $stmt->execute();
         $rowTeam = $resTeam ? $resTeam->fetchArray(SQLITE3_ASSOC) : null;
         $opponent_roster = null;
         if ($rowTeam) {
             $team_id = (int)$rowTeam['id'];
             $stmt = $db->prepare('SELECT player_data FROM league_team_rosters WHERE league_team_id = :id AND season = :season');
-            $stmt->bindValue(':id', $team_id, SQLITE3_INTEGER);
-            $stmt->bindValue(':season', $match['season'], SQLITE3_TEXT);
+            $stmt->bindValue(':id', $team_id);
+            $stmt->bindValue(':season', $match['season']);
             $resRoster = $stmt->execute();
             $rowRoster = $resRoster ? $resRoster->fetchArray(SQLITE3_ASSOC) : null;
             if ($rowRoster) {
@@ -213,13 +213,13 @@ function handleLeagueMatchByUUID($match_uuid)
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['simulate_match'])) {
             $stmt_check = $db->prepare("SELECT status FROM league_matches WHERE uuid = :uuid");
-            $stmt_check->bindValue(':uuid', $match_uuid, SQLITE3_TEXT);
+            $stmt_check->bindValue(':uuid', $match_uuid);
             $res_check = $stmt_check->execute();
             $row_check = $res_check ? $res_check->fetchArray(SQLITE3_ASSOC) : null;
             if ($row_check && $row_check['status'] === 'scheduled') {
                 // Resolve numeric id for simulation
                 $stmt_id = $db->prepare("SELECT id FROM league_matches WHERE uuid = :uuid");
-                $stmt_id->bindValue(':uuid', $match_uuid, SQLITE3_TEXT);
+                $stmt_id->bindValue(':uuid', $match_uuid);
                 $res_id = $stmt_id->execute();
                 $row_id = $res_id ? $res_id->fetchArray(SQLITE3_ASSOC) : null;
                 $match_id = (int)($row_id['id'] ?? 0);
@@ -1054,8 +1054,8 @@ function displayMatchResult($match_id)
             WHERE lm.id = :match_id AND lm.status = \'completed\'
             AND (ht.user_uuid = :user_uuid OR at.user_uuid = :user_uuid)
         ');
-        $stmt->bindValue(':match_id', $match_id, SQLITE3_INTEGER);
-        $stmt->bindValue(':user_uuid', $user_uuid, SQLITE3_TEXT);
+        $stmt->bindValue(':match_id', $match_id);
+        $stmt->bindValue(':user_uuid', $user_uuid);
         $result = $stmt->execute();
         if ($result === false) {
             $_SESSION['error'] = 'Failed to load match result.';
@@ -1071,8 +1071,8 @@ function displayMatchResult($match_id)
         }
 
         // Get user's current data
-        $stmt = $db->prepare('SELECT u.budget, u.fans, s.capacity, s.level FROM users u LEFT JOIN stadiums s ON u.id = s.user_id WHERE u.uuid = :uuid');
-        $stmt->bindValue(':uuid', $user_uuid, SQLITE3_TEXT);
+        $stmt = $db->prepare('SELECT c.club_name, c.budget, c.fans, s.capacity, s.level FROM user_club c LEFT JOIN stadiums s ON s.user_uuid = c.user_uuid WHERE c.user_uuid = :uuid');
+        $stmt->bindValue(':uuid', $user_uuid);
         $result = $stmt->execute();
         $user_data = $result->fetchArray(SQLITE3_ASSOC);
 
@@ -1107,7 +1107,7 @@ function displayMatchResult($match_id)
             // Pass a positive value to ensure we get the breakdown (value doesn't matter for the breakdown generation)
             // Resolve numeric id for functions expecting user_id
             $stmtId = $db->prepare('SELECT id FROM users WHERE uuid = :uuid');
-            $stmtId->bindValue(':uuid', $user_uuid, SQLITE3_TEXT);
+            $stmtId->bindValue(':uuid', $user_uuid);
             $resId = $stmtId->execute();
             $rowId = $resId ? $resId->fetchArray(SQLITE3_ASSOC) : null;
             $user_id_resolved = $rowId['id'] ?? null;
@@ -1159,7 +1159,7 @@ function displayMatchResultByUUID($match_uuid)
     try {
         $db = getDbConnection();
         $stmt = $db->prepare('SELECT id FROM league_matches WHERE uuid = :uuid');
-        $stmt->bindValue(':uuid', $match_uuid, SQLITE3_TEXT);
+        $stmt->bindValue(':uuid', $match_uuid);
         $res = $stmt->execute();
         $row = $res ? $row = $res->fetchArray(SQLITE3_ASSOC) : null;
         if (!$row) {
@@ -1943,15 +1943,15 @@ function handleClubChallenge($opponent_id)
         $db = getDbConnection();
 
         // Get user's team data
-        $stmt = $db->prepare('SELECT name, club_name, formation, team, budget FROM users WHERE id = :id');
-        $stmt->bindValue(':id', $_SESSION['user_id'], SQLITE3_INTEGER);
+        $stmt = $db->prepare('SELECT u.name, c.club_name, c.formation, c.team, c.budget FROM users u LEFT JOIN user_club c ON c.user_uuid = u.uuid WHERE u.id = :id');
+        $stmt->bindValue(':id', $_SESSION['user_id']);
         $result = $stmt->execute();
         $user_data = $result->fetchArray(SQLITE3_ASSOC);
 
         // Get opponent's team data
-        $stmt = $db->prepare('SELECT name, club_name, formation, team, budget FROM users WHERE id = :opponent_id AND id != :user_id');
-        $stmt->bindValue(':opponent_id', $opponent_id, SQLITE3_INTEGER);
-        $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+        $stmt = $db->prepare('SELECT u.name, c.club_name, c.formation, c.team, c.budget FROM users u LEFT JOIN user_club c ON c.user_uuid = u.uuid WHERE u.id = :opponent_id AND u.id != :user_id');
+        $stmt->bindValue(':opponent_id', $opponent_id);
+        $stmt->bindValue(':user_id', $_SESSION['user_id']);
         $result = $stmt->execute();
         $opponent_data = $result->fetchArray(SQLITE3_ASSOC);
 
@@ -2001,9 +2001,9 @@ function handleClubChallenge($opponent_id)
             $user_team = applyClubMatchInjuries($user_team, $match_result['injuries']);
 
             // Update user team in database with injuries
-            $stmt = $db->prepare('UPDATE users SET team = :team WHERE id = :user_id');
-            $stmt->bindValue(':team', json_encode($user_team), SQLITE3_TEXT);
-            $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+            $stmt = $db->prepare('UPDATE user_club SET team = :team WHERE user_uuid = (SELECT uuid FROM users WHERE id = :user_id)');
+            $stmt->bindValue(':team', json_encode($user_team));
+            $stmt->bindValue(':user_id', $_SESSION['user_id']);
             $stmt->execute();
         }
 
