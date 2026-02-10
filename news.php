@@ -8,18 +8,18 @@ require_once 'partials/layout.php';
 
 
 $db = getDbConnection();
-$userId = $_SESSION['user_id'];
+$userUuid = $_SESSION['user_uuid'];
 
 // Database tables are now created in install.php
 
 // Get user data
-$stmt = $db->prepare('SELECT * FROM users WHERE id = :id');
-$stmt->bindValue(':id', $userId, SQLITE3_INTEGER);
+$stmt = $db->prepare('SELECT * FROM users WHERE uuid = :uuid');
+$stmt->bindValue(':uuid', $userUuid, SQLITE3_TEXT);
 $result = $stmt->execute();
 $user = $result->fetchArray(SQLITE3_ASSOC);
 
 // Clean up expired news and generate new items
-$newsItems = manageNewsItems($db, $userId);
+$newsItems = manageNewsItems($db, $userUuid);
 
 $db->close();
 

@@ -17,10 +17,10 @@ require_once __DIR__ . '/league_functions.php';
  * Manage news items - clean expired and generate new ones
  */
 if (!function_exists('manageNewsItems')) {
-    function manageNewsItems($db, $user_id)
+    function manageNewsItems($db, $user_uuid)
     {
         // Clean up expired news
-        cleanExpiredNews($db, $user_id);
+        cleanExpiredNews($db, $user_uuid);
 
         // Get current news count and last creation time
         $stmt = $db->prepare('
@@ -28,9 +28,9 @@ if (!function_exists('manageNewsItems')) {
                 COUNT(*) as count,
                 MAX(created_at) as last_created
             FROM news 
-            WHERE user_id = :user_id
+            WHERE user_uuid = :user_uuid
         ');
-        $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+        $stmt->bindValue(':user_uuid', $user_uuid, SQLITE3_TEXT);
         $result = $stmt->execute();
         $newsInfo = $result->fetchArray(SQLITE3_ASSOC);
 
@@ -58,11 +58,11 @@ if (!function_exists('manageNewsItems')) {
 
         // Generate new news if conditions are met
         if ($shouldGenerate) {
-            generateNewNewsItems($db, $user_id, 6 - $currentCount);
+            generateNewNewsItems($db, $user_uuid, 6 - $currentCount);
         }
 
         // Return all current news items
-        return getCurrentNewsItems($db, $user_id);
+        return getCurrentNewsItems($db, $user_uuid);
     }
 }
 
@@ -70,14 +70,13 @@ if (!function_exists('manageNewsItems')) {
  * Clean up expired news items
  */
 if (!function_exists('cleanExpiredNews')) {
-    function cleanExpiredNews($db, $user_id)
+    function cleanExpiredNews($db, $user_uuid)
     {
-        if (DB_DRIVER === 'mysql') {
-            $stmt = $db->prepare('DELETE FROM news WHERE user_id = :user_id AND expires_at < NOW()');
-        } else {
-            $stmt = $db->prepare('DELETE FROM news WHERE user_id = :user_id AND expires_at < datetime("now")');
+        $stmt = $db->prepare('DELETE FROM news WHERE user_uuid = :user_uuid AND expires_at < NOW()');
+        if ($stmt === false) {
+            return;
         }
-        $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+        $stmt->bindValue(':user_uuid', $user_uuid, SQLITE3_TEXT);
         $stmt->execute();
     }
 }
@@ -86,26 +85,19 @@ if (!function_exists('cleanExpiredNews')) {
  * Get current news items from database
  */
 if (!function_exists('getCurrentNewsItems')) {
-    function getCurrentNewsItems($db, $user_id)
+    function getCurrentNewsItems($db, $user_uuid)
     {
-        if (DB_DRIVER === 'mysql') {
-            $stmt = $db->prepare('
-                SELECT * FROM news 
-                WHERE user_id = :user_id AND expires_at > NOW()
-                ORDER BY 
-                    CASE WHEN priority = "high" THEN 1 ELSE 2 END,
-                    created_at DESC
-            ');
-        } else {
-            $stmt = $db->prepare('
-                SELECT * FROM news 
-                WHERE user_id = :user_id AND expires_at > datetime("now")
-                ORDER BY 
-                    CASE WHEN priority = "high" THEN 1 ELSE 2 END,
-                    created_at DESC
-            ');
+        $stmt = $db->prepare('
+            SELECT * FROM news 
+            WHERE user_uuid = :user_uuid AND expires_at > NOW()
+            ORDER BY 
+                CASE WHEN priority = "high" THEN 1 ELSE 2 END,
+                created_at DESC
+        ');
+        if ($stmt === false) {
+            return [];
         }
-        $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+        $stmt->bindValue(':user_uuid', $user_uuid, SQLITE3_TEXT);
         $result = $stmt->execute();
 
         $newsItems = [];
@@ -140,10 +132,10 @@ if (!function_exists('getCurrentNewsItems')) {
  * Generate new news items and save to database
  */
 if (!function_exists('generateNewNewsItems')) {
-    function generateNewNewsItems($db, $user_id, $maxItems)
+    function generateNewNewsItems($db, $user_uuid, $maxItems)
     {
-        $stmt = $db->prepare('SELECT team, substitutes FROM users WHERE id = :id');
-        $stmt->bindValue(':id', $user_id, SQLITE3_INTEGER);
+        $stmt = $db->prepare('SELECT team, substitutes FROM users WHERE uuid = :uuid');
+        $stmt->bindValue(':uuid', $user_uuid, SQLITE3_TEXT);
         $result = $stmt->execute();
         $userData = $result->fetchArray(SQLITE3_ASSOC);
 
@@ -156,10 +148,10 @@ if (!function_exists('generateNewNewsItems')) {
         if (!empty($allPlayers)) {
             $possibleNews = array_merge($possibleNews, generateDepartureRequestNews($allPlayers));
         }
-        $possibleNews = array_merge($possibleNews, generatePlayerInterestNews($user_id));
+        $possibleNews = array_merge($possibleNews, generatePlayerInterestNews($user_uuid));
 
-        $opponentPreview = generateNextOpponentNews($db, $user_id);
-        $opponentPlayers = generateOpponentPlayersNews($db, $user_id);
+        $opponentPreview = generateNextOpponentNews($db, $user_uuid);
+        $opponentPlayers = generateOpponentPlayersNews($db, $user_uuid);
 
         $selectedNews = null;
         if (!empty($opponentPreview)) {
@@ -171,27 +163,27 @@ if (!function_exists('generateNewNewsItems')) {
         }
 
         if ($selectedNews) {
-            $stmt = $db->prepare('SELECT COUNT(*) as count FROM news WHERE user_id = :user_id');
-            $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+            $stmt = $db->prepare('SELECT COUNT(*) as count FROM news WHERE user_uuid = :user_uuid');
+            $stmt->bindValue(':user_uuid', $user_uuid, SQLITE3_TEXT);
             $result = $stmt->execute();
             $currentCount = $result->fetchArray(SQLITE3_ASSOC)['count'];
 
             if ($currentCount >= 6) {
                 $stmt = $db->prepare('
                     DELETE FROM news 
-                    WHERE user_id = :user_id 
+                    WHERE user_uuid = :user_uuid 
                     AND id = (
                         SELECT id FROM news 
-                        WHERE user_id = :user_id 
+                        WHERE user_uuid = :user_uuid 
                         ORDER BY created_at ASC 
                         LIMIT 1
                     )
                 ');
-                $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+                $stmt->bindValue(':user_uuid', $user_uuid, SQLITE3_TEXT);
                 $stmt->execute();
             }
 
-            saveNewsItem($db, $user_id, $selectedNews);
+            saveNewsItem($db, $user_uuid, $selectedNews);
         }
     }
 }
@@ -200,16 +192,16 @@ if (!function_exists('generateNewNewsItems')) {
  * Save a news item to the database
  */
 if (!function_exists('saveNewsItem')) {
-    function saveNewsItem($db, $user_id, $newsData)
+    function saveNewsItem($db, $user_uuid, $newsData)
     {
         $expiresAt = date('Y-m-d H:i:s', time() + (4 * 60 * 60)); // 4 hours from now
 
         $stmt = $db->prepare('
-            INSERT INTO news (user_id, category, priority, title, content, player_data, actions, expires_at)
-            VALUES (:user_id, :category, :priority, :title, :content, :player_data, :actions, :expires_at)
+            INSERT INTO news (user_uuid, category, priority, title, content, player_data, actions, expires_at)
+            VALUES (:user_uuid, :category, :priority, :title, :content, :player_data, :actions, :expires_at)
         ');
 
-        $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+        $stmt->bindValue(':user_uuid', $user_uuid, SQLITE3_TEXT);
         $stmt->bindValue(':category', $newsData['category'], SQLITE3_TEXT);
         $stmt->bindValue(':priority', $newsData['priority'], SQLITE3_TEXT);
         $stmt->bindValue(':title', $newsData['title'], SQLITE3_TEXT);
@@ -312,9 +304,15 @@ if (!function_exists('generateDepartureRequestNews')) {
 }
 
 if (!function_exists('generateNextOpponentNews')) {
-    function generateNextOpponentNews($db, $user_id)
+    function generateNextOpponentNews($db, $user_uuid)
     {
         $news = [];
+        // Resolve numeric id for functions that expect user_id
+        $stmtId = $db->prepare('SELECT id FROM users WHERE uuid = :uuid');
+        $stmtId->bindValue(':uuid', $user_uuid, SQLITE3_TEXT);
+        $resId = $stmtId->execute();
+        $rowId = $resId ? $resId->fetchArray(SQLITE3_ASSOC) : null;
+        $user_id = $rowId['id'] ?? null;
         $season = getCurrentSeasonIdentifier($db);
         $upcoming = getUpcomingMatches($db, $user_id, $season);
         if (empty($upcoming)) {
@@ -393,9 +391,15 @@ if (!function_exists('generateNextOpponentNews')) {
 }
 
 if (!function_exists('generateOpponentPlayersNews')) {
-    function generateOpponentPlayersNews($db, $user_id)
+    function generateOpponentPlayersNews($db, $user_uuid)
     {
         $news = [];
+        // Resolve numeric id for functions that expect user_id
+        $stmtId = $db->prepare('SELECT id FROM users WHERE uuid = :uuid');
+        $stmtId->bindValue(':uuid', $user_uuid, SQLITE3_TEXT);
+        $resId = $stmtId->execute();
+        $rowId = $resId ? $resId->fetchArray(SQLITE3_ASSOC) : null;
+        $user_id = $rowId['id'] ?? null;
         $season = getCurrentSeasonIdentifier($db);
         $upcoming = getUpcomingMatches($db, $user_id, $season);
         if (empty($upcoming)) {

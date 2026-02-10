@@ -26,6 +26,28 @@ try {
         $logs[] = ['type' => 'info', 'message' => 'Database ensured: ' . MYSQL_DB];
     }
     $db = getDbConnection();
+    $ensureIdx = function ($table, $index, $columns) use ($db) {
+        $existsStmt = $db->prepare('SELECT COUNT(*) as c FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = :t');
+        if ($existsStmt === false) {
+            return;
+        }
+        $existsStmt->bindValue(':t', $table, SQLITE3_TEXT);
+        $existsRes = $existsStmt->execute();
+        $existsRow = $existsRes ? $existsRes->fetchArray(SQLITE3_ASSOC) : ['c' => 0];
+        if ((int)($existsRow['c'] ?? 0) === 0) {
+            return;
+        }
+        $stmt = $db->prepare('SELECT COUNT(*) as c FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = :t AND index_name = :i');
+        if ($stmt) {
+            $stmt->bindValue(':t', $table, SQLITE3_TEXT);
+            $stmt->bindValue(':i', $index, SQLITE3_TEXT);
+            $res = $stmt->execute();
+            $row = $res ? $res->fetchArray(SQLITE3_ASSOC) : ['c' => 0];
+            if ((int)($row['c'] ?? 0) === 0) {
+                $db->exec('CREATE INDEX ' . $index . ' ON ' . $table . ' (' . $columns . ')');
+            }
+        }
+    };
     $logs[] = ['type' => 'info', 'message' => 'Database adapter initialized'];
 
     $coreOk = true;
@@ -35,7 +57,28 @@ try {
             email VARCHAR(255) NOT NULL UNIQUE,
             password VARCHAR(255) NOT NULL,
             uuid CHAR(16) NULL,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_users_uuid (uuid)
+        )');
+    $coreOk = $coreOk && $db->exec('CREATE TABLE IF NOT EXISTS user_settings (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_uuid CHAR(16) NOT NULL,
+            setting_key VARCHAR(100) NOT NULL,
+            setting_value TEXT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY uniq_user_setting (user_uuid, setting_key),
+            FOREIGN KEY (user_uuid) REFERENCES users(uuid) ON DELETE CASCADE
+        )');
+    $coreOk = $coreOk && $db->exec('CREATE TABLE IF NOT EXISTS stadiums (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_uuid CHAR(16) NOT NULL,
+            name VARCHAR(255) DEFAULT "Home Stadium",
+            capacity INT DEFAULT 10000,
+            level INT DEFAULT 1,
+            facilities TEXT,
+            last_upgrade DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_uuid) REFERENCES users(uuid)
         )');
     $coreOk = $coreOk && $db->exec('CREATE TABLE IF NOT EXISTS user_club (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -55,6 +98,22 @@ try {
             INDEX idx_user_club_user_uuid (user_uuid),
             INDEX idx_user_club_club_uuid (club_uuid)
         )');
+    $coreOk = $coreOk && $db->exec('CREATE TABLE IF NOT EXISTS transfer_bids (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            bidder_id INT NOT NULL,
+            owner_id INT NOT NULL,
+            player_index INT NOT NULL,
+            player_uuid VARCHAR(64) NOT NULL,
+            bid_amount BIGINT NOT NULL,
+            status VARCHAR(20) DEFAULT "pending",
+            bid_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+            response_time DATETIME NULL,
+            FOREIGN KEY (bidder_id) REFERENCES users(id),
+            FOREIGN KEY (owner_id) REFERENCES users(id)
+        )');
+    $ensureIdx('transfer_bids', 'idx_transfer_bids_bidder', 'bidder_id');
+    $ensureIdx('transfer_bids', 'idx_transfer_bids_owner', 'owner_id');
+    $ensureIdx('transfer_bids', 'idx_transfer_bids_uuid', 'player_uuid');
     $coreOk = $coreOk && $db->exec('CREATE TABLE IF NOT EXISTS shop_items (
             id INT AUTO_INCREMENT PRIMARY KEY,
             name VARCHAR(255) NOT NULL,
@@ -67,6 +126,16 @@ try {
             duration INT DEFAULT 0,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )');
+    $coreOk = $coreOk && $db->exec('CREATE TABLE IF NOT EXISTS scouting_reports (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_uuid CHAR(16) NOT NULL,
+            player_uuid VARCHAR(64) NOT NULL,
+            scouted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            report_quality INT DEFAULT 1,
+            FOREIGN KEY (user_uuid) REFERENCES users(uuid)
+        )');
+    $ensureIdx('scouting_reports', 'idx_scouting_reports_user_uuid', 'user_uuid');
+    $ensureIdx('scouting_reports', 'idx_scouting_reports_uuid', 'player_uuid');
     if ($coreOk) {
         $logs[] = ['type' => 'info', 'message' => 'Create tables successfully'];
     } else {
@@ -232,6 +301,65 @@ try {
             value BIGINT NOT NULL,
             training_focus VARCHAR(50) DEFAULT "balanced",
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )');
+    $postOk = $postOk && $db->exec('CREATE TABLE IF NOT EXISTS nation_calls (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_uuid CHAR(16) NOT NULL,
+            called_players TEXT NOT NULL,
+            total_reward BIGINT NOT NULL,
+            call_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_uuid) REFERENCES users(uuid)
+        )');
+    $postOk = $postOk && $db->exec('CREATE TABLE IF NOT EXISTS news (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_uuid CHAR(16) NOT NULL,
+            category VARCHAR(50) NOT NULL,
+            priority VARCHAR(20) NOT NULL DEFAULT "normal",
+            title VARCHAR(255) NOT NULL,
+            content TEXT NOT NULL,
+            player_data TEXT NULL,
+            actions TEXT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            expires_at DATETIME NOT NULL,
+            INDEX idx_news_user_uuid (user_uuid),
+            FOREIGN KEY (user_uuid) REFERENCES users(uuid)
+        )');
+    $ensureIdx('news', 'idx_news_expires', 'expires_at');
+    $postOk = $postOk && $db->exec('CREATE TABLE IF NOT EXISTS player_stats (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_uuid CHAR(16) NOT NULL,
+            player_id VARCHAR(64) NOT NULL,
+            player_name VARCHAR(255) NOT NULL,
+            position VARCHAR(10) NOT NULL,
+            matches_played INT DEFAULT 0,
+            goals INT DEFAULT 0,
+            assists INT DEFAULT 0,
+            yellow_cards INT DEFAULT 0,
+            red_cards INT DEFAULT 0,
+            total_rating DOUBLE DEFAULT 0,
+            avg_rating DOUBLE DEFAULT 0,
+            clean_sheets INT DEFAULT 0,
+            saves INT DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY uniq_user_player (user_uuid, player_id),
+            FOREIGN KEY (user_uuid) REFERENCES users(uuid)
+        )');
+    $postOk = $postOk && $db->exec('CREATE TABLE IF NOT EXISTS support_tickets (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_uuid CHAR(16) NOT NULL,
+            ticket_number VARCHAR(64) UNIQUE NOT NULL,
+            priority VARCHAR(20) DEFAULT "medium",
+            category VARCHAR(50) NOT NULL,
+            subject VARCHAR(255) NOT NULL,
+            message TEXT NOT NULL,
+            status VARCHAR(20) DEFAULT "open",
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            last_response_at DATETIME NULL,
+            admin_response TEXT NULL,
+            resolution_notes TEXT NULL,
+            FOREIGN KEY (user_uuid) REFERENCES users(uuid)
         )');
     if ($postOk) {
         $logs[] = ['type' => 'info', 'message' => 'Post-club tables ensured'];

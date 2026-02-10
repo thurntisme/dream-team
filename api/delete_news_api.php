@@ -6,7 +6,7 @@ header('Content-Type: application/json');
 
 
 
-$user_id = $_SESSION['user_id'];
+$user_uuid = $_SESSION['user_uuid'];
 
 // Get JSON input
 $input = json_decode(file_get_contents('php://input'), true);
@@ -29,9 +29,9 @@ try {
     $db = getDbConnection();
 
     // Verify the news item belongs to the current user before deleting
-    $stmt = $db->prepare('SELECT id FROM news WHERE id = :news_id AND user_id = :user_id');
+    $stmt = $db->prepare('SELECT id FROM news WHERE id = :news_id AND user_uuid = :user_uuid');
     $stmt->bindValue(':news_id', $news_id, SQLITE3_INTEGER);
-    $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+    $stmt->bindValue(':user_uuid', $user_uuid, SQLITE3_TEXT);
     $result = $stmt->execute();
     $newsItem = $result->fetchArray(SQLITE3_ASSOC);
 
@@ -42,9 +42,9 @@ try {
     }
 
     // Delete the news item
-    $stmt = $db->prepare('DELETE FROM news WHERE id = :news_id AND user_id = :user_id');
+    $stmt = $db->prepare('DELETE FROM news WHERE id = :news_id AND user_uuid = :user_uuid');
     $stmt->bindValue(':news_id', $news_id, SQLITE3_INTEGER);
-    $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+    $stmt->bindValue(':user_uuid', $user_uuid, SQLITE3_TEXT);
 
     if ($stmt->execute()) {
         echo json_encode([

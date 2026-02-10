@@ -36,9 +36,7 @@ function __write_env($pairs)
 
 function __create_tables_simple($db, $driver)
 {
-    $ok = true;
-    if ($driver === 'mysql') {
-        $ok = $ok && $db->exec('CREATE TABLE IF NOT EXISTS users (
+    $ok = $db->exec('CREATE TABLE IF NOT EXISTS users (
             id INT AUTO_INCREMENT PRIMARY KEY,
             name VARCHAR(255) NOT NULL,
             email VARCHAR(255) NOT NULL UNIQUE,
@@ -49,7 +47,7 @@ function __create_tables_simple($db, $driver)
             budget BIGINT DEFAULT ' . DEFAULT_BUDGET . ',
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )');
-        $ok = $ok && $db->exec('CREATE TABLE IF NOT EXISTS shop_items (
+    $ok = $ok && $db->exec('CREATE TABLE IF NOT EXISTS shop_items (
             id INT AUTO_INCREMENT PRIMARY KEY,
             name VARCHAR(255) NOT NULL,
             description TEXT NOT NULL,
@@ -61,31 +59,6 @@ function __create_tables_simple($db, $driver)
             duration INT DEFAULT 0,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )');
-    } else {
-        $ok = $ok && $db->exec('CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            email TEXT UNIQUE NOT NULL,
-            password TEXT NOT NULL,
-            club_name TEXT,
-            formation TEXT DEFAULT "4-4-2",
-            team TEXT,
-            budget INTEGER DEFAULT ' . DEFAULT_BUDGET . ',
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )');
-        $ok = $ok && $db->exec('CREATE TABLE IF NOT EXISTS shop_items (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            description TEXT NOT NULL,
-            price INTEGER NOT NULL,
-            effect_type TEXT NOT NULL,
-            effect_value TEXT NOT NULL,
-            category TEXT NOT NULL,
-            icon TEXT DEFAULT "package",
-            duration INTEGER DEFAULT 0,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )');
-    }
     return $ok;
 }
 
@@ -256,33 +229,117 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['start_setup'])) {
 }
 
 if (false) {
-    ?>
+?>
     <!doctype html>
     <html>
+
     <head>
         <meta charset="utf-8">
         <title>Installer</title>
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <style>
-            body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background:#f8fafc; margin:0; }
-            .container { max-width: 800px; margin: 40px auto; background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:24px; }
-            h1 { margin:0 0 16px; font-size:24px; }
-            fieldset { border:1px solid #e5e7eb; border-radius:8px; margin-bottom:16px; }
-            legend { padding:0 8px; font-weight:600; }
-            label { display:block; font-size:14px; margin:8px 0 4px; }
-            input[type=text], input[type=password], input[type=email] { width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; }
-            .row { display:flex; gap:12px; }
-            .row > div { flex:1; }
-            .actions { display:flex; gap:12px; align-items:center; margin-top:16px; }
-            .btn { background:#2563eb; color:#fff; border:none; padding:10px 16px; border-radius:8px; cursor:pointer; }
-            .btn:disabled { opacity:.6; cursor:not-allowed; }
-            .note { color:#64748b; font-size:13px; }
-            .list { margin:12px 0; padding:0; list-style:none; }
-            .list li { margin:4px 0; font-size:14px; }
-            .error { color:#b91c1c; }
-            .ok { color:#166534; }
+            body {
+                font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+                background: #f8fafc;
+                margin: 0;
+            }
+
+            .container {
+                max-width: 800px;
+                margin: 40px auto;
+                background: #fff;
+                border: 1px solid #e5e7eb;
+                border-radius: 12px;
+                padding: 24px;
+            }
+
+            h1 {
+                margin: 0 0 16px;
+                font-size: 24px;
+            }
+
+            fieldset {
+                border: 1px solid #e5e7eb;
+                border-radius: 8px;
+                margin-bottom: 16px;
+            }
+
+            legend {
+                padding: 0 8px;
+                font-weight: 600;
+            }
+
+            label {
+                display: block;
+                font-size: 14px;
+                margin: 8px 0 4px;
+            }
+
+            input[type=text],
+            input[type=password],
+            input[type=email] {
+                width: 100%;
+                padding: 10px;
+                border: 1px solid #cbd5e1;
+                border-radius: 8px;
+            }
+
+            .row {
+                display: flex;
+                gap: 12px;
+            }
+
+            .row>div {
+                flex: 1;
+            }
+
+            .actions {
+                display: flex;
+                gap: 12px;
+                align-items: center;
+                margin-top: 16px;
+            }
+
+            .btn {
+                background: #2563eb;
+                color: #fff;
+                border: none;
+                padding: 10px 16px;
+                border-radius: 8px;
+                cursor: pointer;
+            }
+
+            .btn:disabled {
+                opacity: .6;
+                cursor: not-allowed;
+            }
+
+            .note {
+                color: #64748b;
+                font-size: 13px;
+            }
+
+            .list {
+                margin: 12px 0;
+                padding: 0;
+                list-style: none;
+            }
+
+            .list li {
+                margin: 4px 0;
+                font-size: 14px;
+            }
+
+            .error {
+                color: #b91c1c;
+            }
+
+            .ok {
+                color: #166534;
+            }
         </style>
     </head>
+
     <body>
         <div class="container">
             <h1>Installer</h1>
@@ -371,6 +428,7 @@ if (false) {
             const mysqlRadio = document.querySelector('input[name="driver"][value="mysql"]');
             const sqliteFields = document.getElementById('sqliteFields');
             const mysqlFields = document.getElementById('mysqlFields');
+
             function sync() {
                 if (sqliteRadio.checked) {
                     sqliteFields.style.display = '';
@@ -385,8 +443,9 @@ if (false) {
             sync();
         </script>
     </body>
+
     </html>
-    <?php
+<?php
     exit;
 }
 
@@ -398,12 +457,7 @@ if (version_compare(PHP_VERSION, '7.4.0') < 0) {
     $errors[] = 'PHP 7.4 or higher is required. Current version: ' . PHP_VERSION;
 }
 
-// Check SQLite extension
-if (DB_DRIVER === 'sqlite') {
-    if (!extension_loaded('sqlite3')) {
-        $errors[] = 'SQLite3 extension is not loaded';
-    }
-}
+// MySQL-only installation
 
 // Get current configuration
 $config = loadConfig();
@@ -411,36 +465,24 @@ $db_file = $config['db_file'] ?? 'database/dreamteam.db';
 $app_name = $config['app_name'] ?? 'Dream Team';
 
 // Check database status
-$db_exists = DB_DRIVER === 'sqlite' ? file_exists($db_file) : true;
+$db_exists = true;
 $table_exists = false;
 $has_users = false;
 $is_ready = false;
 
 if ($db_exists) {
     try {
-        if (DB_DRIVER === 'sqlite') {
-            $db = new SQLite3($db_file);
-            $result = $db->query("SELECT name FROM sqlite_master WHERE type='table' AND name='users'");
-            $table_exists = $result->fetchArray() !== false;
-            if ($table_exists) {
-                $result = $db->query("SELECT COUNT(*) as count FROM users");
-                $row = $result->fetchArray(SQLITE3_ASSOC);
-                $has_users = $row['count'] > 0;
+        $db = getDbConnection();
+        $check = $db->query("SELECT 1 FROM users LIMIT 1");
+        $table_exists = $check !== false;
+        if ($table_exists) {
+            $stmt = $db->query("SELECT COUNT(*) as count FROM users");
+            if ($stmt) {
+                $row = $stmt->fetchArray(SQLITE3_ASSOC);
+                $has_users = $row && isset($row['count']) ? ((int)$row['count'] > 0) : false;
             }
-            $db->close();
-        } else {
-            $db = getDbConnection();
-            $check = $db->query("SELECT 1 FROM users LIMIT 1");
-            $table_exists = $check !== false;
-            if ($table_exists) {
-                $stmt = $db->query("SELECT COUNT(*) as count FROM users");
-                if ($stmt) {
-                    $row = $stmt->fetchArray(SQLITE3_ASSOC);
-                    $has_users = $row && isset($row['count']) ? ((int)$row['count'] > 0) : false;
-                }
-            }
-            $db->close();
         }
+        $db->close();
         $is_ready = $table_exists && $has_users;
     } catch (Exception $e) {
         $errors[] = 'Database error: ' . $e->getMessage();
@@ -451,19 +493,10 @@ if ($db_exists) {
 $step = isset($_POST['step']) ? (int)$_POST['step'] : (isset($_GET['step']) ? (int)$_GET['step'] : 1);
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['test_conn'])) {
     try {
-        $ok = false;
-        $msg = '';
-        if (DB_DRIVER === 'sqlite') {
-            $db = new SQLite3($db_file);
-            $r = $db->query('SELECT 1');
-            $ok = $r !== false;
-            $db->close();
-        } else {
-            $db = getDbConnection();
-            $r = $db->query('SELECT 1');
-            $ok = $r !== false;
-            $db->close();
-        }
+        $db = getDbConnection();
+        $r = $db->query('SELECT 1');
+        $ok = $r !== false;
+        $db->close();
         if (!empty($_POST['ajax'])) {
             header('Content-Type: application/json');
             echo json_encode(['ok' => $ok]);
@@ -487,7 +520,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install'])) {
     try {
         if (DB_DRIVER === 'mysql') {
             $db = getDbConnection();
-            $ensureIdx = function($table, $index, $columns) use ($db) {
+            $ensureIdx = function ($table, $index, $columns) use ($db) {
                 $stmt = $db->prepare('SELECT COUNT(*) as c FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = :t AND index_name = :i');
                 if ($stmt) {
                     $stmt->bindValue(':t', $table, SQLITE3_TEXT);
@@ -522,23 +555,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install'])) {
             )');
             $ok = $ok && $db->exec('CREATE TABLE IF NOT EXISTS user_settings (
                 id INT AUTO_INCREMENT PRIMARY KEY,
-                user_id INT NOT NULL,
+                user_uuid CHAR(16) NOT NULL,
                 setting_key VARCHAR(100) NOT NULL,
                 setting_value TEXT NULL,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                UNIQUE KEY uniq_user_setting (user_id, setting_key),
-                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                UNIQUE KEY uniq_user_setting (user_uuid, setting_key),
+                FOREIGN KEY (user_uuid) REFERENCES users(uuid) ON DELETE CASCADE
             )');
             $ok = $ok && $db->exec('CREATE TABLE IF NOT EXISTS stadiums (
                 id INT AUTO_INCREMENT PRIMARY KEY,
-                user_id INT NOT NULL,
+                user_uuid CHAR(16) NOT NULL,
                 name VARCHAR(255) DEFAULT "Home Stadium",
                 capacity INT DEFAULT 10000,
                 level INT DEFAULT 1,
                 facilities TEXT,
                 last_upgrade DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users(id)
+                FOREIGN KEY (user_uuid) REFERENCES users(uuid)
             )');
             $ok = $ok && $db->exec('CREATE TABLE IF NOT EXISTS transfer_bids (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -558,25 +591,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install'])) {
             $ensureIdx('transfer_bids', 'idx_transfer_bids_uuid', 'player_uuid');
             $ok = $ok && $db->exec('CREATE TABLE IF NOT EXISTS player_inventory (
                 id INT AUTO_INCREMENT PRIMARY KEY,
-                user_id INT NOT NULL,
+                user_uuid CHAR(16) NOT NULL,
                 player_uuid VARCHAR(64) NOT NULL,
                 player_data TEXT NOT NULL,
                 purchase_price BIGINT NOT NULL,
                 purchase_date DATETIME DEFAULT CURRENT_TIMESTAMP,
                 status VARCHAR(20) DEFAULT "available",
-                FOREIGN KEY (user_id) REFERENCES users(id)
+                FOREIGN KEY (user_uuid) REFERENCES users(uuid)
             )');
-            $ensureIdx('player_inventory', 'idx_player_inventory_user', 'user_id');
+            $ensureIdx('player_inventory', 'idx_player_inventory_user_uuid', 'user_uuid');
             $ensureIdx('player_inventory', 'idx_player_inventory_status', 'status');
             $ok = $ok && $db->exec('CREATE TABLE IF NOT EXISTS scouting_reports (
                 id INT AUTO_INCREMENT PRIMARY KEY,
-                user_id INT NOT NULL,
+                user_uuid CHAR(16) NOT NULL,
                 player_uuid VARCHAR(64) NOT NULL,
                 scouted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 report_quality INT DEFAULT 1,
-                FOREIGN KEY (user_id) REFERENCES users(id)
+                FOREIGN KEY (user_uuid) REFERENCES users(uuid)
             )');
-            $ensureIdx('scouting_reports', 'idx_scouting_reports_user', 'user_id');
+            $ensureIdx('scouting_reports', 'idx_scouting_reports_user_uuid', 'user_uuid');
             $ensureIdx('scouting_reports', 'idx_scouting_reports_uuid', 'player_uuid');
             $ok = $ok && $db->exec('CREATE TABLE IF NOT EXISTS shop_items (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -592,19 +625,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install'])) {
             )');
             $ok = $ok && $db->exec('CREATE TABLE IF NOT EXISTS user_inventory (
                 id INT AUTO_INCREMENT PRIMARY KEY,
-                user_id INT NOT NULL,
+                user_uuid CHAR(16) NOT NULL,
                 item_id INT NOT NULL,
                 purchased_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 expires_at DATETIME NULL,
                 quantity INT DEFAULT 1,
-                FOREIGN KEY (user_id) REFERENCES users(id),
+                FOREIGN KEY (user_uuid) REFERENCES users(uuid),
                 FOREIGN KEY (item_id) REFERENCES shop_items(id)
             )');
-            $ensureIdx('user_inventory', 'idx_user_inventory_user', 'user_id');
+            $ensureIdx('user_inventory', 'idx_user_inventory_user_uuid', 'user_uuid');
             $ensureIdx('user_inventory', 'idx_user_inventory_expires', 'expires_at');
             $ok = $ok && $db->exec('CREATE TABLE IF NOT EXISTS club_staff (
                 id INT AUTO_INCREMENT PRIMARY KEY,
-                user_id INT NOT NULL,
+                user_uuid CHAR(16) NOT NULL,
                 staff_type VARCHAR(50) NOT NULL,
                 name VARCHAR(255) NOT NULL,
                 level INT DEFAULT 1,
@@ -613,7 +646,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install'])) {
                 contract_weeks_remaining INT DEFAULT 52,
                 hired_date DATETIME DEFAULT CURRENT_TIMESTAMP,
                 bonus_applied_this_week TINYINT(1) DEFAULT 0,
-                FOREIGN KEY (user_id) REFERENCES users(id)
+                FOREIGN KEY (user_uuid) REFERENCES users(uuid)
             )');
             $ok = $ok && $db->exec('CREATE TABLE IF NOT EXISTS young_players (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -647,15 +680,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install'])) {
             )');
             $ok = $ok && $db->exec('CREATE TABLE IF NOT EXISTS nation_calls (
                 id INT AUTO_INCREMENT PRIMARY KEY,
-                user_id INT NOT NULL,
+                user_uuid CHAR(16) NOT NULL,
                 called_players TEXT NOT NULL,
                 total_reward BIGINT NOT NULL,
                 call_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users(id)
+                FOREIGN KEY (user_uuid) REFERENCES users(uuid)
             )');
             $ok = $ok && $db->exec('CREATE TABLE IF NOT EXISTS news (
                 id INT AUTO_INCREMENT PRIMARY KEY,
-                user_id INT NOT NULL,
+                user_uuid CHAR(16) NOT NULL,
                 category VARCHAR(50) NOT NULL,
                 priority VARCHAR(20) NOT NULL DEFAULT "normal",
                 title VARCHAR(255) NOT NULL,
@@ -664,13 +697,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install'])) {
                 actions TEXT NULL,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 expires_at DATETIME NOT NULL,
-                FOREIGN KEY (user_id) REFERENCES users(id)
+                INDEX idx_news_user_uuid (user_uuid),
+                FOREIGN KEY (user_uuid) REFERENCES users(uuid)
             )');
-            $ensureIdx('news', 'idx_news_user', 'user_id');
             $ensureIdx('news', 'idx_news_expires', 'expires_at');
             $ok = $ok && $db->exec('CREATE TABLE IF NOT EXISTS player_stats (
                 id INT AUTO_INCREMENT PRIMARY KEY,
-                user_id INT NOT NULL,
+                user_uuid CHAR(16) NOT NULL,
                 player_id VARCHAR(64) NOT NULL,
                 player_name VARCHAR(255) NOT NULL,
                 position VARCHAR(10) NOT NULL,
@@ -685,12 +718,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install'])) {
                 saves INT DEFAULT 0,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                UNIQUE KEY uniq_user_player (user_id, player_id),
-                FOREIGN KEY (user_id) REFERENCES users(id)
+                UNIQUE KEY uniq_user_player (user_uuid, player_id),
+                FOREIGN KEY (user_uuid) REFERENCES users(uuid)
             )');
             $ok = $ok && $db->exec('CREATE TABLE IF NOT EXISTS support_tickets (
                 id INT AUTO_INCREMENT PRIMARY KEY,
-                user_id INT NOT NULL,
+                user_uuid CHAR(16) NOT NULL,
                 ticket_number VARCHAR(64) UNIQUE NOT NULL,
                 priority VARCHAR(20) DEFAULT "medium",
                 category VARCHAR(50) NOT NULL,
@@ -702,7 +735,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install'])) {
                 last_response_at DATETIME NULL,
                 admin_response TEXT NULL,
                 resolution_notes TEXT NULL,
-                FOREIGN KEY (user_id) REFERENCES users(id)
+                FOREIGN KEY (user_uuid) REFERENCES users(uuid)
             )');
             // Seed shop items if empty
             $result = $db->query('SELECT COUNT(*) as count FROM shop_items');
@@ -764,8 +797,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install'])) {
             // Create/connect to database
             $db = new SQLite3($db_file);
 
-        // Create users table
-        $sql = 'CREATE TABLE IF NOT EXISTS users (
+            // Create users table
+            $sql = 'CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
             email TEXT UNIQUE NOT NULL,
@@ -786,68 +819,67 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install'])) {
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )';
 
-        if ($db->exec($sql)) {
-            $success[] = 'Database and users table created successfully';
+            if ($db->exec($sql)) {
+                $success[] = 'Database and users table created successfully';
 
-            // Add missing columns to existing users table (migration)
-            try {
-                $result = $db->query("PRAGMA table_info(users)");
-                $columns = [];
-                while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
-                    $columns[] = $row['name'];
+                // Add missing columns to existing users table (migration)
+                try {
+                    $result = $db->query("PRAGMA table_info(users)");
+                    $columns = [];
+                    while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+                        $columns[] = $row['name'];
+                    }
+
+                    // Add club_exp column if missing
+                    if (!in_array('club_exp', $columns)) {
+                        $db->exec('ALTER TABLE users ADD COLUMN club_exp INTEGER DEFAULT 0');
+                        $success[] = 'Added club_exp column to users table';
+                    }
+
+                    // Add club_level column if missing
+                    if (!in_array('club_level', $columns)) {
+                        $db->exec('ALTER TABLE users ADD COLUMN club_level INTEGER DEFAULT 1');
+                        $success[] = 'Added club_level column to users table';
+                    }
+
+                    // Add user_plan column if missing
+                    if (!in_array('user_plan', $columns)) {
+                        $db->exec('ALTER TABLE users ADD COLUMN user_plan TEXT DEFAULT "free"');
+                        $success[] = 'Added user_plan column to users table';
+                    }
+
+                    // Add plan_expires_at column if missing
+                    if (!in_array('plan_expires_at', $columns)) {
+                        $db->exec('ALTER TABLE users ADD COLUMN plan_expires_at DATETIME');
+                        $success[] = 'Added plan_expires_at column to users table';
+                    }
+
+                    // Add substitutes column if missing
+                    if (!in_array('substitutes', $columns)) {
+                        $db->exec('ALTER TABLE users ADD COLUMN substitutes TEXT DEFAULT "[]"');
+                        $success[] = 'Added substitutes column to users table';
+                    }
+
+                    // Add max_players column if missing
+                    if (!in_array('max_players', $columns)) {
+                        $db->exec('ALTER TABLE users ADD COLUMN max_players INTEGER DEFAULT 23');
+                        $success[] = 'Added max_players column to users table';
+                    }
+
+                    // Add fans column if missing
+                    if (!in_array('fans', $columns)) {
+                        $db->exec('ALTER TABLE users ADD COLUMN fans INTEGER DEFAULT 5000');
+                        $success[] = 'Added fans column to users table';
+                    }
+                } catch (Exception $e) {
+                    // Migration failed, but continue - table might be new
+                    $errors[] = 'Column migration warning: ' . $e->getMessage();
                 }
 
-                // Add club_exp column if missing
-                if (!in_array('club_exp', $columns)) {
-                    $db->exec('ALTER TABLE users ADD COLUMN club_exp INTEGER DEFAULT 0');
-                    $success[] = 'Added club_exp column to users table';
-                }
+                // Create additional tables
 
-                // Add club_level column if missing
-                if (!in_array('club_level', $columns)) {
-                    $db->exec('ALTER TABLE users ADD COLUMN club_level INTEGER DEFAULT 1');
-                    $success[] = 'Added club_level column to users table';
-                }
-
-                // Add user_plan column if missing
-                if (!in_array('user_plan', $columns)) {
-                    $db->exec('ALTER TABLE users ADD COLUMN user_plan TEXT DEFAULT "free"');
-                    $success[] = 'Added user_plan column to users table';
-                }
-
-                // Add plan_expires_at column if missing
-                if (!in_array('plan_expires_at', $columns)) {
-                    $db->exec('ALTER TABLE users ADD COLUMN plan_expires_at DATETIME');
-                    $success[] = 'Added plan_expires_at column to users table';
-                }
-
-                // Add substitutes column if missing
-                if (!in_array('substitutes', $columns)) {
-                    $db->exec('ALTER TABLE users ADD COLUMN substitutes TEXT DEFAULT "[]"');
-                    $success[] = 'Added substitutes column to users table';
-                }
-
-                // Add max_players column if missing
-                if (!in_array('max_players', $columns)) {
-                    $db->exec('ALTER TABLE users ADD COLUMN max_players INTEGER DEFAULT 23');
-                    $success[] = 'Added max_players column to users table';
-                }
-
-                // Add fans column if missing
-                if (!in_array('fans', $columns)) {
-                    $db->exec('ALTER TABLE users ADD COLUMN fans INTEGER DEFAULT 5000');
-                    $success[] = 'Added fans column to users table';
-                }
-
-            } catch (Exception $e) {
-                // Migration failed, but continue - table might be new
-                $errors[] = 'Column migration warning: ' . $e->getMessage();
-            }
-
-            // Create additional tables
-
-            // Transfer system tables
-            $db->exec('CREATE TABLE IF NOT EXISTS transfer_bids (
+                // Transfer system tables
+                $db->exec('CREATE TABLE IF NOT EXISTS transfer_bids (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 bidder_id INTEGER NOT NULL,
                 owner_id INTEGER NOT NULL,
@@ -860,137 +892,137 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install'])) {
                 FOREIGN KEY (bidder_id) REFERENCES users(id),
                 FOREIGN KEY (owner_id) REFERENCES users(id)
             )');
-            $db->exec('CREATE INDEX IF NOT EXISTS idx_transfer_bids_bidder ON transfer_bids (bidder_id)');
-            $db->exec('CREATE INDEX IF NOT EXISTS idx_transfer_bids_owner ON transfer_bids (owner_id)');
-            $db->exec('CREATE INDEX IF NOT EXISTS idx_transfer_bids_uuid ON transfer_bids (player_uuid)');
+                $db->exec('CREATE INDEX IF NOT EXISTS idx_transfer_bids_bidder ON transfer_bids (bidder_id)');
+                $db->exec('CREATE INDEX IF NOT EXISTS idx_transfer_bids_owner ON transfer_bids (owner_id)');
+                $db->exec('CREATE INDEX IF NOT EXISTS idx_transfer_bids_uuid ON transfer_bids (player_uuid)');
 
-            $db->exec('CREATE TABLE IF NOT EXISTS player_inventory (
+                $db->exec('CREATE TABLE IF NOT EXISTS player_inventory (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
+                user_uuid TEXT NOT NULL,
                 player_uuid TEXT NOT NULL,
                 player_data TEXT NOT NULL,
                 purchase_price INTEGER NOT NULL,
                 purchase_date DATETIME DEFAULT CURRENT_TIMESTAMP,
                 status TEXT DEFAULT "available",
-                FOREIGN KEY (user_id) REFERENCES users(id)
+                FOREIGN KEY (user_uuid) REFERENCES users(uuid)
             )');
-            $db->exec('CREATE INDEX IF NOT EXISTS idx_player_inventory_user ON player_inventory (user_id)');
-            $db->exec('CREATE INDEX IF NOT EXISTS idx_player_inventory_status ON player_inventory (status)');
+                $db->exec('CREATE INDEX IF NOT EXISTS idx_player_inventory_user_uuid ON player_inventory (user_uuid)');
+                $db->exec('CREATE INDEX IF NOT EXISTS idx_player_inventory_status ON player_inventory (status)');
 
-            // Scouting system table
-            $db->exec('CREATE TABLE IF NOT EXISTS scouting_reports (
+                // Scouting system table
+                $db->exec('CREATE TABLE IF NOT EXISTS scouting_reports (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
+                user_uuid TEXT NOT NULL,
                 player_uuid TEXT NOT NULL,
                 scouted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 report_quality INTEGER DEFAULT 1,
-                FOREIGN KEY (user_id) REFERENCES users (id)
+                FOREIGN KEY (user_uuid) REFERENCES users (uuid)
             )');
-            $db->exec('CREATE INDEX IF NOT EXISTS idx_scouting_reports_user ON scouting_reports (user_id)');
-            $db->exec('CREATE INDEX IF NOT EXISTS idx_scouting_reports_uuid ON scouting_reports (player_uuid)');
+                $db->exec('CREATE INDEX IF NOT EXISTS idx_scouting_reports_user_uuid ON scouting_reports (user_uuid)');
+                $db->exec('CREATE INDEX IF NOT EXISTS idx_scouting_reports_uuid ON scouting_reports (player_uuid)');
 
-            // Migration: Handle column changes and add missing columns
-            try {
-                // Check existing columns in player_inventory
-                $result = $db->query("PRAGMA table_info(player_inventory)");
-                $columns = [];
-                while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
-                    $columns[] = $row['name'];
-                }
-
-                // Add player_uuid column if it doesn't exist
-                if (!in_array('player_uuid', $columns)) {
-                    $db->exec('ALTER TABLE player_inventory ADD COLUMN player_uuid TEXT DEFAULT ""');
-                }
-
-                // Add purchase_price column if it doesn't exist
-                if (!in_array('purchase_price', $columns)) {
-                    $db->exec('ALTER TABLE player_inventory ADD COLUMN purchase_price INTEGER DEFAULT 0');
-                }
-
-                // Migrate data from player_name to player_uuid if needed
-                if (in_array('player_name', $columns) && in_array('player_uuid', $columns)) {
-                    $stmt = $db->prepare('SELECT id, player_name, player_data FROM player_inventory WHERE player_uuid = "" AND player_name != ""');
-                    $result = $stmt->execute();
-
+                // Migration: Handle column changes and add missing columns
+                try {
+                    // Check existing columns in player_inventory
+                    $result = $db->query("PRAGMA table_info(player_inventory)");
+                    $columns = [];
                     while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
-                        $player_data = json_decode($row['player_data'], true);
-                        if ($player_data && isset($player_data['uuid'])) {
-                            $update_stmt = $db->prepare('UPDATE player_inventory SET player_uuid = :uuid WHERE id = :id');
-                            $update_stmt->bindValue(':uuid', $player_data['uuid'], SQLITE3_TEXT);
-                            $update_stmt->bindValue(':id', $row['id'], SQLITE3_INTEGER);
-                            $update_stmt->execute();
+                        $columns[] = $row['name'];
+                    }
+
+                    // Add player_uuid column if it doesn't exist
+                    if (!in_array('player_uuid', $columns)) {
+                        $db->exec('ALTER TABLE player_inventory ADD COLUMN player_uuid TEXT DEFAULT ""');
+                    }
+
+                    // Add purchase_price column if it doesn't exist
+                    if (!in_array('purchase_price', $columns)) {
+                        $db->exec('ALTER TABLE player_inventory ADD COLUMN purchase_price INTEGER DEFAULT 0');
+                    }
+
+                    // Migrate data from player_name to player_uuid if needed
+                    if (in_array('player_name', $columns) && in_array('player_uuid', $columns)) {
+                        $stmt = $db->prepare('SELECT id, player_name, player_data FROM player_inventory WHERE player_uuid = "" AND player_name != ""');
+                        $result = $stmt->execute();
+
+                        while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+                            $player_data = json_decode($row['player_data'], true);
+                            if ($player_data && isset($player_data['uuid'])) {
+                                $update_stmt = $db->prepare('UPDATE player_inventory SET player_uuid = :uuid WHERE id = :id');
+                                $update_stmt->bindValue(':uuid', $player_data['uuid'], SQLITE3_TEXT);
+                                $update_stmt->bindValue(':id', $row['id'], SQLITE3_INTEGER);
+                                $update_stmt->execute();
+                            }
                         }
                     }
-                }
 
-                // Check transfer_bids table
-                $result = $db->query("PRAGMA table_info(transfer_bids)");
-                $bid_columns = [];
-                while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
-                    $bid_columns[] = $row['name'];
-                }
-
-                // Add player_uuid column to transfer_bids if it doesn't exist
-                if (!in_array('player_uuid', $bid_columns)) {
-                    $db->exec('ALTER TABLE transfer_bids ADD COLUMN player_uuid TEXT DEFAULT ""');
-                }
-
-                // Migrate transfer_bids data from player_name to player_uuid if needed
-                if (in_array('player_name', $bid_columns) && in_array('player_uuid', $bid_columns)) {
-                    $stmt = $db->prepare('SELECT id, player_name, player_data FROM transfer_bids WHERE player_uuid = "" AND player_name != ""');
-                    $result = $stmt->execute();
-
+                    // Check transfer_bids table
+                    $result = $db->query("PRAGMA table_info(transfer_bids)");
+                    $bid_columns = [];
                     while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
-                        $player_data = json_decode($row['player_data'], true);
-                        if ($player_data && isset($player_data['uuid'])) {
-                            $update_stmt = $db->prepare('UPDATE transfer_bids SET player_uuid = :uuid WHERE id = :id');
-                            $update_stmt->bindValue(':uuid', $player_data['uuid'], SQLITE3_TEXT);
-                            $update_stmt->bindValue(':id', $row['id'], SQLITE3_INTEGER);
-                            $update_stmt->execute();
+                        $bid_columns[] = $row['name'];
+                    }
+
+                    // Add player_uuid column to transfer_bids if it doesn't exist
+                    if (!in_array('player_uuid', $bid_columns)) {
+                        $db->exec('ALTER TABLE transfer_bids ADD COLUMN player_uuid TEXT DEFAULT ""');
+                    }
+
+                    // Migrate transfer_bids data from player_name to player_uuid if needed
+                    if (in_array('player_name', $bid_columns) && in_array('player_uuid', $bid_columns)) {
+                        $stmt = $db->prepare('SELECT id, player_name, player_data FROM transfer_bids WHERE player_uuid = "" AND player_name != ""');
+                        $result = $stmt->execute();
+
+                        while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+                            $player_data = json_decode($row['player_data'], true);
+                            if ($player_data && isset($player_data['uuid'])) {
+                                $update_stmt = $db->prepare('UPDATE transfer_bids SET player_uuid = :uuid WHERE id = :id');
+                                $update_stmt->bindValue(':uuid', $player_data['uuid'], SQLITE3_TEXT);
+                                $update_stmt->bindValue(':id', $row['id'], SQLITE3_INTEGER);
+                                $update_stmt->execute();
+                            }
                         }
                     }
+
+                    // Check scouting_reports table
+                    $result = $db->query("PRAGMA table_info(scouting_reports)");
+                    $scout_columns = [];
+                    while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+                        $scout_columns[] = $row['name'];
+                    }
+
+                    // Add player_uuid column to scouting_reports if it doesn't exist
+                    if (!in_array('player_uuid', $scout_columns)) {
+                        $db->exec('ALTER TABLE scouting_reports ADD COLUMN player_uuid TEXT DEFAULT ""');
+                    }
+
+                    // Migrate scouting_reports data from player_id to player_uuid if needed
+                    if (in_array('player_id', $scout_columns) && in_array('player_uuid', $scout_columns)) {
+                        // For scouting reports, player_id is already the UUID, so we can copy it directly
+                        $db->exec('UPDATE scouting_reports SET player_uuid = player_id WHERE player_uuid = ""');
+                    }
+                } catch (Exception $e) {
+                    // Migration failed, but continue - table might be new
                 }
 
-                // Check scouting_reports table
-                $result = $db->query("PRAGMA table_info(scouting_reports)");
-                $scout_columns = [];
-                while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
-                    $scout_columns[] = $row['name'];
-                }
-
-                // Add player_uuid column to scouting_reports if it doesn't exist
-                if (!in_array('player_uuid', $scout_columns)) {
-                    $db->exec('ALTER TABLE scouting_reports ADD COLUMN player_uuid TEXT DEFAULT ""');
-                }
-
-                // Migrate scouting_reports data from player_id to player_uuid if needed
-                if (in_array('player_id', $scout_columns) && in_array('player_uuid', $scout_columns)) {
-                    // For scouting reports, player_id is already the UUID, so we can copy it directly
-                    $db->exec('UPDATE scouting_reports SET player_uuid = player_id WHERE player_uuid = ""');
-                }
-            } catch (Exception $e) {
-                // Migration failed, but continue - table might be new
-            }
-
-            // Shop system tables
-            $db->exec('CREATE TABLE IF NOT EXISTS user_inventory (
+                // Shop system tables
+                $db->exec('CREATE TABLE IF NOT EXISTS user_inventory (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
+                user_uuid TEXT NOT NULL,
                 item_id INTEGER NOT NULL,
                 purchased_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 expires_at DATETIME NULL,
                 quantity INTEGER DEFAULT 1,
-                FOREIGN KEY (user_id) REFERENCES users (id),
+                FOREIGN KEY (user_uuid) REFERENCES users (uuid),
                 FOREIGN KEY (item_id) REFERENCES shop_items (id)
             )');
-            $db->exec('CREATE INDEX IF NOT EXISTS idx_user_inventory_user ON user_inventory (user_id)');
-            $db->exec('CREATE INDEX IF NOT EXISTS idx_user_inventory_expires ON user_inventory (expires_at)');
+                $db->exec('CREATE INDEX IF NOT EXISTS idx_user_inventory_user_uuid ON user_inventory (user_uuid)');
+                $db->exec('CREATE INDEX IF NOT EXISTS idx_user_inventory_expires ON user_inventory (expires_at)');
 
-            // Staff system table
-            $db->exec('CREATE TABLE IF NOT EXISTS club_staff (
+                // Staff system table
+                $db->exec('CREATE TABLE IF NOT EXISTS club_staff (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
+                user_uuid TEXT NOT NULL,
                 staff_type TEXT NOT NULL,
                 name TEXT NOT NULL,
                 level INTEGER DEFAULT 1,
@@ -999,11 +1031,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install'])) {
                 contract_weeks_remaining INTEGER DEFAULT 52,
                 hired_date DATETIME DEFAULT CURRENT_TIMESTAMP,
                 bonus_applied_this_week BOOLEAN DEFAULT 0,
-                FOREIGN KEY (user_id) REFERENCES users(id)
+                FOREIGN KEY (user_uuid) REFERENCES users(uuid)
             )');
 
-            // Shop system tables
-            $db->exec('CREATE TABLE IF NOT EXISTS shop_items (
+                // Shop system tables
+                $db->exec('CREATE TABLE IF NOT EXISTS shop_items (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL,
                 description TEXT NOT NULL,
@@ -1016,69 +1048,69 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install'])) {
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )');
 
-            // Seed shop items if table is empty
-            $stmt = $db->prepare('SELECT COUNT(*) as count FROM shop_items');
-            $result = $stmt->execute();
-            $count = $result->fetchArray(SQLITE3_ASSOC)['count'];
+                // Seed shop items if table is empty
+                $stmt = $db->prepare('SELECT COUNT(*) as count FROM shop_items');
+                $result = $stmt->execute();
+                $count = $result->fetchArray(SQLITE3_ASSOC)['count'];
 
-            if ($count == 0) {
-                $default_items = [
-                    // Training Items
-                    ['Training Camp', 'Boost all players rating by +2 for 7 days', 5000000, 'player_boost', '{"rating": 2}', 'training', 'dumbbell', 7],
-                    ['Fitness Coach', 'Reduce injury risk by 50% for 14 days', 3000000, 'injury_protection', '{"reduction": 0.5}', 'training', 'heart-pulse', 14],
-                    ['Skill Academy', 'Boost specific position players by +3 rating for 5 days', 4000000, 'position_boost', '{"rating": 3}', 'training', 'graduation-cap', 5],
+                if ($count == 0) {
+                    $default_items = [
+                        // Training Items
+                        ['Training Camp', 'Boost all players rating by +2 for 7 days', 5000000, 'player_boost', '{"rating": 2}', 'training', 'dumbbell', 7],
+                        ['Fitness Coach', 'Reduce injury risk by 50% for 14 days', 3000000, 'injury_protection', '{"reduction": 0.5}', 'training', 'heart-pulse', 14],
+                        ['Skill Academy', 'Boost specific position players by +3 rating for 5 days', 4000000, 'position_boost', '{"rating": 3}', 'training', 'graduation-cap', 5],
 
-                    // Financial Items
-                    ['Sponsorship Deal', 'Increase budget by €10M instantly', 8000000, 'budget_boost', '{"amount": 10000000}', 'financial', 'handshake', 0],
-                    ['Stadium Upgrade', 'Generate €500K daily for 30 days', 15000000, 'daily_income', '{"amount": 500000}', 'financial', 'building', 30],
-                    ['Merchandise Boost', 'Increase transfer sale prices by 20% for 14 days', 6000000, 'sale_boost', '{"multiplier": 1.2}', 'financial', 'shopping-bag', 14],
+                        // Financial Items
+                        ['Sponsorship Deal', 'Increase budget by €10M instantly', 8000000, 'budget_boost', '{"amount": 10000000}', 'financial', 'handshake', 0],
+                        ['Stadium Upgrade', 'Generate €500K daily for 30 days', 15000000, 'daily_income', '{"amount": 500000}', 'financial', 'building', 30],
+                        ['Merchandise Boost', 'Increase transfer sale prices by 20% for 14 days', 6000000, 'sale_boost', '{"multiplier": 1.2}', 'financial', 'shopping-bag', 14],
 
-                    // Special Items
-                    ['Lucky Charm', 'Increase chance of successful transfers by 25%', 2500000, 'transfer_luck', '{"boost": 0.25}', 'special', 'clover', 10],
-                    ['Scout Network', 'Reveal hidden player stats for 7 days', 3500000, 'player_insight', '{"enabled": true}', 'special', 'search', 7],
-                    ['Energy Drink', 'Boost team performance by 15% for next 3 matches', 1500000, 'match_boost', '{"performance": 0.15, "matches": 3}', 'special', 'zap', 0],
+                        // Special Items
+                        ['Lucky Charm', 'Increase chance of successful transfers by 25%', 2500000, 'transfer_luck', '{"boost": 0.25}', 'special', 'clover', 10],
+                        ['Scout Network', 'Reveal hidden player stats for 7 days', 3500000, 'player_insight', '{"enabled": true}', 'special', 'search', 7],
+                        ['Energy Drink', 'Boost team performance by 15% for next 3 matches', 1500000, 'match_boost', '{"performance": 0.15, "matches": 3}', 'special', 'zap', 0],
 
-                    // Premium Items
-                    ['Golden Boot', 'Permanently increase striker ratings by +1', 20000000, 'permanent_boost', '{"position": "ST", "rating": 1}', 'premium', 'award', 0],
-                    ['Tactical Genius', 'Unlock advanced formations for 30 days', 12000000, 'formation_unlock', '{"advanced": true}', 'premium', 'brain', 30],
-                    ['Club Legend', 'Attract better players in transfers for 21 days', 18000000, 'player_attraction', '{"quality_boost": 0.3}', 'premium', 'star', 21],
+                        // Premium Items
+                        ['Golden Boot', 'Permanently increase striker ratings by +1', 20000000, 'permanent_boost', '{"position": "ST", "rating": 1}', 'premium', 'award', 0],
+                        ['Tactical Genius', 'Unlock advanced formations for 30 days', 12000000, 'formation_unlock', '{"advanced": true}', 'premium', 'brain', 30],
+                        ['Club Legend', 'Attract better players in transfers for 21 days', 18000000, 'player_attraction', '{"quality_boost": 0.3}', 'premium', 'star', 21],
 
-                    // Squad Expansion Items
-                    ['Youth Academy', 'Permanently increase squad size by +2 players', 25000000, 'squad_expansion', '{"players": 2}', 'premium', 'users', 0],
-                    ['Training Facilities', 'Permanently increase squad size by +3 players', 35000000, 'squad_expansion', '{"players": 3}', 'premium', 'building-2', 0],
-                    ['Elite Academy', 'Permanently increase squad size by +5 players', 50000000, 'squad_expansion', '{"players": 5}', 'premium', 'graduation-cap', 0],
+                        // Squad Expansion Items
+                        ['Youth Academy', 'Permanently increase squad size by +2 players', 25000000, 'squad_expansion', '{"players": 2}', 'premium', 'users', 0],
+                        ['Training Facilities', 'Permanently increase squad size by +3 players', 35000000, 'squad_expansion', '{"players": 3}', 'premium', 'building-2', 0],
+                        ['Elite Academy', 'Permanently increase squad size by +5 players', 50000000, 'squad_expansion', '{"players": 5}', 'premium', 'graduation-cap', 0],
 
-                    // Stadium Items
-                    ['Stadium Name Change', 'Allows you to change your stadium name', 2000000, 'stadium_rename', '{"enabled": true}', 'special', 'edit-3', 0]
-                ];
+                        // Stadium Items
+                        ['Stadium Name Change', 'Allows you to change your stadium name', 2000000, 'stadium_rename', '{"enabled": true}', 'special', 'edit-3', 0]
+                    ];
 
-                $stmt = $db->prepare('INSERT INTO shop_items (name, description, price, effect_type, effect_value, category, icon, duration) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+                    $stmt = $db->prepare('INSERT INTO shop_items (name, description, price, effect_type, effect_value, category, icon, duration) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
 
-                foreach ($default_items as $item) {
-                    $stmt->bindValue(1, $item[0], SQLITE3_TEXT);
-                    $stmt->bindValue(2, $item[1], SQLITE3_TEXT);
-                    $stmt->bindValue(3, $item[2], SQLITE3_INTEGER);
-                    $stmt->bindValue(4, $item[3], SQLITE3_TEXT);
-                    $stmt->bindValue(5, $item[4], SQLITE3_TEXT);
-                    $stmt->bindValue(6, $item[5], SQLITE3_TEXT);
-                    $stmt->bindValue(7, $item[6], SQLITE3_TEXT);
-                    $stmt->bindValue(8, $item[7], SQLITE3_INTEGER);
-                    $stmt->execute();
+                    foreach ($default_items as $item) {
+                        $stmt->bindValue(1, $item[0], SQLITE3_TEXT);
+                        $stmt->bindValue(2, $item[1], SQLITE3_TEXT);
+                        $stmt->bindValue(3, $item[2], SQLITE3_INTEGER);
+                        $stmt->bindValue(4, $item[3], SQLITE3_TEXT);
+                        $stmt->bindValue(5, $item[4], SQLITE3_TEXT);
+                        $stmt->bindValue(6, $item[5], SQLITE3_TEXT);
+                        $stmt->bindValue(7, $item[6], SQLITE3_TEXT);
+                        $stmt->bindValue(8, $item[7], SQLITE3_INTEGER);
+                        $stmt->execute();
+                    }
+
+                    $success[] = 'Shop items seeded successfully (' . count($default_items) . ' items)';
+                } else {
+                    $success[] = 'Shop items already exist (' . $count . ' items)';
                 }
 
-                $success[] = 'Shop items seeded successfully (' . count($default_items) . ' items)';
-            } else {
-                $success[] = 'Shop items already exist (' . $count . ' items)';
-            }
+                // League tables
+                require_once 'includes/league_functions.php';
+                createLeagueTables($db);
 
-            // League tables
-            require_once 'includes/league_functions.php';
-            createLeagueTables($db);
+                // Additional system tables
 
-            // Additional system tables
-            
-            // User settings table
-            $db->exec('CREATE TABLE IF NOT EXISTS user_settings (
+                // User settings table
+                $db->exec('CREATE TABLE IF NOT EXISTS user_settings (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL,
                 setting_key TEXT NOT NULL,
@@ -1089,8 +1121,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install'])) {
                 UNIQUE(user_id, setting_key)
             )');
 
-            // Young players table
-            $db->exec('CREATE TABLE IF NOT EXISTS young_players (
+                // Young players table
+                $db->exec('CREATE TABLE IF NOT EXISTS young_players (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 club_id INTEGER NOT NULL,
                 name TEXT NOT NULL,
@@ -1106,10 +1138,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install'])) {
                 promoted_at DATETIME,
                 FOREIGN KEY (club_id) REFERENCES users (id) ON DELETE CASCADE
             )');
-            $db->exec('CREATE INDEX IF NOT EXISTS idx_young_players_club ON young_players (club_id)');
+                $db->exec('CREATE INDEX IF NOT EXISTS idx_young_players_club ON young_players (club_id)');
 
-            // Young player bids table
-            $db->exec('CREATE TABLE IF NOT EXISTS young_player_bids (
+                // Young player bids table
+                $db->exec('CREATE TABLE IF NOT EXISTS young_player_bids (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 young_player_id INTEGER NOT NULL,
                 bidder_club_id INTEGER NOT NULL,
@@ -1123,32 +1155,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install'])) {
                 FOREIGN KEY (owner_club_id) REFERENCES users (id) ON DELETE CASCADE
             )');
 
-            // Nation calls table
-            $db->exec('CREATE TABLE IF NOT EXISTS nation_calls (
+                // Nation calls table
+                $db->exec('CREATE TABLE IF NOT EXISTS nation_calls (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
+                user_uuid TEXT NOT NULL,
                 called_players TEXT NOT NULL,
                 total_reward INTEGER NOT NULL,
                 call_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users (id)
+                FOREIGN KEY (user_uuid) REFERENCES users (uuid)
             )');
 
-            // Stadiums table
-            $db->exec('CREATE TABLE IF NOT EXISTS stadiums (
+                // Stadiums table
+                $db->exec('CREATE TABLE IF NOT EXISTS stadiums (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
+                user_uuid TEXT NOT NULL,
                 name TEXT DEFAULT "Home Stadium",
                 capacity INTEGER DEFAULT 10000,
                 level INTEGER DEFAULT 1,
                 facilities TEXT DEFAULT "{}",
                 last_upgrade DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users (id)
+                FOREIGN KEY (user_uuid) REFERENCES users (uuid)
             )');
 
-            // User feedback table
-            $db->exec('CREATE TABLE IF NOT EXISTS user_feedback (
+                // User feedback table
+                $db->exec('CREATE TABLE IF NOT EXISTS user_feedback (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
+                user_uuid TEXT NOT NULL,
                 category TEXT NOT NULL,
                 subject TEXT NOT NULL,
                 message TEXT NOT NULL,
@@ -1158,13 +1190,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install'])) {
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 admin_response TEXT,
-                FOREIGN KEY (user_id) REFERENCES users(id)
+                FOREIGN KEY (user_uuid) REFERENCES users(uuid)
             )');
 
-            // News table
-            $db->exec('CREATE TABLE IF NOT EXISTS news (
+                // News table
+                $db->exec('CREATE TABLE IF NOT EXISTS news (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
+                user_uuid TEXT NOT NULL,
                 category TEXT NOT NULL,
                 priority TEXT NOT NULL DEFAULT "normal",
                 title TEXT NOT NULL,
@@ -1173,15 +1205,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install'])) {
                 actions TEXT,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 expires_at DATETIME NOT NULL,
-                FOREIGN KEY (user_id) REFERENCES users (id)
+                FOREIGN KEY (user_uuid) REFERENCES users (uuid)
             )');
-            $db->exec('CREATE INDEX IF NOT EXISTS idx_news_user ON news (user_id)');
-            $db->exec('CREATE INDEX IF NOT EXISTS idx_news_expires ON news (expires_at)');
+                $db->exec('CREATE INDEX IF NOT EXISTS idx_news_user_uuid ON news (user_uuid)');
+                $db->exec('CREATE INDEX IF NOT EXISTS idx_news_expires ON news (expires_at)');
 
-            // Player stats table
-            $db->exec('CREATE TABLE IF NOT EXISTS player_stats (
+                // Player stats table
+                $db->exec('CREATE TABLE IF NOT EXISTS player_stats (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
+                user_uuid TEXT NOT NULL,
                 player_id TEXT NOT NULL,
                 player_name TEXT NOT NULL,
                 position TEXT NOT NULL,
@@ -1196,14 +1228,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install'])) {
                 saves INTEGER DEFAULT 0,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users (id),
-                UNIQUE(user_id, player_id)
+                FOREIGN KEY (user_uuid) REFERENCES users (uuid),
+                UNIQUE(user_uuid, player_id)
             )');
 
-            // Support tickets table
-            $db->exec('CREATE TABLE IF NOT EXISTS support_tickets (
+                // Support tickets table
+                $db->exec('CREATE TABLE IF NOT EXISTS support_tickets (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
+                user_uuid TEXT NOT NULL,
                 ticket_number TEXT UNIQUE NOT NULL,
                 priority TEXT DEFAULT "medium",
                 category TEXT NOT NULL,
@@ -1215,41 +1247,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install'])) {
                 last_response_at DATETIME,
                 admin_response TEXT,
                 resolution_notes TEXT,
-                FOREIGN KEY (user_id) REFERENCES users(id)
+                FOREIGN KEY (user_uuid) REFERENCES users(uuid)
             )');
 
-            $success[] = 'All database tables created successfully';
+                $success[] = 'All database tables created successfully';
 
-            // Create admin user if requested
-            if (!empty($_POST['admin_name']) && !empty($_POST['admin_email']) && !empty($_POST['admin_password'])) {
-                $stmt = $db->prepare('INSERT INTO users (name, email, password) VALUES (:name, :email, :password)');
-                $stmt->bindValue(':name', $_POST['admin_name'], SQLITE3_TEXT);
-                $stmt->bindValue(':email', $_POST['admin_email'], SQLITE3_TEXT);
-                $stmt->bindValue(':password', password_hash($_POST['admin_password'], PASSWORD_DEFAULT), SQLITE3_TEXT);
+                // Create admin user if requested
+                if (!empty($_POST['admin_name']) && !empty($_POST['admin_email']) && !empty($_POST['admin_password'])) {
+                    $stmt = $db->prepare('INSERT INTO users (name, email, password) VALUES (:name, :email, :password)');
+                    $stmt->bindValue(':name', $_POST['admin_name'], SQLITE3_TEXT);
+                    $stmt->bindValue(':email', $_POST['admin_email'], SQLITE3_TEXT);
+                    $stmt->bindValue(':password', password_hash($_POST['admin_password'], PASSWORD_DEFAULT), SQLITE3_TEXT);
 
-                if ($stmt->execute()) {
-                    $success[] = 'Admin user created successfully';
-                } else {
-                    $errors[] = 'Failed to create admin user: ' . $db->lastErrorMsg();
+                    if ($stmt->execute()) {
+                        $success[] = 'Admin user created successfully';
+                    } else {
+                        $errors[] = 'Failed to create admin user: ' . $db->lastErrorMsg();
+                    }
                 }
+
+                // Set proper permissions
+                chmod($db_file, 0666);
+
+                // Update status
+                $db_exists = true;
+                $table_exists = true;
+                $has_users = !empty($_POST['admin_name']);
+                $is_ready = $db_exists && $table_exists && $has_users;
+            } else {
+                $errors[] = 'Failed to create database table: ' . $db->lastErrorMsg();
             }
 
-            // Set proper permissions
-            chmod($db_file, 0666);
-
-            // Update status
-            $db_exists = true;
-            $table_exists = true;
-            $has_users = !empty($_POST['admin_name']);
-            $is_ready = $db_exists && $table_exists && $has_users;
-
-        } else {
-            $errors[] = 'Failed to create database table: ' . $db->lastErrorMsg();
+            $db->close();
         }
-
-        $db->close();
-        }
-
     } catch (Exception $e) {
         $errors[] = 'Installation failed: ' . $e->getMessage();
     }
@@ -1328,7 +1358,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['repair'])) {
                 $errors[] = 'Database repair check failed: ' . $e->getMessage();
             }
         }
-
     } catch (Exception $e) {
         $errors[] = 'Database repair failed: ' . $e->getMessage();
     }
@@ -1474,10 +1503,6 @@ startContent();
                             <div class="font-mono text-sm"><?php echo htmlspecialchars(DB_DRIVER); ?></div>
                         </div>
                         <div class="bg-gray-50 p-3 rounded border">
-                            <div class="text-xs text-gray-500">DB_FILE</div>
-                            <div class="font-mono text-sm"><?php echo htmlspecialchars(DB_FILE); ?></div>
-                        </div>
-                        <div class="bg-gray-50 p-3 rounded border">
                             <div class="text-xs text-gray-500">MYSQL_HOST</div>
                             <div class="font-mono text-sm"><?php echo htmlspecialchars(MYSQL_HOST); ?></div>
                         </div>
@@ -1500,23 +1525,7 @@ startContent();
                     <div class="mt-6">
                         <h3 class="text-lg font-semibold mb-2">Database Inputs</h3>
                         <div class="text-sm text-gray-600 mb-3">Display-only inputs for review.</div>
-                        <div class="mb-3 flex gap-4">
-                            <label class="inline-flex items-center gap-2">
-                                <input type="radio" name="ui_driver" value="sqlite" <?php echo DB_DRIVER === 'sqlite' ? 'checked' : ''; ?>>
-                                <span>SQLite</span>
-                            </label>
-                            <label class="inline-flex items-center gap-2">
-                                <input type="radio" name="ui_driver" value="mysql" <?php echo DB_DRIVER === 'mysql' ? 'checked' : ''; ?>>
-                                <span>MySQL</span>
-                            </label>
-                        </div>
-                        <div id="uiSqlite" class="grid grid-cols-1 gap-3 <?php echo DB_DRIVER === 'mysql' ? 'hidden' : ''; ?>">
-                            <div>
-                                <label class="block text-sm font-medium mb-1">DB_FILE</label>
-                                <input type="text" class="w-full px-3 py-2 border rounded-lg" value="<?php echo htmlspecialchars(DB_FILE); ?>" readonly>
-                            </div>
-                        </div>
-                        <div id="uiMysql" class="grid grid-cols-1 md:grid-cols-2 gap-3 <?php echo DB_DRIVER === 'sqlite' ? 'hidden' : ''; ?>">
+                        <div id="uiMysql" class="grid grid-cols-1 md:grid-cols-2 gap-3">
                             <div>
                                 <label class="block text-sm font-medium mb-1">MYSQL_HOST</label>
                                 <input type="text" class="w-full px-3 py-2 border rounded-lg" value="<?php echo htmlspecialchars(MYSQL_HOST); ?>" readonly>
@@ -1761,7 +1770,7 @@ startContent();
         lucide.createIcons();
 
         // SweetAlert for reset system button
-        document.getElementById('resetSystemBtn')?.addEventListener('click', function () {
+        document.getElementById('resetSystemBtn')?.addEventListener('click', function() {
             Swal.fire({
                 icon: 'warning',
                 title: 'Reset System?',
@@ -1784,7 +1793,7 @@ startContent();
         });
 
         // SweetAlert for reset database button
-        document.getElementById('resetDatabaseBtn')?.addEventListener('click', function () {
+        document.getElementById('resetDatabaseBtn')?.addEventListener('click', function() {
             Swal.fire({
                 icon: 'warning',
                 title: 'Reset Database?',
@@ -1807,7 +1816,7 @@ startContent();
         });
 
         // SweetAlert for seed all data button (combined)
-        document.getElementById('seedAllBtn')?.addEventListener('click', function () {
+        document.getElementById('seedAllBtn')?.addEventListener('click', function() {
             Swal.fire({
                 icon: 'question',
                 title: 'Seed Complete Demo Data?',
@@ -1896,7 +1905,7 @@ startContent();
         });
 
         // SweetAlert for seed clubs button
-        document.getElementById('seedClubsBtn')?.addEventListener('click', function () {
+        document.getElementById('seedClubsBtn')?.addEventListener('click', function() {
             Swal.fire({
                 icon: 'question',
                 title: 'Seed Demo Clubs?',
@@ -1949,7 +1958,7 @@ startContent();
         });
 
         // SweetAlert for seed shop items button
-        document.getElementById('seedShopBtn')?.addEventListener('click', function () {
+        document.getElementById('seedShopBtn')?.addEventListener('click', function() {
             Swal.fire({
                 icon: 'question',
                 title: 'Seed Shop Items?',
@@ -2009,11 +2018,11 @@ startContent();
         });
 
         // Step 1 Setup with popup logs
-        (function () {
+        (function() {
             const form = document.getElementById('connTestForm');
             const btn = document.getElementById('setupBtnStep1');
             if (!form || !btn) return;
-            form.addEventListener('submit', function (e) {
+            form.addEventListener('submit', function(e) {
                 e.preventDefault();
                 const name = (document.getElementById('ui_admin_name')?.value || '').trim();
                 const email = (document.getElementById('ui_admin_email')?.value || '').trim();
@@ -2045,23 +2054,25 @@ startContent();
                     allowOutsideClick: false
                 });
                 fetch('api/setup_database_api.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: new URLSearchParams({ 
-                        mode: seedMode,
-                        admin_name: name,
-                        admin_email: email,
-                        admin_password: password
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded'
+                        },
+                        body: new URLSearchParams({
+                            mode: seedMode,
+                            admin_name: name,
+                            admin_email: email,
+                            admin_password: password
+                        })
                     })
-                })
                     .then(r => r.json())
                     .then(data => {
                         const entries = Array.isArray(data.logs) ? data.logs : [];
                         const html = ['<div class=\"text-left\"><ul class=\"text-sm space-y-1\">'];
                         entries.forEach(entry => {
-                            const cls = entry.type === 'error' ? 'text-red-600'
-                                : entry.type === 'detail' ? 'text-gray-600'
-                                : 'text-green-700';
+                            const cls = entry.type === 'error' ? 'text-red-600' :
+                                entry.type === 'detail' ? 'text-gray-600' :
+                                'text-green-700';
                             html.push('<li class=\"' + cls + '\">' + (entry.message || '') + '</li>');
                         });
                         html.push('</ul></div>');
@@ -2087,25 +2098,7 @@ startContent();
                     });
             });
         })();
-        (function () {
-            const radios = document.querySelectorAll('input[name="ui_driver"]');
-            const uiSqlite = document.getElementById('uiSqlite');
-            const uiMysql = document.getElementById('uiMysql');
-            const sync = () => {
-                let val = 'sqlite';
-                radios.forEach(r => { if (r.checked) val = r.value; });
-                if (val === 'sqlite') {
-                    uiSqlite.classList.remove('hidden');
-                    uiMysql.classList.add('hidden');
-                } else {
-                    uiMysql.classList.remove('hidden');
-                    uiSqlite.classList.add('hidden');
-                }
-            };
-            radios.forEach(r => r.addEventListener('change', sync));
-            sync();
-        })();
-        (function () {
+        (function() {
             const n = document.getElementById('ui_admin_name');
             const e = document.getElementById('ui_admin_email');
             const p = document.getElementById('ui_admin_password');
@@ -2139,11 +2132,11 @@ startContent();
         })();
 
         // Setup Database (Install + Seed) with logs
-        (function () {
+        (function() {
             const btn = document.getElementById('runSetupBtn');
             const logsEl = document.getElementById('setupLogs');
             if (!btn || !logsEl) return;
-            btn.addEventListener('click', function () {
+            btn.addEventListener('click', function() {
                 btn.disabled = true;
                 logsEl.innerHTML = '';
                 const li = (msg, cls) => {
@@ -2154,18 +2147,22 @@ startContent();
                 };
                 li('Starting setup...', 'text-gray-700');
                 const seedMode = localStorage.getItem('seed_mode') || 'all';
-                fetch('api/setup_database_api.php', { 
+                fetch('api/setup_database_api.php', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                        body: new URLSearchParams({ mode: seedMode })
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded'
+                        },
+                        body: new URLSearchParams({
+                            mode: seedMode
+                        })
                     })
                     .then(r => r.json())
                     .then(data => {
                         const entries = Array.isArray(data.logs) ? data.logs : [];
                         entries.forEach(entry => {
-                            const cls = entry.type === 'error' ? 'text-red-600'
-                                : entry.type === 'detail' ? 'text-gray-600'
-                                : 'text-green-700';
+                            const cls = entry.type === 'error' ? 'text-red-600' :
+                                entry.type === 'detail' ? 'text-gray-600' :
+                                'text-green-700';
                             li(entry.message, cls);
                         });
                         if (data.ok) {
@@ -2203,7 +2200,7 @@ startContent();
                     });
             });
         })();
-        (function () {
+        (function() {
             const radios = document.querySelectorAll('input[name="ui_seed_mode"]');
             const saved = localStorage.getItem('seed_mode') || 'all';
             let found = false;
@@ -2219,7 +2216,9 @@ startContent();
             }
             const sync = () => {
                 let v = 'all';
-                radios.forEach(r => { if (r.checked) v = r.value; });
+                radios.forEach(r => {
+                    if (r.checked) v = r.value;
+                });
                 localStorage.setItem('seed_mode', v);
             };
             radios.forEach(r => r.addEventListener('change', sync));
