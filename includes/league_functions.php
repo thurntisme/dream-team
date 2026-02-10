@@ -447,8 +447,14 @@ function getUserMatches($db, $user_id, $season)
 
     // Get user's team ID
     $stmt = $db->prepare('SELECT id FROM league_teams WHERE season = :season AND user_uuid = :user_uuid');
-    $stmt->bindValue(':season', $season, SQLITE3_TEXT);
-    $stmt->bindValue(':user_uuid', $user_uuid, SQLITE3_TEXT);
+    if ($stmt === false) {
+        $stmt = $db->prepare('SELECT id FROM league_teams WHERE season = :season AND user_id = :user_id');
+        $stmt->bindValue(':season', $season, SQLITE3_TEXT);
+        $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+    } else {
+        $stmt->bindValue(':season', $season, SQLITE3_TEXT);
+        $stmt->bindValue(':user_uuid', $user_uuid, SQLITE3_TEXT);
+    }
     $result = $stmt->execute();
     $user_team = $result->fetchArray(SQLITE3_ASSOC);
 
@@ -517,8 +523,14 @@ function getUpcomingMatches($db, $user_id, $season)
 
     // Get user's team ID
     $stmt = $db->prepare('SELECT id FROM league_teams WHERE season = :season AND user_uuid = :user_uuid');
-    $stmt->bindValue(':season', $season, SQLITE3_TEXT);
-    $stmt->bindValue(':user_uuid', $user_uuid, SQLITE3_TEXT);
+    if ($stmt === false) {
+        $stmt = $db->prepare('SELECT id FROM league_teams WHERE season = :season AND user_id = :user_id');
+        $stmt->bindValue(':season', $season, SQLITE3_TEXT);
+        $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+    } else {
+        $stmt->bindValue(':season', $season, SQLITE3_TEXT);
+        $stmt->bindValue(':user_uuid', $user_uuid, SQLITE3_TEXT);
+    }
     $result = $stmt->execute();
     $user_team = $result->fetchArray(SQLITE3_ASSOC);
 
@@ -534,17 +546,22 @@ function getUpcomingMatches($db, $user_id, $season)
         lm.*,
         ht.name as home_team,
         at.name as away_team,
-        ht.user_uuid as home_team_id,
-        at.user_uuid as away_team_id
+        hu.id as home_team_id,
+        au.id as away_team_id
     FROM league_matches lm
     JOIN league_teams ht ON lm.home_team_id = ht.id
     JOIN league_teams at ON lm.away_team_id = at.id
+    LEFT JOIN users hu ON hu.uuid = ht.user_uuid
+    LEFT JOIN users au ON au.uuid = at.user_uuid
     WHERE lm.season = :season 
     AND lm.gameweek >= :current_gameweek
     AND lm.gameweek <= :max_gameweek
     ORDER BY lm.gameweek ASC, lm.match_date ASC';
 
     $stmt = $db->prepare($sql);
+    if ($stmt === false) {
+        return [];
+    }
     $stmt->bindValue(':season', $season, SQLITE3_TEXT);
     $stmt->bindValue(':current_gameweek', $current_gameweek, SQLITE3_INTEGER);
     $stmt->bindValue(':max_gameweek', $current_gameweek + 5, SQLITE3_INTEGER); // Show next 5 gameweeks

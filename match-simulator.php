@@ -105,21 +105,32 @@ function handleLeagueMatch($match_id)
             $_SESSION['gameweek_results'] = $gameweek_results;
 
             // Check if our match was simulated successfully
-        $stmt_check = $db->prepare("SELECT status FROM league_matches WHERE id = :id");
+            $stmt_check = $db->prepare("SELECT status FROM league_matches WHERE id = :id");
             $stmt_check->bindValue(':id', $match_id, SQLITE3_INTEGER);
             $res_check = $stmt_check->execute();
-        if ($res_check === false) {
-            $_SESSION['error'] = 'Failed to verify match status.';
-            header('Location: league.php');
-            exit;
-        }
-        $row_check = $res_check->fetchArray(SQLITE3_ASSOC);
+            if ($res_check === false) {
+                $_SESSION['error'] = 'Failed to verify match status.';
+                header('Location: league.php');
+                exit;
+            }
+            $row_check = $res_check->fetchArray(SQLITE3_ASSOC);
 
             if ($row_check && $row_check['status'] === 'completed') {
                 // Redirect to match result page
                 header('Location: match-simulator.php?match_result=' . $match_id);
                 exit;
             } else {
+                // Fallback: directly simulate just this match
+                simulateMatch($db, (int)$match_id, (int)$user_id_resolved);
+                // Re-check status
+                $stmt_check2 = $db->prepare("SELECT status FROM league_matches WHERE id = :id");
+                $stmt_check2->bindValue(':id', $match_id, SQLITE3_INTEGER);
+                $res_check2 = $stmt_check2->execute();
+                $row_check2 = $res_check2 ? $res_check2->fetchArray(SQLITE3_ASSOC) : null;
+                if ($row_check2 && $row_check2['status'] === 'completed') {
+                    header('Location: match-simulator.php?match_result=' . $match_id);
+                    exit;
+                }
                 $_SESSION['error'] = 'Failed to simulate match.';
             }
         }
@@ -496,7 +507,7 @@ function displayLeagueMatch($match, $user_data, $opponent_data, $is_home, $oppon
                         <i data-lucide="arrow-left" class="w-4 h-4"></i>
                         Back to League
                     </a>
-                    <form method="POST" class="inline" onsubmit="return checkPlayerFitness(<?php echo htmlspecialchars(json_encode($user_data)); ?>)">
+                    <form id="simulateForm" method="POST" class="inline" onsubmit="return checkPlayerFitness(<?php echo htmlspecialchars(json_encode($user_data)); ?>)">
                         <button type="submit" name="simulate_match"
                             class="bg-green-600 text-white px-8 py-3 rounded-lg hover:bg-green-700 font-bold transition-colors flex items-center gap-2 shadow-md">
                             <i data-lucide="play" class="w-5 h-5"></i>
@@ -550,7 +561,11 @@ function displayLeagueMatch($match, $user_data, $opponent_data, $is_home, $oppon
         }
 
         // Check player fitness before match
+        let fitnessOverride = false;
         function checkPlayerFitness(teamData) {
+            if (fitnessOverride) {
+                return true;
+            }
             const team = JSON.parse(teamData.team || '[]');
             const substitutes = JSON.parse(teamData.substitutes || '[]');
 
@@ -574,6 +589,7 @@ function displayLeagueMatch($match, $user_data, $opponent_data, $is_home, $oppon
         function showFitnessWarning(players) {
             const modal = document.getElementById('fitnessWarningModal');
             const playersList = document.getElementById('lowFitnessPlayersList');
+            const proceedBtn = document.getElementById('proceedAnywayBtn');
 
             // Build player list HTML
             let html = '';
@@ -595,6 +611,15 @@ function displayLeagueMatch($match, $user_data, $opponent_data, $is_home, $oppon
             playersList.innerHTML = html;
             modal.classList.remove('hidden');
             document.body.style.overflow = 'hidden'; // Disable body scroll
+            if (proceedBtn) {
+                proceedBtn.onclick = function() {
+                    fitnessOverride = true;
+                    modal.classList.add('hidden');
+                    document.body.style.overflow = '';
+                    const form = document.getElementById('simulateForm');
+                    if (form) form.submit();
+                };
+            }
         }
 
         function closeFitnessWarning() {
@@ -674,6 +699,9 @@ function displayLeagueMatch($match, $user_data, $opponent_data, $is_home, $oppon
                 </a>
                 <button id="closeFitnessWarningModalBtn" class="bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700 font-medium transition-colors">
                     Close
+                </button>
+                <button id="proceedAnywayBtn" class="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 font-medium transition-colors">
+                    Proceed Anyway
                 </button>
             </div>
         </div>
