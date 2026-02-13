@@ -129,7 +129,7 @@ try {
         }
 
         $match_id = (int) $_POST['match_id'];
-        $gameweek_results = simulateGameweek($db, $match_id, $user_id);
+        $gameweek_results = simulateGameweek($db, $match_id, $user['uuid']);
 
         // Store results in session for display
         $_SESSION['gameweek_results'] = $gameweek_results;
@@ -156,10 +156,10 @@ try {
     $standings = getLeagueStandings($db, $current_season_id);
 
     // Get user's match history
-    $user_matches = getUserMatches($db, $user_id, $current_season_id);
+    $user_matches = getUserMatches($db, $user['uuid'], $current_season_id);
 
     // Get upcoming matches for calendar
-    $upcoming_matches = getUpcomingMatches($db, $user_id, $current_season_id);
+    $upcoming_matches = getUpcomingMatches($db, $user['uuid'], $current_season_id);
 
     // Get current gameweek
     $current_gameweek = getCurrentGameweek($db, $current_season_id);
@@ -168,7 +168,7 @@ try {
     $current_validation = validateClubForLeague($user);
 
     // Check for season end and relegation
-    $season_status = checkSeasonEnd($db, $user_id);
+    $season_status = checkSeasonEnd($db, $user['uuid']);
 
     // Get league statistics
     $top_scorers = getTopScorers($db, $current_season_id, 3);
@@ -242,8 +242,8 @@ try {
     $canProcessNationCall = false;
     if ($matchesPlayed > 0 && $matchesPlayed % 8 === 0) {
         // Check if nation call was already processed for this milestone
-        $stmt = $db->prepare('SELECT COUNT(*) as count FROM nation_calls WHERE user_id = :user_id AND call_date > datetime("now", "-1 day")');
-        $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+        $stmt = $db->prepare('SELECT COUNT(*) as count FROM nation_calls WHERE user_uuid = :user_uuid AND call_date > datetime(\"now\", \"-1 day\")');
+        $stmt->bindValue(':user_uuid', $user['uuid'], SQLITE3_TEXT);
         $result = $stmt->execute();
         $recentCalls = $result->fetchArray(SQLITE3_ASSOC);
 
@@ -571,7 +571,7 @@ startContent();
     // Find user's next match
     $next_match = null;
     foreach ($upcoming_matches as $match) {
-        if (($match['home_team_id'] == $user_id || $match['away_team_id'] == $user_id) && $match['status'] == 'scheduled') {
+        if ((($match['home_user_uuid'] ?? null) === $user['uuid'] || ($match['away_user_uuid'] ?? null) === $user['uuid']) && $match['status'] == 'scheduled') {
             $next_match = $match;
             break;
         }
@@ -607,17 +607,17 @@ startContent();
                 <div class="flex items-center justify-between">
                     <!-- Home Team -->
                     <div class="flex-1 text-center">
-                        <div class="w-16 h-16 mx-auto mb-3 <?php echo $next_match['home_team_id'] == $user_id ? 'bg-blue-600' : 'bg-gray-500'; ?> rounded-full flex items-center justify-center shadow-md">
-                            <i data-lucide="<?php echo $next_match['home_team_id'] == $user_id ? 'user' : 'users'; ?>" class="w-6 h-6 text-white"></i>
+                        <div class="w-16 h-16 mx-auto mb-3 <?php echo ($next_match['home_user_uuid'] ?? null) === $user['uuid'] ? 'bg-blue-600' : 'bg-gray-500'; ?> rounded-full flex items-center justify-center shadow-md">
+                            <i data-lucide="<?php echo ($next_match['home_user_uuid'] ?? null) === $user['uuid'] ? 'user' : 'users'; ?>" class="w-6 h-6 text-white"></i>
                         </div>
-                        <h4 class="font-bold text-lg <?php echo $next_match['home_team_id'] == $user_id ? 'text-blue-600' : 'text-gray-700'; ?> mb-1">
+                        <h4 class="font-bold text-lg <?php echo ($next_match['home_user_uuid'] ?? null) === $user['uuid'] ? 'text-blue-600' : 'text-gray-700'; ?> mb-1">
                             <?php echo htmlspecialchars($next_match['home_team']); ?>
                         </h4>
                         <div class="flex items-center justify-center gap-1 text-sm">
                             <i data-lucide="home" class="w-4 h-4 text-green-600"></i>
                             <span class="text-green-600 font-medium">HOME</span>
                         </div>
-                        <?php if ($next_match['home_team_id'] == $user_id): ?>
+                        <?php if (($next_match['home_user_uuid'] ?? null) === $user['uuid']): ?>
                             <div class="mt-2 bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-bold inline-block">
                                 YOUR TEAM
                             </div>
@@ -633,17 +633,17 @@ startContent();
 
                     <!-- Away Team -->
                     <div class="flex-1 text-center">
-                        <div class="w-16 h-16 mx-auto mb-3 <?php echo $next_match['away_team_id'] == $user_id ? 'bg-blue-600' : 'bg-gray-500'; ?> rounded-full flex items-center justify-center shadow-md">
-                            <i data-lucide="<?php echo $next_match['away_team_id'] == $user_id ? 'user' : 'users'; ?>" class="w-6 h-6 text-white"></i>
+                        <div class="w-16 h-16 mx-auto mb-3 <?php echo ($next_match['away_user_uuid'] ?? null) === $user['uuid'] ? 'bg-blue-600' : 'bg-gray-500'; ?> rounded-full flex items-center justify-center shadow-md">
+                            <i data-lucide="<?php echo ($next_match['away_user_uuid'] ?? null) === $user['uuid'] ? 'user' : 'users'; ?>" class="w-6 h-6 text-white"></i>
                         </div>
-                        <h4 class="font-bold text-lg <?php echo $next_match['away_team_id'] == $user_id ? 'text-blue-600' : 'text-gray-700'; ?> mb-1">
+                        <h4 class="font-bold text-lg <?php echo ($next_match['away_user_uuid'] ?? null) === $user['uuid'] ? 'text-blue-600' : 'text-gray-700'; ?> mb-1">
                             <?php echo htmlspecialchars($next_match['away_team']); ?>
                         </h4>
                         <div class="flex items-center justify-center gap-1 text-sm">
                             <i data-lucide="plane" class="w-4 h-4 text-orange-600"></i>
                             <span class="text-orange-600 font-medium">AWAY</span>
                         </div>
-                        <?php if ($next_match['away_team_id'] == $user_id): ?>
+                        <?php if (($next_match['away_user_uuid'] ?? null) === $user['uuid']): ?>
                             <div class="mt-2 bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-bold inline-block">
                                 YOUR TEAM
                             </div>
@@ -656,7 +656,7 @@ startContent();
                     <div class="flex items-center gap-4 text-sm text-gray-600">
                         <div class="flex items-center gap-1">
                             <i data-lucide="map-pin" class="w-4 h-4"></i>
-                            <span><?php echo $next_match['home_team_id'] == $user_id ? 'Your Stadium' : htmlspecialchars($next_match['home_team']) . ' Stadium'; ?></span>
+                            <span><?php echo (($next_match['home_user_uuid'] ?? null) === $user['uuid']) ? 'Your Stadium' : htmlspecialchars($next_match['home_team']) . ' Stadium'; ?></span>
                         </div>
                         <div class="flex items-center gap-1">
                             <i data-lucide="trophy" class="w-4 h-4"></i>
@@ -867,7 +867,7 @@ startContent();
                     <?php if (!empty($top_scorers)): ?>
                         <div class="space-y-3">
                             <?php foreach ($top_scorers as $index => $scorer): ?>
-                                <?php $isUserPlayer = ($scorer['user_id'] == $user_id); ?>
+                                <?php $isUserPlayer = (($scorer['user_uuid'] ?? null) === $user['uuid']); ?>
                                 <div
                                     class="flex items-center justify-between p-3 rounded-lg <?php echo $isUserPlayer ? 'bg-blue-50 border-2 border-blue-200' : 'bg-gray-50'; ?>">
                                     <div class="flex items-center gap-3">
@@ -923,7 +923,7 @@ startContent();
                     <?php if (!empty($top_assists)): ?>
                         <div class="space-y-3">
                             <?php foreach ($top_assists as $index => $assister): ?>
-                                <?php $isUserPlayer = ($assister['user_id'] == $user_id); ?>
+                                <?php $isUserPlayer = (($assister['user_uuid'] ?? null) === $user['uuid']); ?>
                                 <div
                                     class="flex items-center justify-between p-3 rounded-lg <?php echo $isUserPlayer ? 'bg-blue-50 border-2 border-blue-200' : 'bg-gray-50'; ?>">
                                     <div class="flex items-center gap-3">
@@ -979,7 +979,7 @@ startContent();
                     <?php if (!empty($top_rated)): ?>
                         <div class="space-y-3">
                             <?php foreach ($top_rated as $index => $player): ?>
-                                <?php $isUserPlayer = ($player['user_id'] == $user_id); ?>
+                                <?php $isUserPlayer = (($player['user_uuid'] ?? null) === $user['uuid']); ?>
                                 <div
                                     class="flex items-center justify-between p-3 rounded-lg <?php echo $isUserPlayer ? 'bg-blue-50 border-2 border-blue-200' : 'bg-gray-50'; ?>">
                                     <div class="flex items-center gap-3">
@@ -1039,7 +1039,7 @@ startContent();
                         <?php if (!empty($most_yellow_cards)): ?>
                             <div class="space-y-3">
                                 <?php foreach ($most_yellow_cards as $index => $player): ?>
-                                    <?php $isUserPlayer = ($player['user_id'] == $user_id); ?>
+                                    <?php $isUserPlayer = (($player['user_uuid'] ?? null) === $user['uuid']); ?>
                                     <div
                                         class="flex items-center justify-between p-2 rounded <?php echo $isUserPlayer ? 'bg-blue-50 border-2 border-blue-200' : 'bg-gray-50'; ?>">
                                         <div class="flex items-center gap-2">
@@ -1088,7 +1088,7 @@ startContent();
                         <?php if (!empty($most_red_cards)): ?>
                             <div class="space-y-3">
                                 <?php foreach ($most_red_cards as $index => $player): ?>
-                                    <?php $isUserPlayer = ($player['user_id'] == $user_id); ?>
+                                    <?php $isUserPlayer = (($player['user_uuid'] ?? null) === $user['uuid']); ?>
                                     <div
                                         class="flex items-center justify-between p-2 rounded <?php echo $isUserPlayer ? 'bg-blue-50 border-2 border-blue-200' : 'bg-gray-50'; ?>">
                                         <div class="flex items-center gap-2">
@@ -1137,7 +1137,7 @@ startContent();
                     <?php if (!empty($top_goalkeepers)): ?>
                         <div class="space-y-3">
                             <?php foreach ($top_goalkeepers as $index => $gk): ?>
-                                <?php $isUserPlayer = ($gk['user_id'] == $user_id); ?>
+                                <?php $isUserPlayer = (($gk['user_uuid'] ?? null) === $user['uuid']); ?>
                                 <div
                                     class="flex items-center justify-between p-3 rounded-lg <?php echo $isUserPlayer ? 'bg-blue-50 border-2 border-blue-200' : 'bg-gray-50'; ?>">
                                     <div class="flex items-center gap-3">
@@ -1230,18 +1230,18 @@ startContent();
                                 </div>
                                 <div class="flex items-center gap-2">
                                     <span
-                                        class="font-medium <?php echo $match['home_team_id'] == $user_id ? 'text-blue-600' : ''; ?>">
+                                        class="font-medium <?php echo (($match['home_user_uuid'] ?? null) === $user['uuid']) ? 'text-blue-600' : ''; ?>">
                                         <?php echo htmlspecialchars($match['home_team']); ?>
                                     </span>
                                     <span class="text-gray-400">vs</span>
                                     <span
-                                        class="font-medium <?php echo $match['away_team_id'] == $user_id ? 'text-blue-600' : ''; ?>">
+                                        class="font-medium <?php echo (($match['away_user_uuid'] ?? null) === $user['uuid']) ? 'text-blue-600' : ''; ?>">
                                         <?php echo htmlspecialchars($match['away_team']); ?>
                                     </span>
                                 </div>
                             </div>
 
-                            <?php if ($match['status'] === 'scheduled' && ($match['home_team_id'] == $user_id || $match['away_team_id'] == $user_id)): ?>
+                            <?php if ($match['status'] === 'scheduled' && ((($match['home_user_uuid'] ?? null) === $user['uuid']) || (($match['away_user_uuid'] ?? null) === $user['uuid']))): ?>
                                 <?php if ($match['gameweek'] == $current_gameweek): ?>
                                     <?php if ($current_validation['is_valid']): ?>
                                         <button type="button" data-uuid="<?php echo htmlspecialchars($match['uuid'] ?? ''); ?>"

@@ -307,20 +307,14 @@ if (!function_exists('generateNextOpponentNews')) {
     function generateNextOpponentNews($db, $user_uuid)
     {
         $news = [];
-        // Resolve numeric id for functions that expect user_id
-        $stmtId = $db->prepare('SELECT id FROM users WHERE uuid = :uuid');
-        $stmtId->bindValue(':uuid', $user_uuid, SQLITE3_TEXT);
-        $resId = $stmtId->execute();
-        $rowId = $resId ? $resId->fetchArray(SQLITE3_ASSOC) : null;
-        $user_id = $rowId['id'] ?? null;
         $season = getCurrentSeasonIdentifier($db);
-        $upcoming = getUpcomingMatches($db, $user_id, $season);
+        $upcoming = getUpcomingMatches($db, $user_uuid, $season);
         if (empty($upcoming)) {
             return $news;
         }
         $nextMatch = null;
         foreach ($upcoming as $m) {
-            if ($m['home_team_id'] == $user_id || $m['away_team_id'] == $user_id) {
+            if (($m['home_user_uuid'] ?? null) === $user_uuid || ($m['away_user_uuid'] ?? null) === $user_uuid) {
                 $nextMatch = $m;
                 break;
             }
@@ -328,7 +322,7 @@ if (!function_exists('generateNextOpponentNews')) {
         if (!$nextMatch) {
             return $news;
         }
-        $isHome = $nextMatch['home_team_id'] == $user_id;
+        $isHome = (($nextMatch['home_user_uuid'] ?? null) === $user_uuid);
         $opponentName = $isHome ? $nextMatch['away_team'] : $nextMatch['home_team'];
         $venue = $isHome ? 'Home' : 'Away';
         $gw = (int)($nextMatch['gameweek'] ?? 0);
@@ -345,7 +339,7 @@ if (!function_exists('generateNextOpponentNews')) {
         }
         $userTeamPos = null;
         foreach ($standings as $idx => $team) {
-            if (($team['user_id'] ?? null) == $user_id) {
+            if (($team['user_uuid'] ?? null) === $user_uuid) {
                 $userTeamPos = $idx + 1;
                 break;
             }
@@ -394,20 +388,14 @@ if (!function_exists('generateOpponentPlayersNews')) {
     function generateOpponentPlayersNews($db, $user_uuid)
     {
         $news = [];
-        // Resolve numeric id for functions that expect user_id
-        $stmtId = $db->prepare('SELECT id FROM users WHERE uuid = :uuid');
-        $stmtId->bindValue(':uuid', $user_uuid, SQLITE3_TEXT);
-        $resId = $stmtId->execute();
-        $rowId = $resId ? $resId->fetchArray(SQLITE3_ASSOC) : null;
-        $user_id = $rowId['id'] ?? null;
         $season = getCurrentSeasonIdentifier($db);
-        $upcoming = getUpcomingMatches($db, $user_id, $season);
+        $upcoming = getUpcomingMatches($db, $user_uuid, $season);
         if (empty($upcoming)) {
             return $news;
         }
         $nextMatch = null;
         foreach ($upcoming as $m) {
-            if ($m['home_team_id'] == $user_id || $m['away_team_id'] == $user_id) {
+            if (($m['home_user_uuid'] ?? null) === $user_uuid || ($m['away_user_uuid'] ?? null) === $user_uuid) {
                 $nextMatch = $m;
                 break;
             }
@@ -415,7 +403,7 @@ if (!function_exists('generateOpponentPlayersNews')) {
         if (!$nextMatch) {
             return $news;
         }
-        $isHome = $nextMatch['home_team_id'] == $user_id;
+        $isHome = (($nextMatch['home_user_uuid'] ?? null) === $user_uuid);
         $opponentName = $isHome ? $nextMatch['away_team'] : $nextMatch['home_team'];
         $players = getDefaultPlayers();
         $candidates = array_filter($players, function ($p) {

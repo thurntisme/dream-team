@@ -149,7 +149,8 @@ function createLeagueTables($db)
                 $db->exec('CREATE INDEX IF NOT EXISTS idx_league_matches_home ON league_matches (home_team_id)');
                 $db->exec('CREATE INDEX IF NOT EXISTS idx_league_matches_away ON league_matches (away_team_id)');
             }
-        } catch (Throwable $e) {}
+        } catch (Throwable $e) {
+        }
         // Ensure uuid column
         try {
             $stmtCol = $db->prepare('SELECT COUNT(*) as c FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = :t AND column_name = :c');
@@ -162,7 +163,8 @@ function createLeagueTables($db)
                     $db->exec('ALTER TABLE league_matches ADD COLUMN uuid CHAR(16) NULL');
                 }
             }
-        } catch (Throwable $e) {}
+        } catch (Throwable $e) {
+        }
         // Ensure uuid index
         try {
             $stmtIdx = $db->prepare('SELECT COUNT(*) as c FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = :t AND index_name = :i');
@@ -178,7 +180,8 @@ function createLeagueTables($db)
                 // SQLite fallback
                 $db->exec('CREATE INDEX IF NOT EXISTS idx_league_matches_uuid ON league_matches (uuid)');
             }
-        } catch (Throwable $e) {}
+        } catch (Throwable $e) {
+        }
         // Backfill missing uuids
         try {
             $stmt = $db->prepare('SELECT id, uuid FROM league_matches WHERE uuid IS NULL OR uuid = ""');
@@ -194,7 +197,8 @@ function createLeagueTables($db)
                     }
                 }
             }
-        } catch (Throwable $e) {}
+        } catch (Throwable $e) {
+        }
     }
 }
 
@@ -219,7 +223,7 @@ function createLeagueTeams($db, $user_uuid, $season)
     $stmt->bindValue(':user_uuid', $user_uuid, SQLITE3_TEXT);
     $stmt->bindValue(':name', $club['club_name'] ?? 'Your Club', SQLITE3_TEXT);
     $stmt->execute();
-    
+
     // Get the user's team ID and assign roster
     $user_team_id = $db->lastInsertRowid();
     assignTeamRoster($db, $user_team_id, $season, $user_id);
@@ -230,7 +234,7 @@ function createLeagueTeams($db, $user_uuid, $season)
         $stmt->bindValue(':season', $season, SQLITE3_TEXT);
         $stmt->bindValue(':name', $club_name, SQLITE3_TEXT);
         $stmt->execute();
-        
+
         // Get the team ID and assign roster
         $team_id = $db->lastInsertRowid();
         assignTeamRoster($db, $team_id, $season, null);
@@ -242,7 +246,7 @@ function createLeagueTeams($db, $user_uuid, $season)
         $stmt->bindValue(':season', $season, SQLITE3_TEXT);
         $stmt->bindValue(':name', $club_name, SQLITE3_TEXT);
         $stmt->execute();
-        
+
         // Get the team ID and assign roster
         $team_id = $db->lastInsertRowid();
         assignTeamRoster($db, $team_id, $season, null);
@@ -256,15 +260,15 @@ function assignTeamRoster($db, $league_team_id, $season, $user_id = null)
 {
     // Get all available players from the system
     $all_players = getDefaultPlayers();
-    
+
     if (empty($all_players)) {
         return false;
     }
-    
+
     // Shuffle and select 23 random players
     shuffle($all_players);
     $selected_players = array_slice($all_players, 0, 23);
-    
+
     // Organize players by their main position
     $players_by_position = [
         'GK' => [],
@@ -272,10 +276,10 @@ function assignTeamRoster($db, $league_team_id, $season, $user_id = null)
         'MID' => [],
         'FWD' => []
     ];
-    
+
     foreach ($selected_players as $player) {
         $pos = $player['position'] ?? 'MID';
-        
+
         // Map specific positions to general categories
         if (in_array($pos, ['LB', 'RB', 'CB'])) {
             $players_by_position['DEF'][] = $player;
@@ -287,11 +291,11 @@ function assignTeamRoster($db, $league_team_id, $season, $user_id = null)
             $players_by_position['MID'][] = $player;
         }
     }
-    
+
     // Build roster respecting player positions
     // Formation: 1 GK, 4 DEF, 4 MID, 2 FWD (starting 11) + 12 substitutes
     $roster = [];
-    
+
     // Add starting XI (11 players)
     // 1 GK
     for ($i = 0; $i < 1 && !empty($players_by_position['GK']); $i++) {
@@ -301,7 +305,7 @@ function assignTeamRoster($db, $league_team_id, $season, $user_id = null)
         $player['form'] = rand(5, 10);
         $roster[] = $player;
     }
-    
+
     // 4 DEF
     for ($i = 0; $i < 4 && !empty($players_by_position['DEF']); $i++) {
         $player = array_pop($players_by_position['DEF']);
@@ -310,7 +314,7 @@ function assignTeamRoster($db, $league_team_id, $season, $user_id = null)
         $player['form'] = rand(5, 10);
         $roster[] = $player;
     }
-    
+
     // 4 MID
     for ($i = 0; $i < 4 && !empty($players_by_position['MID']); $i++) {
         $player = array_pop($players_by_position['MID']);
@@ -319,7 +323,7 @@ function assignTeamRoster($db, $league_team_id, $season, $user_id = null)
         $player['form'] = rand(5, 10);
         $roster[] = $player;
     }
-    
+
     // 2 FWD
     for ($i = 0; $i < 2 && !empty($players_by_position['FWD']); $i++) {
         $player = array_pop($players_by_position['FWD']);
@@ -328,13 +332,13 @@ function assignTeamRoster($db, $league_team_id, $season, $user_id = null)
         $player['form'] = rand(5, 10);
         $roster[] = $player;
     }
-    
+
     // Add substitutes (12 players) - fill remaining slots
     $remaining_players = [];
     foreach ($players_by_position as $position_players) {
         $remaining_players = array_merge($remaining_players, $position_players);
     }
-    
+
     for ($i = 0; $i < 12 && !empty($remaining_players); $i++) {
         $player = array_pop($remaining_players);
         $player['rating'] = rand(70, 95);
@@ -342,14 +346,14 @@ function assignTeamRoster($db, $league_team_id, $season, $user_id = null)
         $player['form'] = rand(5, 10);
         $roster[] = $player;
     }
-    
+
     // Store roster in database
     $stmt = $db->prepare('INSERT INTO league_team_rosters (league_team_id, season, player_data) VALUES (:league_team_id, :season, :player_data)');
     $stmt->bindValue(':league_team_id', $league_team_id, SQLITE3_INTEGER);
     $stmt->bindValue(':season', $season, SQLITE3_TEXT);
     $stmt->bindValue(':player_data', json_encode($roster), SQLITE3_TEXT);
     $result = $stmt->execute();
-    
+
     return $result ? true : false;
 }
 
@@ -453,7 +457,8 @@ function generateFixtures($db, $season)
                 }
             }
         }
-    } catch (Throwable $e) {}
+    } catch (Throwable $e) {
+    }
 }
 
 function getCurrentSeason($db)
@@ -465,13 +470,13 @@ function getNextSeasonIdentifier($db)
 {
     // Get the current year
     $current_year = date('Y');
-    
+
     // Get the highest season number for this year
     $stmt = $db->prepare('SELECT MAX(season) as max_season FROM league_teams WHERE season LIKE :year_pattern');
     $stmt->bindValue(':year_pattern', $current_year . '/%', SQLITE3_TEXT);
     $result = $stmt->execute();
     $row = $result->fetchArray(SQLITE3_ASSOC);
-    
+
     if ($row['max_season']) {
         // Extract the season number and increment
         $parts = explode('/', $row['max_season']);
@@ -480,7 +485,7 @@ function getNextSeasonIdentifier($db)
         // First season of the year
         $season_num = 1;
     }
-    
+
     // Format: 2026/01, 2026/02, etc.
     return sprintf('%d/%02d', $current_year, $season_num);
 }
@@ -489,12 +494,12 @@ function getCurrentSeasonIdentifier($db)
 {
     // Get the most recent season identifier
     $current_year = date('Y');
-    
+
     $stmt = $db->prepare('SELECT DISTINCT season FROM league_teams WHERE season LIKE :year_pattern ORDER BY season DESC LIMIT 1');
     $stmt->bindValue(':year_pattern', $current_year . '/%', SQLITE3_TEXT);
     $result = $stmt->execute();
     $row = $result->fetchArray(SQLITE3_ASSOC);
-    
+
     return $row['season'] ?? getNextSeasonIdentifier($db);
 }
 
@@ -530,69 +535,70 @@ function getLeagueStandings($db, $season)
     return $standings;
 }
 
-function getUserMatches($db, $user_id, $season)
+function getUserMatches($db, $user_uuid, $season)
 {
-    // Resolve user_uuid from numeric id
-    $stmt = $db->prepare('SELECT uuid FROM users WHERE id = :id');
-    $stmt->bindValue(':id', $user_id, SQLITE3_INTEGER);
-    $resUuid = $stmt->execute();
-    $rowUuid = $resUuid ? $resUuid->fetchArray(SQLITE3_ASSOC) : null;
-    $user_uuid = $rowUuid['uuid'] ?? null;
-
     // Get user's team ID
     $stmt = $db->prepare('SELECT id FROM league_teams WHERE season = :season AND user_uuid = :user_uuid');
-    if ($stmt === false) {
-        $stmt = $db->prepare('SELECT id FROM league_teams WHERE season = :season AND user_id = :user_id');
-        $stmt->bindValue(':season', $season, SQLITE3_TEXT);
-        $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
-    } else {
-        $stmt->bindValue(':season', $season, SQLITE3_TEXT);
-        $stmt->bindValue(':user_uuid', $user_uuid, SQLITE3_TEXT);
-    }
+    $stmt->bindValue(':season', $season, SQLITE3_TEXT);
+    $stmt->bindValue(':user_uuid', $user_uuid, SQLITE3_TEXT);
     $result = $stmt->execute();
     $user_team = $result->fetchArray(SQLITE3_ASSOC);
 
-    if (!$user_team)
-        return [];
+    if (!$user_team) {
+        $stmt = $db->prepare('SELECT id FROM league_teams WHERE user_uuid = :user_uuid ORDER BY season DESC LIMIT 1');
+        $stmt->bindValue(':user_uuid', $user_uuid, SQLITE3_TEXT);
+        $resLatest = $stmt->execute();
+        $user_team = $resLatest ? $resLatest->fetchArray(SQLITE3_ASSOC) : null;
+        if (!$user_team)
+            return [];
+    }
 
     $team_id = $user_team['id'];
 
-    $sql = 'SELECT 
-        lm.*,
-        CASE 
-            WHEN lm.home_team_id = :team_id THEN at.name 
-            ELSE ht.name 
-        END as opponent,
-        CASE 
-            WHEN lm.home_team_id = :team_id THEN \'H\' 
-            ELSE \'A\' 
-        END as venue,
-        CASE 
-            WHEN lm.home_team_id = :team_id THEN lm.home_score 
-            ELSE lm.away_score 
-        END as user_score,
-        CASE 
-            WHEN lm.home_team_id = :team_id THEN lm.away_score 
-            ELSE lm.home_score 
-        END as opponent_score,
-        CASE 
-            WHEN lm.status != \'completed\' THEN NULL
-            WHEN (lm.home_team_id = :team_id AND lm.home_score > lm.away_score) OR 
-                 (lm.away_team_id = :team_id AND lm.away_score > lm.home_score) THEN \'W\'
-            WHEN lm.home_score = lm.away_score THEN \'D\'
-            ELSE \'L\'
-        END as result
-    FROM league_matches lm
-    JOIN league_teams ht ON lm.home_team_id = ht.id
-    JOIN league_teams at ON lm.away_team_id = at.id
-    WHERE lm.season = :season 
-    AND (lm.home_team_id = :team_id OR lm.away_team_id = :team_id)
-    AND lm.status = \'completed\'
-    ORDER BY lm.gameweek DESC, lm.match_date DESC';
+    $sql = "
+        SELECT 
+            lm.*,
+            CASE 
+                WHEN lm.home_team_id = :team_id1 THEN at.name 
+                ELSE ht.name 
+            END as opponent,
+            CASE 
+                WHEN lm.home_team_id = :team_id2 THEN 'H' 
+                ELSE 'A' 
+            END as venue,
+            CASE 
+                WHEN lm.home_team_id = :team_id3 THEN lm.home_score 
+                ELSE lm.away_score 
+            END as user_score,
+            CASE 
+                WHEN lm.home_team_id = :team_id4 THEN lm.away_score 
+                ELSE lm.home_score 
+            END as opponent_score,
+            CASE 
+                WHEN (lm.home_team_id = :team_id5 AND lm.home_score > lm.away_score) OR 
+                    (lm.away_team_id = :team_id6 AND lm.away_score > lm.home_score) THEN 'W'
+                WHEN lm.home_score = lm.away_score THEN 'D'
+                ELSE 'L'
+            END as result
+        FROM league_matches lm
+        JOIN league_teams ht ON lm.home_team_id = ht.id
+        JOIN league_teams at ON lm.away_team_id = at.id
+        WHERE lm.season = :season
+        AND (lm.home_team_id = :team_id7 OR lm.away_team_id = :team_id8)
+        AND lm.status = 'completed'
+        ORDER BY lm.gameweek DESC, lm.match_date DESC
+    ";
 
     $stmt = $db->prepare($sql);
     $stmt->bindValue(':season', $season, SQLITE3_TEXT);
-    $stmt->bindValue(':team_id', $team_id, SQLITE3_INTEGER);
+    $stmt->bindValue(':team_id1', $team_id, SQLITE3_INTEGER);
+    $stmt->bindValue(':team_id2', $team_id, SQLITE3_INTEGER);
+    $stmt->bindValue(':team_id3', $team_id, SQLITE3_INTEGER);
+    $stmt->bindValue(':team_id4', $team_id, SQLITE3_INTEGER);
+    $stmt->bindValue(':team_id5', $team_id, SQLITE3_INTEGER);
+    $stmt->bindValue(':team_id6', $team_id, SQLITE3_INTEGER);
+    $stmt->bindValue(':team_id7', $team_id, SQLITE3_INTEGER);
+    $stmt->bindValue(':team_id8', $team_id, SQLITE3_INTEGER);
     $result = $stmt->execute();
 
     $matches = [];
@@ -606,25 +612,12 @@ function getUserMatches($db, $user_id, $season)
     return $matches;
 }
 
-function getUpcomingMatches($db, $user_id, $season)
+function getUpcomingMatches($db, $user_uuid, $season)
 {
-    // Resolve user_uuid from numeric id
-    $stmt = $db->prepare('SELECT uuid FROM users WHERE id = :id');
-    $stmt->bindValue(':id', $user_id, SQLITE3_INTEGER);
-    $resUuid = $stmt->execute();
-    $rowUuid = $resUuid ? $resUuid->fetchArray(SQLITE3_ASSOC) : null;
-    $user_uuid = $rowUuid['uuid'] ?? null;
-
     // Get user's team ID
     $stmt = $db->prepare('SELECT id FROM league_teams WHERE season = :season AND user_uuid = :user_uuid');
-    if ($stmt === false) {
-        $stmt = $db->prepare('SELECT id FROM league_teams WHERE season = :season AND user_id = :user_id');
-        $stmt->bindValue(':season', $season, SQLITE3_TEXT);
-        $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
-    } else {
-        $stmt->bindValue(':season', $season, SQLITE3_TEXT);
-        $stmt->bindValue(':user_uuid', $user_uuid, SQLITE3_TEXT);
-    }
+    $stmt->bindValue(':season', $season, SQLITE3_TEXT);
+    $stmt->bindValue(':user_uuid', $user_uuid, SQLITE3_TEXT);
     $result = $stmt->execute();
     $user_team = $result->fetchArray(SQLITE3_ASSOC);
 
@@ -641,7 +634,9 @@ function getUpcomingMatches($db, $user_id, $season)
         ht.name as home_team,
         at.name as away_team,
         hu.id as home_team_id,
-        au.id as away_team_id
+        au.id as away_team_id,
+        hu.uuid as home_user_uuid,
+        au.uuid as away_user_uuid
     FROM league_matches lm
     JOIN league_teams ht ON lm.home_team_id = ht.id
     JOIN league_teams at ON lm.away_team_id = at.id
@@ -731,7 +726,7 @@ function simulateMatch($db, $match_id, $user_id)
     // Apply rewards to user if they participated in this match
     $user_team_id = null;
     $is_user_home = false;
-    
+
     // Check if user is home team
     $stmt = $db->prepare('SELECT user_uuid FROM league_teams WHERE id = :id AND user_uuid = :user_uuid');
     if ($stmt === false) return false;
@@ -758,7 +753,7 @@ function simulateMatch($db, $match_id, $user_id)
     if ($user_team_id) {
         $user_score = $is_user_home ? $home_score : $away_score;
         $opponent_score = $is_user_home ? $away_score : $home_score;
-        
+
         // Determine match result for user
         $match_result = 'draw';
         if ($user_score > $opponent_score) {
@@ -769,7 +764,7 @@ function simulateMatch($db, $match_id, $user_id)
 
         // Calculate additional rewards (beyond what updateTeamStats already applied)
         $rewards = calculateLeagueMatchRewards($match_result, $user_score, $opponent_score, $is_user_home);
-        
+
         // Apply budget rewards (user_club)
         // Resolve user_uuid from user_id
         $stmtUU = $db->prepare('SELECT uuid FROM users WHERE id = :id');
@@ -792,6 +787,17 @@ function simulateMatch($db, $match_id, $user_id)
 
 function simulateMatchByUUID($db, $match_uuid, $user_id)
 {
+    // Allow passing either numeric user_id or user_uuid
+    $user_uuid = null;
+    if (is_numeric($user_id)) {
+        $stmtU = $db->prepare('SELECT uuid FROM users WHERE id = :id');
+        $stmtU->bindValue(':id', (int)$user_id, SQLITE3_INTEGER);
+        $resU = $stmtU->execute();
+        $rowU = $resU ? $resU->fetchArray(SQLITE3_ASSOC) : null;
+        $user_uuid = $rowU['uuid'] ?? null;
+    } else {
+        $user_uuid = $user_id;
+    }
     $stmt = $db->prepare('SELECT id FROM league_matches WHERE uuid = :uuid');
     if ($stmt === false) return false;
     $stmt->bindValue(':uuid', $match_uuid, SQLITE3_TEXT);
@@ -839,7 +845,7 @@ function getFanRevenueBreakdown($db, $user_uuid, $is_home, $total_revenue, $prev
         $stadium_multipliers = [1 => 1.0, 2 => 1.2, 3 => 1.5, 4 => 1.8, 5 => 2.2];
         $stadium_multiplier = $stadium_multipliers[$stadium_level] ?? 1.0;
         $stadium_facility_revenue = 50000 * $stadium_multiplier;
-        
+
         $breakdown[] = ['description' => "Stadium Facilities (Level {$stadium_level})", 'amount' => $stadium_facility_revenue];
     }
 
@@ -952,12 +958,17 @@ function simulateGameweek($db, $match_id, $user_id)
     $gameweek = $match_info['gameweek'];
     $season = $match_info['season'];
 
-    // Resolve user_uuid from numeric id and get user's league team
-    $stmt = $db->prepare('SELECT uuid FROM users WHERE id = :id');
-    $stmt->bindValue(':id', $user_id, SQLITE3_INTEGER);
-    $resUuid = $stmt->execute();
-    $rowUuid = $resUuid ? $resUuid->fetchArray(SQLITE3_ASSOC) : null;
-    $user_uuid = $rowUuid['uuid'] ?? null;
+    // Resolve user_uuid from either numeric id or direct uuid and get user's league team
+    $user_uuid = null;
+    if (is_numeric($user_id)) {
+        $stmt = $db->prepare('SELECT uuid FROM users WHERE id = :id');
+        $stmt->bindValue(':id', (int)$user_id, SQLITE3_INTEGER);
+        $resUuid = $stmt->execute();
+        $rowUuid = $resUuid ? $resUuid->fetchArray(SQLITE3_ASSOC) : null;
+        $user_uuid = $rowUuid['uuid'] ?? null;
+    } else {
+        $user_uuid = $user_id;
+    }
 
     // Get user's team ID for tracking their match
     $stmt = $db->prepare('SELECT id FROM league_teams WHERE season = :season AND user_uuid = :user_uuid');
@@ -1097,12 +1108,17 @@ function simulateGameweek($db, $match_id, $user_id)
 
 function simulateCurrentGameweek($db, $user_id, $season, $gameweek)
 {
-    // Resolve user_uuid from numeric id and get user's league team
-    $stmt = $db->prepare('SELECT uuid FROM users WHERE id = :id');
-    $stmt->bindValue(':id', $user_id, SQLITE3_INTEGER);
-    $resUuid = $stmt->execute();
-    $rowUuid = $resUuid ? $resUuid->fetchArray(SQLITE3_ASSOC) : null;
-    $user_uuid = $rowUuid['uuid'] ?? null;
+    // Resolve user_uuid from either numeric id or direct uuid and get user's league team
+    $user_uuid = null;
+    if (is_numeric($user_id)) {
+        $stmt = $db->prepare('SELECT uuid FROM users WHERE id = :id');
+        $stmt->bindValue(':id', (int)$user_id, SQLITE3_INTEGER);
+        $resUuid = $stmt->execute();
+        $rowUuid = $resUuid ? $resUuid->fetchArray(SQLITE3_ASSOC) : null;
+        $user_uuid = $rowUuid['uuid'] ?? null;
+    } else {
+        $user_uuid = $user_id;
+    }
 
     // Get user's team ID for tracking their match
     $stmt = $db->prepare('SELECT id FROM league_teams WHERE season = :season AND user_uuid = :user_uuid');
@@ -1624,7 +1640,6 @@ function selectPostMatchPlayer($db, $user_id, $selected_index)
             'message' => 'Player added to your squad successfully!',
             'player' => $selected_player
         ];
-
     } catch (Exception $e) {
         error_log("Post-match player selection error: " . $e->getMessage());
         return ['success' => false, 'message' => 'Failed to add player to squad'];
@@ -1640,10 +1655,10 @@ function getTopScorers($db, $season, $limit = 3)
     $sql = 'SELECT 
         ps.player_name,
         ps.goals,
-        ps.user_id,
+        ps.user_uuid as user_uuid,
         u.club_name
     FROM player_stats ps
-    JOIN users u ON ps.user_id = u.id
+    JOIN users u ON ps.user_uuid = u.uuid
     JOIN league_teams lt ON u.uuid = lt.user_uuid AND lt.season = :season
     WHERE ps.goals > 0
     ORDER BY ps.goals DESC, ps.assists DESC, ps.player_name ASC
@@ -1676,10 +1691,10 @@ function getTopAssists($db, $season, $limit = 3)
     $sql = 'SELECT 
         ps.player_name,
         ps.assists,
-        ps.user_id,
+        ps.user_uuid as user_uuid,
         u.club_name
     FROM player_stats ps
-    JOIN users u ON ps.user_id = u.id
+    JOIN users u ON ps.user_uuid = u.uuid
     JOIN league_teams lt ON u.uuid = lt.user_uuid AND lt.season = :season
     WHERE ps.assists > 0
     ORDER BY ps.assists DESC, ps.goals DESC, ps.player_name ASC
@@ -1713,11 +1728,11 @@ function getTopRatedPlayers($db, $season, $limit = 3)
         ps.player_name,
         ps.position,
         ps.matches_played,
-        ps.user_id,
+        ps.user_uuid as user_uuid,
         CASE WHEN ps.matches_played > 0 THEN ROUND(CAST(ps.total_rating AS REAL) / ps.matches_played, 1) ELSE 0 END as avg_rating,
         u.club_name
     FROM player_stats ps
-    JOIN users u ON ps.user_id = u.id
+    JOIN users u ON ps.user_uuid = u.uuid
     JOIN league_teams lt ON u.uuid = lt.user_uuid AND lt.season = :season
     WHERE ps.matches_played >= 3
     ORDER BY avg_rating DESC, ps.matches_played DESC, ps.player_name ASC
@@ -1750,10 +1765,10 @@ function getMostYellowCards($db, $season, $limit = 3)
     $sql = 'SELECT 
         ps.player_name,
         ps.yellow_cards,
-        ps.user_id,
+        ps.user_uuid as user_uuid,
         u.club_name
     FROM player_stats ps
-    JOIN users u ON ps.user_id = u.id
+    JOIN users u ON ps.user_uuid = u.uuid
     JOIN league_teams lt ON u.uuid = lt.user_uuid AND lt.season = :season
     WHERE ps.yellow_cards > 0
     ORDER BY ps.yellow_cards DESC, ps.red_cards DESC, ps.player_name ASC
@@ -1786,10 +1801,10 @@ function getMostRedCards($db, $season, $limit = 3)
     $sql = 'SELECT 
         ps.player_name,
         ps.red_cards,
-        ps.user_id,
+        ps.user_uuid as user_uuid,
         u.club_name
     FROM player_stats ps
-    JOIN users u ON ps.user_id = u.id
+    JOIN users u ON ps.user_uuid = u.uuid
     JOIN league_teams lt ON u.uuid = lt.user_uuid AND lt.season = :season
     WHERE ps.red_cards > 0
     ORDER BY ps.red_cards DESC, ps.yellow_cards DESC, ps.player_name ASC
@@ -1824,10 +1839,10 @@ function getTopGoalkeepers($db, $season, $limit = 3)
         ps.clean_sheets,
         ps.saves,
         ps.matches_played,
-        ps.user_id,
+        ps.user_uuid as user_uuid,
         u.club_name
     FROM player_stats ps
-    JOIN users u ON ps.user_id = u.id
+    JOIN users u ON ps.user_uuid = u.uuid
     JOIN league_teams lt ON u.uuid = lt.user_uuid AND lt.season = :season
     WHERE ps.position = \'GK\' AND ps.matches_played > 0
     ORDER BY ps.clean_sheets DESC, ps.saves DESC, ps.matches_played DESC, ps.player_name ASC
@@ -2072,7 +2087,6 @@ function processRelegationPromotion($db, $season)
             'next_season' => $next_season,
             'season_summary' => $season_summary
         ];
-
     } catch (Exception $e) {
         $db->exec('ROLLBACK');
         error_log("Relegation processing error: " . $e->getMessage());
@@ -2142,7 +2156,6 @@ function calculateSeasonEndRewards($position, $division = 1)
 
         $rewards[] = ['type' => 'prize', 'description' => 'Elite League Participation', 'amount' => $base_prize];
         $rewards[] = ['type' => 'prize', 'description' => "Final Position: {$position}th Place", 'amount' => $position_prize];
-
     } else { // Championship
         // Championship rewards (smaller amounts)
         $base_prize = 10000000; // €10M base
@@ -2260,7 +2273,8 @@ function applySeasonEndRewards($db, $user_id, $rewards)
 /**
  * Calculate rewards for league match results
  */
-function calculateLeagueMatchRewards($match_result, $user_score, $opponent_score, $is_home) {
+function calculateLeagueMatchRewards($match_result, $user_score, $opponent_score, $is_home)
+{
     $rewards = [];
     $total_budget = 0;
 
