@@ -70,11 +70,6 @@ function renderNavigation($isLoggedIn, $showAuth, $currentPage, $clubName, $user
                                     <i data-lucide="building" class="w-4 h-4"></i>
                                     <span>Stadium</span>
                                 </a>
-                                <a href="academy.php"
-                                    class="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                                    <i data-lucide="graduation-cap" class="w-4 h-4"></i>
-                                    <span>Academy</span>
-                                </a>
                             </div>
                         </div>
 

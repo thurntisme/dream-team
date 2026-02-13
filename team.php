@@ -48,7 +48,6 @@ startContent();
 <div class="container mx-auto p-4">
     <?php include 'components/league-validation-errors.php'; ?>
     <?php include 'components/club-overview-section.php'; ?>
-    <?php include 'components/training-center.php'; ?>
 
     <div class="grid grid-cols-1 lg:grid-cols-7 gap-4">
         <div class="lg:col-span-2 gap-4">

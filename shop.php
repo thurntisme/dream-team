@@ -111,10 +111,6 @@ startContent();
                     class="px-4 py-2 rounded-md text-sm font-medium transition-colors bg-white text-blue-600 shadow-sm">
                     All Items
                 </button>
-                <button id="trainingTab"
-                    class="px-4 py-2 rounded-md text-sm font-medium transition-colors text-gray-600 hover:text-gray-900">
-                    Training
-                </button>
                 <button id="financialTab"
                     class="px-4 py-2 rounded-md text-sm font-medium transition-colors text-gray-600 hover:text-gray-900">
                     Financial
@@ -195,7 +191,15 @@ startContent();
 
 <script>
     // Shop items data from PHP
-    const shopItems = <?php echo json_encode($shop_items); ?>;
+    const shopItems = <?php
+        $filtered = [];
+        foreach ($shop_items as $item) {
+            if (($item['category'] ?? '') !== 'training') {
+                $filtered[] = $item;
+            }
+        }
+        echo json_encode($filtered);
+    ?>;
     const userBudget = <?php echo $user_data['budget']; ?>;
     let currentMaxPlayers = <?php echo $user_data['max_players']; ?>;
 
