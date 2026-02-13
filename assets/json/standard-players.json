@@ -1312,5 +1312,95 @@
       "strength": 70,
       "aggression": 72
     }
+  },
+  {
+    "name": "Gilberto Silva",
+    "position": "CDM",
+    "rating": 78,
+    "value": 16000000,
+    "age": 35,
+    "uuid": "std-gilberto-silva-001",
+    "nationality": "Brazil",
+    "avatar": null,
+    "playablePositions": ["CDM", "CM"],
+    "attributes": {
+      "passing": 76,
+      "tackling": 83,
+      "positioning": 84,
+      "strength": 82,
+      "vision": 75
+    }
+  },
+  {
+    "name": "Javier Zanetti",
+    "position": "RB",
+    "rating": 82,
+    "value": 22000000,
+    "age": 35,
+    "uuid": "std-javier-zanetti-001",
+    "nationality": "Argentina",
+    "avatar": null,
+    "playablePositions": ["RB", "LB", "CDM", "CM"],
+    "attributes": {
+      "pace": 77,
+      "crossing": 79,
+      "defending": 85,
+      "stamina": 90,
+      "dribbling": 78
+    }
+  },
+  {
+    "name": "Pavel Nedvěd",
+    "position": "CM",
+    "rating": 84,
+    "value": 24000000,
+    "age": 33,
+    "uuid": "std-pavel-nedved-001",
+    "nationality": "Czech Republic",
+    "avatar": null,
+    "playablePositions": ["CM", "LM", "CAM"],
+    "attributes": {
+      "passing": 86,
+      "dribbling": 83,
+      "vision": 85,
+      "stamina": 88,
+      "shooting": 82
+    }
+  },
+  {
+    "name": "Franz Beckenbauer",
+    "position": "CB",
+    "rating": 86,
+    "value": 28000000,
+    "age": 32,
+    "uuid": "std-franz-beckenbauer-001",
+    "nationality": "Germany",
+    "avatar": null,
+    "playablePositions": ["CB", "CDM"],
+    "attributes": {
+      "defending": 88,
+      "heading": 84,
+      "strength": 82,
+      "marking": 87,
+      "tackling": 86
+    }
+  },
+  {
+    "name": "Bobby Moore",
+    "position": "CB",
+    "rating": 85,
+    "value": 26000000,
+    "age": 30,
+    "uuid": "std-bobby-moore-001",
+    "nationality": "England",
+    "avatar": null,
+    "playablePositions": ["CB", "CDM"],
+    "attributes": {
+      "defending": 87,
+      "heading": 82,
+      "strength": 80,
+      "marking": 88,
+      "tackling": 85
+    }
   }
 ]

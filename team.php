@@ -938,8 +938,13 @@ startContent();
         }).then((result) => {
             if (result.isConfirmed) {
                 substitutePlayers[idx] = null;
+                if (selectedSubIdx === idx) {
+                    selectedSubIdx = null;
+                }
                 renderSubstitutes();
+                renderField();
                 updateClubStats();
+                updateSelectedPlayerInfo();
 
                 // Auto-save the changes to database
                 $.post('api/save_team_api.php', {
@@ -961,7 +966,9 @@ startContent();
                         // If save failed, revert the change
                         substitutePlayers[idx] = player;
                         renderSubstitutes();
+                        renderField();
                         updateClubStats();
+                        updateSelectedPlayerInfo();
 
                         Swal.fire({
                             icon: 'error',
@@ -974,7 +981,9 @@ startContent();
                     // If request failed, revert the change
                     substitutePlayers[idx] = player;
                     renderSubstitutes();
+                    renderField();
                     updateClubStats();
+                    updateSelectedPlayerInfo();
 
                     Swal.fire({
                         icon: 'error',
@@ -1650,6 +1659,7 @@ startContent();
                 }
                 renderPlayers();
                 renderField();
+                updateSelectedPlayerInfo();
                 updateClubStats();
 
                 // Auto-save the changes to database
@@ -1673,6 +1683,7 @@ startContent();
                         selectedPlayers[idx] = player;
                         renderPlayers();
                         renderField();
+                        updateSelectedPlayerInfo();
                         updateClubStats();
 
                         Swal.fire({
@@ -1687,6 +1698,7 @@ startContent();
                     selectedPlayers[idx] = player;
                     renderPlayers();
                     renderField();
+                    updateSelectedPlayerInfo();
                     updateClubStats();
 
                     Swal.fire({
