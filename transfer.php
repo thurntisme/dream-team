@@ -239,6 +239,16 @@ startContent();
         <!-- My Players Tab -->
         <div id="myPlayersContent" class="tab-content hidden">
             <div class="space-y-4">
+                <div class="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg p-3">
+                    <div class="text-sm text-gray-700">
+                        Manage your purchased players. Assign them to your squad.
+                    </div>
+                    <button id="assignAllButton"
+                        class="inline-flex items-center gap-2 bg-blue-600 text-white px-3 py-2 rounded-md hover:bg-blue-700 transition-colors text-sm">
+                        <i data-lucide="user-plus" class="w-4 h-4"></i>
+                        Assign All Players to Team
+                    </button>
+                </div>
                 <?php if (empty($player_inventory)): ?>
                     <div class="text-center py-12">
                         <i data-lucide="users" class="w-16 h-16 text-gray-400 mx-auto mb-4"></i>
@@ -1180,6 +1190,55 @@ startContent();
                 });
             });
     }
+    
+    // Assign all available inventory players to team substitutes
+    function assignAllPlayersToTeam() {
+        Swal.fire({
+            title: 'Assign All Players?',
+            text: 'This will move all available inventory players into your team substitutes until the squad is full.',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#10b981',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Assign All',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (!result.isConfirmed) return;
+            Swal.fire({
+                title: 'Processing...',
+                text: 'Assigning players to your squad',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                didOpen: () => Swal.showLoading()
+            });
+            fetch('api/manage_inventory_api.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'assign_all' })
+            })
+                .then(response => response.json().then(data => {
+                    if (!response.ok) throw new Error(data.message || 'Failed to assign players');
+                    return data;
+                }))
+                .then(data => {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Players Assigned!',
+                        text: 'Your inventory players have been added to your squad.',
+                        confirmButtonColor: '#10b981'
+                    }).then(() => window.location.reload());
+                })
+                .catch(error => {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Assignment Failed',
+                        text: error.message || 'Could not assign players',
+                        confirmButtonColor: '#ef4444'
+                    });
+                });
+        });
+    }
 
     // Close player info modal
     document.getElementById('closePlayerInfoModal').addEventListener('click', function () {
@@ -1209,6 +1268,10 @@ startContent();
         updatePlayerCounts();
         filterPlayers(false); // Don't reset page on initial load
         lucide.createIcons();
+        const assignAllBtn = document.getElementById('assignAllButton');
+        if (assignAllBtn) {
+            assignAllBtn.addEventListener('click', assignAllPlayersToTeam);
+        }
     });
 </script>
 
