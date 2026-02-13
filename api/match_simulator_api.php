@@ -83,12 +83,15 @@ try {
         exit;
     }
 
-    $ok = simulateMatchByUUID($db, $uuid, $user_id);
-    if (!$ok) {
-        $log('simulate_failed', ['uuid' => $uuid, 'user_id' => $user_id]);
-        echo json_encode(['ok' => false, 'error' => 'simulate_failed']);
+    // Simulate the entire gameweek containing this match (including user's match)
+    $results = simulateGameweek($db, (int)$match['id'], $user_id);
+    if (!$results || !is_array($results)) {
+        $log('simulate_gameweek_failed', ['uuid' => $uuid, 'user_id' => $user_id]);
+        echo json_encode(['ok' => false, 'error' => 'simulate_gameweek_failed']);
         exit;
     }
+    // Store results for UI consumption
+    $_SESSION['gameweek_results'] = $results;
 
     // Verify completion
     $stmtChk = $db->prepare('SELECT status FROM league_matches WHERE uuid = :uuid');
@@ -107,7 +110,7 @@ try {
     }
 
     $db->close();
-    $log('success', ['uuid' => $uuid]);
+    $log('success_gameweek', ['uuid' => $uuid, 'matches_simulated' => $results['matches_simulated'] ?? null, 'gameweek' => $results['gameweek'] ?? null]);
     echo json_encode(['ok' => true, 'match_result_uuid' => $uuid]);
 } catch (Throwable $e) {
     $log('exception', ['message' => $e->getMessage()]);

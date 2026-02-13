@@ -321,9 +321,9 @@ try {
                 </div>
 
                 <?php if (($match['status'] ?? '') === 'completed'): ?>
-                    <div id="result" class="bg-white rounded-lg shadow border border-gray-200 overflow-hidden mb-6">
+                    <div id="result" class="bg-white rounded-lg shadow border border-gray-200 overflow-hidden my-6">
                         <div class="bg-gray-50 border-b border-gray-200 p-4">
-                            <div class="flex items-center gap-3">
+                            <div class="flex justify-center items-center gap-3">
                                 <div class="w-10 h-10 bg-gray-700 rounded-full flex items-center justify-center">
                                     <i data-lucide="trophy" class="w-5 h-5 text-white"></i>
                                 </div>
@@ -842,8 +842,9 @@ try {
                                             body: (function(){ fd.set('uuid', '<?php echo urlencode($match_uuid); ?>'); return fd.toString(); })()
                                         });
                                         const data = await res.json().catch(() => null);
+                                        console.log(res, data);
                                         if (res.ok && data && data.ok) {
-                                            window.location.href = 'league_match.php?uuid=<?php echo urlencode($match_uuid); ?>#result';
+                                            window.location.href = 'league_match.php?uuid=<?php echo urlencode($match_uuid); ?>';
                                             return;
                                         }
                                         alert('Simulation failed. Please try again.');
