@@ -12,7 +12,49 @@ if (!isLoggedIn()) {
     exit;
 }
 
-// Only allow POST requests
+// Support GET (reward options) and POST (apply selected reward)
+if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+    header('Content-Type: application/json');
+    try {
+        $user_uuid = $_SESSION['user_uuid'];
+        $match_uuid = isset($_GET['match_uuid']) ? $_GET['match_uuid'] : null;
+        if (!$match_uuid) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => 'Match ID is required']);
+            exit;
+        }
+        $claimed_key = "mystery_box_claimed_{$match_uuid}_{$user_uuid}";
+        if (isset($_SESSION[$claimed_key]) && $_SESSION[$claimed_key] === true) {
+            echo json_encode(['success' => true, 'claimed' => true, 'options' => []]);
+            exit;
+        }
+
+        // Generate reward options server-side
+        $pool = [
+            ['type' => 'budget', 'amount' => 150000, 'text' => 'You received €150,000!', 'icon' => '💰'],
+            ['type' => 'budget', 'amount' => 250000, 'text' => 'You received €250,000!', 'icon' => '💰'],
+            ['type' => 'budget', 'amount' => 350000, 'text' => 'You received €350,000!', 'icon' => '💰'],
+            ['type' => 'player', 'text' => 'You received a random player card!', 'icon' => '⚽'],
+            ['type' => 'item', 'text' => 'You received a training boost item!', 'icon' => '🏃'],
+            ['type' => 'budget', 'amount' => 100000, 'text' => 'You received €100,000!', 'icon' => '💰'],
+            ['type' => 'fans', 'amount' => 300, 'text' => 'You gained 300 new fans!', 'icon' => '👥']
+        ];
+        // Shuffle and take 3
+        $shuffled = $pool;
+        shuffle($shuffled);
+        $options = array_slice($shuffled, 0, 3);
+
+        // Store in session to allow server-side validation later
+        $opts_key = "mystery_box_options_{$match_uuid}_{$user_uuid}";
+        $_SESSION[$opts_key] = $options;
+
+        echo json_encode(['success' => true, 'claimed' => false, 'options' => $options]);
+    } catch (Throwable $e) {
+        http_response_code(500);
+        echo json_encode(['success' => false, 'message' => 'Failed to get reward options']);
+    }
+    exit;
+}
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
     echo json_encode(['success' => false, 'message' => 'Method not allowed']);
@@ -35,12 +77,12 @@ try {
     $db = getDbConnection();
 
     // Check if user has already claimed mystery box reward for this match
-    $match_id = $input['match_id'] ?? null;
-    if (!$match_id) {
+    $match_uuid = $input['match_uuid'] ?? null;
+    if (!$match_uuid) {
         throw new Exception('Match ID is required');
     }
 
-    $session_key = "mystery_box_claimed_{$match_id}_{$user_uuid}";
+    $session_key = "mystery_box_claimed_{$match_uuid}_{$user_uuid}";
     if (isset($_SESSION[$session_key]) && $_SESSION[$session_key] === true) {
         throw new Exception('Mystery box reward already claimed for this match');
     }
@@ -48,6 +90,28 @@ try {
     // Validate reward data
     if (!isset($reward['type']) || !isset($reward['text'])) {
         throw new Exception('Invalid reward data');
+    }
+    // Optional: ensure selected reward matches one of server-provided options
+    $opts_key = "mystery_box_options_{$match_uuid}_{$user_uuid}";
+    if (isset($_SESSION[$opts_key]) && is_array($_SESSION[$opts_key])) {
+        $allowed = false;
+        foreach ($_SESSION[$opts_key] as $opt) {
+            if ($reward['type'] === ($opt['type'] ?? null)) {
+                // For budget/fans, also match amount
+                if (in_array($reward['type'], ['budget', 'fans'], true)) {
+                    if (intval($reward['amount'] ?? 0) === intval($opt['amount'] ?? -1)) {
+                        $allowed = true;
+                        break;
+                    }
+                } else {
+                    $allowed = true;
+                    break;
+                }
+            }
+        }
+        if (!$allowed) {
+            throw new Exception('Selected reward not permitted');
+        }
     }
 
     $success = false;

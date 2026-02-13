@@ -8,7 +8,7 @@ require_once 'includes/league_functions.php';
 
 $displayTeamLineup = function ($team_data, $league_roster = null) {
     if ($league_roster) {
-        ?>
+?>
         <div class="space-y-2">
             <?php foreach (array_slice($league_roster, 0, 11) as $index => $player): ?>
                 <?php if ($player): ?>
@@ -28,7 +28,7 @@ $displayTeamLineup = function ($team_data, $league_roster = null) {
                 <?php endif; ?>
             <?php endforeach; ?>
         </div>
-        <?php
+    <?php
         return;
     }
     if (!$team_data) {
@@ -58,12 +58,12 @@ $displayTeamLineup = function ($team_data, $league_roster = null) {
             <?php endif; ?>
         <?php endforeach; ?>
     </div>
-    <?php
+<?php
 };
 
 $renderError = function ($message) {
     startContent();
-    ?>
+?>
     <div class="container mx-auto py-10">
         <div class="max-w-xl mx-auto bg-white rounded-lg shadow-lg border border-red-200 overflow-hidden">
             <div class="bg-gradient-to-r from-red-500 to-red-600 text-white p-4">
@@ -88,7 +88,7 @@ $renderError = function ($message) {
             </div>
         </div>
     </div>
-    <?php
+<?php
     endContent('Error');
 };
 
@@ -475,10 +475,10 @@ try {
                         </div>
                     </div>
                 </div>
-                
+
                 <?php if (($match['status'] ?? '') === 'completed'): ?>
                     <?php
-                    $session_key = "mystery_box_claimed_{$match['id']}_{$user_uuid}";
+                    $session_key = "mystery_box_claimed_{$match['uuid']}_{$user_uuid}";
                     $mystery_box_claimed = isset($_SESSION[$session_key]) && $_SESSION[$session_key] === true;
                     ?>
                     <div class="bg-white rounded-lg shadow border border-gray-200 overflow-hidden mt-6">
@@ -497,7 +497,7 @@ try {
                             <div class="grid grid-cols-3 gap-4 mb-6">
                                 <?php for ($i = 1; $i <= 3; $i++): ?>
                                     <div class="mystery-box cursor-pointer transform hover:scale-105 transition-transform duration-200 <?php echo $mystery_box_claimed ? 'opacity-50 cursor-not-allowed' : ''; ?>"
-                                         data-box="<?php echo $i; ?>" <?php echo $mystery_box_claimed ? 'style=\"pointer-events: none;\"' : ''; ?>>
+                                        data-box="<?php echo $i; ?>" <?php echo $mystery_box_claimed ? 'style=\"pointer-events: none;\"' : ''; ?>>
                                         <div class="bg-gradient-to-br from-purple-400 to-purple-600 rounded-lg p-6 text-center text-white shadow-lg">
                                             <?php if ($mystery_box_claimed): ?>
                                                 <div class="w-16 h-16 mx-auto mb-3 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
@@ -538,10 +538,10 @@ try {
                             Approve
                         </button>
                         <script>
-                            (function(){
+                            (function() {
                                 const btn = document.getElementById('approveBtn');
                                 if (!btn) return;
-                                btn.addEventListener('click', function(){
+                                btn.addEventListener('click', function() {
                                     window.location.href = 'league.php?tab=standings';
                                 });
                             })();
@@ -549,271 +549,225 @@ try {
                     </div>
                     <script>
                         <?php if (!$mystery_box_claimed): ?>
-                        document.querySelectorAll('.mystery-box').forEach(box => {
-                            box.addEventListener('click', function() {
-                                const boxNumber = this.dataset.box;
+                                (function() {
+                                    let rewardOptions = null;
 
-                                // Generate all 3 rewards (one for each box)
-                                const allRewards = [{
-                                        type: 'budget',
-                                        amount: 150000,
-                                        text: 'You received €150,000!',
-                                        icon: '💰'
-                                    },
-                                    {
-                                        type: 'budget',
-                                        amount: 250000,
-                                        text: 'You received €250,000!',
-                                        icon: '💰'
-                                    },
-                                    {
-                                        type: 'budget',
-                                        amount: 350000,
-                                        text: 'You received €350,000!',
-                                        icon: '💰'
-                                    },
-                                    {
-                                        type: 'player',
-                                        text: 'You received a random player card!',
-                                        icon: '⚽'
-                                    },
-                                    {
-                                        type: 'item',
-                                        text: 'You received a training boost item!',
-                                        icon: '🏃'
-                                    },
-                                    {
-                                        type: 'budget',
-                                        amount: 100000,
-                                        text: 'You received €100,000!',
-                                        icon: '💰'
-                                    },
-                                    {
-                                        type: 'fans',
-                                        amount: 300,
-                                        text: 'You gained 300 new fans!',
-                                        icon: '👥'
+                                    async function ensureRewardOptions() {
+                                        if (rewardOptions) return rewardOptions;
+
+                                        try {
+                                            const res = await fetch(
+                                                'api/mystery_box_reward_api.php?match_uuid=<?= urlencode($match['uuid'] ?? ''); ?>', {
+                                                    method: 'GET'
+                                                }
+                                            );
+
+                                            const data = await res.json().catch(() => null);
+
+                                            if (
+                                                res.ok &&
+                                                data &&
+                                                data.success &&
+                                                !data.claimed &&
+                                                Array.isArray(data.options) &&
+                                                data.options.length === 3
+                                            ) {
+                                                rewardOptions = data.options;
+                                                return rewardOptions;
+                                            }
+
+                                            throw new Error('Failed to load reward options');
+                                        } catch (e) {
+                                            const errorDiv = document.createElement('div');
+                                            errorDiv.className =
+                                                'mt-3 p-2 bg-red-100 text-red-800 rounded-lg text-sm';
+                                            errorDiv.innerHTML =
+                                                '<i data-lucide="x-circle" class="w-4 h-4 inline mr-1"></i>Unable to load reward options.';
+
+                                            const container =
+                                                document.getElementById('reward-content') ||
+                                                document.getElementById('reward-display');
+
+                                            if (container) {
+                                                container.classList.remove('hidden');
+                                                container.appendChild(errorDiv);
+                                                if (typeof lucide !== 'undefined') lucide.createIcons();
+                                            }
+
+                                            return null;
+                                        }
                                     }
-                                ];
 
-                                // Shuffle and pick 3 different rewards
-                                const shuffled = [...allRewards].sort(() => 0.5 - Math.random());
-                                const boxRewards = shuffled.slice(0, 3);
-                                const selectedReward = boxRewards[boxNumber - 1];
+                                    document.querySelectorAll('.mystery-box').forEach(box => {
+                                        box.addEventListener('click', async function() {
 
-                                // Disable all boxes
-                                document.querySelectorAll('.mystery-box').forEach(b => {
-                                    b.style.pointerEvents = 'none';
-                                });
+                                            // 🔒 Prevent double click
+                                            if (this.dataset.locked) return;
+                                            this.dataset.locked = "true";
 
-                                // Add shake animation to selected box
-                                this.style.transition = 'all 0.3s ease';
-                                this.style.animation = 'shake 0.5s ease-in-out';
+                                            const options = await ensureRewardOptions();
+                                            if (!options) return;
 
-                                // Add animations if not already added
-                                if (!document.querySelector('#mystery-animations')) {
-                                    const style = document.createElement('style');
-                                    style.id = 'mystery-animations';
-                                    style.textContent = `
-                                        @keyframes shake {
-                                            0%, 100% { transform: translateX(0); }
-                                            25% { transform: translateX(-5px); }
-                                            75% { transform: translateX(5px); }
-                                        }
-                                        @keyframes pulse-glow {
-                                            0%, 100% { box-shadow: 0 0 20px rgba(255, 215, 0, 0.5); }
-                                            50% { box-shadow: 0 0 30px rgba(255, 215, 0, 0.8); }
-                                        }
-                                        @keyframes flip-reveal {
-                                            0% { transform: rotateY(0deg); }
-                                            50% { transform: rotateY(90deg); }
-                                            100% { transform: rotateY(0deg); }
-                                        }
-                                        @keyframes fade-gray {
-                                            0% { opacity: 1; }
-                                            100% { opacity: 0.6; }
-                                        }
-                                        @keyframes fade-in-up {
-                                            0% { opacity: 0; transform: translateY(20px); }
-                                            100% { opacity: 1; transform: translateY(0); }
-                                        }
-                                    `;
-                                    document.head.appendChild(style);
-                                }
+                                            const boxNumber = parseInt(this.dataset.box);
+                                            const selectedReward = options[boxNumber - 1];
 
-                                // Show opening animation and reveal all boxes
-                                setTimeout(() => {
-                                    // Add glow effect to selected box
-                                    this.style.animation = 'pulse-glow 1s ease-in-out infinite';
-                                    this.style.borderRadius = '12px';
+                                            if (!selectedReward) return;
 
-                                    // Fade other boxes
-                                    document.querySelectorAll('.mystery-box').forEach((b, index) => {
-                                        const boxNum = parseInt(b.dataset.box);
-                                        if (boxNum != boxNumber) {
-                                            b.style.animation = 'fade-gray 0.5s ease-out forwards';
-                                        }
+                                            // Disable all boxes
+                                            document.querySelectorAll('.mystery-box').forEach(b => {
+                                                b.style.pointerEvents = 'none';
+                                            });
+
+                                            // Inject animations once
+                                            if (!document.querySelector('#mystery-animations')) {
+                                                const style = document.createElement('style');
+                                                style.id = 'mystery-animations';
+                                                style.textContent = `
+                    @keyframes shake {
+                        0%,100%{transform:translateX(0)}
+                        25%{transform:translateX(-5px)}
+                        75%{transform:translateX(5px)}
+                    }
+                    @keyframes pulse-glow {
+                        0%,100%{box-shadow:0 0 20px rgba(255,215,0,.5)}
+                        50%{box-shadow:0 0 30px rgba(255,215,0,.8)}
+                    }
+                    @keyframes flip-reveal {
+                        0%{transform:rotateY(0)}
+                        50%{transform:rotateY(90deg)}
+                        100%{transform:rotateY(0)}
+                    }
+                    @keyframes fade-gray {
+                        from{opacity:1}
+                        to{opacity:.6}
+                    }
+                    @keyframes fade-in-up {
+                        from{opacity:0;transform:translateY(20px)}
+                        to{opacity:1;transform:translateY(0)}
+                    }
+                `;
+                                                document.head.appendChild(style);
+                                            }
+
+                                            // Shake animation
+                                            this.style.animation = 'shake 0.5s ease-in-out';
+
+                                            setTimeout(() => {
+
+                                                this.style.animation = 'pulse-glow 1s ease-in-out infinite';
+
+                                                document.querySelectorAll('.mystery-box').forEach(b => {
+                                                    if (parseInt(b.dataset.box) !== boxNumber) {
+                                                        b.style.animation = 'fade-gray 0.5s ease-out forwards';
+                                                    }
+                                                });
+
+                                                setTimeout(() => {
+
+                                                    document.querySelectorAll('.mystery-box').forEach(b => {
+
+                                                        const boxNum = parseInt(b.dataset.box);
+                                                        const reward = options[boxNum - 1];
+                                                        const boxContent = b.querySelector('.bg-gradient-to-br');
+
+                                                        if (!boxContent) return;
+
+                                                        b.style.animation = 'flip-reveal 0.8s ease-in-out';
+
+                                                        setTimeout(() => {
+
+                                                            if (boxNum === boxNumber) {
+                                                                boxContent.innerHTML = `
+                                    <div class="w-16 h-16 mx-auto mb-3 bg-white bg-opacity-30 rounded-full flex items-center justify-center text-2xl">
+                                        ${reward.icon}
+                                    </div>
+                                    <div class="font-bold text-lg text-yellow-200">SELECTED!</div>
+                                    <div class="text-sm">${reward.text}</div>
+                                `;
+                                                            } else {
+                                                                boxContent.innerHTML = `
+                                    <div class="w-16 h-16 mx-auto mb-3 bg-white bg-opacity-20 rounded-full flex items-center justify-center text-2xl">
+                                        ${reward.icon}
+                                    </div>
+                                    <div class="text-sm opacity-75">${reward.text}</div>
+                                `;
+                                                                b.style.opacity = '0.6';
+                                                            }
+
+                                                        }, 400);
+                                                    });
+
+                                                    // Show main reward display
+                                                    setTimeout(() => {
+
+                                                        const rewardDisplay = document.getElementById('reward-display');
+                                                        const rewardContent = document.getElementById('reward-content');
+
+                                                        rewardContent.innerHTML = `
+                            <div class="text-3xl mb-2">${selectedReward.icon}</div>
+                            <div class="text-xl font-bold">${selectedReward.text}</div>
+                            <div class="text-sm mt-2 opacity-90">
+                                Check the other boxes to see what you could have won!
+                            </div>
+                        `;
+
+                                                        rewardDisplay.classList.remove('hidden');
+                                                        rewardDisplay.style.animation = 'fade-in-up 0.5s ease-out forwards';
+
+                                                        // POST save reward
+                                                        fetch('api/mystery_box_reward_api.php', {
+                                                                method: 'POST',
+                                                                headers: {
+                                                                    'Content-Type': 'application/json'
+                                                                },
+                                                                body: JSON.stringify({
+                                                                    reward: selectedReward,
+                                                                    match_uuid: <?= json_encode($match['uuid'] ?? null); ?>
+                                                                })
+                                                            })
+                                                            .then(res => {
+                                                                if (!res.ok) throw new Error('Server error');
+                                                                return res.json();
+                                                            })
+                                                            .then(data => {
+                                                                if (!data.success) throw new Error(data.message);
+
+                                                                const confirmationDiv = document.createElement('div');
+                                                                confirmationDiv.className =
+                                                                    'mt-3 p-2 bg-green-100 text-green-800 rounded-lg text-sm';
+                                                                confirmationDiv.innerHTML =
+                                                                    '<i data-lucide="check-circle" class="w-4 h-4 inline mr-1"></i>' +
+                                                                    data.message;
+
+                                                                rewardContent.appendChild(confirmationDiv);
+
+                                                                if (typeof lucide !== 'undefined') {
+                                                                    lucide.createIcons();
+                                                                }
+                                                            })
+                                                            .catch(err => {
+                                                                console.error('Reward save failed:', err);
+
+                                                                const errorDiv = document.createElement('div');
+                                                                errorDiv.className =
+                                                                    'mt-3 p-2 bg-red-100 text-red-800 rounded-lg text-sm';
+                                                                errorDiv.innerHTML =
+                                                                    'Error saving reward. Please refresh.';
+
+                                                                rewardContent.appendChild(errorDiv);
+                                                            });
+
+                                                    }, 1000);
+
+                                                }, 800);
+
+                                            }, 500);
+
+                                        });
                                     });
 
-                                    // Reveal all boxes with flip animation
-                                    setTimeout(() => {
-                                        document.querySelectorAll('.mystery-box').forEach((b, index) => {
-                                            const boxNum = parseInt(b.dataset.box);
-                                            const reward = boxRewards[boxNum - 1];
-                                            const boxContent = b.querySelector('.bg-gradient-to-br');
+                                })();
 
-                                            // Add flip animation
-                                            b.style.animation = 'flip-reveal 0.8s ease-in-out';
-
-                                            setTimeout(() => {
-                                                if (boxNum == boxNumber) {
-                                                    // Selected box
-                                                    boxContent.innerHTML = `
-                                                        <div class="w-16 h-16 mx-auto mb-3 bg-white bg-opacity-30 rounded-full flex items-center justify-center text-2xl">
-                                                            ${reward.icon}
-                                                        </div>
-                                                        <div class="font-bold text-lg text-yellow-200">SELECTED!</div>
-                                                        <div class="text-sm">${reward.text}</div>
-                                                    `;
-                                                    boxContent.className = 'bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-lg p-6 text-center text-white shadow-lg';
-                                                    b.style.animation = 'pulse-glow 2s ease-in-out infinite';
-                                                } else {
-                                                    // Other boxes
-                                                    boxContent.innerHTML = `
-                                                        <div class="w-16 h-16 mx-auto mb-3 bg-white bg-opacity-20 rounded-full flex items-center justify-center text-2xl">
-                                                            ${reward.icon}
-                                                        </div>
-                                                        <div class="font-bold text-sm text-gray-300">Box ${boxNum}</div>
-                                                        <div class="text-xs opacity-75">${reward.text}</div>
-                                                    `;
-                                                    boxContent.className = 'bg-gradient-to-br from-gray-400 to-gray-600 rounded-lg p-6 text-center text-white shadow-lg';
-                                                    b.style.opacity = '0.6';
-                                                    b.style.animation = 'none';
-                                                }
-                                            }, 400);
-                                        });
-
-                                        // Show main reward display
-                                        setTimeout(() => {
-                                            const rewardDisplay = document.getElementById('reward-display');
-                                            document.getElementById('reward-content').innerHTML = `
-                                                <div class="text-3xl mb-2">${selectedReward.icon}</div>
-                                                <div class="text-xl font-bold">${selectedReward.text}</div>
-                                                <div class="text-sm mt-2 opacity-90">Check the other boxes to see what you could have won!</div>
-                                            `;
-                                            rewardDisplay.style.transform = 'translateY(20px)';
-                                            rewardDisplay.style.opacity = '0';
-                                            rewardDisplay.style.transition = 'all 0.5s ease-out';
-                                            rewardDisplay.classList.remove('hidden');
-
-                                            setTimeout(() => {
-                                                rewardDisplay.style.transform = 'translateY(0)';
-                                                rewardDisplay.style.opacity = '1';
-                                            }, 50);
-
-                                            // API call to save reward
-                                            fetch('api/mystery_box_reward_api.php', {
-                                                method: 'POST',
-                                                headers: { 'Content-Type': 'application/json' },
-                                                body: JSON.stringify({
-                                                    reward: selectedReward,
-                                                    match_id: <?php echo (int)($match['id'] ?? 0); ?>
-                                                })
-                                            })
-                                            .then(response => response.json())
-                                            .then(data => {
-                                                if (data.success) {
-                                                    const confirmationDiv = document.createElement('div');
-                                                    confirmationDiv.className = 'mt-3 p-2 bg-green-100 text-green-800 rounded-lg text-sm';
-                                                    confirmationDiv.innerHTML = `
-                                                        <i data-lucide="check-circle" class="w-4 h-4 inline mr-1"></i>
-                                                        ${data.message}
-                                                    `;
-                                                    document.getElementById('reward-content').appendChild(confirmationDiv);
-
-                                                    if (data.player_data) {
-                                                        const player = data.player_data;
-                                                        const playerCard = document.createElement('div');
-                                                        playerCard.className = 'mt-4 bg-white rounded-lg shadow-md p-4 text-gray-800 transform transition-all duration-500 animate-fade-in-up';
-                                                        playerCard.style.animation = 'fade-in-up 0.5s ease-out forwards';
-
-                                                        let borderColor = 'border-gray-200';
-                                                        let headerBg = 'bg-gray-100';
-
-                                                        if (player.rating >= 85) {
-                                                            borderColor = 'border-yellow-400 border-2';
-                                                            headerBg = 'bg-gradient-to-r from-yellow-100 to-yellow-50';
-                                                        } else if (player.rating >= 80) {
-                                                            borderColor = 'border-blue-400 border-2';
-                                                            headerBg = 'bg-gradient-to-r from-blue-100 to-blue-50';
-                                                        } else if (player.rating >= 75) {
-                                                            borderColor = 'border-green-400 border-2';
-                                                            headerBg = 'bg-gradient-to-r from-green-100 to-green-50';
-                                                        }
-
-                                                        playerCard.classList.add(borderColor.split(' ')[0]);
-                                                        if (borderColor.includes('border-2')) playerCard.classList.add('border-2');
-
-                                                        const stats = {
-                                                            pace: player.pace || Math.floor(Math.random() * (95 - 60) + 60),
-                                                            shooting: player.shooting || Math.floor(Math.random() * (90 - 50) + 50),
-                                                            passing: player.passing || Math.floor(Math.random() * (90 - 50) + 50),
-                                                            dribbling: player.dribbling || Math.floor(Math.random() * (92 - 55) + 55),
-                                                            defending: player.defending || Math.floor(Math.random() * (88 - 40) + 40),
-                                                            physical: player.physical || Math.floor(Math.random() * (90 - 50) + 50)
-                                                        };
-
-                                                        playerCard.innerHTML = `
-                                                            <div class="flex items-center gap-4 ${headerBg} p-3 rounded-t-lg -mx-4 -mt-4 mb-3 border-b border-gray-100">
-                                                                <div class="w-16 h-16 bg-gradient-to-br from-blue-600 to-purple-700 rounded-full flex items-center justify-center text-white text-2xl font-bold shadow-lg ring-2 ring-white">
-                                                                    ${player.rating}
-                                                                </div>
-                                                                <div class="text-left flex-1">
-                                                                    <div class="font-bold text-xl text-gray-900">${player.name}</div>
-                                                                    <div class="flex items-center gap-2 text-sm text-gray-600">
-                                                                        <span class="px-2 py-0.5 bg-white border border-gray-200 rounded text-xs font-bold uppercase tracking-wider">${player.position}</span>
-                                                                        <span class="text-gray-400">•</span>
-                                                                        <span class="flex items-center gap-1"><i data-lucide="activity" class="w-3 h-3"></i> ${player.fitness || 100}% Fit</span>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                            <div class="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                                                                <div class="flex justify-between items-center border-b border-gray-100 pb-1">
-                                                                    <span class="text-gray-500">PAC</span>
-                                                                    <span class="font-bold ${stats.pace > 80 ? 'text-green-600' : 'text-gray-800'}">${stats.pace}</span>
-                                                                </div>
-                                                                <div class="flex justify-between items-center border-b border-gray-100 pb-1">
-                                                                    <span class="text-gray-500">DRI</span>
-                                                                    <span class="font-bold ${stats.dribbling > 80 ? 'text-green-600' : 'text-gray-800'}">${stats.dribbling}</span>
-                                                                </div>
-                                                                <div class="flex justify-between items-center border-b border-gray-100 pb-1">
-                                                                    <span class="text-gray-500">SHO</span>
-                                                                    <span class="font-bold ${stats.shooting > 80 ? 'text-green-600' : 'text-gray-800'}">${stats.shooting}</span>
-                                                                </div>
-                                                                <div class="flex justify-between items-center border-b border-gray-100 pb-1">
-                                                                    <span class="text-gray-500">DEF</span>
-                                                                    <span class="font-bold ${stats.defending > 80 ? 'text-green-600' : 'text-gray-800'}">${stats.defending}</span>
-                                                                </div>
-                                                                <div class="flex justify-between items-center pb-1">
-                                                                    <span class="text-gray-500">PAS</span>
-                                                                    <span class="font-bold ${stats.passing > 80 ? 'text-green-600' : 'text-gray-800'}">${stats.passing}</span>
-                                                                </div>
-                                                                <div class="flex justify-between items-center pb-1">
-                                                                    <span class="text-gray-500">PHY</span>
-                                                                    <span class="font-bold ${stats.physical > 80 ? 'text-green-600' : 'text-gray-800'}">${stats.physical}</span>
-                                                                </div>
-                                                            </div>
-                                                        `;
-                                                        document.getElementById('reward-content').appendChild(playerCard);
-                                                    }
-                                                    if (typeof lucide !== 'undefined') lucide.createIcons();
-                                                }
-                                            });
-                                        }, 1000);
-                                    }, 800);
-                                }, 500);
-                            });
-                        });
                         <?php endif; ?>
                     </script>
                 <?php endif; ?>
@@ -828,7 +782,7 @@ try {
                             (function() {
                                 const btn = document.getElementById('simulateBtn');
                                 if (!btn) return;
-                                btn.addEventListener('click', async function () {
+                                btn.addEventListener('click', async function() {
                                     if (btn.disabled) return;
                                     btn.disabled = true;
                                     btn.classList.add('opacity-50');
@@ -838,8 +792,13 @@ try {
                                         fd.set('simulate_match', '1');
                                         const res = await fetch('api/match_simulator_api.php', {
                                             method: 'POST',
-                                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                                            body: (function(){ fd.set('uuid', '<?php echo urlencode($match_uuid); ?>'); return fd.toString(); })()
+                                            headers: {
+                                                'Content-Type': 'application/x-www-form-urlencoded'
+                                            },
+                                            body: (function() {
+                                                fd.set('uuid', '<?php echo urlencode($match_uuid); ?>');
+                                                return fd.toString();
+                                            })()
                                         });
                                         const data = await res.json().catch(() => null);
                                         console.log(res, data);

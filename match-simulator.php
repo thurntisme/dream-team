@@ -1590,7 +1590,7 @@ function displayMatchResultPage($match, $is_home, $user_score, $opponent_score, 
                                         },
                                         body: JSON.stringify({
                                             reward: selectedReward,
-                                            match_id: <?php echo $match['id'] ?? 'null'; ?>
+                                            match_uuid: <?php echo json_encode($match['uuid'] ?? null); ?>
                                         })
                                     })
                                     .then(response => response.json())
