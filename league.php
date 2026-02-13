@@ -1225,9 +1225,6 @@ startContent();
                                 <div class="text-sm text-gray-500">
                                     <?php echo date('M j, Y', strtotime($match['match_date'])); ?>
                                 </div>
-                                <div class="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded">
-                                    <?php echo htmlspecialchars($match['uuid'] ?? ''); ?>
-                                </div>
                                 <div class="flex items-center gap-2">
                                     <span
                                         class="font-medium <?php echo (($match['home_user_uuid'] ?? null) === $user['uuid']) ? 'text-blue-600' : ''; ?>">
