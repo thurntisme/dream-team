@@ -347,6 +347,24 @@ try {
                             </div>
                         </div>
                     </div>
+                    <?php if (!empty($is_user_match)): ?>
+                        <?php
+                        $user_score = $is_home ? (int)($match['home_score'] ?? 0) : (int)($match['away_score'] ?? 0);
+                        $opponent_score = $is_home ? (int)($match['away_score'] ?? 0) : (int)($match['home_score'] ?? 0);
+                        $result_label = $user_score > $opponent_score ? 'You won!' : ($user_score < $opponent_score ? 'You were beaten.' : 'Draw.');
+                        $result_color = $user_score > $opponent_score ? 'bg-green-50 border-green-200 text-green-700' : ($user_score < $opponent_score ? 'bg-red-50 border-red-200 text-red-700' : 'bg-yellow-50 border-yellow-200 text-yellow-700');
+                        $result_icon = $user_score > $opponent_score ? 'trophy' : ($user_score < $opponent_score ? 'alert-triangle' : 'minus');
+                        ?>
+                        <div class="rounded-lg border <?php echo $result_color; ?> p-4 mb-6 flex justify-center items-center gap-3">
+                            <div class="text-2xl font-bold <?php
+                                                            echo $user_score > $opponent_score ? 'text-green-600' : ($user_score < $opponent_score ? 'text-red-600' : 'text-yellow-600');
+                                                            ?>">
+                                <?php
+                                echo $user_score > $opponent_score ? '🎉 VICTORY!' : ($user_score < $opponent_score ? '😞 DEFEAT!' : '🤝 DRAW!');
+                                ?>
+                            </div>
+                        </div>
+                    <?php endif; ?>
                     <div class="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden mb-6">
                         <div class="bg-gradient-to-r from-green-500 to-green-600 text-white p-4">
                             <div class="flex items-center gap-3">
