@@ -27,6 +27,26 @@ $displayTeamLineup = function ($team_data, $league_roster = null) {
                     </div>
                 <?php endif; ?>
             <?php endforeach; ?>
+            <?php if (count($league_roster) > 11): ?>
+                <div class="my-3 border-t border-gray-200"></div>
+                <?php foreach (array_slice($league_roster, 11, 5) as $index => $player): ?>
+                    <?php if ($player): ?>
+                        <div class="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
+                            <div class="w-8 h-8 bg-gray-500 rounded-full flex items-center justify-center text-white text-sm font-bold">
+                                <?php echo 12 + $index; ?>
+                            </div>
+                            <div class="flex-1">
+                                <div class="font-medium"><?php echo htmlspecialchars($player['name']); ?></div>
+                                <div class="text-sm text-gray-600"><?php echo htmlspecialchars($player['position']); ?></div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-sm font-medium"><?php echo $player['rating']; ?></div>
+                                <div class="text-xs text-gray-500">Rating</div>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+                <?php endforeach; ?>
+            <?php endif; ?>
         </div>
     <?php
         return;
@@ -40,7 +60,7 @@ $displayTeamLineup = function ($team_data, $league_roster = null) {
     $roles = FORMATIONS[$formation]['roles'] ?? FORMATIONS['4-4-2']['roles'];
     ?>
     <div class="space-y-2">
-        <?php foreach ($team as $index => $player): ?>
+        <?php foreach (array_slice($team, 0, 11) as $index => $player): ?>
             <?php if ($player): ?>
                 <div class="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
                     <div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-bold">
@@ -57,6 +77,26 @@ $displayTeamLineup = function ($team_data, $league_roster = null) {
                 </div>
             <?php endif; ?>
         <?php endforeach; ?>
+        <?php if (count($team) > 11): ?>
+            <div class="my-3 border-t border-gray-200"></div>
+            <?php foreach (array_slice($team, 11, 5) as $bIndex => $player): ?>
+                <?php if ($player): ?>
+                    <div class="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
+                        <div class="w-8 h-8 bg-gray-500 rounded-full flex items-center justify-center text-white text-sm font-bold">
+                            <?php echo 12 + $bIndex; ?>
+                        </div>
+                        <div class="flex-1">
+                            <div class="font-medium"><?php echo htmlspecialchars($player['name']); ?></div>
+                            <div class="text-sm text-gray-600"><?php echo htmlspecialchars($player['position']); ?></div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-sm font-medium"><?php echo $player['rating'] ?? '-'; ?></div>
+                            <div class="text-xs text-gray-500">Rating</div>
+                        </div>
+                    </div>
+                <?php endif; ?>
+            <?php endforeach; ?>
+        <?php endif; ?>
     </div>
 <?php
 };
