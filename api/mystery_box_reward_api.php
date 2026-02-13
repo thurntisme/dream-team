@@ -29,7 +29,7 @@ if (!$input || !isset($input['reward'])) {
 }
 
 $reward = $input['reward'];
-$user_id = $_SESSION['user_id'];
+$user_uuid = $_SESSION['user_uuid'];
 
 try {
     $db = getDbConnection();
@@ -40,7 +40,7 @@ try {
         throw new Exception('Match ID is required');
     }
 
-    $session_key = "mystery_box_claimed_{$match_id}_{$user_id}";
+    $session_key = "mystery_box_claimed_{$match_id}_{$user_uuid}";
     if (isset($_SESSION[$session_key]) && $_SESSION[$session_key] === true) {
         throw new Exception('Mystery box reward already claimed for this match');
     }
@@ -65,9 +65,9 @@ try {
             }
 
             // Update user budget
-            $stmt = $db->prepare('UPDATE users SET budget = budget + :amount WHERE id = :user_id');
+            $stmt = $db->prepare('UPDATE user_club SET budget = budget + :amount WHERE user_uuid = :user_uuid');
             $stmt->bindValue(':amount', $amount, SQLITE3_INTEGER);
-            $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+            $stmt->bindValue(':user_uuid', $user_uuid, SQLITE3_TEXT);
             $result = $stmt->execute();
 
             if ($result) {
@@ -87,9 +87,9 @@ try {
             }
 
             // Update user fans
-            $stmt = $db->prepare('UPDATE users SET fans = fans + :amount WHERE id = :user_id');
+            $stmt = $db->prepare('UPDATE user_club SET fans = fans + :amount WHERE user_uuid = :user_uuid');
             $stmt->bindValue(':amount', $amount, SQLITE3_INTEGER);
-            $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+            $stmt->bindValue(':user_uuid', $user_uuid, SQLITE3_TEXT);
             $result = $stmt->execute();
 
             if ($result) {
@@ -99,33 +99,26 @@ try {
             break;
 
         case 'player':
-            // Get user's current team and substitutes
-            $stmt = $db->prepare('SELECT team, substitutes, max_players FROM users WHERE id = :user_id');
-            $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+            // Get user's current team from user_club
+            $stmt = $db->prepare('SELECT team, max_players FROM user_club WHERE user_uuid = :user_uuid');
+            $stmt->bindValue(':user_uuid', $user_uuid, SQLITE3_TEXT);
             $result = $stmt->execute();
             $user_info = $result->fetchArray(SQLITE3_ASSOC);
 
-            $team = json_decode($user_info['team'] ?? '[]', true) ?: [];
-            $substitutes = json_decode($user_info['substitutes'] ?? '[]', true) ?: [];
+            $full_team = json_decode($user_info['team'] ?? '[]', true) ?: [];
             $max_players = $user_info['max_players'] ?? 25; // Default to 25 if not set
 
             // Calculate current total players
-            $current_players_count = 0;
-            foreach ($team as $p) {
-                if ($p) $current_players_count++;
-            }
-            foreach ($substitutes as $p) {
-                if ($p) $current_players_count++;
-            }
+            $current_players_count = count(array_filter($full_team));
 
             // Check if user has space
             if ($current_players_count >= $max_players) {
                 // No space, give budget equivalent instead
                 $equivalent_budget = 300000;
 
-                $stmt = $db->prepare('UPDATE users SET budget = budget + :amount WHERE id = :user_id');
+                $stmt = $db->prepare('UPDATE user_club SET budget = budget + :amount WHERE user_uuid = :user_uuid');
                 $stmt->bindValue(':amount', $equivalent_budget, SQLITE3_INTEGER);
-                $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+                $stmt->bindValue(':user_uuid', $user_uuid, SQLITE3_TEXT);
                 $result = $stmt->execute();
 
                 if ($result) {
@@ -137,13 +130,7 @@ try {
                 $all_players = getDefaultPlayers();
 
                 // Get owned player names (to avoid duplicates)
-                $owned_names = [];
-                foreach ($team as $p) {
-                    if ($p) $owned_names[] = $p['name'];
-                }
-                foreach ($substitutes as $p) {
-                    if ($p) $owned_names[] = $p['name'];
-                }
+                $owned_names = array_map(function($p) { return $p['name'] ?? ''; }, array_filter($full_team));
 
                 // Filter available players
                 $available_players = array_filter($all_players, function ($p) use ($owned_names) {
@@ -154,9 +141,9 @@ try {
                     // User owns all players (unlikely), give budget
                     $equivalent_budget = 500000;
 
-                    $stmt = $db->prepare('UPDATE users SET budget = budget + :amount WHERE id = :user_id');
+                    $stmt = $db->prepare('UPDATE user_club SET budget = budget + :amount WHERE user_uuid = :user_uuid');
                     $stmt->bindValue(':amount', $equivalent_budget, SQLITE3_INTEGER);
-                    $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+                    $stmt->bindValue(':user_uuid', $user_uuid, SQLITE3_TEXT);
                     $result = $stmt->execute();
 
                     if ($result) {
@@ -176,25 +163,13 @@ try {
                         $new_player['fitness'] = 100;
                     }
 
-                    // Add to substitutes
-                    // Find first empty slot or append
-                    $added = false;
-                    for ($i = 0; $i < count($substitutes); $i++) {
-                        if ($substitutes[$i] === null) {
-                            $substitutes[$i] = $new_player;
-                            $added = true;
-                            break;
-                        }
-                    }
-
-                    if (!$added) {
-                        $substitutes[] = $new_player;
-                    }
+                    // Add to team (append)
+                    $full_team[] = $new_player;
 
                     // Update database
-                    $stmt = $db->prepare('UPDATE users SET substitutes = :substitutes WHERE id = :user_id');
-                    $stmt->bindValue(':substitutes', json_encode($substitutes), SQLITE3_TEXT);
-                    $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+                    $stmt = $db->prepare('UPDATE user_club SET team = :team WHERE user_uuid = :user_uuid');
+                    $stmt->bindValue(':team', json_encode($full_team), SQLITE3_TEXT);
+                    $stmt->bindValue(':user_uuid', $user_uuid, SQLITE3_TEXT);
                     $result = $stmt->execute();
 
                     if ($result) {
@@ -211,9 +186,9 @@ try {
             // For now, we'll give a budget equivalent
             $equivalent_budget = 150000;
 
-            $stmt = $db->prepare('UPDATE users SET budget = budget + :amount WHERE id = :user_id');
+            $stmt = $db->prepare('UPDATE user_club SET budget = budget + :amount WHERE user_uuid = :user_uuid');
             $stmt->bindValue(':amount', $equivalent_budget, SQLITE3_INTEGER);
-            $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+            $stmt->bindValue(':user_uuid', $user_uuid, SQLITE3_TEXT);
             $result = $stmt->execute();
 
             if ($result) {
@@ -234,8 +209,8 @@ try {
     $_SESSION[$session_key] = true;
 
     // Get updated user data
-    $stmt = $db->prepare('SELECT budget, fans FROM users WHERE id = :user_id');
-    $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+    $stmt = $db->prepare('SELECT budget, fans FROM user_club WHERE user_uuid = :user_uuid');
+    $stmt->bindValue(':user_uuid', $user_uuid, SQLITE3_TEXT);
     $result = $stmt->execute();
     $user_data = $result->fetchArray(SQLITE3_ASSOC);
 

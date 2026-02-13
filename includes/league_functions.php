@@ -161,19 +161,6 @@ function createLeagueTables($db)
                 if ((int)($rowCol['c'] ?? 0) === 0) {
                     $db->exec('ALTER TABLE league_matches ADD COLUMN uuid CHAR(16) NULL');
                 }
-            } else {
-                // SQLite fallback
-                $res = $db->query("PRAGMA table_info(league_matches)");
-                $hasUuid = false;
-                while ($r = $res->fetchArray(SQLITE3_ASSOC)) {
-                    if (($r['name'] ?? '') === 'uuid') {
-                        $hasUuid = true;
-                        break;
-                    }
-                }
-                if (!$hasUuid) {
-                    $db->exec('ALTER TABLE league_matches ADD COLUMN uuid TEXT NULL');
-                }
             }
         } catch (Throwable $e) {}
         // Ensure uuid index
@@ -692,6 +679,7 @@ function simulateMatch($db, $match_id, $user_id)
 {
     // Resolve user_uuid from numeric id
     $stmt = $db->prepare('SELECT uuid FROM users WHERE id = :id');
+    if ($stmt === false) return false;
     $stmt->bindValue(':id', $user_id, SQLITE3_INTEGER);
     $resUuid = $stmt->execute();
     $rowUuid = $resUuid ? $resUuid->fetchArray(SQLITE3_ASSOC) : null;
@@ -699,6 +687,7 @@ function simulateMatch($db, $match_id, $user_id)
 
     // Get match details
     $stmt = $db->prepare('SELECT * FROM league_matches WHERE id = :id AND status = \'scheduled\'');
+    if ($stmt === false) return false;
     $stmt->bindValue(':id', $match_id, SQLITE3_INTEGER);
     $result = $stmt->execute();
     $match = $result->fetchArray(SQLITE3_ASSOC);
@@ -708,11 +697,13 @@ function simulateMatch($db, $match_id, $user_id)
 
     // Get team details
     $stmt = $db->prepare('SELECT * FROM league_teams WHERE id = :id');
+    if ($stmt === false) return false;
     $stmt->bindValue(':id', $match['home_team_id'], SQLITE3_INTEGER);
     $result = $stmt->execute();
     $home_team = $result->fetchArray(SQLITE3_ASSOC);
 
     $stmt = $db->prepare('SELECT * FROM league_teams WHERE id = :id');
+    if ($stmt === false) return false;
     $stmt->bindValue(':id', $match['away_team_id'], SQLITE3_INTEGER);
     $result = $stmt->execute();
     $away_team = $result->fetchArray(SQLITE3_ASSOC);
@@ -727,6 +718,7 @@ function simulateMatch($db, $match_id, $user_id)
 
     // Update match result
     $stmt = $db->prepare('UPDATE league_matches SET home_score = :home_score, away_score = :away_score, status = \'completed\' WHERE id = :id');
+    if ($stmt === false) return false;
     $stmt->bindValue(':home_score', $home_score, SQLITE3_INTEGER);
     $stmt->bindValue(':away_score', $away_score, SQLITE3_INTEGER);
     $stmt->bindValue(':id', $match_id, SQLITE3_INTEGER);
@@ -742,6 +734,7 @@ function simulateMatch($db, $match_id, $user_id)
     
     // Check if user is home team
     $stmt = $db->prepare('SELECT user_uuid FROM league_teams WHERE id = :id AND user_uuid = :user_uuid');
+    if ($stmt === false) return false;
     $stmt->bindValue(':id', $match['home_team_id'], SQLITE3_INTEGER);
     $stmt->bindValue(':user_uuid', $user_uuid, SQLITE3_TEXT);
     $result = $stmt->execute();
@@ -751,6 +744,7 @@ function simulateMatch($db, $match_id, $user_id)
     } else {
         // Check if user is away team
         $stmt = $db->prepare('SELECT user_uuid FROM league_teams WHERE id = :id AND user_uuid = :user_uuid');
+        if ($stmt === false) return false;
         $stmt->bindValue(':id', $match['away_team_id'], SQLITE3_INTEGER);
         $stmt->bindValue(':user_uuid', $user_uuid, SQLITE3_TEXT);
         $result = $stmt->execute();
@@ -778,12 +772,14 @@ function simulateMatch($db, $match_id, $user_id)
         
         // Apply budget rewards
         $stmt = $db->prepare('UPDATE users SET budget = budget + :reward WHERE id = :user_id');
+        if ($stmt === false) return false;
         $stmt->bindValue(':reward', $rewards['budget_earned'], SQLITE3_INTEGER);
         $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
         $stmt->execute();
         
         // Apply fan changes
         $stmt = $db->prepare('SELECT fans FROM users WHERE id = :user_id');
+        if ($stmt === false) return false;
         $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
         $result = $stmt->execute();
         $user_data = $result->fetchArray(SQLITE3_ASSOC);
@@ -792,6 +788,7 @@ function simulateMatch($db, $match_id, $user_id)
         $new_fans = max(1000, $current_fans + $rewards['fan_change']); // Minimum 1000 fans
         
         $stmt = $db->prepare('UPDATE users SET fans = :fans WHERE id = :user_id');
+        if ($stmt === false) return false;
         $stmt->bindValue(':fans', $new_fans, SQLITE3_INTEGER);
         $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
         $stmt->execute();
@@ -800,15 +797,30 @@ function simulateMatch($db, $match_id, $user_id)
     return true;
 }
 
-function getFanRevenueBreakdown($db, $user_id, $is_home, $total_revenue, $previous_fans = null)
+function simulateMatchByUUID($db, $match_uuid, $user_id)
+{
+    $stmt = $db->prepare('SELECT id FROM league_matches WHERE uuid = :uuid');
+    if ($stmt === false) return false;
+    $stmt->bindValue(':uuid', $match_uuid, SQLITE3_TEXT);
+    $res = $stmt->execute();
+    $row = $res ? $row = $res->fetchArray(SQLITE3_ASSOC) : null;
+    $match_id = (int)($row['id'] ?? 0);
+    if ($match_id <= 0) return false;
+    return simulateMatch($db, $match_id, $user_id);
+}
+
+function getFanRevenueBreakdown($db, $user_uuid, $is_home, $total_revenue, $previous_fans = null)
 {
     if ($total_revenue <= 0) {
         return [['description' => 'Fan Revenue', 'amount' => 0]];
     }
 
     // Get detailed fan revenue breakdown
-    $stmt = $db->prepare('SELECT u.fans, s.capacity, s.level FROM users u LEFT JOIN stadiums s ON u.id = s.user_id WHERE u.id = :user_id');
-    $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+    $stmt = $db->prepare('SELECT u.fans, s.capacity, s.level FROM users u LEFT JOIN stadiums s ON u.uuid = s.user_uuid WHERE u.uuid = :user_uuid');
+    if ($stmt === false) {
+        return [['description' => 'Fan Revenue', 'amount' => 0]];
+    }
+    $stmt->bindValue(':user_uuid', $user_uuid, SQLITE3_TEXT);
     $result = $stmt->execute();
     $user_data = $result->fetchArray(SQLITE3_ASSOC);
 
@@ -910,9 +922,18 @@ function updateFansAfterMatch($db, $user_id, $user_score, $opponent_score, $is_h
 
 function simulateGameweek($db, $match_id, $user_id)
 {
-    // Get the gameweek of the user's match
-    $stmt = $db->prepare('SELECT gameweek, season FROM league_matches WHERE id = :id');
-    $stmt->bindValue(':id', $match_id, SQLITE3_INTEGER);
+    // Resolve uuid then get the gameweek of the user's match
+    $stmt0 = $db->prepare('SELECT uuid FROM league_matches WHERE id = :id');
+    if ($stmt0 === false) return false;
+    $stmt0->bindValue(':id', $match_id, SQLITE3_INTEGER);
+    $res0 = $stmt0->execute();
+    $row0 = $res0 ? $res0->fetchArray(SQLITE3_ASSOC) : null;
+    $match_uuid = $row0['uuid'] ?? null;
+    if (!$match_uuid) return false;
+
+    $stmt = $db->prepare('SELECT gameweek, season FROM league_matches WHERE uuid = :uuid');
+    if ($stmt === false) return false;
+    $stmt->bindValue(':uuid', $match_uuid, SQLITE3_TEXT);
     $result = $stmt->execute();
     $match_info = $result->fetchArray(SQLITE3_ASSOC);
 
@@ -938,9 +959,9 @@ function simulateGameweek($db, $match_id, $user_id)
     $user_team = $result->fetchArray(SQLITE3_ASSOC);
     $user_team_id = $user_team ? $user_team['id'] : null;
 
-    // Get all matches in this gameweek with team names
+    // Get all matches in this gameweek with team names and uuid
     $stmt = $db->prepare('SELECT 
-        lm.id, lm.home_team_id, lm.away_team_id,
+        lm.uuid, lm.home_team_id, lm.away_team_id,
         ht.name as home_team, at.name as away_team
         FROM league_matches lm
         JOIN league_teams ht ON lm.home_team_id = ht.id
@@ -955,12 +976,13 @@ function simulateGameweek($db, $match_id, $user_id)
     $all_results = [];
 
     while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
-        if (simulateMatch($db, $row['id'], $user_id)) {
+        if (simulateMatchByUUID($db, $row['uuid'], $user_id)) {
             $matches_simulated++;
 
             // Get the match result
-            $stmt2 = $db->prepare('SELECT home_score, away_score FROM league_matches WHERE id = :id');
-            $stmt2->bindValue(':id', $row['id'], SQLITE3_INTEGER);
+            $stmt2 = $db->prepare('SELECT home_score, away_score FROM league_matches WHERE uuid = :uuid');
+            if ($stmt2 === false) continue;
+            $stmt2->bindValue(':uuid', $row['uuid'], SQLITE3_TEXT);
             $result2 = $stmt2->execute();
             $match_result = $result2->fetchArray(SQLITE3_ASSOC);
 
@@ -1035,7 +1057,7 @@ function simulateGameweek($db, $match_id, $user_id)
         if ($fan_result['additional_revenue'] > 0) {
             $budget_earned += $fan_result['additional_revenue'];
             // Get detailed fan revenue breakdown
-            $fan_breakdown = getFanRevenueBreakdown($db, $user_id, $user_match_result['is_home'], $fan_result['additional_revenue'], $fan_result['previous_fans']);
+            $fan_breakdown = getFanRevenueBreakdown($db, $user_uuid, $user_match_result['is_home'], $fan_result['additional_revenue'], $fan_result['previous_fans']);
             foreach ($fan_breakdown as $item) {
                 $budget_breakdown[] = $item;
             }
@@ -1082,9 +1104,9 @@ function simulateCurrentGameweek($db, $user_id, $season, $gameweek)
     $user_team = $result->fetchArray(SQLITE3_ASSOC);
     $user_team_id = $user_team ? $user_team['id'] : null;
 
-    // Get all matches in this gameweek with team names
+    // Get all matches in this gameweek with team names and uuid
     $stmt = $db->prepare('SELECT 
-        lm.id, lm.home_team_id, lm.away_team_id,
+        lm.uuid, lm.home_team_id, lm.away_team_id,
         ht.name as home_team, at.name as away_team
         FROM league_matches lm
         JOIN league_teams ht ON lm.home_team_id = ht.id
@@ -1099,12 +1121,13 @@ function simulateCurrentGameweek($db, $user_id, $season, $gameweek)
     $all_results = [];
 
     while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
-        if (simulateMatch($db, $row['id'], $user_id)) {
+        if (simulateMatchByUUID($db, $row['uuid'], $user_id)) {
             $matches_simulated++;
 
             // Get the match result
-            $stmt2 = $db->prepare('SELECT home_score, away_score FROM league_matches WHERE id = :id');
-            $stmt2->bindValue(':id', $row['id'], SQLITE3_INTEGER);
+            $stmt2 = $db->prepare('SELECT home_score, away_score FROM league_matches WHERE uuid = :uuid');
+            if ($stmt2 === false) continue;
+            $stmt2->bindValue(':uuid', $row['uuid'], SQLITE3_TEXT);
             $result2 = $stmt2->execute();
             $match_result = $result2->fetchArray(SQLITE3_ASSOC);
 
@@ -1182,7 +1205,7 @@ function simulateCurrentGameweek($db, $user_id, $season, $gameweek)
         if ($fan_result['additional_revenue'] > 0) {
             $budget_earned += $fan_result['additional_revenue'];
             // Get detailed fan revenue breakdown
-            $fan_breakdown = getFanRevenueBreakdown($db, $user_id, $user_match_result['is_home'], $fan_result['additional_revenue'], $fan_result['previous_fans']);
+            $fan_breakdown = getFanRevenueBreakdown($db, $user_uuid, $user_match_result['is_home'], $fan_result['additional_revenue'], $fan_result['previous_fans']);
             foreach ($fan_breakdown as $item) {
                 $budget_breakdown[] = $item;
             }
@@ -1345,7 +1368,7 @@ function updateTeamStats($db, $team_id, $goals_for, $goals_against, $is_home)
         goals_against = goals_against + :goals_against,
         points = points + :points
         WHERE id = :id');
-
+    if ($stmt === false) return;
     $stmt->bindValue(':wins', $wins, SQLITE3_INTEGER);
     $stmt->bindValue(':draws', $draws, SQLITE3_INTEGER);
     $stmt->bindValue(':losses', $losses, SQLITE3_INTEGER);
@@ -1357,6 +1380,7 @@ function updateTeamStats($db, $team_id, $goals_for, $goals_against, $is_home)
 
     // Update user budget if this is a user team
     $stmt = $db->prepare('SELECT user_uuid FROM league_teams WHERE id = :id AND user_uuid IS NOT NULL');
+    if ($stmt === false) return;
     $stmt->bindValue(':id', $team_id, SQLITE3_INTEGER);
     $result = $stmt->execute();
     $user_team = $result->fetchArray(SQLITE3_ASSOC);
@@ -1365,6 +1389,7 @@ function updateTeamStats($db, $team_id, $goals_for, $goals_against, $is_home)
         // Update player conditions (fitness and form) after match
         // Resolve numeric id from uuid then call update
         $stmtU = $db->prepare('SELECT id FROM users WHERE uuid = :uuid');
+        if ($stmtU === false) return;
         $stmtU->bindValue(':uuid', $user_team['user_uuid'], SQLITE3_TEXT);
         $resU = $stmtU->execute();
         $rowU = $resU ? $resU->fetchArray(SQLITE3_ASSOC) : null;
@@ -1378,6 +1403,7 @@ function updatePlayerConditions($db, $user_id, $wins, $draws, $losses, $goals_fo
 {
     // Get user's team and substitutes
     $stmt = $db->prepare('SELECT team, substitutes FROM users WHERE id = :user_id');
+    if ($stmt === false) return;
     $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
     $result = $stmt->execute();
     $user_data = $result->fetchArray(SQLITE3_ASSOC);
@@ -1418,7 +1444,7 @@ function updatePlayerConditions($db, $user_id, $wins, $draws, $losses, $goals_fo
                 $team[$i]['contract_matches_remaining'] = max(0, $team[$i]['contract_matches_remaining'] - 1);
 
                 // Award experience points based on match performance
-                $base_experience = 10; // Base experience for playing
+                $base_experience = 10;
                 $performance_bonus = 0;
 
                 switch ($performance) {

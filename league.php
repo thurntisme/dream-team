@@ -665,7 +665,7 @@ startContent();
                     </div>
 
                     <?php if ($next_match): ?>
-                        <button id="playMatchBtn"
+                        <button id="playMatchBtn" data-uuid="<?php echo htmlspecialchars($next_match['uuid'] ?? ''); ?>"
                             class="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 font-medium transition-colors flex items-center gap-2 shadow-md">
                             <i data-lucide="play" class="w-4 h-4"></i>
                             Play Match
@@ -677,22 +677,16 @@ startContent();
                                 btn.addEventListener('click', async function () {
                                     btn.disabled = true;
                                     btn.classList.add('opacity-50');
-                                    try {
-                                        const res = await fetch('api/generate_next_match_api.php', { method: 'POST' });
-                                        const json = await res.json();
-                                        if (json && json.ok && json.match_uuid) {
-                                            window.location.href = 'match-simulator.php?match_uuid=' + encodeURIComponent(json.match_uuid);
-                                        } else if (json && json.match_id) {
-                                            window.location.href = 'match-simulator.php?match_id=' + encodeURIComponent(json.match_id);
-                                        } else {
-                                            alert('Failed to prepare the match.');
-                                        }
-                                    } catch (e) {
-                                        alert('Network error preparing match.');
-                                    } finally {
+                                    const u = btn.dataset.uuid;
+                                    if (u) {
+                                        window.location.href = 'league_match.php?uuid=' + encodeURIComponent(u);
+                                    } else {
+                                        alert('Match UUID not available.');
+                                    }
+                                    setTimeout(function() {
                                         btn.disabled = false;
                                         btn.classList.remove('opacity-50');
-                                    }
+                                    }, 100);
                                 });
                             })();
                         </script>
@@ -1231,6 +1225,9 @@ startContent();
                                 <div class="text-sm text-gray-500">
                                     <?php echo date('M j, Y', strtotime($match['match_date'])); ?>
                                 </div>
+                                <div class="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded">
+                                    <?php echo htmlspecialchars($match['uuid'] ?? ''); ?>
+                                </div>
                                 <div class="flex items-center gap-2">
                                     <span
                                         class="font-medium <?php echo $match['home_team_id'] == $user_id ? 'text-blue-600' : ''; ?>">
@@ -1247,7 +1244,7 @@ startContent();
                             <?php if ($match['status'] === 'scheduled' && ($match['home_team_id'] == $user_id || $match['away_team_id'] == $user_id)): ?>
                                 <?php if ($match['gameweek'] == $current_gameweek): ?>
                                     <?php if ($current_validation['is_valid']): ?>
-                                        <button type="button"
+                                        <button type="button" data-uuid="<?php echo htmlspecialchars($match['uuid'] ?? ''); ?>"
                                             class="play-match-btn bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700"
                                             title="Play your next scheduled league match">
                                             Play Match
@@ -1300,23 +1297,17 @@ startContent();
                     const original = btn.innerHTML;
                     btn.disabled = true;
                     btn.classList.add('opacity-50');
-                    try {
-                        const res = await fetch('api/generate_next_match_api.php', { method: 'POST' });
-                        const json = await res.json();
-                        if (json && json.ok && json.match_uuid) {
-                            window.location.href = 'match-simulator.php?match_uuid=' + encodeURIComponent(json.match_uuid);
-                        } else if (json && json.match_id) {
-                            window.location.href = 'match-simulator.php?match_id=' + encodeURIComponent(json.match_id);
-                        } else {
-                            alert('Failed to prepare the match.');
-                        }
-                    } catch (e) {
-                        alert('Network error preparing match.');
-                    } finally {
+                    const u = btn.dataset.uuid;
+                    if (u) {
+                        window.location.href = 'match-simulator.php?uuid=' + encodeURIComponent(u);
+                    } else {
+                        alert('Match UUID not available.');
+                    }
+                    setTimeout(function() {
                         btn.disabled = false;
                         btn.classList.remove('opacity-50');
                         btn.innerHTML = original;
-                    }
+                    }, 100);
                 });
             });
         })();

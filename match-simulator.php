@@ -9,7 +9,7 @@ require_once 'includes/league_functions.php';
 // Check if this is a league match or club challenge
 $match_id = $_GET['match_id'] ?? null;
 $match_result_id = $_GET['match_result'] ?? null;
-$match_uuid = $_GET['match_uuid'] ?? null;
+$match_uuid = $_GET['uuid'] ?? null;
 $match_result_uuid = $_GET['match_result_uuid'] ?? null;
 $opponent_id = $_GET['opponent'] ?? null;
 
@@ -126,8 +126,7 @@ function handleLeagueMatch($match_id)
                 header('Location: match-simulator.php?match_result=' . $match_id);
                 exit;
             } else {
-                // Fallback: directly simulate just this match
-                simulateMatch($db, (int)$match_id, (int)$user_id_resolved);
+                simulateMatchByUUID($db, $match['uuid'] ?? '', (int)$user_id_resolved);
                 // Re-check status
                 $stmt_check2 = $db->prepare("SELECT status FROM league_matches WHERE id = :id");
                 $stmt_check2->bindValue(':id', $match_id);
@@ -178,6 +177,11 @@ function handleLeagueMatchByUUID($match_uuid)
         $match = $result->fetchArray(SQLITE3_ASSOC);
 
         if (!$match) {
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                header('Content-Type: application/json');
+                echo json_encode(['ok' => false, 'error' => 'match_not_found']);
+                exit;
+            }
             $_SESSION['error'] = 'Match not found or not available to play.';
             header('Location: league.php');
             exit;
@@ -216,25 +220,27 @@ function handleLeagueMatchByUUID($match_uuid)
             $stmt_check->bindValue(':uuid', $match_uuid);
             $res_check = $stmt_check->execute();
             $row_check = $res_check ? $res_check->fetchArray(SQLITE3_ASSOC) : null;
+            header('Content-Type: application/json');
             if ($row_check && $row_check['status'] === 'scheduled') {
-                // Resolve numeric id for simulation
-                $stmt_id = $db->prepare("SELECT id FROM league_matches WHERE uuid = :uuid");
-                $stmt_id->bindValue(':uuid', $match_uuid);
-                $res_id = $stmt_id->execute();
-                $row_id = $res_id ? $res_id->fetchArray(SQLITE3_ASSOC) : null;
-                $match_id = (int)($row_id['id'] ?? 0);
-                if ($match_id > 0 && simulateMatch($db, $match_id, (int)$_SESSION['user_id'])) {
-                    header('Location: match-simulator.php?match_result_uuid=' . $match_uuid);
+                if (simulateMatchByUUID($db, $match_uuid, (int)$_SESSION['user_id'])) {
+                    echo json_encode(['ok' => true, 'match_result_uuid' => $match_uuid]);
                     exit;
                 }
-                $_SESSION['error'] = 'Failed to simulate match.';
+                echo json_encode(['ok' => false, 'error' => 'simulate_failed']);
+                exit;
             }
+            echo json_encode(['ok' => false, 'error' => 'invalid_status']);
+            exit;
         }
 
         $db->close();
         displayLeagueMatch($match, $user_data, null, $is_home, null);
     } catch (Exception $e) {
-        error_log("League match error: " . $e->getMessage());
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            header('Content-Type: application/json');
+            echo json_encode(['ok' => false, 'error' => 'exception', 'message' => $e->getMessage()]);
+            exit;
+        }
         $_SESSION['error'] = 'An error occurred while loading the match.';
         header('Location: league.php');
         exit;
@@ -1111,7 +1117,7 @@ function displayMatchResult($match_id)
             $resId = $stmtId->execute();
             $rowId = $resId ? $resId->fetchArray(SQLITE3_ASSOC) : null;
             $user_id_resolved = $rowId['id'] ?? null;
-            $fan_breakdown = getFanRevenueBreakdown($db, (int)$user_id_resolved, $is_home, 100);
+            $fan_breakdown = getFanRevenueBreakdown($db, $user_uuid, $is_home, 100);
             
             foreach ($fan_breakdown as $item) {
                 $rewards['breakdown'][] = $item;

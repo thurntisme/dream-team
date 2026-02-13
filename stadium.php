@@ -39,23 +39,52 @@ try {
         $can_rename_stadium = false;
     }
 
-    $stmt = $db->prepare('SELECT * FROM stadiums WHERE user_id = (SELECT id FROM users WHERE uuid = :uuid)');
+    // Prefer user_uuid schema; fallback to user_id if present
     $stadium_data = null;
-    if ($stmt) {
-        $stmt->bindValue(':uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
-        $result = $stmt->execute();
-        $stadium_data = $result ? $result->fetchArray(SQLITE3_ASSOC) : null;
+    $stmtSt = $db->prepare('SELECT * FROM stadiums WHERE user_uuid = :uuid');
+    if ($stmtSt) {
+        $stmtSt->bindValue(':uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
+        $resSt = $stmtSt->execute();
+        $stadium_data = $resSt ? $resSt->fetchArray(SQLITE3_ASSOC) : null;
+    } else {
+        $stmtStId = $db->prepare('SELECT * FROM stadiums WHERE user_id = (SELECT id FROM users WHERE uuid = :uuid)');
+        if ($stmtStId) {
+            $stmtStId->bindValue(':uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
+            $resStId = $stmtStId->execute();
+            $stadium_data = $resStId ? $resStId->fetchArray(SQLITE3_ASSOC) : null;
+        }
     }
     if (!$stadium_data) {
-        $ins = $db->prepare('INSERT INTO stadiums (user_id) VALUES ((SELECT id FROM users WHERE uuid = :uuid))');
-        if ($ins) {
-            $ins->bindValue(':uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
-            $ins->execute();
-            $stmt = $db->prepare('SELECT * FROM stadiums WHERE user_id = (SELECT id FROM users WHERE uuid = :uuid)');
-            if ($stmt) {
-                $stmt->bindValue(':uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
-                $result = $stmt->execute();
-                $stadium_data = $result ? $result->fetchArray(SQLITE3_ASSOC) : null;
+        // Create a stadium record with proper name "<club_name> Stadium"
+        $defaultName = (trim($club_name) !== '' ? trim($club_name) : 'Home') . ' Stadium';
+        $insSt = $db->prepare('INSERT INTO stadiums (user_uuid, name, capacity, level) VALUES (:uuid, :name, :cap, :lvl)');
+        if ($insSt) {
+            $insSt->bindValue(':uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
+            $insSt->bindValue(':name', $defaultName, SQLITE3_TEXT);
+            $insSt->bindValue(':cap', 10000, SQLITE3_INTEGER);
+            $insSt->bindValue(':lvl', 1, SQLITE3_INTEGER);
+            $insSt->execute();
+            $stmtStReload = $db->prepare('SELECT * FROM stadiums WHERE user_uuid = :uuid');
+            if ($stmtStReload) {
+                $stmtStReload->bindValue(':uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
+                $resStReload = $stmtStReload->execute();
+                $stadium_data = $resStReload ? $resStReload->fetchArray(SQLITE3_ASSOC) : null;
+            }
+        } else {
+            // Fallback for legacy schema with user_id
+            $insId = $db->prepare('INSERT INTO stadiums (user_id, name, capacity, level) VALUES ((SELECT id FROM users WHERE uuid = :uuid), :name, :cap, :lvl)');
+            if ($insId) {
+                $insId->bindValue(':uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
+                $insId->bindValue(':name', $defaultName, SQLITE3_TEXT);
+                $insId->bindValue(':cap', 10000, SQLITE3_INTEGER);
+                $insId->bindValue(':lvl', 1, SQLITE3_INTEGER);
+                $insId->execute();
+                $stmtReloadId = $db->prepare('SELECT * FROM stadiums WHERE user_id = (SELECT id FROM users WHERE uuid = :uuid)');
+                if ($stmtReloadId) {
+                    $stmtReloadId->bindValue(':uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
+                    $resReloadId = $stmtReloadId->execute();
+                    $stadium_data = $resReloadId ? $resReloadId->fetchArray(SQLITE3_ASSOC) : null;
+                }
             }
         }
     }

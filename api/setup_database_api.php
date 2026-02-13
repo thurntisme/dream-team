@@ -194,6 +194,33 @@ try {
                                     $stmtClub->bindValue(':budget', DEFAULT_BUDGET, SQLITE3_INTEGER);
                                     $stmtClub->execute();
                                 }
+                                // Ensure stadium exists for admin with "<club> Stadium" name
+                                try {
+                                    $clubNameVal = $adminName . ' FC';
+                                    $stadiumName = $clubNameVal . ' Stadium';
+                                    $stmtStChk = $db->prepare('SELECT COUNT(*) as c FROM stadiums WHERE user_uuid = :uuid');
+                                    if ($stmtStChk) {
+                                        $stmtStChk->bindValue(':uuid', $uuidVal, SQLITE3_TEXT);
+                                        $resStChk = $stmtStChk->execute();
+                                        $rowStChk = $resStChk ? $resStChk->fetchArray(SQLITE3_ASSOC) : ['c' => 0];
+                                        $exists = ((int)($rowStChk['c'] ?? 0)) > 0;
+                                    } else {
+                                        $exists = false;
+                                    }
+                                    if (!$exists) {
+                                        $stmtStIns = $db->prepare('INSERT INTO stadiums (user_uuid, name, capacity, level) VALUES (:uuid, :name, :cap, :lvl)');
+                                        if ($stmtStIns) {
+                                            $stmtStIns->bindValue(':uuid', $uuidVal, SQLITE3_TEXT);
+                                            $stmtStIns->bindValue(':name', $stadiumName, SQLITE3_TEXT);
+                                            $stmtStIns->bindValue(':cap', 10000, SQLITE3_INTEGER);
+                                            $stmtStIns->bindValue(':lvl', 1, SQLITE3_INTEGER);
+                                            $stmtStIns->execute();
+                                        }
+                                    }
+                                    $logs[] = ['type' => 'detail', 'message' => 'Admin stadium ensured'];
+                                } catch (Throwable $e) {
+                                    $logs[] = ['type' => 'error', 'message' => 'Admin stadium error: ' . $e->getMessage()];
+                                }
                                 $logs[] = ['type' => 'info', 'message' => 'Admin user created'];
                             } else {
                                 $ok = false;
