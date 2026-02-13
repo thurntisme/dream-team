@@ -27,7 +27,7 @@ class TeamController
         $stmt = $this->db->prepare('
             SELECT 
                 u.name, u.email, u.created_at,
-                c.club_name, c.formation, c.team, c.budget, c.max_players
+                c.club_name, c.formation, c.team, c.budget, c.max_players, c.fans
             FROM users u
             LEFT JOIN user_club c ON c.user_uuid = u.uuid
             WHERE u.uuid = :uuid

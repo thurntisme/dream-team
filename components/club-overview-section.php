@@ -62,7 +62,7 @@
         </div>
 
         <!-- Club Statistics Grid -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
             <div
                 class="bg-gradient-to-r from-green-50 to-green-100 rounded-lg p-4 text-center border border-green-200">
                 <div class="text-2xl font-bold text-green-700" id="clubTeamValue">
@@ -102,6 +102,13 @@
                     ?>
                 </div>
                 <div class="text-sm text-yellow-600">Avg Rating</div>
+            </div>
+            <div
+                class="bg-gradient-to-r from-red-50 to-red-100 rounded-lg p-4 text-center border border-red-200">
+                <div class="text-2xl font-bold text-red-700" id="clubFans">
+                    <?php echo number_format((int)($user['fans'] ?? 0)); ?>
+                </div>
+                <div class="text-sm text-red-600">Fans</div>
             </div>
         </div>
 
