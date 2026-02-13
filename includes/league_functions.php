@@ -770,28 +770,21 @@ function simulateMatch($db, $match_id, $user_id)
         // Calculate additional rewards (beyond what updateTeamStats already applied)
         $rewards = calculateLeagueMatchRewards($match_result, $user_score, $opponent_score, $is_user_home);
         
-        // Apply budget rewards
-        $stmt = $db->prepare('UPDATE users SET budget = budget + :reward WHERE id = :user_id');
-        if ($stmt === false) return false;
-        $stmt->bindValue(':reward', $rewards['budget_earned'], SQLITE3_INTEGER);
-        $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
-        $stmt->execute();
-        
-        // Apply fan changes
-        $stmt = $db->prepare('SELECT fans FROM users WHERE id = :user_id');
-        if ($stmt === false) return false;
-        $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
-        $result = $stmt->execute();
-        $user_data = $result->fetchArray(SQLITE3_ASSOC);
-        
-        $current_fans = $user_data['fans'] ?? 5000;
-        $new_fans = max(1000, $current_fans + $rewards['fan_change']); // Minimum 1000 fans
-        
-        $stmt = $db->prepare('UPDATE users SET fans = :fans WHERE id = :user_id');
-        if ($stmt === false) return false;
-        $stmt->bindValue(':fans', $new_fans, SQLITE3_INTEGER);
-        $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
-        $stmt->execute();
+        // Apply budget rewards (user_club)
+        // Resolve user_uuid from user_id
+        $stmtUU = $db->prepare('SELECT uuid FROM users WHERE id = :id');
+        if ($stmtUU === false) return false;
+        $stmtUU->bindValue(':id', $user_id, SQLITE3_INTEGER);
+        $resUU = $stmtUU->execute();
+        $rowUU = $resUU ? $resUU->fetchArray(SQLITE3_ASSOC) : null;
+        $user_uuid_resolved = $rowUU['uuid'] ?? null;
+        if ($user_uuid_resolved) {
+            $stmt = $db->prepare('UPDATE user_club SET budget = budget + :reward WHERE user_uuid = :user_uuid');
+            if ($stmt === false) return false;
+            $stmt->bindValue(':reward', $rewards['budget_earned'], SQLITE3_INTEGER);
+            $stmt->bindValue(':user_uuid', $user_uuid_resolved, SQLITE3_TEXT);
+            $stmt->execute();
+        }
     }
 
     return true;
@@ -816,7 +809,7 @@ function getFanRevenueBreakdown($db, $user_uuid, $is_home, $total_revenue, $prev
     }
 
     // Get detailed fan revenue breakdown
-    $stmt = $db->prepare('SELECT u.fans, s.capacity, s.level FROM users u LEFT JOIN stadiums s ON u.uuid = s.user_uuid WHERE u.uuid = :user_uuid');
+    $stmt = $db->prepare('SELECT c.fans, s.capacity, s.level FROM user_club c LEFT JOIN stadiums s ON c.user_uuid = s.user_uuid WHERE c.user_uuid = :user_uuid');
     if ($stmt === false) {
         return [['description' => 'Fan Revenue', 'amount' => 0]];
     }
@@ -855,11 +848,26 @@ function getFanRevenueBreakdown($db, $user_uuid, $is_home, $total_revenue, $prev
 
 function updateFansAfterMatch($db, $user_id, $user_score, $opponent_score, $is_home)
 {
-    // Get user's current fans and stadium info
-    $stmt = $db->prepare('SELECT u.fans, s.capacity, s.level FROM users u LEFT JOIN stadiums s ON u.id = s.user_id WHERE u.id = :user_id');
-    $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+    // Resolve user_uuid
+    $stmtU = $db->prepare('SELECT uuid FROM users WHERE id = :id');
+    $stmtU->bindValue(':id', $user_id, SQLITE3_INTEGER);
+    $resU = $stmtU->execute();
+    $rowU = $resU ? $resU->fetchArray(SQLITE3_ASSOC) : null;
+    $user_uuid = $rowU['uuid'] ?? null;
+    if (!$user_uuid) {
+        return [
+            'fan_change' => 0,
+            'new_fans' => null,
+            'additional_revenue' => 0,
+            'previous_fans' => null
+        ];
+    }
+
+    // Get user's current fans and stadium info from user_club
+    $stmt = $db->prepare('SELECT c.fans, s.capacity, s.level FROM user_club c LEFT JOIN stadiums s ON c.user_uuid = s.user_uuid WHERE c.user_uuid = :user_uuid');
+    $stmt->bindValue(':user_uuid', $user_uuid, SQLITE3_TEXT);
     $result = $stmt->execute();
-    $user_data = $result->fetchArray(SQLITE3_ASSOC);
+    $user_data = $result ? $result->fetchArray(SQLITE3_ASSOC) : null;
 
     $current_fans = $user_data['fans'] ?? 5000;
     $stadium_capacity = $user_data['capacity'] ?? 10000;
@@ -907,9 +915,9 @@ function updateFansAfterMatch($db, $user_id, $user_score, $opponent_score, $is_h
     // Update fan count (minimum 1000 fans)
     $new_fans = max(1000, $current_fans + $fan_change);
 
-    $stmt = $db->prepare('UPDATE users SET fans = :fans WHERE id = :user_id');
+    $stmt = $db->prepare('UPDATE user_club SET fans = :fans WHERE user_uuid = :user_uuid');
     $stmt->bindValue(':fans', $new_fans, SQLITE3_INTEGER);
-    $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+    $stmt->bindValue(':user_uuid', $user_uuid, SQLITE3_TEXT);
     $stmt->execute();
 
     return [
