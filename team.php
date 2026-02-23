@@ -91,7 +91,16 @@ startContent();
 <?php include 'components/player-recommendations-modal.php'; ?>
 
 <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <script>
+    const clubName = <?php echo json_encode($user['club_name'] ?? 'Club'); ?>;
+    function sanitizeFileName(name) {
+        return (name || 'Club')
+            .toString()
+            .replace(/[<>:"/\\|?*]+/g, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
     // Best Line-up Logic
     $('#bestLineup').click(function() {
         // 1. Gather all current players (Starting + Subs)
@@ -4688,6 +4697,54 @@ startContent();
                     });
                 });
             }
+        });
+    });
+
+    // Export team line-up field as PNG
+    $('#exportTeam').on('click', function () {
+        const fieldEl = document.getElementById('field-wrapper');
+        if (!fieldEl) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Export Failed',
+                text: 'Field view not found on the page.',
+                confirmButtonColor: '#ef4444'
+            });
+            return;
+        }
+
+        const $transient = $(fieldEl).find('.action-buttons, .hover-switch-btn');
+        const prevStyles = [];
+        $transient.each(function () {
+            prevStyles.push($(this).attr('style'));
+            $(this).css('display', 'none');
+        });
+
+        html2canvas(fieldEl, {
+            useCORS: true,
+            scale: 2
+        }).then(canvas => {
+            const a = document.createElement('a');
+            const safeClub = sanitizeFileName(clubName);
+            a.download = `${safeClub} - line-up.png`;
+            a.href = canvas.toDataURL('image/png');
+            a.click();
+        }).catch(err => {
+            Swal.fire({
+                icon: 'error',
+                title: 'Export Failed',
+                text: 'Could not generate the image. Please try again.',
+                confirmButtonColor: '#ef4444'
+            });
+        }).finally(() => {
+            $transient.each(function (i) {
+                const s = prevStyles[i];
+                if (s !== undefined && s !== null) {
+                    $(this).attr('style', s);
+                } else {
+                    $(this).removeAttr('style');
+                }
+            });
         });
     });
 </script>

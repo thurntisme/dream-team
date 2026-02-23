@@ -59,6 +59,11 @@
                 <i data-lucide="briefcase" class="w-4 h-4"></i>
                 Staff
             </a>
+            <button id="exportTeam"
+                class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 flex items-center gap-2 transition-colors">
+                <i data-lucide="download" class="w-4 h-4"></i>
+                Export
+            </button>
         </div>
 
         <!-- Club Statistics Grid -->
