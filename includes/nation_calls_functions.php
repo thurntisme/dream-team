@@ -190,23 +190,27 @@ if (!function_exists('saveNationCallRecord')) {
     function saveNationCallRecord($db, $user_id, $calledPlayers, $totalReward)
     {
         try {
-            if (DB_DRIVER === 'mysql') {
-                $stmt = $db->prepare('
-                    INSERT INTO nation_calls (user_id, called_players, total_reward, call_date)
-                    VALUES (:user_id, :called_players, :total_reward, NOW())
-                ');
-            } else {
-                $stmt = $db->prepare('
-                    INSERT INTO nation_calls (user_id, called_players, total_reward, call_date)
-                    VALUES (:user_id, :called_players, :total_reward, datetime("now"))
-                ');
+            // Resolve UUID from provided key (accepts legacy numeric id or uuid)
+            $user_uuid = $user_id;
+            if (!is_string($user_uuid) || strlen($user_uuid) < 16) {
+                $stmtUuid = $db->prepare('SELECT uuid FROM users WHERE id = :id LIMIT 1');
+                $stmtUuid->bindValue(':id', $user_id, SQLITE3_INTEGER);
+                $resUuid = $stmtUuid->execute();
+                $rowUuid = $resUuid ? $resUuid->fetchArray(SQLITE3_ASSOC) : null;
+                $user_uuid = $rowUuid['uuid'] ?? null;
             }
 
-            $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+            $stmt = $db->prepare('
+                INSERT INTO nation_calls (user_uuid, called_players, total_reward, call_date)
+                VALUES (:user_uuid, :called_players, :total_reward, NOW())
+            ');
+
+            $stmt->bindValue(':user_uuid', $user_uuid, SQLITE3_TEXT);
             $stmt->bindValue(':called_players', json_encode($calledPlayers), SQLITE3_TEXT);
             $stmt->bindValue(':total_reward', $totalReward, SQLITE3_INTEGER);
 
-            return $stmt->execute();
+            $res = $stmt->execute();
+            return $res !== false;
         } catch (Exception $e) {
             return false;
         }
@@ -225,14 +229,24 @@ if (!function_exists('getNationCallHistory')) {
     function getNationCallHistory($db, $user_id, $limit = 10)
     {
         try {
-            $stmt = $db->prepare('
-                SELECT * FROM nation_calls 
-                WHERE user_id = :user_id 
-                ORDER BY call_date DESC 
-                LIMIT :limit
-            ');
-            $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
-            $stmt->bindValue(':limit', $limit, SQLITE3_INTEGER);
+            $limit = max(1, (int)$limit);
+            // Resolve UUID from provided key (accepts legacy numeric id or uuid)
+            $user_uuid = $user_id;
+            if (!is_string($user_uuid) || strlen($user_uuid) < 16) {
+                $stmtUuid = $db->prepare('SELECT uuid FROM users WHERE id = :id LIMIT 1');
+                $stmtUuid->bindValue(':id', $user_id, SQLITE3_INTEGER);
+                $resUuid = $stmtUuid->execute();
+                $rowUuid = $resUuid ? $resUuid->fetchArray(SQLITE3_ASSOC) : null;
+                $user_uuid = $rowUuid['uuid'] ?? null;
+            }
+
+            $sql = '
+                SELECT * FROM nation_calls
+                WHERE user_uuid = :user_uuid
+                ORDER BY call_date DESC
+                LIMIT ' . $limit;
+            $stmt = $db->prepare($sql);
+            $stmt->bindValue(':user_uuid', $user_uuid, SQLITE3_TEXT);
 
             $result = $stmt->execute();
             $history = [];
@@ -261,6 +275,16 @@ if (!function_exists('getNationCallStats')) {
     function getNationCallStats($db, $user_id)
     {
         try {
+            // Resolve UUID from provided key (accepts legacy numeric id or uuid)
+            $user_uuid = $user_id;
+            if (!is_string($user_uuid) || strlen($user_uuid) < 16) {
+                $stmtUuid = $db->prepare('SELECT uuid FROM users WHERE id = :id LIMIT 1');
+                $stmtUuid->bindValue(':id', $user_id, SQLITE3_INTEGER);
+                $resUuid = $stmtUuid->execute();
+                $rowUuid = $resUuid ? $resUuid->fetchArray(SQLITE3_ASSOC) : null;
+                $user_uuid = $rowUuid['uuid'] ?? null;
+            }
+
             $stmt = $db->prepare('
                 SELECT 
                     COUNT(*) as total_calls,
@@ -268,16 +292,16 @@ if (!function_exists('getNationCallStats')) {
                     AVG(total_reward) as avg_earnings,
                     MAX(total_reward) as best_earnings
                 FROM nation_calls 
-                WHERE user_id = :user_id
+                WHERE user_uuid = :user_uuid
             ');
-            $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+            $stmt->bindValue(':user_uuid', $user_uuid, SQLITE3_TEXT);
             $result = $stmt->execute();
 
             $stats = $result->fetchArray(SQLITE3_ASSOC);
 
             // Count unique players called
-            $stmt = $db->prepare('SELECT called_players FROM nation_calls WHERE user_id = :user_id');
-            $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+            $stmt = $db->prepare('SELECT called_players FROM nation_calls WHERE user_uuid = :user_uuid');
+            $stmt->bindValue(':user_uuid', $user_uuid, SQLITE3_TEXT);
             $result = $stmt->execute();
 
             $uniquePlayers = [];
