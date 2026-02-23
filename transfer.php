@@ -936,10 +936,6 @@ startContent();
                         </div>
                         ` : ''}
                         <div class="flex justify-between">
-                            <span class="text-gray-600">Current Club:</span>
-                            <span class="font-medium">${player.club || 'Free Agent'}</span>
-                        </div>
-                        <div class="flex justify-between">
                             <span class="text-gray-600">Market Value:</span>
                             <span class="font-medium text-green-600">${formatMarketValue(player.value)}</span>
                         </div>
@@ -948,16 +944,8 @@ startContent();
                             <span class="font-medium text-blue-600">${formatMarketValue(calculateSalary(player))}</span>
                         </div>
                         <div class="flex justify-between">
-                            <span class="text-gray-600">Primary Position:</span>
-                            <span class="font-medium">${player.position}</span>
-                        </div>
-                        <div class="flex justify-between">
                             <span class="text-gray-600">Contract:</span>
                             <span class="font-medium">${contractRemaining} match${contractRemaining !== 1 ? 'es' : ''} remaining</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-gray-600">Matches Played:</span>
-                            <span class="font-medium">${player.matches_played || 0}</span>
                         </div>
                         ${contractRemaining <= 8 ? `
                         <div class="mt-3 p-3 rounded-lg border bg-orange-50 border-orange-200">
@@ -982,26 +970,30 @@ startContent();
                         Positions & Skills
                     </h3>
                     <div class="space-y-4">
-                        <div>
-                            <span class="text-gray-600 text-sm">Playable Positions:</span>
-                            <div class="flex flex-wrap gap-2 mt-2">
-                                ${(player.playablePositions || [player.position]).map(pos =>
-                `<span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm font-medium">${pos}</span>`
-            ).join('')}
+                        <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-6">
+                            <div class="flex flex-col gap-2">
+                                <span class="text-gray-600 text-sm">Main Position:</span>
+                                <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm font-medium w-max">${player.position}</span>
+                            </div>
+                            <div class="flex-1 flex flex-col gap-2">
+                                <span class="text-gray-600 text-sm">Playable Positions:</span>
+                                <div class="flex flex-wrap gap-2">
+                                    ${(player.playablePositions || [player.position]).map(pos =>
+                                        `<span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm font-medium">${pos}</span>`
+                                    ).join('')}
+                                </div>
                             </div>
                         </div>
                         <div>
                             <span class="text-gray-600 text-sm">Key Attributes:</span>
                             <div class="mt-2 space-y-2">
                                 ${Object.entries(normalizedStats).map(([stat, value]) => `
-                                    <div class="flex justify-between items-center">
-                                        <span class="text-sm">${stat}</span>
-                                        <div class="flex items-center gap-2">
-                                            <div class="w-16 bg-gray-200 rounded-full h-2">
-                                                <div class="bg-blue-600 h-2 rounded-full" style="width: ${value}%"></div>
-                                            </div>
-                                            <span class="text-sm font-medium w-8">${value}</span>
+                                    <div class="flex items-center gap-3">
+                                        <span class="text-sm w-28">${stat}</span>
+                                        <div class="flex-1 bg-gray-200 rounded-full h-2">
+                                            <div class="bg-blue-600 h-2 rounded-full" style="width: ${value}%"></div>
                                         </div>
+                                        <span class="text-sm font-medium w-8 text-right">${value}</span>
                                     </div>
                                 `).join('')}
                             </div>
@@ -1009,14 +1001,6 @@ startContent();
                     </div>
                 </div>
 
-                <!-- Description -->
-                <div class="lg:col-span-2 bg-gray-50 rounded-lg p-4">
-                    <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
-                        <i data-lucide="file-text" class="w-5 h-5 text-orange-600"></i>
-                        Player Description
-                    </h3>
-                    <p class="text-gray-700 leading-relaxed">${player.description || 'Professional football player with great potential and skills.'}</p>
-                </div>
             </div>
         `;
 
