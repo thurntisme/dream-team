@@ -59,16 +59,27 @@
                 <i data-lucide="briefcase" class="w-4 h-4"></i>
                 Staff
             </a>
-            <button id="exportTeam"
-                class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 flex items-center gap-2 transition-colors">
-                <i data-lucide="download" class="w-4 h-4"></i>
-                Export
-            </button>
-            <button id="exportTeamJson"
-                class="bg-gray-700 text-white px-4 py-2 rounded-lg hover:bg-gray-800 flex items-center gap-2 transition-colors">
-                <i data-lucide="file-json" class="w-4 h-4"></i>
-                Export JSON
-            </button>
+            <div class="relative ml-auto">
+                <button id="exportDropdownBtn"
+                    class="bg-gray-700 text-white px-4 py-2 rounded-lg hover:bg-gray-800 flex items-center gap-2 transition-colors">
+                    <i data-lucide="download" class="w-4 h-4"></i>
+                    Export
+                    <i data-lucide="chevron-down" class="w-4 h-4"></i>
+                </button>
+                <div id="exportDropdown"
+                    class="hidden absolute right-0 mt-2 w-44 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-20">
+                    <button id="exportPngOption"
+                        class="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                        <i data-lucide="image" class="w-4 h-4"></i>
+                        Export PNG
+                    </button>
+                    <button id="exportJsonOption"
+                        class="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                        <i data-lucide="file-json" class="w-4 h-4"></i>
+                        Export JSON
+                    </button>
+                </div>
+            </div>
         </div>
 
         <!-- Club Statistics Grid -->

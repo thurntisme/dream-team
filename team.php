@@ -4716,8 +4716,27 @@ startContent();
         });
     });
 
+    // Export dropdown behavior
+    $('#exportDropdownBtn').on('click', function (e) {
+        e.stopPropagation();
+        $('#exportDropdown').toggleClass('hidden');
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+    });
+    $(document).on('click', function (e) {
+        const $menu = $('#exportDropdown');
+        const $btn = $('#exportDropdownBtn');
+        if (!$menu.hasClass('hidden')) {
+            if (!$(e.target).closest('#exportDropdown, #exportDropdownBtn').length) {
+                $menu.addClass('hidden');
+            }
+        }
+    });
+
     // Export team line-up field as PNG
-    $('#exportTeam').on('click', function () {
+    $('#exportPngOption').on('click', function () {
+        $('#exportDropdown').addClass('hidden');
         const fieldEl = document.getElementById('field-wrapper');
         if (!fieldEl) {
             Swal.fire({
@@ -4764,7 +4783,8 @@ startContent();
         });
     });
 
-    $('#exportTeamJson').on('click', function () {
+    $('#exportJsonOption').on('click', function () {
+        $('#exportDropdown').addClass('hidden');
         const uuids = [];
         const addUuid = (p) => {
             if (p && p.uuid) {
