@@ -31,6 +31,72 @@ try {
         exit;
     }
 
+    $player_pack_items = [
+        [
+            'name' => 'Standard Player Pack (70+)',
+            'description' => 'Get a random standard player rated 70 or higher.',
+            'price' => 5000000,
+            'effect_type' => 'player_pack',
+            'effect_value' => '{"min_rating":70,"max_rating":79,"tier":"standard"}',
+            'category' => 'premium',
+            'icon' => 'user-plus',
+            'duration' => 0
+        ],
+        [
+            'name' => 'Elite Player Pack (80+)',
+            'description' => 'Get a random high-rated player rated 80 or higher.',
+            'price' => 12000000,
+            'effect_type' => 'player_pack',
+            'effect_value' => '{"min_rating":80,"max_rating":89,"tier":"elite"}',
+            'category' => 'premium',
+            'icon' => 'shield-star',
+            'duration' => 0
+        ],
+        [
+            'name' => 'Superstar Player Pack (90+)',
+            'description' => 'Get a random top-tier player rated 90 or higher.',
+            'price' => 25000000,
+            'effect_type' => 'player_pack',
+            'effect_value' => '{"min_rating":90,"max_rating":99,"tier":"superstar"}',
+            'category' => 'premium',
+            'icon' => 'flame',
+            'duration' => 0
+        ],
+        [
+            'name' => 'Legend Player Pack',
+            'description' => 'Get a random legendary player with outstanding rating.',
+            'price' => 40000000,
+            'effect_type' => 'player_pack',
+            'effect_value' => '{"min_rating":88,"max_rating":99,"tier":"legend"}',
+            'category' => 'premium',
+            'icon' => 'crown',
+            'duration' => 0
+        ]
+    ];
+
+    foreach ($player_pack_items as $item) {
+        $stmt = $db->prepare('SELECT id FROM shop_items WHERE name = :name LIMIT 1');
+        if ($stmt) {
+            $stmt->bindValue(':name', $item['name'], SQLITE3_TEXT);
+            $check = $stmt->execute();
+            $existing = $check ? $check->fetchArray(SQLITE3_ASSOC) : false;
+            if (!$existing) {
+                $insert = $db->prepare('INSERT INTO shop_items (name, description, price, effect_type, effect_value, category, icon, duration) VALUES (:name, :description, :price, :effect_type, :effect_value, :category, :icon, :duration)');
+                if ($insert) {
+                    $insert->bindValue(':name', $item['name'], SQLITE3_TEXT);
+                    $insert->bindValue(':description', $item['description'], SQLITE3_TEXT);
+                    $insert->bindValue(':price', $item['price'], SQLITE3_INTEGER);
+                    $insert->bindValue(':effect_type', $item['effect_type'], SQLITE3_TEXT);
+                    $insert->bindValue(':effect_value', $item['effect_value'], SQLITE3_TEXT);
+                    $insert->bindValue(':category', $item['category'], SQLITE3_TEXT);
+                    $insert->bindValue(':icon', $item['icon'], SQLITE3_TEXT);
+                    $insert->bindValue(':duration', $item['duration'], SQLITE3_INTEGER);
+                    $insert->execute();
+                }
+            }
+        }
+    }
+
     // Get all shop items (exclude training category)
     $stmt = $db->prepare('SELECT * FROM shop_items WHERE category IN (\'financial\', \'special\', \'premium\') ORDER BY category, price ASC');
     $result = $stmt->execute();
@@ -59,7 +125,6 @@ try {
     }
 
     $db->close();
-
 } catch (Exception $e) {
     header('Location: install.php');
     exit;
@@ -104,6 +169,10 @@ startContent();
                 <button id="specialTab"
                     class="px-4 py-2 rounded-md text-sm font-medium transition-colors text-gray-600 hover:text-gray-900">
                     Special
+                </button>
+                <button id="playerPacksTab"
+                    class="px-4 py-2 rounded-md text-sm font-medium transition-colors text-gray-600 hover:text-gray-900">
+                    Player Packs
                 </button>
                 <button id="premiumTab"
                     class="px-4 py-2 rounded-md text-sm font-medium transition-colors text-gray-600 hover:text-gray-900">
@@ -222,9 +291,14 @@ startContent();
     function renderItems() {
         const container = document.getElementById('itemsGrid');
 
-        const filteredItems = currentCategory === 'all'
-            ? shopItems
-            : shopItems.filter(item => item.category === currentCategory);
+        let filteredItems;
+        if (currentCategory === 'all') {
+            filteredItems = shopItems;
+        } else if (currentCategory === 'playerPacks') {
+            filteredItems = shopItems.filter(item => item.effect_type === 'player_pack');
+        } else {
+            filteredItems = shopItems.filter(item => item.category === currentCategory);
+        }
 
         if (filteredItems.length === 0) {
             container.innerHTML = `
@@ -334,16 +408,16 @@ startContent();
         });
 
         fetch('api/purchase_item_api.php', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                item_id: parseInt(itemId),
-                item_name: itemName,
-                item_price: parseInt(itemPrice)
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    item_id: parseInt(itemId),
+                    item_name: itemName,
+                    item_price: parseInt(itemPrice)
+                })
             })
-        })
             .then(response => {
                 return response.json().then(data => {
                     if (!response.ok) {
@@ -399,14 +473,14 @@ startContent();
 
     // Event listeners for tabs
     document.getElementById('allItemsTab').addEventListener('click', () => switchTab('allItems'));
-    
     document.getElementById('financialTab').addEventListener('click', () => switchTab('financial'));
     document.getElementById('specialTab').addEventListener('click', () => switchTab('special'));
+    document.getElementById('playerPacksTab').addEventListener('click', () => switchTab('playerPacks'));
     document.getElementById('premiumTab').addEventListener('click', () => switchTab('premium'));
     document.getElementById('myItemsTab').addEventListener('click', () => switchTab('myItems'));
 
     // Initialize
-    document.addEventListener('DOMContentLoaded', function () {
+    document.addEventListener('DOMContentLoaded', function() {
         renderItems();
         lucide.createIcons();
     });
