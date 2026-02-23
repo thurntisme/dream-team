@@ -53,6 +53,45 @@ class TeamController
                 $storedTeam = $decoded;
             }
         }
+
+        // Backward compatibility: if no substitutes are stored in user_club.team,
+        // try to load legacy data from users.team/users.substitutes
+        $hasSubstitutesInClubTeam = false;
+        if (!empty($storedTeam)) {
+            $benchSlice = array_slice($storedTeam, 11);
+            if (!empty(array_filter($benchSlice, fn($p) => $p !== null))) {
+                $hasSubstitutesInClubTeam = true;
+            }
+        }
+
+        if (!$hasSubstitutesInClubTeam) {
+            try {
+                $legacyStmt = $this->db->prepare('SELECT team, substitutes FROM users WHERE uuid = :uuid');
+                if ($legacyStmt !== false) {
+                    $legacyStmt->bindValue(':uuid', $this->userId, SQLITE3_TEXT);
+                    $legacyRes = $legacyStmt->execute();
+                    $legacyRow = $legacyRes ? $legacyRes->fetchArray(SQLITE3_ASSOC) : null;
+
+                    if ($legacyRow) {
+                        $legacyTeam = json_decode($legacyRow['team'] ?? '[]', true) ?: [];
+                        $legacySubs = json_decode($legacyRow['substitutes'] ?? '[]', true) ?: [];
+
+                        if (!empty(array_filter($legacyTeam, fn($p) => $p !== null)) || !empty(array_filter($legacySubs, fn($p) => $p !== null))) {
+                            $storedTeam = $legacyTeam;
+                            if (count($storedTeam) < 11) {
+                                $storedTeam = array_pad($storedTeam, 11, null);
+                            } else {
+                                $storedTeam = array_slice($storedTeam, 0, 11);
+                            }
+                            $storedTeam = array_merge($storedTeam, $legacySubs);
+                        }
+                    }
+                }
+            } catch (Throwable $e) {
+                // If legacy columns do not exist or any error occurs, ignore and use current schema data
+            }
+        }
+
         $lineup = array_slice($storedTeam, 0, 11);
         $substitutes = array_slice($storedTeam, 11);
 

@@ -180,21 +180,37 @@ try {
         $response_cost = $cost;
 
     } else {
-        // Handle team management purchase (existing functionality)
         $cost = $player_cost;
 
-        // Check if user has enough budget
         if ($current_budget < $cost) {
             throw new Exception('Insufficient budget to purchase this player');
         }
 
-        // Calculate new budget
         $new_budget = $current_budget - $cost;
 
-        // Update club formation, team, and budget (no substitutes column)
+        $teamArr = json_decode($team, true);
+        $subsArr = json_decode($substitutes, true);
+        if (!is_array($teamArr)) {
+            $teamArr = [];
+        }
+        if (!is_array($subsArr)) {
+            $subsArr = [];
+        }
+        if (count($teamArr) < 11) {
+            $teamArr = array_pad($teamArr, 11, null);
+        } else {
+            $teamArr = array_slice($teamArr, 0, 11);
+        }
+        $combined = array_merge($teamArr, $subsArr);
+        $maxPlayers = $user_data['max_players'] ?? DEFAULT_MAX_PLAYERS;
+        if (is_numeric($maxPlayers) && $maxPlayers > 0 && count($combined) > (int)$maxPlayers) {
+            $combined = array_slice($combined, 0, (int)$maxPlayers);
+        }
+        $combinedJson = json_encode($combined);
+
         $stmt = $db->prepare('UPDATE user_club SET formation = :formation, team = :team, budget = :budget WHERE user_uuid = :user_uuid');
         $stmt->bindValue(':formation', $formation, SQLITE3_TEXT);
-        $stmt->bindValue(':team', $team, SQLITE3_TEXT);
+        $stmt->bindValue(':team', $combinedJson, SQLITE3_TEXT);
         $stmt->bindValue(':budget', $new_budget, SQLITE3_INTEGER);
         $stmt->bindValue(':user_uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
 
