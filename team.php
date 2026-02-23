@@ -110,6 +110,7 @@ startContent();
 <script>
     const clubName = <?php echo json_encode($user['club_name'] ?? 'Club'); ?>;
     const clubUuid = <?php echo json_encode($club_uuid ?? null); ?>;
+
     function sanitizeFileName(name) {
         return (name || 'Club')
             .toString()
@@ -121,9 +122,13 @@ startContent();
     $('#bestLineup').click(function() {
         // 1. Gather all current players (Starting + Subs)
         let squad = [];
-        selectedPlayers.forEach(p => { if(p) squad.push(p); });
-        substitutePlayers.forEach(p => { if(p) squad.push(p); });
-        
+        selectedPlayers.forEach(p => {
+            if (p) squad.push(p);
+        });
+        substitutePlayers.forEach(p => {
+            if (p) squad.push(p);
+        });
+
         // Remove duplicates if any (by uuid)
         const uniqueSquad = [];
         const seenUuids = new Set();
@@ -133,7 +138,7 @@ startContent();
                 seenUuids.add(id);
                 uniqueSquad.push(p);
             } else if (!id) {
-                 uniqueSquad.push(p);
+                uniqueSquad.push(p);
             }
         });
         squad = uniqueSquad;
@@ -149,7 +154,7 @@ startContent();
 
         const formation = $('#formation').val();
         const roles = formations[formation].roles; // e.g. ['GK', 'LB', 'CB', ...]
-        
+
         const newStarting = new Array(roles.length).fill(null);
         const usedPlayerIds = new Set();
 
@@ -157,18 +162,18 @@ startContent();
         roles.forEach((role, slotIdx) => {
             // Filter candidates not yet used
             let candidates = squad.filter(p => !usedPlayerIds.has(p.uuid || p.id));
-            
+
             // Score candidates for this role
             // Criteria: 
             // - Fitness > 20
             // - Form >= 6.5 (Good)
             // - Position Match (Main or Playable)
-            
+
             // I'll filter first by strict criteria
             let strictCandidates = candidates.filter(p => {
                 const fitness = p.fitness !== undefined ? p.fitness : 100;
                 if (fitness <= 20) return false;
-                
+
                 const form = p.form !== undefined ? p.form : 7;
                 if (form < 6.5) return false; // 6.5 is "Good"
 
@@ -179,7 +184,7 @@ startContent();
                 );
                 return isMain || isPlayable;
             });
-            
+
             // If strict candidates exist, pick best by rating
             if (strictCandidates.length > 0) {
                 strictCandidates.sort((a, b) => getEffectiveRating(b) - getEffectiveRating(a));
@@ -189,26 +194,26 @@ startContent();
             } else {
                 // Fallback: Relax Form/Fitness, but keep Position
                 let positionCandidates = candidates.filter(p => {
-                     const isMain = p.position === role;
-                     const isPlayable = p.playablePositions && (
+                    const isMain = p.position === role;
+                    const isPlayable = p.playablePositions && (
                         Array.isArray(p.playablePositions) ? p.playablePositions.includes(role) : p.playablePositions == role
                     );
                     return isMain || isPlayable;
                 });
-                
+
                 if (positionCandidates.length > 0) {
-                     positionCandidates.sort((a, b) => getEffectiveRating(b) - getEffectiveRating(a));
-                     const best = positionCandidates[0];
-                     newStarting[slotIdx] = best;
-                     usedPlayerIds.add(best.uuid || best.id);
+                    positionCandidates.sort((a, b) => getEffectiveRating(b) - getEffectiveRating(a));
+                    const best = positionCandidates[0];
+                    newStarting[slotIdx] = best;
+                    usedPlayerIds.add(best.uuid || best.id);
                 } else {
                     // Fallback: Best available player regardless of position (Out of Position)
-                     candidates.sort((a, b) => getEffectiveRating(b) - getEffectiveRating(a));
-                     if (candidates.length > 0) {
-                         const best = candidates[0];
-                         newStarting[slotIdx] = best;
-                         usedPlayerIds.add(best.uuid || best.id);
-                     }
+                    candidates.sort((a, b) => getEffectiveRating(b) - getEffectiveRating(a));
+                    if (candidates.length > 0) {
+                        const best = candidates[0];
+                        newStarting[slotIdx] = best;
+                        usedPlayerIds.add(best.uuid || best.id);
+                    }
                 }
             }
         });
@@ -217,10 +222,10 @@ startContent();
         const remainingPlayers = squad.filter(p => !usedPlayerIds.has(p.uuid || p.id));
         // Sort remaining by rating
         remainingPlayers.sort((a, b) => getEffectiveRating(b) - getEffectiveRating(a));
-        
+
         const subCount = Math.max(substitutePlayers.length, 7);
         const newSubs = new Array(subCount).fill(null);
-        
+
         remainingPlayers.forEach((p, i) => {
             if (i < subCount) newSubs[i] = p;
         });
@@ -228,11 +233,11 @@ startContent();
         // Apply changes
         selectedPlayers = newStarting;
         substitutePlayers = newSubs;
-        
+
         renderPlayers();
         renderField();
         renderSubstitutes();
-        
+
         // Recalculate overview stats
         let totalValue = 0;
         let playerCount = 0;
@@ -249,9 +254,9 @@ startContent();
                 }
             }
         });
-        
+
         updateClubOverviewStats(totalValue, playerCount, ratedPlayers > 0 ? totalRating / ratedPlayers : 0);
-        
+
         Swal.fire({
             icon: 'success',
             title: 'Best Line-up Selected',
@@ -262,7 +267,6 @@ startContent();
             position: 'top-end'
         });
     });
-
 </script>
 <script>
     const players = <?php echo json_encode(getDefaultPlayers()); ?>;
@@ -745,7 +749,8 @@ startContent();
         const budgetUsedPercentage = (totalValue / maxBudget) * 100;
 
         $('#totalTeamValue').text(formatMarketValue(totalValue));
-        $('#remainingBudget').text(formatMarketValue(remainingBudget));
+        // Show wallet / max budget instead of remaining difference
+        $('#remainingBudget').text(formatMarketValue(maxBudget));
         const totalSquadSize = playerCount + substitutePlayers.filter(p => p !== null).length;
         $('#playerCount').text(`${totalSquadSize}/${maxPlayers} players`);
 
@@ -763,7 +768,7 @@ startContent();
             $budgetBar.addClass('bg-blue-600');
         }
 
-        // Change remaining budget color if over budget
+        // Change remaining budget color if over budget (using remainingBudget internally)
         const $remainingBudget = $('#remainingBudget');
         $remainingBudget.removeClass('text-blue-600 text-red-600');
         if (remainingBudget < 0) {
@@ -1354,7 +1359,7 @@ startContent();
         renderField(); // Update field to show selection
         updateSelectedPlayerInfo(); // Update selected player info box
     }
-    
+
     // Function to select a substitute (highlight only)
     function selectSubstitute(idx) {
         selectedPlayerIdx = null; // Unselect any starting XI player
@@ -1399,22 +1404,22 @@ startContent();
 
         // Update basic info
         $('#selectedPlayerName').text(player.name);
-        
+
         // Ensure playablePositions is available (fallback to global list if missing in saved player)
         if (!player.playablePositions && typeof players !== 'undefined') {
-             const defaultPlayer = players.find(p => (p.uuid && p.uuid === player.uuid) || (p.id && p.id === player.id));
-             if (defaultPlayer && defaultPlayer.playablePositions) {
-                 player.playablePositions = defaultPlayer.playablePositions;
-             }
+            const defaultPlayer = players.find(p => (p.uuid && p.uuid === player.uuid) || (p.id && p.id === player.id));
+            if (defaultPlayer && defaultPlayer.playablePositions) {
+                player.playablePositions = defaultPlayer.playablePositions;
+            }
         }
 
         // Display Main Position | Playable Positions
         let positionText = player.position || 'Unknown';
         if (player.playablePositions) {
-            const playable = Array.isArray(player.playablePositions) 
-                ? player.playablePositions.join(',') 
-                : player.playablePositions;
-            
+            const playable = Array.isArray(player.playablePositions) ?
+                player.playablePositions.join(',') :
+                player.playablePositions;
+
             if (playable && playable.length > 0) {
                 positionText += ' | ' + playable;
             }
@@ -2119,7 +2124,8 @@ startContent();
 
         const remainingBudget = maxBudget - currentTeamValue;
 
-        $('#modalTitle').html(`${modalTitle} <span class="text-sm font-normal text-blue-600">(Budget: ${formatMarketValue(remainingBudget)})</span>`);
+        // Show wallet / max budget in modal header
+        $('#modalTitle').html(`${modalTitle} <span class="text-sm font-normal text-blue-600">(Budget: ${formatMarketValue(maxBudget)})</span>`);
         openModal('playerModal');
         $('#playerSearch').val('');
         renderModalPlayers('');
@@ -4717,14 +4723,14 @@ startContent();
     });
 
     // Export dropdown behavior
-    $('#exportDropdownBtn').on('click', function (e) {
+    $('#exportDropdownBtn').on('click', function(e) {
         e.stopPropagation();
         $('#exportDropdown').toggleClass('hidden');
         if (typeof lucide !== 'undefined') {
             lucide.createIcons();
         }
     });
-    $(document).on('click', function (e) {
+    $(document).on('click', function(e) {
         const $menu = $('#exportDropdown');
         const $btn = $('#exportDropdownBtn');
         if (!$menu.hasClass('hidden')) {
@@ -4735,7 +4741,7 @@ startContent();
     });
 
     // Export team line-up field as PNG
-    $('#exportPngOption').on('click', function () {
+    $('#exportPngOption').on('click', function() {
         $('#exportDropdown').addClass('hidden');
         const fieldEl = document.getElementById('field-wrapper');
         if (!fieldEl) {
@@ -4750,7 +4756,7 @@ startContent();
 
         const $transient = $(fieldEl).find('.action-buttons, .hover-switch-btn');
         const prevStyles = [];
-        $transient.each(function () {
+        $transient.each(function() {
             prevStyles.push($(this).attr('style'));
             $(this).css('display', 'none');
         });
@@ -4772,7 +4778,7 @@ startContent();
                 confirmButtonColor: '#ef4444'
             });
         }).finally(() => {
-            $transient.each(function (i) {
+            $transient.each(function(i) {
                 const s = prevStyles[i];
                 if (s !== undefined && s !== null) {
                     $(this).attr('style', s);
@@ -4783,7 +4789,7 @@ startContent();
         });
     });
 
-    $('#exportJsonOption').on('click', function () {
+    $('#exportJsonOption').on('click', function() {
         $('#exportDropdown').addClass('hidden');
         const uuids = [];
         const addUuid = (p) => {
@@ -4800,7 +4806,9 @@ startContent();
             team_players: uuids
         };
         const jsonStr = JSON.stringify(payload, null, 2);
-        const blob = new Blob([jsonStr], { type: 'application/json' });
+        const blob = new Blob([jsonStr], {
+            type: 'application/json'
+        });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         const safeClub = sanitizeFileName(clubName);
@@ -4813,16 +4821,16 @@ startContent();
     });
 
     // Import team from JSON
-    $('#importJsonOption').on('click', function () {
+    $('#importJsonOption').on('click', function() {
         $('#exportDropdown').addClass('hidden');
         const input = document.createElement('input');
         input.type = 'file';
         input.accept = 'application/json,.json';
-        input.onchange = function (e) {
+        input.onchange = function(e) {
             const file = e.target.files && e.target.files[0];
             if (!file) return;
             const reader = new FileReader();
-            reader.onload = function () {
+            reader.onload = function() {
                 try {
                     const data = JSON.parse(reader.result);
                     if (!data || !Array.isArray(data.team_players)) {
@@ -4844,7 +4852,9 @@ startContent();
                         seen.add(uuid);
                         const p = players.find(x => x && x.uuid === uuid);
                         if (p) {
-                            foundPlayers.push(ensurePlayerSalary({ ...p }));
+                            foundPlayers.push(ensurePlayerSalary({
+                                ...p
+                            }));
                         } else {
                             missing.push(uuid);
                         }
@@ -4906,7 +4916,7 @@ startContent();
                             formation: $('#formation').val(),
                             team: JSON.stringify(selectedPlayers),
                             substitutes: JSON.stringify(substitutePlayers)
-                        }, function (response) {
+                        }, function(response) {
                             if (response.success) {
                                 Swal.fire({
                                     icon: 'success',
@@ -4927,7 +4937,7 @@ startContent();
                                     confirmButtonColor: '#ef4444'
                                 });
                             }
-                        }, 'json').fail(function () {
+                        }, 'json').fail(function() {
                             Swal.fire({
                                 icon: 'error',
                                 title: 'Connection Error',

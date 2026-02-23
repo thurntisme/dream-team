@@ -29,11 +29,15 @@
         <div id="teamValueSummary" class="mb-4 p-3 bg-gray-50 rounded-lg border">
             <div class="flex justify-between items-center mb-2">
                 <div class="text-sm text-gray-600">Budget</div>
-                <div id="remainingBudget" class="text-sm font-bold text-blue-600">€200.0M</div>
+                <div id="remainingBudget" class="text-sm font-bold text-blue-600">
+                    <?php echo formatMarketValue($user_budget); ?>
+                </div>
             </div>
             <div class="flex justify-between items-center mb-2">
                 <div class="text-sm text-gray-600">Team Value</div>
-                <div id="totalTeamValue" class="text-sm font-bold text-green-600">€0.0M</div>
+                <div id="totalTeamValue" class="text-sm font-bold text-green-600">
+                    <?php echo formatMarketValue($team_value); ?>
+                </div>
             </div>
             <div class="w-full bg-gray-200 rounded-full h-2 mb-2">
                 <div id="budgetBar" class="bg-blue-600 h-2 rounded-full transition-all duration-300"
