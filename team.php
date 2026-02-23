@@ -4796,6 +4796,7 @@ startContent();
         const payload = {
             club_name: clubName || null,
             club_uuid: clubUuid || null,
+            formation: $('#formation').val() || null,
             team_players: uuids
         };
         const jsonStr = JSON.stringify(payload, null, 2);
@@ -4852,11 +4853,13 @@ startContent();
                     const previewNames = foundPlayers.slice(0, 20).map(p => p.name || p.uuid).join(', ');
                     const previewMissing = missing.slice(0, 10).join(', ');
                     const clubNameIncoming = data.club_name || '(unknown)';
+                    const formationIncoming = data.formation || '(not provided)';
                     Swal.fire({
                         title: 'Import Team from JSON?',
                         html: `
                             <div class="text-left text-sm">
                                 <div class="mb-2"><strong>Club:</strong> ${clubNameIncoming}</div>
+                                <div class="mb-2"><strong>Formation:</strong> ${formationIncoming}</div>
                                 <div class="mb-2"><strong>Players found:</strong> ${foundPlayers.length}</div>
                                 ${previewNames ? `<div class="mb-2"><strong>Preview:</strong> ${previewNames}${foundPlayers.length > 20 ? '…' : ''}</div>` : ''}
                                 ${missing.length ? `<div class="text-gray-600"><strong>Missing UUIDs:</strong> ${previewMissing}${missing.length > 10 ? '…' : ''}</div>` : ''}
@@ -4873,6 +4876,10 @@ startContent();
                         }
                     }).then((result) => {
                         if (!result.isConfirmed) return;
+
+                        if (data.formation && formations[data.formation]) {
+                            $('#formation').val(data.formation);
+                        }
 
                         const newStarting = new Array(11).fill(null);
                         for (let i = 0; i < 11 && i < foundPlayers.length; i++) {
