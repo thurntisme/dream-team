@@ -40,6 +40,21 @@ $substitute_data = json_decode($saved_substitutes, true) ?: [];
 $substitute_players = count(array_filter($substitute_data, fn($p) => $p !== null));
 $total_players = $starting_players + $substitute_players;
 
+$club_uuid = null;
+try {
+    $db2 = getDbConnection();
+    $stmt2 = $db2->prepare('SELECT club_uuid FROM user_club WHERE user_uuid = :user_uuid');
+    if ($stmt2 !== false) {
+        $stmt2->bindValue(':user_uuid', $_SESSION['user_uuid'] ?? null, SQLITE3_TEXT);
+        $res2 = $stmt2->execute();
+        $row2 = $res2 ? $res2->fetchArray(SQLITE3_ASSOC) : null;
+        $club_uuid = $row2['club_uuid'] ?? null;
+    }
+    $db2->close();
+} catch (Exception $e) {
+    $club_uuid = null;
+}
+
 
 // Start content capture
 startContent();
@@ -94,6 +109,7 @@ startContent();
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <script>
     const clubName = <?php echo json_encode($user['club_name'] ?? 'Club'); ?>;
+    const clubUuid = <?php echo json_encode($club_uuid ?? null); ?>;
     function sanitizeFileName(name) {
         return (name || 'Club')
             .toString()
@@ -4746,6 +4762,33 @@ startContent();
                 }
             });
         });
+    });
+
+    $('#exportTeamJson').on('click', function () {
+        const uuids = [];
+        const addUuid = (p) => {
+            if (p && p.uuid) {
+                uuids.push(p.uuid);
+            }
+        };
+        if (Array.isArray(selectedPlayers)) selectedPlayers.forEach(addUuid);
+        if (Array.isArray(substitutePlayers)) substitutePlayers.forEach(addUuid);
+        const payload = {
+            club_name: clubName || null,
+            club_uuid: clubUuid || null,
+            team_players: uuids
+        };
+        const jsonStr = JSON.stringify(payload, null, 2);
+        const blob = new Blob([jsonStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const safeClub = sanitizeFileName(clubName);
+        a.download = `${safeClub} - team.json`;
+        a.href = url;
+        document.body.appendChild(a);
+        a.click();
+        URL.revokeObjectURL(url);
+        a.remove();
     });
 </script>
 

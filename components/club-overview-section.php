@@ -64,6 +64,11 @@
                 <i data-lucide="download" class="w-4 h-4"></i>
                 Export
             </button>
+            <button id="exportTeamJson"
+                class="bg-gray-700 text-white px-4 py-2 rounded-lg hover:bg-gray-800 flex items-center gap-2 transition-colors">
+                <i data-lucide="file-json" class="w-4 h-4"></i>
+                Export JSON
+            </button>
         </div>
 
         <!-- Club Statistics Grid -->
