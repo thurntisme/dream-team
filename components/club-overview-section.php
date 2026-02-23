@@ -63,7 +63,7 @@
                 <button id="exportDropdownBtn"
                     class="bg-gray-700 text-white px-4 py-2 rounded-lg hover:bg-gray-800 flex items-center gap-2 transition-colors">
                     <i data-lucide="download" class="w-4 h-4"></i>
-                    Export
+                    Tools
                     <i data-lucide="chevron-down" class="w-4 h-4"></i>
                 </button>
                 <div id="exportDropdown"
