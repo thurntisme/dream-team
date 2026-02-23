@@ -32,7 +32,8 @@ if (!$input || !isset($input['item_id']) || !isset($input['item_price'])) {
 
 $item_id = (int) $input['item_id'];
 $item_price = (int) $input['item_price'];
-$user_id = $_SESSION['user_id'];
+$user_uuid = $_SESSION['user_uuid'];
+$user_id = isset($_SESSION['user_id']) ? (int) $_SESSION['user_id'] : null;
 
 try {
     $db = getDbConnection();
@@ -40,18 +41,21 @@ try {
     // Start transaction
     $db->exec('START TRANSACTION');
 
-    // Get user's current budget and max_players
-    $stmt = $db->prepare('SELECT budget, max_players FROM users WHERE id = :user_id');
-    $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+    // Get user's current budget and max_players from user_club (club-centric data)
+    $stmt = $db->prepare('SELECT budget, max_players FROM user_club WHERE user_uuid = :user_uuid');
+    if ($stmt === false) {
+        throw new Exception('Failed to prepare club query');
+    }
+    $stmt->bindValue(':user_uuid', $user_uuid, SQLITE3_TEXT);
     $result = $stmt->execute();
-    $user_data = $result->fetchArray(SQLITE3_ASSOC);
+    $user_data = $result ? $result->fetchArray(SQLITE3_ASSOC) : false;
 
     if (!$user_data) {
-        throw new Exception('User not found');
+        throw new Exception('Club data not found for user');
     }
 
-    $current_budget = $user_data['budget'];
-    $current_max_players = $user_data['max_players'];
+    $current_budget = (int) $user_data['budget'];
+    $current_max_players = (int) $user_data['max_players'];
 
     // Check if user has enough budget
     if ($current_budget < $item_price) {
@@ -73,11 +77,14 @@ try {
         throw new Exception('Price mismatch');
     }
 
-    // Deduct budget
+    // Deduct budget (update club budget)
     $new_budget = $current_budget - $item_price;
-    $stmt = $db->prepare('UPDATE users SET budget = :budget WHERE id = :user_id');
+    $stmt = $db->prepare('UPDATE user_club SET budget = :budget WHERE user_uuid = :user_uuid');
+    if ($stmt === false) {
+        throw new Exception('Failed to prepare budget update');
+    }
     $stmt->bindValue(':budget', $new_budget, SQLITE3_INTEGER);
-    $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+    $stmt->bindValue(':user_uuid', $user_uuid, SQLITE3_TEXT);
 
     if (!$stmt->execute()) {
         throw new Exception('Failed to update budget');
@@ -90,8 +97,24 @@ try {
     }
 
     // Add item to user's inventory or increase quantity if already exists
-    $stmt = $db->prepare('SELECT id, quantity FROM user_inventory WHERE user_id = :user_id AND item_id = :item_id');
-    $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+    $inventoryUsesUuid = true;
+    $stmt = $db->prepare('SELECT id, quantity FROM user_inventory WHERE user_uuid = :user_uuid AND item_id = :item_id');
+    if ($stmt === false) {
+        // Fallback for legacy schema using user_id instead of user_uuid
+        $inventoryUsesUuid = false;
+        $stmt = $db->prepare('SELECT id, quantity FROM user_inventory WHERE user_id = :user_id AND item_id = :item_id');
+        if ($stmt === false) {
+            throw new Exception('Failed to prepare inventory lookup');
+        }
+    }
+    if ($inventoryUsesUuid) {
+        $stmt->bindValue(':user_uuid', $user_uuid, SQLITE3_TEXT);
+    } else {
+        if ($user_id === null) {
+            throw new Exception('User session invalid for inventory');
+        }
+        $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+    }
     $stmt->bindValue(':item_id', $item_id, SQLITE3_INTEGER);
     $result = $stmt->execute();
     $existing_item = $result->fetchArray(SQLITE3_ASSOC);
@@ -104,9 +127,23 @@ try {
             throw new Exception('Failed to update item quantity');
         }
     } else {
-        // Insert new item
-        $stmt = $db->prepare('INSERT INTO user_inventory (user_id, item_id, expires_at, quantity) VALUES (:user_id, :item_id, :expires_at, 1)');
-        $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+        // Insert new item (support both user_uuid and legacy user_id schemas)
+        if ($inventoryUsesUuid) {
+            $stmt = $db->prepare('INSERT INTO user_inventory (user_uuid, item_id, expires_at, quantity) VALUES (:user_uuid, :item_id, :expires_at, 1)');
+            if ($stmt === false) {
+                throw new Exception('Failed to prepare inventory insert');
+            }
+            $stmt->bindValue(':user_uuid', $user_uuid, SQLITE3_TEXT);
+        } else {
+            if ($user_id === null) {
+                throw new Exception('User session invalid for inventory insert');
+            }
+            $stmt = $db->prepare('INSERT INTO user_inventory (user_id, item_id, expires_at, quantity) VALUES (:user_id, :item_id, :expires_at, 1)');
+            if ($stmt === false) {
+                throw new Exception('Failed to prepare inventory insert');
+            }
+            $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+        }
         $stmt->bindValue(':item_id', $item_id, SQLITE3_INTEGER);
         $stmt->bindValue(':expires_at', $expires_at, SQLITE3_TEXT);
         if (!$stmt->execute()) {
@@ -124,9 +161,12 @@ try {
                 $players_to_add = (int) $effect_data['players'];
                 $new_max_players = $current_max_players + $players_to_add;
 
-                $stmt = $db->prepare('UPDATE users SET max_players = :max_players WHERE id = :user_id');
+                $stmt = $db->prepare('UPDATE user_club SET max_players = :max_players WHERE user_uuid = :user_uuid');
+                if ($stmt === false) {
+                    throw new Exception('Failed to prepare max players update');
+                }
                 $stmt->bindValue(':max_players', $new_max_players, SQLITE3_INTEGER);
-                $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+                $stmt->bindValue(':user_uuid', $user_uuid, SQLITE3_TEXT);
 
                 if (!$stmt->execute()) {
                     throw new Exception('Failed to update max players');
@@ -141,9 +181,12 @@ try {
                 $budget_boost = (int) $effect_data['amount'];
                 $boosted_budget = $new_budget + $budget_boost;
 
-                $stmt = $db->prepare('UPDATE users SET budget = :budget WHERE id = :user_id');
+                $stmt = $db->prepare('UPDATE user_club SET budget = :budget WHERE user_uuid = :user_uuid');
+                if ($stmt === false) {
+                    throw new Exception('Failed to prepare budget boost update');
+                }
                 $stmt->bindValue(':budget', $boosted_budget, SQLITE3_INTEGER);
-                $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+                $stmt->bindValue(':user_uuid', $user_uuid, SQLITE3_TEXT);
 
                 if (!$stmt->execute()) {
                     throw new Exception('Failed to apply budget boost');
@@ -169,7 +212,6 @@ try {
         'new_budget' => $new_budget + ($effect_data['amount'] ?? 0),
         'new_max_players' => $current_max_players + ($effect_data['players'] ?? 0)
     ]);
-
 } catch (Exception $e) {
     // Rollback transaction on error
     if (isset($db)) {
@@ -180,4 +222,3 @@ try {
     http_response_code(400);
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }
-?>
