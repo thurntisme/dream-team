@@ -14,7 +14,7 @@ try {
     $db = getDbConnection();
 
     // Get user's club info
-    $stmt = $db->prepare('SELECT club_name, formation, team FROM user_club WHERE user_uuid = :user_uuid');
+    $stmt = $db->prepare('SELECT club_name, formation, team, max_players FROM user_club WHERE user_uuid = :user_uuid');
     $stmt->bindValue(':user_uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
     $result = $stmt->execute();
     $user_club = $result->fetchArray(SQLITE3_ASSOC);
@@ -139,7 +139,10 @@ startContent();
 
                     <?php
                     $team = json_decode($user_club['team'] ?? '[]', true);
-                    $player_count = is_array($team) ? count(array_filter($team, fn($p) => $p !== null)) : 0;
+                    $total_players = is_array($team) ? count(array_filter($team, fn($p) => $p !== null)) : 0;
+                    $max_players = isset($user_club['max_players'])
+                        ? (int)$user_club['max_players']
+                        : (defined('DEFAULT_MAX_PLAYERS') ? DEFAULT_MAX_PLAYERS : 25);
 
                     // Calculate user's team value
                     $user_team_value = 0;
@@ -154,7 +157,7 @@ startContent();
                     <div class="space-y-2 mb-4">
                         <div class="text-sm text-gray-600">
                             <i data-lucide="users" class="w-4 h-4 inline"></i>
-                            <?php echo $player_count; ?> / 11 players selected
+                            <?php echo $total_players . ' / ' . $max_players; ?> players selected
                         </div>
                         <?php if ($user_team_value > 0): ?>
                             <div class="text-sm text-green-600 font-semibold">
