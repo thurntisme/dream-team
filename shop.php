@@ -10,37 +10,29 @@ require_once 'partials/layout.php';
 try {
     $db = getDbConnection();
 
-    // Get current user's data
-    $stmt = $db->prepare('SELECT budget, team, max_players FROM users WHERE id = :user_id');
-    $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+    // Get current user's club data
+    $stmt = $db->prepare('SELECT budget, team, max_players FROM user_club WHERE user_uuid = :user_uuid');
+    $stmt->bindValue(':user_uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
     $result = $stmt->execute();
     $user_data = $result->fetchArray(SQLITE3_ASSOC);
 
     // Ensure max_players is set for existing users
     if (!isset($user_data['max_players']) || $user_data['max_players'] === null) {
         $user_data['max_players'] = DEFAULT_MAX_PLAYERS;
-        $stmt = $db->prepare('UPDATE users SET max_players = :max_players WHERE id = :user_id');
+        $stmt = $db->prepare('UPDATE user_club SET max_players = :max_players WHERE user_uuid = :user_uuid');
         $stmt->bindValue(':max_players', DEFAULT_MAX_PLAYERS, SQLITE3_INTEGER);
-        $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+        $stmt->bindValue(':user_uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
         $stmt->execute();
     }
 
-    if (DB_DRIVER === 'sqlite') {
-        $result = $db->query("SELECT name FROM sqlite_master WHERE type='table' AND name='shop_items'");
-        if (!$result->fetchArray()) {
-            header('Location: install.php');
-            exit;
-        }
-    } else {
-        $result = $db->query("SELECT 1 FROM shop_items LIMIT 1");
-        if ($result === false) {
-            header('Location: install.php');
-            exit;
-        }
+    $result = $db->query("SELECT 1 FROM shop_items LIMIT 1");
+    if ($result === false) {
+        header('Location: install.php');
+        exit;
     }
 
-    // Get all shop items
-    $stmt = $db->prepare('SELECT * FROM shop_items ORDER BY category, price ASC');
+    // Get all shop items (exclude training category)
+    $stmt = $db->prepare('SELECT * FROM shop_items WHERE category IN (\'financial\', \'special\', \'premium\') ORDER BY category, price ASC');
     $result = $stmt->execute();
 
     $shop_items = [];
@@ -48,28 +40,22 @@ try {
         $shop_items[] = $row;
     }
 
-    // Get user's active items
-    if (DB_DRIVER === 'mysql') {
-        $stmt = $db->prepare('SELECT ui.*, si.name, si.description, si.effect_type, si.effect_value, si.icon 
-                         FROM user_inventory ui 
-                         JOIN shop_items si ON ui.item_id = si.id 
-                         WHERE ui.user_id = :user_id AND ui.quantity > 0 
-                         AND (ui.expires_at IS NULL OR ui.expires_at > NOW())
-                         ORDER BY ui.purchased_at DESC');
-    } else {
-        $stmt = $db->prepare('SELECT ui.*, si.name, si.description, si.effect_type, si.effect_value, si.icon 
-                         FROM user_inventory ui 
-                         JOIN shop_items si ON ui.item_id = si.id 
-                         WHERE ui.user_id = :user_id AND ui.quantity > 0 
-                         AND (ui.expires_at IS NULL OR ui.expires_at > datetime("now"))
-                         ORDER BY ui.purchased_at DESC');
-    }
-    $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
-    $result = $stmt->execute();
-
+    // Get user's active items (DB-agnostic CURRENT_TIMESTAMP)
     $user_items = [];
-    while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
-        $user_items[] = $row;
+    $stmt = $db->prepare('SELECT ui.*, si.name, si.description, si.effect_type, si.effect_value, si.icon 
+                         FROM user_inventory ui 
+                         JOIN shop_items si ON ui.item_id = si.id 
+                         WHERE ui.user_uuid = :user_uuid AND ui.quantity > 0 
+                         AND (ui.expires_at IS NULL OR ui.expires_at > CURRENT_TIMESTAMP)
+                         ORDER BY ui.purchased_at DESC');
+    if ($stmt !== false) {
+        $stmt->bindValue(':user_uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
+        $result = $stmt->execute();
+        if ($result !== false) {
+            while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+                $user_items[] = $row;
+            }
+        }
     }
 
     $db->close();
@@ -191,15 +177,7 @@ startContent();
 
 <script>
     // Shop items data from PHP
-    const shopItems = <?php
-        $filtered = [];
-        foreach ($shop_items as $item) {
-            if (($item['category'] ?? '') !== 'training') {
-                $filtered[] = $item;
-            }
-        }
-        echo json_encode($filtered);
-    ?>;
+    const shopItems = <?php echo json_encode($shop_items); ?>;
     const userBudget = <?php echo $user_data['budget']; ?>;
     let currentMaxPlayers = <?php echo $user_data['max_players']; ?>;
 
@@ -207,7 +185,6 @@ startContent();
 
     // Category colors
     const categoryColors = {
-        'training': 'from-green-500 to-emerald-600',
         'financial': 'from-yellow-500 to-amber-600',
         'special': 'from-purple-500 to-violet-600',
         'premium': 'from-pink-500 to-rose-600'
@@ -422,7 +399,7 @@ startContent();
 
     // Event listeners for tabs
     document.getElementById('allItemsTab').addEventListener('click', () => switchTab('allItems'));
-    document.getElementById('trainingTab').addEventListener('click', () => switchTab('training'));
+    
     document.getElementById('financialTab').addEventListener('click', () => switchTab('financial'));
     document.getElementById('specialTab').addEventListener('click', () => switchTab('special'));
     document.getElementById('premiumTab').addEventListener('click', () => switchTab('premium'));
