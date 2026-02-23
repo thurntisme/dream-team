@@ -78,6 +78,12 @@
                         <i data-lucide="file-json" class="w-4 h-4"></i>
                         Export JSON
                     </button>
+                    <div class="border-t border-gray-100 my-1"></div>
+                    <button id="importJsonOption"
+                        class="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                        <i data-lucide="upload" class="w-4 h-4"></i>
+                        Import JSON
+                    </button>
                 </div>
             </div>
         </div>

@@ -4810,6 +4810,138 @@ startContent();
         URL.revokeObjectURL(url);
         a.remove();
     });
+
+    // Import team from JSON
+    $('#importJsonOption').on('click', function () {
+        $('#exportDropdown').addClass('hidden');
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'application/json,.json';
+        input.onchange = function (e) {
+            const file = e.target.files && e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function () {
+                try {
+                    const data = JSON.parse(reader.result);
+                    if (!data || !Array.isArray(data.team_players)) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Invalid File',
+                            text: 'JSON must include "team_players" as an array of player UUIDs.',
+                            confirmButtonColor: '#ef4444'
+                        });
+                        return;
+                    }
+
+                    const uuids = data.team_players;
+                    const foundPlayers = [];
+                    const missing = [];
+                    const seen = new Set();
+                    uuids.forEach(uuid => {
+                        if (!uuid || seen.has(uuid)) return;
+                        seen.add(uuid);
+                        const p = players.find(x => x && x.uuid === uuid);
+                        if (p) {
+                            foundPlayers.push(ensurePlayerSalary({ ...p }));
+                        } else {
+                            missing.push(uuid);
+                        }
+                    });
+
+                    const previewNames = foundPlayers.slice(0, 20).map(p => p.name || p.uuid).join(', ');
+                    const previewMissing = missing.slice(0, 10).join(', ');
+                    const clubNameIncoming = data.club_name || '(unknown)';
+                    Swal.fire({
+                        title: 'Import Team from JSON?',
+                        html: `
+                            <div class="text-left text-sm">
+                                <div class="mb-2"><strong>Club:</strong> ${clubNameIncoming}</div>
+                                <div class="mb-2"><strong>Players found:</strong> ${foundPlayers.length}</div>
+                                ${previewNames ? `<div class="mb-2"><strong>Preview:</strong> ${previewNames}${foundPlayers.length > 20 ? '…' : ''}</div>` : ''}
+                                ${missing.length ? `<div class="text-gray-600"><strong>Missing UUIDs:</strong> ${previewMissing}${missing.length > 10 ? '…' : ''}</div>` : ''}
+                            </div>
+                        `,
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonColor: '#3b82f6',
+                        cancelButtonColor: '#6b7280',
+                        confirmButtonText: 'Import',
+                        cancelButtonText: 'Cancel',
+                        didOpen: () => {
+                            if (typeof lucide !== 'undefined') lucide.createIcons();
+                        }
+                    }).then((result) => {
+                        if (!result.isConfirmed) return;
+
+                        const newStarting = new Array(11).fill(null);
+                        for (let i = 0; i < 11 && i < foundPlayers.length; i++) {
+                            newStarting[i] = foundPlayers[i];
+                        }
+                        const maxSubstitutes = Math.max(0, maxPlayers - 11);
+                        const newSubs = new Array(maxSubstitutes).fill(null);
+                        for (let i = 11; i < foundPlayers.length && (i - 11) < maxSubstitutes; i++) {
+                            newSubs[i - 11] = foundPlayers[i];
+                        }
+
+                        selectedPlayers = newStarting;
+                        substitutePlayers = newSubs;
+                        selectedPlayerIdx = null;
+                        selectedSubIdx = null;
+
+                        renderPlayers();
+                        renderField();
+                        renderSubstitutes();
+                        updateClubStats();
+                        updateSelectedPlayerInfo();
+
+                        $.post('api/save_team_api.php', {
+                            formation: $('#formation').val(),
+                            team: JSON.stringify(selectedPlayers),
+                            substitutes: JSON.stringify(substitutePlayers)
+                        }, function (response) {
+                            if (response.success) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Import Completed',
+                                    html: `
+                                        <div class="text-left text-sm">
+                                            <div><strong>Imported:</strong> ${foundPlayers.length} player(s)</div>
+                                            ${missing.length ? `<div class="text-gray-600 mt-1"><strong>Missing:</strong> ${missing.length} UUID(s) not found and were ignored.</div>` : ''}
+                                        </div>
+                                    `,
+                                    confirmButtonColor: '#3b82f6'
+                                });
+                            } else {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Save Failed',
+                                    text: response.message || 'Could not save imported team. Please try again.',
+                                    confirmButtonColor: '#ef4444'
+                                });
+                            }
+                        }, 'json').fail(function () {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Connection Error',
+                                text: 'Could not save imported team. Please check your connection and try again.',
+                                confirmButtonColor: '#ef4444'
+                            });
+                        });
+                    });
+                } catch (err) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Invalid JSON',
+                        text: 'Failed to parse the selected JSON file.',
+                        confirmButtonColor: '#ef4444'
+                    });
+                }
+            };
+            reader.readAsText(file);
+        };
+        input.click();
+    });
 </script>
 
 <link rel="stylesheet" href="assets/css/swal-custom.css">
