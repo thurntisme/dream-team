@@ -24,12 +24,13 @@ try {
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['renew_contract'])) {
         $player_uuid = $_POST['player_uuid'];
         $position = $_POST['position']; // 'team' or 'substitute'
+        // Interpret contract_length as number of matches
         $contract_length = (int) $_POST['contract_length'];
         $salary_increase = (float) $_POST['salary_increase'];
 
         // Validate inputs
-        if ($contract_length < 1 || $contract_length > 5) {
-            $_SESSION['error'] = 'Contract length must be between 1 and 5 years';
+        if ($contract_length < 1 || $contract_length > 200) {
+            $_SESSION['error'] = 'Contract length must be between 1 and 200 matches';
         } elseif ($salary_increase < 0 || $salary_increase > 100) {
             $_SESSION['error'] = 'Salary increase must be between 0% and 100%';
         } else {
@@ -64,18 +65,18 @@ try {
                 $new_salary = $current_salary * (1 + $salary_increase / 100);
 
                 // Calculate total cost
-                $total_cost = $new_salary * $contract_length;
+                // Salary is per year; convert matches -> years using 38 matches/season
+                $total_cost = $new_salary * ($contract_length / 38);
 
                 // Check if user has enough budget
                 if (($club['budget'] ?? 0) < $total_cost) {
                     $_SESSION['error'] = 'Insufficient budget. Need ' . formatMarketValue($total_cost) . ' but only have ' . formatMarketValue($club['budget'] ?? 0);
                 } else {
                     // Update player contract
-                    $player_found['contract_matches'] = $contract_length * 38; // Assuming 38 matches per season
-                    $player_found['contract_matches_remaining'] = $player_found['contract_matches'];
+                    $player_found['contract_matches'] = $contract_length;
+                    $player_found['contract_matches_remaining'] = $contract_length;
                     $player_found['salary'] = $new_salary;
                     $player_found['contract_renewed_date'] = date('Y-m-d');
-                    $player_found['contract_years'] = $contract_length;
 
                     // Deduct cost from budget
                     $new_budget = ($club['budget'] ?? 0) - $total_cost;
@@ -316,9 +317,9 @@ startContent();
                         <?php foreach ($team as $index => $player): ?>
                             <?php if ($player): ?>
                                 <?php
-                                $matches_remaining = $player['contract_matches_remaining'] ?? rand(10, 50);
+                                $matches_remaining = $player['contract_matches_remaining'] ?? ($player['contract_matches'] ?? 0);
                                 $salary = $player['salary'] ?? ($player['value'] * 0.1);
-                                $contract_years = $player['contract_years'] ?? 2;
+                                $total_matches = $player['contract_matches'] ?? $matches_remaining;
                                 $status = 'Active';
                                 $status_color = 'text-green-600';
 
@@ -348,11 +349,9 @@ startContent();
                                     </td>
                                     <td class="px-6 py-4">
                                         <div class="font-medium"><?php echo formatMarketValue($salary); ?></div>
-                                        <div class="text-sm text-gray-500">per year</div>
                                     </td>
                                     <td class="px-6 py-4">
-                                        <div class="font-medium"><?php echo $contract_years; ?> years</div>
-                                        <div class="text-sm text-gray-500"><?php echo $matches_remaining; ?> matches left</div>
+                                        <div class="font-medium"><?php echo $total_matches; ?> matches</div>
                                     </td>
                                     <td class="px-6 py-4">
                                         <span class="font-medium <?php echo $status_color; ?>"><?php echo $status; ?></span>
@@ -417,9 +416,9 @@ startContent();
                         <?php foreach ($substitutes as $index => $player): ?>
                             <?php if ($player): ?>
                                 <?php
-                                $matches_remaining = $player['contract_matches_remaining'] ?? rand(10, 50);
+                                $matches_remaining = $player['contract_matches_remaining'] ?? ($player['contract_matches'] ?? 0);
                                 $salary = $player['salary'] ?? ($player['value'] * 0.1);
-                                $contract_years = $player['contract_years'] ?? 2;
+                                $total_matches = $player['contract_matches'] ?? $matches_remaining;
                                 $status = 'Active';
                                 $status_color = 'text-green-600';
 
@@ -449,11 +448,9 @@ startContent();
                                     </td>
                                     <td class="px-6 py-4">
                                         <div class="font-medium"><?php echo formatMarketValue($salary); ?></div>
-                                        <div class="text-sm text-gray-500">per year</div>
                                     </td>
                                     <td class="px-6 py-4">
-                                        <div class="font-medium"><?php echo $contract_years; ?> years</div>
-                                        <div class="text-sm text-gray-500"><?php echo $matches_remaining; ?> matches left</div>
+                                        <div class="font-medium"><?php echo $total_matches; ?> matches</div>
                                     </td>
                                     <td class="px-6 py-4">
                                         <span class="font-medium <?php echo $status_color; ?>"><?php echo $status; ?></span>
@@ -509,15 +506,10 @@ startContent();
 
                 <div class="mb-4">
                     <label for="contract_length" class="block text-sm font-medium text-gray-700 mb-2">Contract Length
-                        (years)</label>
-                    <select name="contract_length" id="contract_length" required
-                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
-                        <option value="1">1 Year</option>
-                        <option value="2" selected>2 Years</option>
-                        <option value="3">3 Years</option>
-                        <option value="4">4 Years</option>
-                        <option value="5">5 Years</option>
-                    </select>
+                        (matches)</label>
+                    <input type="number" name="contract_length" id="contract_length" min="1" max="200" value="38" required
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500" />
+                    <p class="text-xs text-gray-500 mt-1">Typical season ≈ 38 matches</p>
                 </div>
 
                 <div class="mb-4">
@@ -573,11 +565,11 @@ startContent();
     }
 
     function updateCostCalculation() {
-        const contractLength = parseInt(document.getElementById('contract_length').value);
+        const contractLength = parseInt(document.getElementById('contract_length').value); // matches
         const salaryIncrease = parseFloat(document.getElementById('salary_increase').value);
 
         const newSalary = currentSalaryValue * (1 + salaryIncrease / 100);
-        const totalCost = newSalary * contractLength;
+        const totalCost = newSalary * (contractLength / 38);
 
         document.getElementById('newSalary').textContent = formatMarketValue(newSalary);
         document.getElementById('totalCost').textContent = formatMarketValue(totalCost);
