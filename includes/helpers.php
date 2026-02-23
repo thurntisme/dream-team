@@ -30,7 +30,6 @@ require_once __DIR__ . '/club_functions.php';
 require_once __DIR__ . '/utility_functions.php';
 require_once __DIR__ . '/young_player_functions.php';
 require_once __DIR__ . '/user_plan_functions.php';
-require_once __DIR__ . '/news_functions.php';
 require_once __DIR__ . '/nation_calls_functions.php';
 require_once __DIR__ . '/debug_logger.php';
 require_once __DIR__ . '/error_handlers.php';
