@@ -365,25 +365,27 @@ function loadPlayersFromJson()
                 $category = 'standard';
             }
 
-            $players[] = [
-                'uuid' => $player['uuid'] ?? null,
-                'name' => (string) $player['name'],
-                'position' => (string) $player['position'],
-                'rating' => (int) $player['rating'],
-                'value' => (int) $player['value'],
-                'age' => $player['age'] ?? null,
-                'height' => $player['height'] ?? 'Unknown',
-                'weight' => $player['weight'] ?? 'Unknown',
-                'foot' => $player['foot'] ?? 'Right',
-                'nationality' => $player['nationality'] ?? null,
-                'avatar' => $player['avatar'] ?? null,
-                'playablePositions' => $player['playablePositions'] ?? [$player['position']],
-                'attributes' => $player['attributes'] ?? null,
-                'club' => $player['club'] ?? 'Free Agent',
-                'description' => $player['description'] ?? 'Professional football player.',
-                'category' => $category,
-                'source_file' => $filename
-            ];
+            // Preserve all original JSON fields and normalize critical ones
+            $playerNormalized = $player;
+            $playerNormalized['uuid'] = $player['uuid'] ?? null;
+            $playerNormalized['name'] = isset($player['name']) ? (string)$player['name'] : '';
+            $playerNormalized['position'] = isset($player['position']) ? (string)$player['position'] : 'CM';
+            $playerNormalized['rating'] = isset($player['rating']) ? (int)$player['rating'] : 0;
+            $playerNormalized['value'] = isset($player['value']) ? (int)$player['value'] : 0;
+            if (!isset($playerNormalized['playablePositions'])) {
+                $playerNormalized['playablePositions'] = [$playerNormalized['position']];
+            }
+            // Ensure salary present even if JSON missing
+            if (!isset($playerNormalized['salary']) || (int)$playerNormalized['salary'] <= 0) {
+                $val = isset($playerNormalized['value']) ? (int)$playerNormalized['value'] : 1000000;
+                $base = (int) max(1000, round($val * 0.001));
+                $cardLevel = isset($playerNormalized['card_level']) ? (int)$playerNormalized['card_level'] : 1;
+                $playerNormalized['salary'] = (int) round($base * (1 + (($cardLevel - 1) * 0.2)));
+            }
+            $playerNormalized['category'] = $category;
+            $playerNormalized['source_file'] = $filename;
+
+            $players[] = $playerNormalized;
         }
 
         error_log("Dream Team: Loaded " . count($playersData) . " players from " . $filename);

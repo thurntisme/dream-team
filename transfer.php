@@ -19,6 +19,13 @@ try {
 
     // Get all available players from players.json (excluding players already in user's team)
     $all_players = getDefaultPlayers();
+    // Build quick lookup by uuid to enrich inventory items with latest JSON fields
+    $players_by_uuid = [];
+    foreach ($all_players as $p) {
+        if (isset($p['uuid'])) {
+            $players_by_uuid[$p['uuid']] = $p;
+        }
+    }
 
     // Get current user's team to exclude owned players
     $stmt = $db->prepare('SELECT c.team FROM user_club c INNER JOIN users u ON c.user_uuid = u.uuid WHERE u.uuid = :uuid');
@@ -66,6 +73,13 @@ try {
     $player_inventory = [];
     while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
         $row['player_data'] = json_decode($row['player_data'], true);
+        if (is_array($row['player_data'])) {
+            $uuid = $row['player_data']['uuid'] ?? null;
+            if ($uuid && isset($players_by_uuid[$uuid])) {
+                // Merge latest JSON fields into stored player data without overwriting stored customizations
+                $row['player_data'] = array_merge($players_by_uuid[$uuid], $row['player_data']);
+            }
+        }
         $player_inventory[] = $row;
     }
 
@@ -679,22 +693,21 @@ startContent();
 
     // Calculate weekly salary based on player value and rating
     function calculateSalary(player) {
+        if (player && typeof player.salary === 'number' && player.salary > 0) {
+            return player.salary;
+        }
         const baseValue = player.value || 1000000;
         const rating = player.rating || 70;
 
-        // Calculate weekly salary as a percentage of market value
-        // Higher rated players get higher percentage
-        let salaryPercentage = 0.001; // Base 0.1% of market value per week
+        let salaryPercentage = 0.001;
 
-        // Bonus based on rating
-        if (rating >= 90) salaryPercentage = 0.002; // 0.2% for 90+ rated
-        else if (rating >= 85) salaryPercentage = 0.0018; // 0.18% for 85+ rated
-        else if (rating >= 80) salaryPercentage = 0.0015; // 0.15% for 80+ rated
-        else if (rating >= 75) salaryPercentage = 0.0012; // 0.12% for 75+ rated
+        if (rating >= 90) salaryPercentage = 0.002;
+        else if (rating >= 85) salaryPercentage = 0.0018;
+        else if (rating >= 80) salaryPercentage = 0.0015;
+        else if (rating >= 75) salaryPercentage = 0.0012;
 
         const weeklySalary = Math.round(baseValue * salaryPercentage);
 
-        // Minimum salary of €10K per week
         return Math.max(weeklySalary, 10000);
     }
 
@@ -929,6 +942,10 @@ startContent();
                         <div class="flex justify-between">
                             <span class="text-gray-600">Market Value:</span>
                             <span class="font-medium text-green-600">${formatMarketValue(player.value)}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Salary:</span>
+                            <span class="font-medium text-blue-600">${formatMarketValue(calculateSalary(player))}</span>
                         </div>
                         <div class="flex justify-between">
                             <span class="text-gray-600">Primary Position:</span>
