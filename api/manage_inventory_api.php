@@ -278,6 +278,14 @@ try {
             }
 
             break;
+        
+        case 'clear_history':
+            $stmt = $db->prepare('DELETE FROM player_inventory WHERE club_uuid = (SELECT club_uuid FROM user_club WHERE user_uuid = :user_uuid) AND status <> "available"');
+            $stmt->bindValue(':user_uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
+            if (!$stmt->execute()) {
+                throw new Exception('Failed to clear history: ' . $db->lastErrorMsg());
+            }
+            break;
 
         default:
             throw new Exception('Invalid action');

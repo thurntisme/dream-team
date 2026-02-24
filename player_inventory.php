@@ -83,6 +83,7 @@ startContent();
                 <option value="assigned">Assigned</option>
                 <option value="sold">Sold</option>
             </select>
+            <button id="clearHistoryBtn" class="px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg text-sm">Clear History</button>
         </div>
         <div id="listContainer" class="divide-y">
             <?php if (empty($players)): ?>
@@ -212,6 +213,34 @@ document.addEventListener('DOMContentLoaded', () => {
                 btn.textContent = 'Add to Squad';
             }
         });
+    });
+    document.getElementById('clearHistoryBtn').addEventListener('click', async () => {
+        const result = await Swal.fire({
+            title: 'Clear History?',
+            text: 'This will delete all non-available players from your inventory.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Clear History',
+            cancelButtonText: 'Cancel'
+        });
+        if (!result.isConfirmed) return;
+        try {
+            Swal.fire({ title: 'Processing...', allowOutsideClick: false, allowEscapeKey: false, showConfirmButton: false, didOpen: () => Swal.showLoading() });
+            const res = await fetch('api/manage_inventory_api.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'clear_history' })
+            });
+            const data = await res.json();
+            Swal.close();
+            if (!res.ok || !data.success) throw new Error(data.message || 'Failed to clear history');
+            await Swal.fire({ icon: 'success', title: 'History Cleared', text: 'Non-available players have been removed.', confirmButtonColor: '#10b981' });
+            location.reload();
+        } catch (e) {
+            Swal.fire({ icon: 'error', title: 'Failed', text: e.message || 'Failed to clear history', confirmButtonColor: '#ef4444' });
+        }
     });
     async function placeOnMarket(inventoryId, playerData) {
         const sellPrice = Math.round((playerData.value || 0) * 0.7);
