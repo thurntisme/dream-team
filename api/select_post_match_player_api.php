@@ -24,10 +24,33 @@ if (!isset($input['selected_index']) || !is_numeric($input['selected_index'])) {
 }
 
 $selected_index = (int) $input['selected_index'];
-$user_id = $_SESSION['user_id'];
 
 try {
     $db = getDbConnection();
+
+    // Resolve numeric user_id from session user_uuid if present
+    $user_id = null;
+    if (!empty($_SESSION['user_uuid'])) {
+        $stmt = $db->prepare('SELECT id FROM users WHERE uuid = :uuid');
+        if ($stmt) {
+            $stmt->bindValue(':uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
+            $res = $stmt->execute();
+            $row = $res ? $res->fetchArray(SQLITE3_ASSOC) : null;
+            $user_id = isset($row['id']) ? (int)$row['id'] : null;
+        }
+    }
+
+    // Fallback to legacy numeric session id
+    if ($user_id === null && !empty($_SESSION['user_id'])) {
+        $user_id = (int) $_SESSION['user_id'];
+    }
+
+    if ($user_id === null) {
+        http_response_code(401);
+        echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+        $db->close();
+        exit;
+    }
 
     $result = selectPostMatchPlayer($db, $user_id, $selected_index);
 
