@@ -416,6 +416,24 @@ try {
             resolution_notes TEXT NULL,
             FOREIGN KEY (user_uuid) REFERENCES users(uuid)
         )');
+    // User feedback table
+    $postOk = $postOk && $db->exec('CREATE TABLE IF NOT EXISTS user_feedback (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_uuid CHAR(16) NOT NULL,
+            category VARCHAR(50) NOT NULL,
+            subject VARCHAR(255) NOT NULL,
+            message TEXT NOT NULL,
+            status VARCHAR(20) DEFAULT "pending",
+            reward_amount BIGINT DEFAULT 0,
+            reward_paid TINYINT(1) DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_feedback_user_uuid (user_uuid),
+            INDEX idx_feedback_status (status),
+            FOREIGN KEY (user_uuid) REFERENCES users(uuid)
+        )');
+    $ensureIdx('user_feedback', 'idx_feedback_user_uuid', 'user_uuid');
+    $ensureIdx('user_feedback', 'idx_feedback_status', 'status');
     if ($postOk) {
         $logs[] = ['type' => 'info', 'message' => 'Post-club tables ensured'];
     } else {

@@ -10,7 +10,7 @@ require_once 'partials/layout.php';
 
 
 $db = getDbConnection();
-$userId = $_SESSION['user_id'];
+$userUuid = $_SESSION['user_uuid'];
 $message = '';
 $messageType = '';
 
@@ -40,11 +40,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             foreach ($settings as $key => $value) {
                 if (DB_DRIVER === 'mysql') {
-                    $stmt = $db->prepare('INSERT INTO user_settings (user_id, setting_key, setting_value, updated_at) VALUES (:user_id, :key, :value, NOW()) ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_at = NOW()');
+                    $stmt = $db->prepare('INSERT INTO user_settings (user_uuid, setting_key, setting_value, updated_at) VALUES (:user_uuid, :key, :value, NOW()) ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_at = NOW()');
                 } else {
-                    $stmt = $db->prepare('INSERT OR REPLACE INTO user_settings (user_id, setting_key, setting_value, updated_at) VALUES (:user_id, :key, :value, datetime("now"))');
+                    $stmt = $db->prepare('INSERT OR REPLACE INTO user_settings (user_uuid, setting_key, setting_value, updated_at) VALUES (:user_uuid, :key, :value, datetime("now"))');
                 }
-                $stmt->bindValue(':user_id', $userId, SQLITE3_INTEGER);
+                $stmt->bindValue(':user_uuid', $userUuid, SQLITE3_TEXT);
                 $stmt->bindValue(':key', $key, SQLITE3_TEXT);
                 $stmt->bindValue(':value', $value, SQLITE3_TEXT);
                 $stmt->execute();
@@ -61,10 +61,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // Get current settings
-function getUserSetting($db, $userId, $key, $default = '')
+function getUserSetting($db, $userUuid, $key, $default = '')
 {
-    $stmt = $db->prepare('SELECT setting_value FROM user_settings WHERE user_id = :user_id AND setting_key = :key');
-    $stmt->bindValue(':user_id', $userId, SQLITE3_INTEGER);
+    $stmt = $db->prepare('SELECT setting_value FROM user_settings WHERE user_uuid = :user_uuid AND setting_key = :key');
+    $stmt->bindValue(':user_uuid', $userUuid, SQLITE3_TEXT);
     $stmt->bindValue(':key', $key, SQLITE3_TEXT);
     $result = $stmt->execute();
     $row = $result->fetchArray(SQLITE3_ASSOC);
@@ -72,12 +72,12 @@ function getUserSetting($db, $userId, $key, $default = '')
 }
 
 $currentSettings = [
-    'notifications' => getUserSetting($db, $userId, 'notifications', '1'),
-    'email_updates' => getUserSetting($db, $userId, 'email_updates', '1'),
-    'theme' => getUserSetting($db, $userId, 'theme', 'light'),
-    'language' => getUserSetting($db, $userId, 'language', 'en'),
-    'timezone' => getUserSetting($db, $userId, 'timezone', 'UTC'),
-    'auto_save' => getUserSetting($db, $userId, 'auto_save', '1')
+    'notifications' => getUserSetting($db, $userUuid, 'notifications', '1'),
+    'email_updates' => getUserSetting($db, $userUuid, 'email_updates', '1'),
+    'theme' => getUserSetting($db, $userUuid, 'theme', 'light'),
+    'language' => getUserSetting($db, $userUuid, 'language', 'en'),
+    'timezone' => getUserSetting($db, $userUuid, 'timezone', 'UTC'),
+    'auto_save' => getUserSetting($db, $userUuid, 'auto_save', '1')
 ];
 
 $db->close();
@@ -249,75 +249,9 @@ startContent();
     // Initialize Lucide icons
     lucide.createIcons();
 
-    // Auto-save functionality for settings
-    function autoSaveSettings() {
-        const form = document.querySelector('form');
-        const formData = new FormData(form);
+    // Auto-save functionality removed per request
 
-        // Show saving indicator
-        const saveBtn = document.querySelector('button[type="submit"]');
-        const originalText = saveBtn.innerHTML;
-        saveBtn.innerHTML = '<div class="flex items-center gap-2"><i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Saving...</span></div>';
-        saveBtn.disabled = true;
-
-        // Re-initialize icons for the new loader icon
-        lucide.createIcons();
-
-        fetch('settings_api.php', {
-            method: 'POST',
-            body: formData
-        })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Show success feedback
-                    saveBtn.innerHTML = '<div class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-green-500"></i><span>Saved!</span></div>';
-                    lucide.createIcons();
-
-                    // Reset button after 2 seconds
-                    setTimeout(() => {
-                        saveBtn.innerHTML = originalText;
-                        saveBtn.disabled = false;
-                        lucide.createIcons();
-                    }, 2000);
-                } else {
-                    throw new Error(data.message || 'Failed to save settings');
-                }
-            })
-            .catch(error => {
-                console.error('Error saving settings:', error);
-                saveBtn.innerHTML = '<div class="flex items-center gap-2"><i data-lucide="x" class="w-4 h-4 text-red-500"></i><span>Error</span></div>';
-                lucide.createIcons();
-
-                // Reset button after 3 seconds
-                setTimeout(() => {
-                    saveBtn.innerHTML = originalText;
-                    saveBtn.disabled = false;
-                    lucide.createIcons();
-                }, 3000);
-            });
-    }
-
-    // Add event listeners for real-time saving on toggle switches
-    document.addEventListener('DOMContentLoaded', function () {
-        const toggles = document.querySelectorAll('input[type="checkbox"]');
-        const selects = document.querySelectorAll('select');
-
-        // Auto-save on toggle change
-        toggles.forEach(toggle => {
-            toggle.addEventListener('change', function () {
-                // Small delay to allow UI to update
-                setTimeout(autoSaveSettings, 100);
-            });
-        });
-
-        // Auto-save on select change
-        selects.forEach(select => {
-            select.addEventListener('change', function () {
-                setTimeout(autoSaveSettings, 100);
-            });
-        });
-    });
+    // Real-time auto-save disabled
 
     // Theme preview functionality
     function previewTheme(theme) {

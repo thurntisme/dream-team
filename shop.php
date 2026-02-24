@@ -314,10 +314,6 @@ startContent();
                     class="px-4 py-2 rounded-md text-sm font-medium transition-colors text-gray-600 hover:text-gray-900">
                     Player Packs
                 </button>
-                <button id="premiumTab"
-                    class="px-4 py-2 rounded-md text-sm font-medium transition-colors text-gray-600 hover:text-gray-900">
-                    Premium
-                </button>
                 <button id="myItemsTab" class=" px-4 py-2 rounded-md text-sm font-medium transition-colors text-gray-600
                     hover:text-gray-900">
                     My Items (
@@ -746,7 +742,6 @@ startContent();
     document.getElementById('financialTab').addEventListener('click', () => switchTab('financial'));
     document.getElementById('specialTab').addEventListener('click', () => switchTab('special'));
     document.getElementById('playerPacksTab').addEventListener('click', () => switchTab('playerPacks'));
-    document.getElementById('premiumTab').addEventListener('click', () => switchTab('premium'));
     document.getElementById('myItemsTab').addEventListener('click', () => switchTab('myItems'));
 
     // Initialize

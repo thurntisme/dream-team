@@ -13,11 +13,10 @@ try {
     // Database tables are now created in install.php
 
     // Get user data
-    $stmt = $db->prepare('SELECT name, email, club_name, budget FROM users WHERE id = :id');
-    $stmt->bindValue(':id', $_SESSION['user_id'], SQLITE3_INTEGER);
+    $stmt = $db->prepare('SELECT name, email FROM users WHERE uuid = :uuid');
+    $stmt->bindValue(':uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
     $result = $stmt->execute();
     $user = $result->fetchArray(SQLITE3_ASSOC);
-    $user_budget = $user['budget'] ?? DEFAULT_BUDGET;
 
     // Handle form submission
     $message = '';
@@ -36,29 +35,14 @@ try {
             $message_type = 'error';
         } else {
             // Insert feedback
-            $stmt = $db->prepare('INSERT INTO user_feedback (user_id, category, subject, message) VALUES (:user_id, :category, :subject, :message)');
-            $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+            $stmt = $db->prepare('INSERT INTO user_feedback (user_uuid, category, subject, message) VALUES (:user_uuid, :category, :subject, :message)');
+            $stmt->bindValue(':user_uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
             $stmt->bindValue(':category', $category, SQLITE3_TEXT);
             $stmt->bindValue(':subject', $subject, SQLITE3_TEXT);
             $stmt->bindValue(':message', $feedback_message, SQLITE3_TEXT);
 
             if ($stmt->execute()) {
-                // Award immediate reward for submitting feedback
-                $reward_amount = 140; // Base reward for submission
-                $new_budget = $user_budget + $reward_amount;
-
-                $stmt = $db->prepare('UPDATE users SET budget = :budget WHERE id = :user_id');
-                $stmt->bindValue(':budget', $new_budget, SQLITE3_INTEGER);
-                $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
-                $stmt->execute();
-
-                // Mark reward as paid
-                $stmt = $db->prepare('UPDATE user_feedback SET reward_paid = 1 WHERE user_id = :user_id AND id = (SELECT MAX(id) FROM user_feedback WHERE user_id = :user_id)');
-                $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
-                $stmt->execute();
-
-                $user_budget = $new_budget;
-                $message = "Thank you for your feedback! You've earned €140 and may earn an additional €1,260 if your feedback is approved.";
+                $message = "Thank you for your feedback!";
                 $message_type = 'success';
             } else {
                 $message = 'Failed to submit feedback. Please try again.';
@@ -68,8 +52,8 @@ try {
     }
 
     // Get user's feedback history
-    $stmt = $db->prepare('SELECT * FROM user_feedback WHERE user_id = :user_id ORDER BY created_at DESC LIMIT 10');
-    $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+    $stmt = $db->prepare('SELECT * FROM user_feedback WHERE user_uuid = :user_uuid ORDER BY created_at DESC LIMIT 10');
+    $stmt->bindValue(':user_uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
     $result = $stmt->execute();
 
     $feedback_history = [];
@@ -118,10 +102,7 @@ startContent();
                 <h1 class="text-3xl font-bold text-gray-900 mb-2">Feedback & Suggestions</h1>
                 <p class="text-gray-600">Help us improve Dream Team and earn rewards!</p>
             </div>
-            <div class="bg-green-100 text-green-800 px-4 py-2 rounded-lg">
-                <div class="text-sm text-green-600">Your Budget</div>
-                <div class="text-lg font-bold"><?php echo formatMarketValue($user_budget); ?></div>
-            </div>
+            
         </div>
 
         <!-- Reward Information -->
@@ -279,12 +260,10 @@ startContent();
                                         ?>">
                                             <?php echo ucfirst($feedback['status']); ?>
                                         </span>
-                                        <?php if ($feedback['status'] === 'pending'): ?>
-                                            <button onclick="approveFeedback(<?php echo $feedback['id']; ?>)"
-                                                class="text-xs bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700 transition-colors">
-                                                Approve
-                                            </button>
-                                        <?php endif; ?>
+                                <button onclick="viewFeedbackDetail(<?php echo htmlspecialchars(json_encode($feedback), ENT_QUOTES); ?>)"
+                                    class="text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 transition-colors">
+                                    View Detail
+                                </button>
                                     </div>
                                 </div>
                                 <div class="text-xs text-gray-500 mb-1">
@@ -326,59 +305,35 @@ startContent();
         });
     }
 
-    // Function to approve feedback (for testing/admin purposes)
-    function approveFeedback(feedbackId) {
+    function viewFeedbackDetail(f) {
+        const statusClass = f.status === 'approved' ? 'text-green-600' : (f.status === 'rejected' ? 'text-red-600' : 'text-yellow-600');
+        const created = f.created_at ? new Date(f.created_at).toLocaleString() : '';
+        const rewardInfo = f.reward_paid ? `Earned: €${Number(f.reward_amount || 0).toLocaleString()}` : '';
         Swal.fire({
-            title: 'Approve Feedback?',
-            text: 'This will award the user an additional €1,260 (total €1,400).',
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonColor: '#16a34a',
-            cancelButtonColor: '#6b7280',
-            confirmButtonText: 'Yes, Approve',
-            cancelButtonText: 'Cancel'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                fetch('api/feedback_api.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        action: 'approve_feedback',
-                        feedback_id: feedbackId
-                    })
-                })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            Swal.fire({
-                                icon: 'success',
-                                title: 'Feedback Approved!',
-                                text: `User has been awarded €${data.additional_reward} additional reward.`,
-                                confirmButtonColor: '#16a34a'
-                            }).then(() => {
-                                window.location.reload();
-                            });
-                        } else {
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'Approval Failed',
-                                text: data.message || 'Failed to approve feedback.',
-                                confirmButtonColor: '#ef4444'
-                            });
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Connection Error',
-                            text: 'Failed to approve feedback. Please try again.',
-                            confirmButtonColor: '#ef4444'
-                        });
-                    });
-            }
+            title: f.subject || 'Feedback Detail',
+            html: `
+                <div class="text-left space-y-3">
+                    <div class="flex items-center gap-2">
+                        <span class="text-gray-600">Category:</span>
+                        <span class="font-medium">${String(f.category || '').replace(/_/g, ' ')}</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-gray-600">Status:</span>
+                        <span class="font-medium ${statusClass}">${String(f.status || '')}</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-gray-600">Created:</span>
+                        <span class="font-medium">${created}</span>
+                    </div>
+                    ${rewardInfo ? `<div class="flex items-center gap-2"><span class="text-gray-600">Reward:</span><span class="font-medium text-green-600">${rewardInfo}</span></div>` : ''}
+                    <div>
+                        <div class="text-gray-600 mb-1">Message:</div>
+                        <div class="p-3 bg-gray-50 border border-gray-200 rounded text-sm">${(f.message || '').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+                    </div>
+                </div>
+            `,
+            confirmButtonColor: '#2563eb',
+            confirmButtonText: 'Close'
         });
     }
 </script>
