@@ -34,22 +34,6 @@ try {
             $inventory_id = (int)$row['id'];
         }
         $db->close();
-    } else {
-        if (isset($payload['item_id'])) {
-            // Compatibility: resolve by item_id if provided
-            $db = getDbConnection();
-            $stmt = $db->prepare('SELECT id FROM user_inventory WHERE user_uuid = :user_uuid AND item_id = :item_id AND quantity > 0 ORDER BY id ASC LIMIT 1');
-            if ($stmt) {
-                $stmt->bindValue(':user_uuid', $_SESSION['user_uuid'] ?? '', SQLITE3_TEXT);
-                $stmt->bindValue(':item_id', (int)$payload['item_id'], SQLITE3_INTEGER);
-                $res = $stmt->execute();
-                $row = $res ? $res->fetchArray(SQLITE3_ASSOC) : null;
-                if ($row && isset($row['id'])) {
-                    $inventory_id = (int)$row['id'];
-                }
-            }
-            $db->close();
-        }
     }
     $user_uuid = $_SESSION['user_uuid'] ?? null;
 

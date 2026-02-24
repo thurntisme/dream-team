@@ -275,7 +275,7 @@ startContent();
                                         <div class="text-sm font-medium text-green-600">Permanent</div>
                                     <?php endif; ?>
                                     <?php if (($item['effect_type'] ?? '') === 'player_pack' && (int)$item['quantity'] > 0): ?>
-                                        <button onclick="openPlayerPack('<?php echo isset($item['item_uuid']) ? htmlspecialchars($item['item_uuid'], ENT_QUOTES) : ''; ?>', '<?php echo htmlspecialchars($item['name'], ENT_QUOTES); ?>', <?php echo (int)$item['item_id']; ?>, '<?php echo htmlspecialchars($item['description'], ENT_QUOTES); ?>')"
+                                        <button onclick="openPlayerPack('<?php echo isset($item['item_uuid']) ? htmlspecialchars($item['item_uuid'], ENT_QUOTES) : ''; ?>', '<?php echo htmlspecialchars($item['name'], ENT_QUOTES); ?>', '<?php echo htmlspecialchars($item['description'], ENT_QUOTES); ?>')"
                                                 class="mt-2 px-3 py-2 rounded-lg text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white">
                                             Open Pack
                                         </button>
@@ -517,7 +517,7 @@ startContent();
             });
     }
 
-    async function openPlayerPack(itemUuid, itemName, itemId, itemDesc) {
+    async function openPlayerPack(itemUuid, itemName, itemDesc) {
         const confirm = await Swal.fire({
             title: itemName || 'Open Pack',
             html: `<div class="text-left"><div class="text-sm text-gray-700">${(itemDesc || '')}</div><div class="text-xs text-gray-500 mt-2">Opens one pack and adds a player to your inventory. If there is squad space and the pack tier auto-assigns, the player may join your squad.</div></div>`,
@@ -547,8 +547,7 @@ startContent();
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({
                     action: 'open_pack',
-                    item_uuid: String(itemUuid || '').trim(),
-                    item_id: typeof itemId === 'number' ? itemId : parseInt(itemId || 0)
+                    item_uuid: String(itemUuid || '').trim()
                 })
             });
             const data = await res.json();
