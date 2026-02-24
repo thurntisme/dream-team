@@ -6,8 +6,8 @@ require_once '../config/constants.php';
 
 header('Content-Type: application/json');
 
-// Check if user is logged in
-if (!isset($_SESSION['user_id'])) {
+// Check if user is logged in (use user_uuid)
+if (!isset($_SESSION['user_uuid'])) {
     echo json_encode(['success' => false, 'message' => 'Not authenticated']);
     exit;
 }
@@ -16,17 +16,17 @@ if (!isset($_SESSION['user_id'])) {
 define('RECOMMENDATION_COST', 2000000); // €2M per recommendation request
 
 $db = getDbConnection();
-$userId = $_SESSION['user_id'];
+$userUuid = $_SESSION['user_uuid'];
 
 try {
     $startTime = microtime(true);
-    debug_info("Player recommendation request started", ['user_id' => $userId]);
+    debug_info("Player recommendation request started", ['user_uuid' => $userUuid]);
     
     // Check if this is a cost inquiry or actual recommendation request
     $action = $_POST['action'] ?? 'get_recommendations';
     
     if ($action === 'get_cost') {
-        debug_info("Cost inquiry request", ['user_id' => $userId, 'cost' => RECOMMENDATION_COST]);
+        debug_info("Cost inquiry request", ['user_uuid' => $userUuid, 'cost' => RECOMMENDATION_COST]);
         // Return just the cost for confirmation
         echo json_encode([
             'success' => true,
@@ -36,9 +36,9 @@ try {
         exit;
     }
 
-    // Get user data
-    $stmt = $db->prepare('SELECT team, substitutes, budget, formation FROM users WHERE id = :user_id');
-    $stmt->bindValue(':user_id', $userId, SQLITE3_INTEGER);
+    // Get user club data (team, budget, formation) from user_club
+    $stmt = $db->prepare('SELECT team, budget, formation FROM user_club WHERE user_uuid = :user_uuid');
+    $stmt->bindValue(':user_uuid', $userUuid, SQLITE3_TEXT);
     $result = $stmt->execute();
     $user = $result->fetchArray(SQLITE3_ASSOC);
 
@@ -60,16 +60,15 @@ try {
 
     // Deduct cost from user's budget
     $newBudget = $user['budget'] - RECOMMENDATION_COST;
-    $updateStmt = $db->prepare('UPDATE users SET budget = :budget WHERE id = :user_id');
+    $updateStmt = $db->prepare('UPDATE user_club SET budget = :budget WHERE user_uuid = :user_uuid');
     $updateStmt->bindValue(':budget', $newBudget, SQLITE3_INTEGER);
-    $updateStmt->bindValue(':user_id', $userId, SQLITE3_INTEGER);
+    $updateStmt->bindValue(':user_uuid', $userUuid, SQLITE3_TEXT);
     
     if (!$updateStmt->execute()) {
         throw new Exception('Failed to process payment for recommendations');
     }
 
     $currentTeam = json_decode($user['team'], true) ?: [];
-    $currentSubs = json_decode($user['substitutes'], true) ?: [];
     $budget = $user['budget'];
     $formation = $user['formation'] ?: '4-4-2';
 
@@ -79,11 +78,6 @@ try {
     // Get current player names to exclude them
     $currentPlayerNames = [];
     foreach ($currentTeam as $player) {
-        if ($player && isset($player['name'])) {
-            $currentPlayerNames[] = $player['name'];
-        }
-    }
-    foreach ($currentSubs as $player) {
         if ($player && isset($player['name'])) {
             $currentPlayerNames[] = $player['name'];
         }
@@ -217,7 +211,7 @@ try {
     ];
     
     debug_performance("Player recommendation generation", $startTime, [
-        'user_id' => $userId,
+        'user_uuid' => $userUuid,
         'recommendations_count' => count($recommendations),
         'empty_positions' => count($emptyPositions),
         'weak_positions' => count($weakPositions),
@@ -225,7 +219,7 @@ try {
         'new_budget' => $newBudget
     ]);
     
-    debug_user_action($userId, "Generated player recommendations", [
+    debug_user_action($userUuid, "Generated player recommendations", [
         'cost' => RECOMMENDATION_COST,
         'recommendations' => count($recommendations)
     ]);
