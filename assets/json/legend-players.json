@@ -1,0 +1,192 @@
+[
+  {
+    "name": "Paolo Maldini",
+    "position": "CB",
+    "rating": 95,
+    "value": 50000000,
+    "age": 34,
+    "uuid": "legend-paolo-maldini-001",
+    "nationality": "Italy",
+    "avatar": null,
+    "playablePositions": ["CB", "LB"],
+    "attributes": {
+      "defending": 96,
+      "heading": 92,
+      "strength": 93,
+      "marking": 96,
+      "tackling": 95
+    },
+    "salary": 50000
+  },
+  {
+    "name": "Zinedine Zidane",
+    "position": "CAM",
+    "rating": 96,
+    "value": 60000000,
+    "age": 33,
+    "uuid": "legend-zinedine-zidane-001",
+    "nationality": "France",
+    "avatar": null,
+    "playablePositions": ["CAM", "CM"],
+    "attributes": {
+      "passing": 97,
+      "dribbling": 95,
+      "vision": 97,
+      "stamina": 86,
+      "shooting": 92
+    },
+    "salary": 60000
+  },
+  {
+    "name": "Ronaldo",
+    "position": "ST",
+    "rating": 95,
+    "value": 58000000,
+    "age": 31,
+    "uuid": "legend-ronaldo-nazario-001",
+    "nationality": "Brazil",
+    "avatar": null,
+    "playablePositions": ["ST", "CF"],
+    "attributes": {
+      "finishing": 97,
+      "pace": 95,
+      "dribbling": 95,
+      "strength": 90,
+      "composure": 95
+    },
+    "salary": 58000
+  },
+  {
+    "name": "Ronaldinho",
+    "position": "CAM",
+    "rating": 95,
+    "value": 56000000,
+    "age": 30,
+    "uuid": "legend-ronaldinho-001",
+    "nationality": "Brazil",
+    "avatar": null,
+    "playablePositions": ["CAM", "LW", "RW"],
+    "attributes": {
+      "dribbling": 97,
+      "passing": 94,
+      "vision": 95,
+      "agility": 97,
+      "shooting": 90
+    },
+    "salary": 56000
+  },
+  {
+    "name": "Thierry Henry",
+    "position": "ST",
+    "rating": 93,
+    "value": 52000000,
+    "age": 31,
+    "uuid": "legend-thierry-henry-001",
+    "nationality": "France",
+    "avatar": null,
+    "playablePositions": ["ST", "LW"],
+    "attributes": {
+      "finishing": 95,
+      "pace": 94,
+      "dribbling": 93,
+      "composure": 92,
+      "positioning": 94
+    },
+    "salary": 52000
+  },
+  {
+    "name": "Xavi",
+    "position": "CM",
+    "rating": 93,
+    "value": 52000000,
+    "age": 32,
+    "uuid": "legend-xavi-hernandez-001",
+    "nationality": "Spain",
+    "avatar": null,
+    "playablePositions": ["CM", "CDM"],
+    "attributes": {
+      "passing": 97,
+      "vision": 96,
+      "dribbling": 90,
+      "stamina": 88,
+      "shooting": 85
+    },
+    "salary": 52000
+  },
+  {
+    "name": "Andrea Pirlo",
+    "position": "CM",
+    "rating": 92,
+    "value": 48000000,
+    "age": 33,
+    "uuid": "legend-andrea-pirlo-001",
+    "nationality": "Italy",
+    "avatar": null,
+    "playablePositions": ["CM", "CDM"],
+    "attributes": {
+      "passing": 96,
+      "vision": 96,
+      "dribbling": 88,
+      "stamina": 82,
+      "shooting": 86
+    },
+    "salary": 48000
+  },
+  {
+    "name": "Iker Casillas",
+    "position": "GK",
+    "rating": 92,
+    "value": 45000000,
+    "age": 30,
+    "uuid": "legend-iker-casillas-001",
+    "nationality": "Spain",
+    "avatar": null,
+    "playablePositions": ["GK"],
+    "attributes": {
+      "diving": 94,
+      "handling": 93,
+      "kicking": 88,
+      "reflexes": 95,
+      "positioning": 93
+    },
+    "salary": 45000
+  },
+  {
+    "name": "Cafu",
+    "position": "RB",
+    "rating": 92,
+    "value": 44000000,
+    "age": 32,
+    "uuid": "legend-cafu-001",
+    "nationality": "Brazil",
+    "avatar": null,
+    "playablePositions": ["RB", "RWB"],
+    "attributes": {
+      "pace": 92,
+      "crossing": 90,
+      "defending": 91,
+      "stamina": 94,
+      "dribbling": 88
+    },
+    "salary": 44000
+  },
+  {
+    "name": "Roberto Carlos",
+    "position": "LB",
+    "rating": 93,
+    "value": 50000000,
+    "age": 31,
+    "uuid": "legend-roberto-carlos-001",
+    "nationality": "Brazil",
+    "avatar": null,
+    "playablePositions": ["LB", "LWB", "LM"],
+    "attributes": {
+      "pace": 96,
+      "crossing": 92,
+      "defending": 90,
+      "stamina": 95,
+      "shooting": 92
+    },
+    "salary": 50000
+  }
+]

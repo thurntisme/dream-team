@@ -1,0 +1,192 @@
+[
+  {
+    "name": "Kylian Mbappé",
+    "position": "ST",
+    "rating": 97,
+    "value": 140000000,
+    "age": 27,
+    "uuid": "modern-kylian-mbappe-001",
+    "nationality": "France",
+    "avatar": null,
+    "playablePositions": ["ST", "LW"],
+    "attributes": {
+      "pace": 99,
+      "finishing": 95,
+      "dribbling": 94,
+      "composure": 92,
+      "strength": 85
+    },
+    "salary": 200000
+  },
+  {
+    "name": "Erling Haaland",
+    "position": "ST",
+    "rating": 96,
+    "value": 130000000,
+    "age": 25,
+    "uuid": "modern-erling-haaland-001",
+    "nationality": "Norway",
+    "avatar": null,
+    "playablePositions": ["ST", "CF"],
+    "attributes": {
+      "finishing": 97,
+      "pace": 91,
+      "strength": 94,
+      "heading": 93,
+      "composure": 90
+    },
+    "salary": 190000
+  },
+  {
+    "name": "Kevin De Bruyne",
+    "position": "CM",
+    "rating": 95,
+    "value": 90000000,
+    "age": 33,
+    "uuid": "modern-kevin-de-bruyne-001",
+    "nationality": "Belgium",
+    "avatar": null,
+    "playablePositions": ["CM", "CAM"],
+    "attributes": {
+      "passing": 98,
+      "vision": 97,
+      "shooting": 88,
+      "stamina": 85,
+      "dribbling": 86
+    },
+    "salary": 180000
+  },
+  {
+    "name": "Mohamed Salah",
+    "position": "RW",
+    "rating": 94,
+    "value": 95000000,
+    "age": 31,
+    "uuid": "modern-mohamed-salah-001",
+    "nationality": "Egypt",
+    "avatar": null,
+    "playablePositions": ["RW", "ST"],
+    "attributes": {
+      "pace": 94,
+      "dribbling": 92,
+      "finishing": 92,
+      "vision": 85,
+      "stamina": 88
+    },
+    "salary": 160000
+  },
+  {
+    "name": "Neymar Jr",
+    "position": "LW",
+    "rating": 93,
+    "value": 85000000,
+    "age": 32,
+    "uuid": "modern-neymar-jr-001",
+    "nationality": "Brazil",
+    "avatar": null,
+    "playablePositions": ["LW", "CAM"],
+    "attributes": {
+      "dribbling": 96,
+      "passing": 90,
+      "pace": 89,
+      "vision": 91,
+      "shooting": 86
+    },
+    "salary": 170000
+  },
+  {
+    "name": "Robert Lewandowski",
+    "position": "ST",
+    "rating": 92,
+    "value": 60000000,
+    "age": 36,
+    "uuid": "modern-robert-lewandowski-001",
+    "nationality": "Poland",
+    "avatar": null,
+    "playablePositions": ["ST", "CF"],
+    "attributes": {
+      "finishing": 96,
+      "positioning": 94,
+      "heading": 88,
+      "composure": 92,
+      "strength": 85
+    },
+    "salary": 140000
+  },
+  {
+    "name": "Virgil van Dijk",
+    "position": "CB",
+    "rating": 93,
+    "value": 70000000,
+    "age": 33,
+    "uuid": "modern-virgil-van-dijk-001",
+    "nationality": "Netherlands",
+    "avatar": null,
+    "playablePositions": ["CB"],
+    "attributes": {
+      "defending": 95,
+      "heading": 94,
+      "strength": 92,
+      "tackling": 91,
+      "positioning": 93
+    },
+    "salary": 150000
+  },
+  {
+    "name": "Jude Bellingham",
+    "position": "CM",
+    "rating": 92,
+    "value": 120000000,
+    "age": 20,
+    "uuid": "modern-jude-bellingham-001",
+    "nationality": "England",
+    "avatar": null,
+    "playablePositions": ["CM", "CAM"],
+    "attributes": {
+      "passing": 89,
+      "dribbling": 88,
+      "shooting": 86,
+      "stamina": 94,
+      "vision": 87
+    },
+    "salary": 120000
+  },
+  {
+    "name": "Vinícius Júnior",
+    "position": "LW",
+    "rating": 91,
+    "value": 95000000,
+    "age": 23,
+    "uuid": "modern-vinicius-jr-001",
+    "nationality": "Brazil",
+    "avatar": null,
+    "playablePositions": ["LW", "LM"],
+    "attributes": {
+      "pace": 95,
+      "dribbling": 94,
+      "crossing": 82,
+      "shooting": 85,
+      "agility": 92
+    },
+    "salary": 110000
+  },
+  {
+    "name": "Alisson Becker",
+    "position": "GK",
+    "rating": 91,
+    "value": 50000000,
+    "age": 33,
+    "uuid": "modern-alisson-becker-001",
+    "nationality": "Brazil",
+    "avatar": null,
+    "playablePositions": ["GK"],
+    "attributes": {
+      "diving": 90,
+      "handling": 92,
+      "kicking": 88,
+      "reflexes": 91,
+      "positioning": 92
+    },
+    "salary": 130000
+  }
+]

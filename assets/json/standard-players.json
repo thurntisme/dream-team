@@ -1632,5 +1632,271 @@
       "shooting": 80
     },
     "salary": 21000
+  },
+  {
+    "name": "Luis Romero",
+    "position": "RB",
+    "rating": 74,
+    "value": 7000000,
+    "age": 25,
+    "uuid": "std-luis-romero-001",
+    "nationality": "Argentina",
+    "avatar": null,
+    "playablePositions": ["RB", "RWB"],
+    "attributes": {
+      "pace": 76,
+      "crossing": 73,
+      "defending": 74,
+      "stamina": 75,
+      "dribbling": 72
+    },
+    "salary": 7000
+  },
+  {
+    "name": "Pierre Dubois",
+    "position": "CM",
+    "rating": 76,
+    "value": 8500000,
+    "age": 26,
+    "uuid": "std-pierre-dubois-001",
+    "nationality": "France",
+    "avatar": null,
+    "playablePositions": ["CM", "CDM", "CAM"],
+    "attributes": {
+      "passing": 78,
+      "vision": 77,
+      "stamina": 76,
+      "tackling": 74,
+      "dribbling": 75
+    },
+    "salary": 8500
+  },
+  {
+    "name": "Arjun Mehta",
+    "position": "RW",
+    "rating": 75,
+    "value": 8000000,
+    "age": 24,
+    "uuid": "std-arjun-mehta-001",
+    "nationality": "India",
+    "avatar": null,
+    "playablePositions": ["RW", "RM", "LW"],
+    "attributes": {
+      "pace": 80,
+      "dribbling": 78,
+      "crossing": 74,
+      "shooting": 73,
+      "stamina": 75
+    },
+    "salary": 8000
+  },
+  {
+    "name": "Musa Diallo",
+    "position": "GK",
+    "rating": 72,
+    "value": 5000000,
+    "age": 27,
+    "uuid": "std-musa-diallo-001",
+    "nationality": "Senegal",
+    "avatar": null,
+    "playablePositions": ["GK"],
+    "attributes": {
+      "diving": 72,
+      "handling": 73,
+      "kicking": 70,
+      "reflexes": 72,
+      "positioning": 71
+    },
+    "salary": 5000
+  },
+  {
+    "name": "Jorge Alvarez",
+    "position": "LB",
+    "rating": 73,
+    "value": 6500000,
+    "age": 25,
+    "uuid": "std-jorge-alvarez-001",
+    "nationality": "Mexico",
+    "avatar": null,
+    "playablePositions": ["LB", "LWB"],
+    "attributes": {
+      "pace": 75,
+      "crossing": 74,
+      "defending": 73,
+      "stamina": 75,
+      "dribbling": 72
+    },
+    "salary": 6500
+  },
+  {
+    "name": "Nikola Stojanovic",
+    "position": "CDM",
+    "rating": 74,
+    "value": 7000000,
+    "age": 26,
+    "uuid": "std-nikola-stojanovic-001",
+    "nationality": "Serbia",
+    "avatar": null,
+    "playablePositions": ["CDM", "CM"],
+    "attributes": {
+      "tackling": 76,
+      "strength": 75,
+      "passing": 72,
+      "vision": 71,
+      "stamina": 76
+    },
+    "salary": 7000
+  },
+  {
+    "name": "Ethan Clarke",
+    "position": "CB",
+    "rating": 75,
+    "value": 8000000,
+    "age": 27,
+    "uuid": "std-ethan-clarke-001",
+    "nationality": "United States",
+    "avatar": null,
+    "playablePositions": ["CB"],
+    "attributes": {
+      "defending": 76,
+      "heading": 75,
+      "strength": 76,
+      "marking": 75,
+      "tackling": 74
+    },
+    "salary": 8000
+  },
+  {
+    "name": "Rami Haddad",
+    "position": "CAM",
+    "rating": 77,
+    "value": 9000000,
+    "age": 25,
+    "uuid": "std-rami-haddad-001",
+    "nationality": "Egypt",
+    "avatar": null,
+    "playablePositions": ["CAM", "CM"],
+    "attributes": {
+      "passing": 79,
+      "dribbling": 78,
+      "vision": 79,
+      "stamina": 74,
+      "shooting": 76
+    },
+    "salary": 9000
+  },
+  {
+    "name": "Tobias Müller",
+    "position": "RW",
+    "rating": 74,
+    "value": 7000000,
+    "age": 24,
+    "uuid": "std-tobias-muller-001",
+    "nationality": "Germany",
+    "avatar": null,
+    "playablePositions": ["RW", "RM"],
+    "attributes": {
+      "pace": 78,
+      "dribbling": 76,
+      "crossing": 73,
+      "shooting": 72,
+      "stamina": 74
+    },
+    "salary": 7000
+  },
+  {
+    "name": "João Pereira",
+    "position": "LW",
+    "rating": 75,
+    "value": 8000000,
+    "age": 23,
+    "uuid": "std-joao-pereira-001",
+    "nationality": "Portugal",
+    "avatar": null,
+    "playablePositions": ["LW", "LM", "RW"],
+    "attributes": {
+      "pace": 79,
+      "dribbling": 77,
+      "crossing": 75,
+      "shooting": 74,
+      "stamina": 75
+    },
+    "salary": 8000
+  },
+  {
+    "name": "Chen Wei",
+    "position": "CM",
+    "rating": 73,
+    "value": 6500000,
+    "age": 24,
+    "uuid": "std-chen-wei-001",
+    "nationality": "China",
+    "avatar": null,
+    "playablePositions": ["CM", "CAM"],
+    "attributes": {
+      "passing": 76,
+      "vision": 74,
+      "dribbling": 73,
+      "stamina": 74,
+      "tackling": 70
+    },
+    "salary": 6500
+  },
+  {
+    "name": "Alessio Ricci",
+    "position": "ST",
+    "rating": 76,
+    "value": 9000000,
+    "age": 26,
+    "uuid": "std-alessio-ricci-001",
+    "nationality": "Italy",
+    "avatar": null,
+    "playablePositions": ["ST", "CF"],
+    "attributes": {
+      "finishing": 78,
+      "heading": 76,
+      "strength": 75,
+      "ball_control": 77,
+      "composure": 76
+    },
+    "salary": 9000
+  },
+  {
+    "name": "Samuel Okoro",
+    "position": "RB",
+    "rating": 72,
+    "value": 5200000,
+    "age": 25,
+    "uuid": "std-samuel-okoro-001",
+    "nationality": "Nigeria",
+    "avatar": null,
+    "playablePositions": ["RB", "RWB"],
+    "attributes": {
+      "pace": 75,
+      "crossing": 71,
+      "defending": 72,
+      "stamina": 73,
+      "dribbling": 71
+    },
+    "salary": 5200
+  },
+  {
+    "name": "Matías Fernández",
+    "position": "GK",
+    "rating": 73,
+    "value": 6000000,
+    "age": 28,
+    "uuid": "std-matias-fernandez-001",
+    "nationality": "Chile",
+    "avatar": null,
+    "playablePositions": ["GK"],
+    "attributes": {
+      "diving": 73,
+      "handling": 72,
+      "kicking": 71,
+      "reflexes": 74,
+      "positioning": 72
+    },
+    "salary": 6000
   }
 ]
