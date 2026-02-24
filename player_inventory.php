@@ -112,6 +112,12 @@ startContent();
                                 <button class="assign-btn px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm" data-id="<?php echo (int)$p['id']; ?>" data-uuid="<?php echo htmlspecialchars($p['uuid'] ?? '', ENT_QUOTES); ?>">
                                     Add to Squad
                                 </button>
+                                <button onclick="placeOnMarket(<?php echo (int)$p['id']; ?>, <?php echo htmlspecialchars(json_encode($p), ENT_QUOTES); ?>)" class="px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-sm">
+                                    Place on Market
+                                </button>
+                                <button onclick="releasePlayer(<?php echo (int)$p['id']; ?>, <?php echo '\'' . htmlspecialchars($p['name'], ENT_QUOTES) . '\''; ?>)" class="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm">
+                                    Release
+                                </button>
                             <?php else: ?>
                                 <span class="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs"><?php echo htmlspecialchars(ucfirst($p['status'])); ?></span>
                             <?php endif; ?>
@@ -207,6 +213,82 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
+    async function placeOnMarket(inventoryId, playerData) {
+        const sellPrice = Math.round((playerData.value || 0) * 0.7);
+        const result = await Swal.fire({
+            title: `Place ${playerData.name} on Market?`,
+            html: `
+                <div class="text-left space-y-4">
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <div class="space-y-1 text-sm">
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Market Value:</span>
+                                <span class="font-medium text-green-600">${formatMarketValue(playerData.value || 0)}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Quick Sell Price (70%):</span>
+                                <span class="font-medium text-blue-600">${formatMarketValue(sellPrice)}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="text-sm text-gray-600">This will mark the player as sold and credit your budget.</p>
+                </div>
+            `,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#f59e0b',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Place on Market',
+            cancelButtonText: 'Cancel',
+            didOpen: () => { lucide.createIcons(); }
+        });
+        if (!result.isConfirmed) return;
+        try {
+            Swal.fire({ title: 'Processing...', allowOutsideClick: false, allowEscapeKey: false, showConfirmButton: false, didOpen: () => Swal.showLoading() });
+            const res = await fetch('api/manage_inventory_api.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ action: 'sell', inventory_id: inventoryId, player_data: playerData, sell_price: sellPrice })
+            });
+            const data = await res.json();
+            Swal.close();
+            if (!res.ok || !data.success) throw new Error(data.message || 'Failed to place on market');
+            await Swal.fire({ icon: 'success', title: 'Placed on Market', text: `${playerData.name} has been sold for ${formatMarketValue(sellPrice)}.`, confirmButtonColor: '#10b981' });
+            location.reload();
+        } catch (e) {
+            Swal.fire({ icon: 'error', title: 'Failed', text: e.message || 'Failed to place on market', confirmButtonColor: '#ef4444' });
+        }
+    }
+    async function releasePlayer(inventoryId, playerName) {
+        const result = await Swal.fire({
+            title: `Release ${playerName}?`,
+            text: 'This will permanently remove the player from your inventory without compensation.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Release',
+            cancelButtonText: 'Cancel'
+        });
+        if (!result.isConfirmed) return;
+        try {
+            Swal.fire({ title: 'Processing...', allowOutsideClick: false, allowEscapeKey: false, showConfirmButton: false, didOpen: () => Swal.showLoading() });
+            const res = await fetch('api/manage_inventory_api.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ action: 'delete', inventory_id: inventoryId, player_data: { name: playerName } })
+            });
+            const data = await res.json();
+            Swal.close();
+            if (!res.ok || !data.success) throw new Error(data.message || 'Failed to release player');
+            await Swal.fire({ icon: 'success', title: 'Player Released', text: `${playerName} has been released.`, confirmButtonColor: '#10b981' });
+            location.reload();
+        } catch (e) {
+            Swal.fire({ icon: 'error', title: 'Failed', text: e.message || 'Failed to release player', confirmButtonColor: '#ef4444' });
+        }
+    }
+    window.placeOnMarket = placeOnMarket;
+    window.releasePlayer = releasePlayer;
     function formatMarketValue(value) {
         if (value >= 1000000) {
             return '€' + (value / 1000000).toFixed(1) + 'M';
