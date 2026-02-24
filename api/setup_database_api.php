@@ -295,8 +295,6 @@ try {
             club_uuid CHAR(16) NOT NULL,
             player_uuid CHAR(16) NOT NULL,
             player_data TEXT NOT NULL,
-            purchase_price BIGINT NOT NULL,
-            purchase_date DATETIME DEFAULT CURRENT_TIMESTAMP,
             status VARCHAR(20) DEFAULT "available",
             INDEX idx_inventory_club_uuid (club_uuid),
             INDEX idx_inventory_player_uuid (player_uuid),

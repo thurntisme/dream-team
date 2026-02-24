@@ -120,7 +120,7 @@ class UseItemController
                 if (!$rowClub || !isset($rowClub['club_uuid'])) {
                     throw new Exception('User not associated with a club');
                 }
-                $stmtIns2 = $this->db->prepare('INSERT INTO player_inventory (club_uuid, player_uuid, player_data, purchase_price) VALUES (:club_uuid, :player_uuid, :player_data, 10)');
+                $stmtIns2 = $this->db->prepare('INSERT INTO player_inventory (club_uuid, player_uuid, player_data) VALUES (:club_uuid, :player_uuid, :player_data)');
                 if ($stmtIns2 !== false) {
                     $stmtIns2->bindValue(':club_uuid', $rowClub['club_uuid'], SQLITE3_TEXT);
                     $stmtIns2->bindValue(':player_uuid', $picked['uuid'], SQLITE3_TEXT);

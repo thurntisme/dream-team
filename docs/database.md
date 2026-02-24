@@ -93,13 +93,10 @@ Stores purchased players not currently in active squads.
 ```sql
 CREATE TABLE player_inventory (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
+    club_uuid CHAR(16) NOT NULL,
     player_uuid TEXT NOT NULL,
     player_data TEXT NOT NULL,
-    purchase_price INTEGER NOT NULL,
-    purchase_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-    status TEXT DEFAULT "available",
-    FOREIGN KEY (user_id) REFERENCES users(id)
+    status TEXT DEFAULT "available"
 )
 ```
 
@@ -107,7 +104,6 @@ CREATE TABLE player_inventory (
 
 **Key Fields**:
 - `player_data`: JSON object containing complete player information
-- `purchase_price`: Amount paid for the player
 - `status`: "available", "sold", etc.
 
 ## Youth System

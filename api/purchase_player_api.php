@@ -154,14 +154,13 @@ try {
             }
         }
 
-        $stmt = $db->prepare('INSERT INTO player_inventory (club_uuid, player_uuid, player_data, purchase_price) VALUES (:club_uuid, :player_uuid, :player_data, :purchase_price)');
+        $stmt = $db->prepare('INSERT INTO player_inventory (club_uuid, player_uuid, player_data) VALUES (:club_uuid, :player_uuid, :player_data)');
         if ($stmt === false) {
             throw new Exception('Failed to prepare inventory insert: ' . $db->lastErrorMsg());
         }
         $stmt->bindValue(':club_uuid', $clubUuidVal, SQLITE3_TEXT);
         $stmt->bindValue(':player_uuid', $resolved_uuid, SQLITE3_TEXT);
         $stmt->bindValue(':player_data', json_encode($player_data), SQLITE3_TEXT);
-        $stmt->bindValue(':purchase_price', $cost, SQLITE3_INTEGER);
 
         if (!$stmt->execute()) {
             throw new Exception('Failed to add player to inventory: ' . $db->lastErrorMsg());

@@ -238,8 +238,6 @@ function isDatabaseAvailable()
                         club_uuid CHAR(16) NOT NULL,
                         player_uuid CHAR(16) NOT NULL,
                         player_data TEXT NOT NULL,
-                        purchase_price BIGINT NOT NULL,
-                        purchase_date DATETIME DEFAULT CURRENT_TIMESTAMP,
                         status VARCHAR(20) DEFAULT \"available\",
                         INDEX idx_inventory_club_uuid (club_uuid),
                         INDEX idx_inventory_player_uuid (player_uuid),
@@ -252,6 +250,8 @@ function isDatabaseAvailable()
                                SET pi.club_uuid = uc.club_uuid
                                WHERE pi.club_uuid IS NULL OR pi.club_uuid = \"\"');
                     $db->exec('ALTER TABLE player_inventory DROP COLUMN user_id');
+                    $db->exec('ALTER TABLE player_inventory DROP COLUMN purchase_price');
+                    $db->exec('ALTER TABLE player_inventory DROP COLUMN purchase_date');
                     $db->exec('ALTER TABLE player_inventory MODIFY COLUMN club_uuid CHAR(16) NOT NULL');
                 } catch (Throwable $e) { }
             } catch (Throwable $e) {

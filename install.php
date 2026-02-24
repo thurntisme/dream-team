@@ -591,16 +591,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install'])) {
             $ensureIdx('transfer_bids', 'idx_transfer_bids_uuid', 'player_uuid');
             $ok = $ok && $db->exec('CREATE TABLE IF NOT EXISTS player_inventory (
                 id INT AUTO_INCREMENT PRIMARY KEY,
-                user_uuid CHAR(16) NOT NULL,
+                club_uuid CHAR(16) NOT NULL,
                 player_uuid VARCHAR(64) NOT NULL,
                 player_data TEXT NOT NULL,
-                purchase_price BIGINT NOT NULL,
-                purchase_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-                status VARCHAR(20) DEFAULT "available",
-                FOREIGN KEY (user_uuid) REFERENCES users(uuid)
+                status VARCHAR(20) DEFAULT "available"
             )');
-            $ensureIdx('player_inventory', 'idx_player_inventory_user_uuid', 'user_uuid');
-            $ensureIdx('player_inventory', 'idx_player_inventory_status', 'status');
+            $ensureIdx('player_inventory', 'idx_inventory_club_uuid', 'club_uuid');
+            $ensureIdx('player_inventory', 'idx_inventory_status', 'status');
             $ok = $ok && $db->exec('CREATE TABLE IF NOT EXISTS scouting_reports (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 user_uuid CHAR(16) NOT NULL,
@@ -901,15 +898,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install'])) {
 
                 $db->exec('CREATE TABLE IF NOT EXISTS player_inventory (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_uuid TEXT NOT NULL,
+                club_uuid TEXT NOT NULL,
                 player_uuid TEXT NOT NULL,
                 player_data TEXT NOT NULL,
-                purchase_price INTEGER NOT NULL,
-                purchase_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-                status TEXT DEFAULT "available",
-                FOREIGN KEY (user_uuid) REFERENCES users(uuid)
+                status TEXT DEFAULT "available"
             )');
-                $db->exec('CREATE INDEX IF NOT EXISTS idx_player_inventory_user_uuid ON player_inventory (user_uuid)');
+                $db->exec('CREATE INDEX IF NOT EXISTS idx_inventory_club_uuid ON player_inventory (club_uuid)');
                 $db->exec('CREATE INDEX IF NOT EXISTS idx_player_inventory_status ON player_inventory (status)');
 
                 // Scouting system table
@@ -936,11 +930,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install'])) {
                     // Add player_uuid column if it doesn't exist
                     if (!in_array('player_uuid', $columns)) {
                         $db->exec('ALTER TABLE player_inventory ADD COLUMN player_uuid TEXT DEFAULT ""');
-                    }
-
-                    // Add purchase_price column if it doesn't exist
-                    if (!in_array('purchase_price', $columns)) {
-                        $db->exec('ALTER TABLE player_inventory ADD COLUMN purchase_price INTEGER DEFAULT 0');
                     }
 
                     // Migrate data from player_name to player_uuid if needed

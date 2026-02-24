@@ -22,22 +22,12 @@ try {
     $rowClub = $resClub ? $resClub->fetchArray(SQLITE3_ASSOC) : null;
     $club_uuid = $rowClub['club_uuid'] ?? null;
 
-    // Fetch inventory rows, prefer club_uuid linking, fallback to user_uuid
+    // Fetch inventory rows
     $inv = [];
     if ($club_uuid) {
-        $stmt = $db->prepare('SELECT id, player_uuid, player_data, status, purchase_date, purchase_price FROM player_inventory WHERE club_uuid = :club_uuid ORDER BY purchase_date DESC, id DESC');
+        $stmt = $db->prepare('SELECT id, player_uuid, player_data, status FROM player_inventory WHERE club_uuid = :club_uuid ORDER BY id DESC');
         if ($stmt !== false) {
             $stmt->bindValue(':club_uuid', $club_uuid, SQLITE3_TEXT);
-            $res = $stmt->execute();
-            while ($res && ($row = $res->fetchArray(SQLITE3_ASSOC))) {
-                $inv[] = $row;
-            }
-        }
-    }
-    if (empty($inv)) {
-        $stmt = $db->prepare('SELECT id, player_uuid, player_data, status, purchase_date, purchase_price FROM player_inventory WHERE user_uuid = :user_uuid ORDER BY purchase_date DESC, id DESC');
-        if ($stmt !== false) {
-            $stmt->bindValue(':user_uuid', $user_uuid, SQLITE3_TEXT);
             $res = $stmt->execute();
             while ($res && ($row = $res->fetchArray(SQLITE3_ASSOC))) {
                 $inv[] = $row;
@@ -71,7 +61,6 @@ foreach ($inv as $row) {
         'rating' => (int)($pdata['rating'] ?? 0),
         'value' => (int)($pdata['value'] ?? 0),
         'status' => $row['status'] ?? 'available',
-        'purchase_date' => $row['purchase_date'] ?? '',
     ];
 }
 
@@ -110,7 +99,7 @@ startContent();
                                 <div class="text-sm text-gray-600">
                                     <?php echo htmlspecialchars($p['position']); ?> • Rating <?php echo (int)$p['rating']; ?> • Value <?php echo formatMarketValue($p['value']); ?>
                                 </div>
-                                <div class="text-xs text-gray-500">Status: <?php echo htmlspecialchars($p['status']); ?><?php if ($p['purchase_date']): ?> • Purchased: <?php echo date('M j, Y', strtotime($p['purchase_date'])); ?><?php endif; ?></div>
+                                <div class="text-xs text-gray-500">Status: <?php echo htmlspecialchars($p['status']); ?></div>
                             </div>
                         </div>
                         <div class="flex items-center gap-2">

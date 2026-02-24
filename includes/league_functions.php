@@ -1625,9 +1625,21 @@ function selectPostMatchPlayer($db, $user_id, $selected_index)
     $selected_player = $post_match_data['options'][$selected_index];
 
     try {
+        // Resolve club_uuid
+        $stmtClub = $db->prepare('SELECT club_uuid FROM user_club WHERE user_uuid = (SELECT uuid FROM users WHERE id = :user_id)');
+        $stmtClub->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+        $resClub = $stmtClub->execute();
+        $rowClub = $resClub ? $resClub->fetchArray(SQLITE3_ASSOC) : null;
+        $club_uuid = $rowClub['club_uuid'] ?? null;
+
+        if (!$club_uuid) {
+            // Fallback: use user_id as club_uuid if not found (legacy)
+            $club_uuid = "USER_" . $user_id;
+        }
+
         // Add player to user's inventory
-        $stmt = $db->prepare('INSERT INTO player_inventory (user_id, player_uuid, player_data, purchase_price, purchase_date, status) VALUES (:user_id, :uuid, :data, 0, CURRENT_TIMESTAMP, "available")');
-        $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+        $stmt = $db->prepare('INSERT INTO player_inventory (club_uuid, player_uuid, player_data, status) VALUES (:club_uuid, :uuid, :data, "available")');
+        $stmt->bindValue(':club_uuid', $club_uuid, SQLITE3_TEXT);
         $stmt->bindValue(':uuid', $selected_player['uuid'], SQLITE3_TEXT);
         $stmt->bindValue(':data', json_encode($selected_player), SQLITE3_TEXT);
         $stmt->execute();

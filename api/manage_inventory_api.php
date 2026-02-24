@@ -67,7 +67,7 @@ try {
     // Verify the inventory item belongs to the current club (only for single-item actions)
     if (in_array($action, ['assign', 'sell', 'delete'], true)) {
         if ($action === 'assign') {
-            $stmt = $db->prepare('SELECT * FROM player_inventory WHERE player_uuid = :player_uuid AND status = "available" AND user_uuid = :user_uuid ORDER BY id DESC LIMIT 1');
+            $stmt = $db->prepare('SELECT * FROM player_inventory WHERE player_uuid = :player_uuid AND status = "available" AND club_uuid = (SELECT club_uuid FROM user_club WHERE user_uuid = :user_uuid) ORDER BY id DESC LIMIT 1');
             $stmt->bindValue(':player_uuid', $player_uuid, SQLITE3_TEXT);
             $stmt->bindValue(':user_uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
         } else {
@@ -190,7 +190,7 @@ try {
             }
 
             // Fetch all available inventory items for this club
-            $stmtInv = $db->prepare('SELECT id, player_data FROM player_inventory WHERE club_uuid = (SELECT club_uuid FROM user_club WHERE user_uuid = :user_uuid) AND status = "available" ORDER BY purchase_date ASC');
+            $stmtInv = $db->prepare('SELECT id, player_data FROM player_inventory WHERE club_uuid = (SELECT club_uuid FROM user_club WHERE user_uuid = :user_uuid) AND status = "available" ORDER BY id ASC');
             $stmtInv->bindValue(':user_uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
             $resInv = $stmtInv->execute();
 
