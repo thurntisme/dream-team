@@ -111,6 +111,106 @@ try {
             'category' => 'premium',
             'icon' => 'target',
             'duration' => 0
+        ],
+        [
+            'name' => 'Fullback Pack',
+            'description' => 'Random fullback (LB/RB/LWB/RWB) rated 70–88.',
+            'price' => 8500000,
+            'effect_type' => 'player_pack',
+            'effect_value' => '{"min_rating":70,"max_rating":88,"positions":["LB","RB","LWB","RWB"],"tier":"fullback"}',
+            'category' => 'premium',
+            'icon' => 'shield',
+            'duration' => 0
+        ],
+        [
+            'name' => 'Winger Pack',
+            'description' => 'Random winger (LW/RW/LM/RM) rated 72–90.',
+            'price' => 9500000,
+            'effect_type' => 'player_pack',
+            'effect_value' => '{"min_rating":72,"max_rating":90,"positions":["LW","RW","LM","RM"],"tier":"winger"}',
+            'category' => 'premium',
+            'icon' => 'wind',
+            'duration' => 0
+        ],
+        [
+            'name' => 'Playmaker Pack',
+            'description' => 'Creative midfielders (CAM/CM) rated 75–90.',
+            'price' => 12000000,
+            'effect_type' => 'player_pack',
+            'effect_value' => '{"min_rating":75,"max_rating":90,"positions":["CAM","CM"],"tier":"playmaker"}',
+            'category' => 'premium',
+            'icon' => 'shield-star',
+            'duration' => 0
+        ],
+        [
+            'name' => 'Anchor DM Pack',
+            'description' => 'Defensive midfield specialists (CDM) rated 70–88.',
+            'price' => 8000000,
+            'effect_type' => 'player_pack',
+            'effect_value' => '{"min_rating":70,"max_rating":88,"positions":["CDM"],"tier":"anchor"}',
+            'category' => 'premium',
+            'icon' => 'anchor',
+            'duration' => 0
+        ],
+        [
+            'name' => 'Centre-Back Pack',
+            'description' => 'Pure centre-backs (CB) rated 70–88.',
+            'price' => 8500000,
+            'effect_type' => 'player_pack',
+            'effect_value' => '{"min_rating":70,"max_rating":88,"positions":["CB"],"tier":"centreback"}',
+            'category' => 'premium',
+            'icon' => 'shield-check',
+            'duration' => 0
+        ],
+        [
+            'name' => 'Striker Pack',
+            'description' => 'Finishing forwards (ST/CF) rated 75–92.',
+            'price' => 13000000,
+            'effect_type' => 'player_pack',
+            'effect_value' => '{"min_rating":75,"max_rating":92,"positions":["ST","CF"],"tier":"striker"}',
+            'category' => 'premium',
+            'icon' => 'target',
+            'duration' => 0
+        ],
+        [
+            'name' => 'Left-Side Pack',
+            'description' => 'Left-sided roles (LB/LWB/LM/LW) rated 70–88.',
+            'price' => 8000000,
+            'effect_type' => 'player_pack',
+            'effect_value' => '{"min_rating":70,"max_rating":88,"positions":["LB","LWB","LM","LW"],"tier":"leftside"}',
+            'category' => 'premium',
+            'icon' => 'arrow-left',
+            'duration' => 0
+        ],
+        [
+            'name' => 'Right-Side Pack',
+            'description' => 'Right-sided roles (RB/RWB/RM/RW) rated 70–88.',
+            'price' => 8000000,
+            'effect_type' => 'player_pack',
+            'effect_value' => '{"min_rating":70,"max_rating":88,"positions":["RB","RWB","RM","RW"],"tier":"rightside"}',
+            'category' => 'premium',
+            'icon' => 'arrow-right',
+            'duration' => 0
+        ],
+        [
+            'name' => 'Balanced Pack (60–74)',
+            'description' => 'Budget-friendly pack with players rated 60–74.',
+            'price' => 3000000,
+            'effect_type' => 'player_pack',
+            'effect_value' => '{"min_rating":60,"max_rating":74,"tier":"balanced"}',
+            'category' => 'premium',
+            'icon' => 'shield',
+            'duration' => 0
+        ],
+        [
+            'name' => 'Top-Class Pack (85–92)',
+            'description' => 'High-impact signings rated between 85 and 92.',
+            'price' => 22000000,
+            'effect_type' => 'player_pack',
+            'effect_value' => '{"min_rating":85,"max_rating":92,"tier":"topclass"}',
+            'category' => 'premium',
+            'icon' => 'star',
+            'duration' => 0
         ]
     ];
 
