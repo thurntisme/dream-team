@@ -185,8 +185,8 @@ if (!function_exists('createYoungPlayerBid')) {
                 return false;
             }
 
-            // Check if bidder has enough budget
-            $stmt = $db->prepare('SELECT budget FROM users WHERE id = :id');
+            // Check if bidder has enough budget from user_club via users.uuid
+            $stmt = $db->prepare('SELECT uc.budget AS budget FROM user_club uc JOIN users u ON uc.user_uuid = u.uuid WHERE u.id = :id');
             $stmt->bindValue(':id', $bidder_club_id, SQLITE3_INTEGER);
             $result = $stmt->execute();
             $bidderData = $result->fetchArray(SQLITE3_ASSOC);
@@ -228,27 +228,16 @@ if (!function_exists('getClubYoungPlayerBids')) {
         try {
             $db = getDbConnection();
 
-            if (DB_DRIVER === 'mysql') {
-                $stmt = $db->prepare('
-                    SELECT b.*, yp.name as player_name, yp.position, yp.age, yp.potential_rating, 
-                           u.club_name as bidder_club_name, u.name as bidder_name
-                    FROM young_player_bids b
-                    JOIN young_players yp ON b.young_player_id = yp.id
-                    JOIN users u ON b.bidder_club_id = u.id
-                    WHERE b.owner_club_id = :club_id AND b.status = "pending" AND b.expires_at > NOW()
-                    ORDER BY b.created_at DESC
-                ');
-            } else {
-                $stmt = $db->prepare('
-                    SELECT b.*, yp.name as player_name, yp.position, yp.age, yp.potential_rating, 
-                           u.club_name as bidder_club_name, u.name as bidder_name
-                    FROM young_player_bids b
-                    JOIN young_players yp ON b.young_player_id = yp.id
-                    JOIN users u ON b.bidder_club_id = u.id
-                    WHERE b.owner_club_id = :club_id AND b.status = "pending" AND b.expires_at > datetime("now")
-                    ORDER BY b.created_at DESC
-                ');
-            }
+            $stmt = $db->prepare('
+                SELECT b.*, yp.name as player_name, yp.position, yp.age, yp.potential_rating, 
+                       uc.club_name as bidder_club_name, u.name as bidder_name
+                FROM young_player_bids b
+                JOIN young_players yp ON b.young_player_id = yp.id
+                JOIN users u ON b.bidder_club_id = u.id
+                JOIN user_club uc ON uc.user_uuid = u.uuid
+                WHERE b.owner_club_id = :club_id AND b.status = "pending" AND b.expires_at > CURRENT_TIMESTAMP
+                ORDER BY b.created_at DESC
+            ');
             $stmt->bindValue(':club_id', $club_id, SQLITE3_INTEGER);
 
             $result = $stmt->execute();
@@ -304,16 +293,16 @@ if (!function_exists('processYoungPlayerBid')) {
                 $stmt->bindValue(':id', $bid['young_player_id'], SQLITE3_INTEGER);
                 $stmt->execute();
 
-                // Update budgets
-                $stmt = $db->prepare('UPDATE users SET budget = budget + :amount WHERE id = :id');
-                $stmt->bindValue(':amount', $bid['bid_amount'], SQLITE3_INTEGER);
-                $stmt->bindValue(':id', $club_id, SQLITE3_INTEGER);
-                $stmt->execute();
+            // Update budgets in user_club via users.uuid
+            $stmt = $db->prepare('UPDATE user_club uc JOIN users u ON uc.user_uuid = u.uuid SET uc.budget = uc.budget + :amount WHERE u.id = :id');
+            $stmt->bindValue(':amount', $bid['bid_amount'], SQLITE3_INTEGER);
+            $stmt->bindValue(':id', $club_id, SQLITE3_INTEGER);
+            $stmt->execute();
 
-                $stmt = $db->prepare('UPDATE users SET budget = budget - :amount WHERE id = :id');
-                $stmt->bindValue(':amount', $bid['bid_amount'], SQLITE3_INTEGER);
-                $stmt->bindValue(':id', $bid['bidder_club_id'], SQLITE3_INTEGER);
-                $stmt->execute();
+            $stmt = $db->prepare('UPDATE user_club uc JOIN users u ON uc.user_uuid = u.uuid SET uc.budget = uc.budget - :amount WHERE u.id = :id');
+            $stmt->bindValue(':amount', $bid['bid_amount'], SQLITE3_INTEGER);
+            $stmt->bindValue(':id', $bid['bidder_club_id'], SQLITE3_INTEGER);
+            $stmt->execute();
             }
 
             // Update bid status
@@ -343,9 +332,10 @@ if (!function_exists('getAvailableYoungPlayers')) {
             $db = getDbConnection();
 
             $stmt = $db->prepare('
-                SELECT yp.*, u.club_name as owner_club_name
+                SELECT yp.*, uc.club_name as owner_club_name
                 FROM young_players yp
                 JOIN users u ON yp.club_id = u.id
+                JOIN user_club uc ON uc.user_uuid = u.uuid
                 WHERE yp.club_id != :club_id AND yp.development_stage = "academy"
                 ORDER BY yp.potential_rating DESC, yp.age ASC
             ');

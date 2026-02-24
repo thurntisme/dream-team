@@ -176,7 +176,7 @@ try {
                             $stmt->bindValue(':email', $adminEmail, SQLITE3_TEXT);
                             $stmt->bindValue(':password', password_hash($adminPassword, PASSWORD_DEFAULT), SQLITE3_TEXT);
                             $stmt->bindValue(':uuid', generateUUID(), SQLITE3_TEXT);
-                            $ins = $stmt->execute();
+                            $ins = $stmt->execute();    
                             if ($ins) {
                                 $adminId = $db->lastInsertRowID();
                                 $stmtUuid = $db->prepare('SELECT uuid FROM users WHERE id = :id');
@@ -302,6 +302,19 @@ try {
             INDEX idx_inventory_player_uuid (player_uuid),
             INDEX idx_inventory_status (status)
         )');
+    // Shop system inventory (consumable items) by user_uuid
+    $postOk = $postOk && $db->exec('CREATE TABLE IF NOT EXISTS user_inventory (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_uuid CHAR(16) NOT NULL,
+            item_id INT NOT NULL,
+            purchased_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            expires_at DATETIME NULL,
+            quantity INT DEFAULT 1,
+            FOREIGN KEY (user_uuid) REFERENCES users(uuid),
+            FOREIGN KEY (item_id) REFERENCES shop_items(id)
+        )');
+    $ensureIdx('user_inventory', 'idx_user_inventory_user_uuid', 'user_uuid');
+    $ensureIdx('user_inventory', 'idx_user_inventory_expires', 'expires_at');
     $postOk = $postOk && $db->exec('CREATE TABLE IF NOT EXISTS club_staff (
             id INT AUTO_INCREMENT PRIMARY KEY,
             club_uuid CHAR(16) NOT NULL,
@@ -329,6 +342,20 @@ try {
             training_focus VARCHAR(50) DEFAULT "balanced",
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )');
+    // Young player bids table
+    $postOk = $postOk && $db->exec('CREATE TABLE IF NOT EXISTS young_player_bids (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            young_player_id INT NOT NULL,
+            bidder_club_id INT NOT NULL,
+            owner_club_id INT NOT NULL,
+            bid_amount BIGINT NOT NULL,
+            status VARCHAR(20) DEFAULT "pending",
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            expires_at DATETIME NOT NULL,
+            FOREIGN KEY (young_player_id) REFERENCES young_players(id)
+        )');
+    $ensureIdx('young_player_bids', 'idx_young_bids_bidder', 'bidder_club_id');
+    $ensureIdx('young_player_bids', 'idx_young_bids_owner', 'owner_club_id');
     $postOk = $postOk && $db->exec('CREATE TABLE IF NOT EXISTS nation_calls (
             id INT AUTO_INCREMENT PRIMARY KEY,
             user_uuid CHAR(16) NOT NULL,
