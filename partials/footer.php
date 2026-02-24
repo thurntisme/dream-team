@@ -72,20 +72,15 @@ function renderFooter($isLoggedIn, $clubName, $userName, $userBudget, $userFans,
                                 <i data-lucide="shopping-cart" class="w-3 h-3"></i>
                                 <span>Buy Players</span>
                             </a>
-                            <a href="scouting.php"
+                            <a href="shop.php"
                                 class="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors">
-                                <i data-lucide="search" class="w-3 h-3"></i>
-                                <span>Scout Players</span>
+                                <i data-lucide="store" class="w-3 h-3"></i>
+                                <span>Shop</span>
                             </a>
-                            <a href="match-simulator.php"
+                            <a href="settings.php"
                                 class="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors">
-                                <i data-lucide="play" class="w-3 h-3"></i>
-                                <span>Challenge Club</span>
-                            </a>
-                            <a href="shirt_numbers.php"
-                                class="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors">
-                                <i data-lucide="shirt" class="w-3 h-3"></i>
-                                <span>Shirt Numbers</span>
+                                <i data-lucide="settings" class="w-3 h-3"></i>
+                                <span>Settings</span>
                             </a>
                         </div>
                     </div>
