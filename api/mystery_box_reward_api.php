@@ -163,85 +163,43 @@ try {
             break;
 
         case 'player':
-            // Get user's current team from user_club
-            $stmt = $db->prepare('SELECT team, max_players FROM user_club WHERE user_uuid = :user_uuid');
+            // Insert random player into player_inventory for user's club
+            // Get club_uuid
+            $stmt = $db->prepare('SELECT club_uuid FROM user_club WHERE user_uuid = :user_uuid');
             $stmt->bindValue(':user_uuid', $user_uuid, SQLITE3_TEXT);
             $result = $stmt->execute();
-            $user_info = $result->fetchArray(SQLITE3_ASSOC);
+            $row = $result ? $result->fetchArray(SQLITE3_ASSOC) : null;
+            $club_uuid = $row['club_uuid'] ?? null;
 
-            $full_team = json_decode($user_info['team'] ?? '[]', true) ?: [];
-            $max_players = $user_info['max_players'] ?? 25; // Default to 25 if not set
+            if (!$club_uuid) {
+                throw new Exception('Club UUID not found');
+            }
 
-            // Calculate current total players
-            $current_players_count = count(array_filter($full_team));
+            // Get all available players
+            $all_players = getDefaultPlayers();
+            // Pick a random player
+            $random_key = array_rand($all_players);
+            $new_player = $all_players[$random_key];
 
-            // Check if user has space
-            if ($current_players_count >= $max_players) {
-                // No space, give budget equivalent instead
-                $equivalent_budget = 300000;
+            // Generate UUID and initialize stats if not present
+            if (!isset($new_player['uuid'])) {
+                $new_player['uuid'] = substr(str_replace('-', '', $new_player['uuid']), 0, 16);
+            }
+            if (!isset($new_player['fitness'])) {
+                $new_player['fitness'] = 100;
+            }
 
-                $stmt = $db->prepare('UPDATE user_club SET budget = budget + :amount WHERE user_uuid = :user_uuid');
-                $stmt->bindValue(':amount', $equivalent_budget, SQLITE3_INTEGER);
-                $stmt->bindValue(':user_uuid', $user_uuid, SQLITE3_TEXT);
-                $result = $stmt->execute();
+            // Insert into player_inventory
+            $stmt = $db->prepare('INSERT INTO player_inventory (club_uuid, player_uuid, player_data, status) VALUES (:club_uuid, :player_uuid, :player_data, "available")');
+            $stmt->bindValue(':club_uuid', $club_uuid, SQLITE3_TEXT);
+            $stmt->bindValue(':player_uuid', $new_player['uuid'], SQLITE3_TEXT);
+            $stmt->bindValue(':player_data', json_encode($new_player), SQLITE3_TEXT);
+            $result = $stmt->execute();
 
-                if ($result) {
-                    $success = true;
-                    $message = "Squad full! Received €" . number_format($equivalent_budget) . " instead of player card.";
-                }
-            } else {
-                // Get all available players
-                $all_players = getDefaultPlayers();
-
-                // Get owned player names (to avoid duplicates)
-                $owned_names = array_map(function($p) { return $p['name'] ?? ''; }, array_filter($full_team));
-
-                // Filter available players
-                $available_players = array_filter($all_players, function ($p) use ($owned_names) {
-                    return !in_array($p['name'], $owned_names);
-                });
-
-                if (empty($available_players)) {
-                    // User owns all players (unlikely), give budget
-                    $equivalent_budget = 500000;
-
-                    $stmt = $db->prepare('UPDATE user_club SET budget = budget + :amount WHERE user_uuid = :user_uuid');
-                    $stmt->bindValue(':amount', $equivalent_budget, SQLITE3_INTEGER);
-                    $stmt->bindValue(':user_uuid', $user_uuid, SQLITE3_TEXT);
-                    $result = $stmt->execute();
-
-                    if ($result) {
-                        $success = true;
-                        $message = "You own all players! Received €" . number_format($equivalent_budget) . " bonus.";
-                    }
-                } else {
-                    // Pick a random player
-                    $random_key = array_rand($available_players);
-                    $new_player = $available_players[$random_key];
-
-                    // Generate UUID and initialize stats if not present
-                    if (!isset($new_player['uuid'])) {
-                        $new_player['uuid'] = uniqid('player_');
-                    }
-                    if (!isset($new_player['fitness'])) {
-                        $new_player['fitness'] = 100;
-                    }
-
-                    // Add to team (append)
-                    $full_team[] = $new_player;
-
-                    // Update database
-                    $stmt = $db->prepare('UPDATE user_club SET team = :team WHERE user_uuid = :user_uuid');
-                    $stmt->bindValue(':team', json_encode($full_team), SQLITE3_TEXT);
-                    $stmt->bindValue(':user_uuid', $user_uuid, SQLITE3_TEXT);
-                    $result = $stmt->execute();
-
-                    if ($result) {
-                        $success = true;
-                        $message = "You unlocked " . $new_player['name'] . " (" . $new_player['position'] . " - " . $new_player['rating'] . ")!";
-                        $player_data = $new_player; // To return to frontend
-                    }
-                }
+            if ($result) {
+                $success = true;
+                $message = "You unlocked " . $new_player['name'] . " (" . $new_player['position'] . " - " . $new_player['rating'] . ")!";
+                $player_data = $new_player; // To return to frontend
             }
             break;
 

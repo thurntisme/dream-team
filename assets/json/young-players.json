@@ -1,141 +1,192 @@
-[  {
+[
+  {
     "name": "Mateo Castillo",
     "position": "CM",
-    "age": 18,
-    "current_rating": 60,
     "rating": 60,
-    "potential_rating": 85,
     "value": 1200000,
-    "development_stage": "academy",
-    "contract_years": 3,
-    "training_focus": "balanced",
+    "age": 18,
+    "uuid": "ytmateocastillo1",
     "nationality": "Argentina",
-    "uuid": "yt-mateo-castillo-001"
+    "avatar": null,
+    "playablePositions": ["CM"],
+    "attributes": {
+      "passing": 60,
+      "dribbling": 60,
+      "stamina": 60,
+      "vision": 60,
+      "shooting": 60
+    },
+    "salary": 1200
   },
   {
     "name": "Liam Hughes",
     "position": "CB",
-    "age": 17,
-    "current_rating": 57,
     "rating": 57,
-    "potential_rating": 82,
     "value": 900000,
-    "development_stage": "academy",
-    "contract_years": 3,
-    "training_focus": "physical",
+    "age": 17,
+    "uuid": "ytliamhughes0010",
     "nationality": "Ireland",
-    "uuid": "yt-liam-hughes-001"
+    "avatar": null,
+    "playablePositions": ["CB"],
+    "attributes": {
+      "defending": 57,
+      "heading": 57,
+      "strength": 57,
+      "marking": 57,
+      "tackling": 57
+    },
+    "salary": 900
   },
   {
     "name": "Noah Kim",
     "position": "RW",
-    "age": 16,
-    "current_rating": 52,
     "rating": 52,
-    "potential_rating": 84,
     "value": 800000,
-    "development_stage": "academy",
-    "contract_years": 4,
-    "training_focus": "technical",
+    "age": 16,
+    "uuid": "ytnoahkim0010000",
     "nationality": "South Korea",
-    "uuid": "yt-noah-kim-001"
+    "avatar": null,
+    "playablePositions": ["RW"],
+    "attributes": {
+      "pace": 52,
+      "dribbling": 52,
+      "finishing": 52,
+      "vision": 52,
+      "stamina": 52
+    },
+    "salary": 800
   },
   {
     "name": "Jude Thompson",
     "position": "ST",
-    "age": 18,
-    "current_rating": 61,
     "rating": 61,
-    "potential_rating": 88,
     "value": 1500000,
-    "development_stage": "academy",
-    "contract_years": 3,
-    "training_focus": "balanced",
+    "age": 18,
+    "uuid": "ytjudethompson01",
     "nationality": "England",
-    "uuid": "yt-jude-thompson-001"
+    "avatar": null,
+    "playablePositions": ["ST"],
+    "attributes": {
+      "finishing": 61,
+      "pace": 61,
+      "dribbling": 61,
+      "strength": 61,
+      "composure": 61
+    },
+    "salary": 1500
   },
   {
     "name": "Milan Ivanov",
     "position": "GK",
-    "age": 17,
-    "current_rating": 58,
     "rating": 58,
-    "potential_rating": 83,
     "value": 1000000,
-    "development_stage": "academy",
-    "contract_years": 4,
-    "training_focus": "technical",
+    "age": 17,
+    "uuid": "ytmilanivanov001",
     "nationality": "Bulgaria",
-    "uuid": "yt-milan-ivanov-001"
+    "avatar": null,
+    "playablePositions": ["GK"],
+    "attributes": {
+      "diving": 58,
+      "handling": 58,
+      "kicking": 58,
+      "reflexes": 58,
+      "positioning": 58
+    },
+    "salary": 1000
   },
   {
     "name": "Rafael Santos",
     "position": "LB",
-    "age": 16,
-    "current_rating": 54,
     "rating": 54,
-    "potential_rating": 80,
     "value": 700000,
-    "development_stage": "academy",
-    "contract_years": 4,
-    "training_focus": "physical",
+    "age": 16,
+    "uuid": "ytrafaelsantos01",
     "nationality": "Brazil",
-    "uuid": "yt-rafael-santos-001"
+    "avatar": null,
+    "playablePositions": ["LB"],
+    "attributes": {
+      "pace": 54,
+      "crossing": 54,
+      "defending": 54,
+      "stamina": 54,
+      "shooting": 54
+    },
+    "salary": 700
   },
   {
     "name": "Ousmane Traoré",
     "position": "CDM",
-    "age": 18,
-    "current_rating": 60,
     "rating": 60,
-    "potential_rating": 86,
     "value": 1300000,
-    "development_stage": "academy",
-    "contract_years": 3,
-    "training_focus": "mental",
+    "age": 18,
+    "uuid": "ytousmanetraore1",
     "nationality": "Mali",
-    "uuid": "yt-ousmane-traore-001"
+    "avatar": null,
+    "playablePositions": ["CDM"],
+    "attributes": {
+      "defending": 60,
+      "strength": 60,
+      "passing": 60,
+      "stamina": 60,
+      "tackling": 60
+    },
+    "salary": 1300
   },
   {
     "name": "Adrian Popescu",
     "position": "CAM",
-    "age": 17,
-    "current_rating": 59,
     "rating": 59,
-    "potential_rating": 87,
     "value": 1400000,
-    "development_stage": "academy",
-    "contract_years": 3,
-    "training_focus": "technical",
+    "age": 17,
+    "uuid": "ytadrianpopescu01",
     "nationality": "Romania",
-    "uuid": "yt-adrian-popescu-001"
+    "avatar": null,
+    "playablePositions": ["CAM"],
+    "attributes": {
+      "passing": 59,
+      "dribbling": 59,
+      "vision": 59,
+      "shooting": 59,
+      "stamina": 59
+    },
+    "salary": 1400
   },
   {
     "name": "Yuta Tanaka",
     "position": "RB",
-    "age": 16,
-    "current_rating": 53,
     "rating": 53,
-    "potential_rating": 81,
     "value": 750000,
-    "development_stage": "academy",
-    "contract_years": 4,
-    "training_focus": "balanced",
+    "age": 16,
+    "uuid": "ytyutatanaka0010",
     "nationality": "Japan",
-    "uuid": "yt-yuta-tanaka-001"
+    "avatar": null,
+    "playablePositions": ["RB"],
+    "attributes": {
+      "pace": 53,
+      "defending": 53,
+      "crossing": 53,
+      "stamina": 53,
+      "tackling": 53
+    },
+    "salary": 750
   },
   {
     "name": "Isabella Ruiz",
     "position": "LM",
-    "age": 18,
-    "current_rating": 60,
     "rating": 60,
-    "potential_rating": 84,
     "value": 1200000,
-    "development_stage": "academy",
-    "contract_years": 3,
-    "training_focus": "technical",
+    "age": 18,
+    "uuid": "ytisabellaruiz01",
     "nationality": "Spain",
-    "uuid": "yt-isabella-ruiz-001"
+    "avatar": null,
+    "playablePositions": ["LM"],
+    "attributes": {
+      "pace": 60,
+      "dribbling": 60,
+      "crossing": 60,
+      "vision": 60,
+      "shooting": 60
+    },
+    "salary": 1200
   }
 ]
