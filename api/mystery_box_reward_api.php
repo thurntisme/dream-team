@@ -31,14 +31,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 
         // Generate reward options server-side
         $pool = [
-            ['type' => 'budget', 'amount' => 150000, 'text' => 'You received €150,000!', 'icon' => '💰'],
-            ['type' => 'budget', 'amount' => 250000, 'text' => 'You received €250,000!', 'icon' => '💰'],
-            ['type' => 'budget', 'amount' => 350000, 'text' => 'You received €350,000!', 'icon' => '💰'],
             ['type' => 'player', 'text' => 'You received a random player card!', 'icon' => '⚽'],
-            ['type' => 'item', 'text' => 'You received a training boost item!', 'icon' => '🏃'],
-            ['type' => 'budget', 'amount' => 100000, 'text' => 'You received €100,000!', 'icon' => '💰'],
-            ['type' => 'fans', 'amount' => 300, 'text' => 'You gained 300 new fans!', 'icon' => '👥']
+            ['type' => 'item', 'text' => 'You received a random item!', 'icon' => '🎁']
         ];
+
+        // Generate 3 option with type budget
+        $budget_options = [];
+        while (count($budget_options) < 3) {
+            $randAmount = rand(50000, 500000);
+            $budget_options[] = [
+                'type' => 'budget',
+                'amount' => $randAmount,
+                'text' => 'You received €' . number_format($randAmount) . '!',
+                'icon' => '💰'
+            ];
+        }
+        // Generate 3 option with type fans
+        $fans_options = [];
+        while (count($fans_options) < 3) {
+            $randAmount = rand(100, 1000);
+            $fans_options[] = [
+                'type' => 'fans',
+                'amount' => $randAmount,
+                'text' => 'You gained ' . number_format($randAmount) . ' new fans!',
+                'icon' => '👥'
+            ];
+        }
+
+        $pool = array_merge($pool, $budget_options, $fans_options);
+
         // Shuffle and take 3
         $shuffled = $pool;
         shuffle($shuffled);
@@ -51,7 +72,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         echo json_encode(['success' => true, 'claimed' => false, 'options' => $options]);
     } catch (Throwable $e) {
         http_response_code(500);
-        echo json_encode(['success' => false, 'message' => 'Failed to get reward options']);
+        echo json_encode(['success' => false, 'message' => 'Failed to get reward options: ' . $e->getMessage()]);
     }
     exit;
 }
@@ -204,19 +225,24 @@ try {
             break;
 
         case 'item':
-            // For item rewards, we could add training items
-            // For now, we'll give a budget equivalent
-            $equivalent_budget = 150000;
-
-            $stmt = $db->prepare('UPDATE user_club SET budget = budget + :amount WHERE user_uuid = :user_uuid');
-            $stmt->bindValue(':amount', $equivalent_budget, SQLITE3_INTEGER);
-            $stmt->bindValue(':user_uuid', $user_uuid, SQLITE3_TEXT);
+            // Get a randome item from table shop_items where type = 'player_pack'
+            $stmt = $db->prepare('SELECT * FROM shop_items WHERE type = "player_pack" ORDER BY RANDOM() LIMIT 1');
             $result = $stmt->execute();
+            $pack = $result ? $result->fetchArray(SQLITE3_ASSOC) : null;
+            if (!$pack) {
+                throw new Exception('No player pack items available');
+            }
 
+            // Insert player pack item into inventory
+            $stmt = $db->prepare('INSERT INTO user_inventory (user_uuid, item_id) VALUES (:user_uuid, :item_id)');
+            $stmt->bindValue(':user_uuid', $user_uuid, SQLITE3_TEXT);
+            $stmt->bindValue(':item_id', $pack['id'], SQLITE3_TEXT);
+            $result = $stmt->execute();
             if ($result) {
                 $success = true;
-                $message = "Received a training item worth €" . number_format($equivalent_budget) . "!";
+                $message = "You received a " . $pack['name'] . "!";
             }
+            
             break;
 
         default:
