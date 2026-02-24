@@ -28,6 +28,7 @@ if (!$data) {
 
 $action = $data['action'] ?? '';
 $inventory_id = (int) ($data['inventory_id'] ?? 0);
+$player_uuid = isset($data['player_uuid']) ? (string)$data['player_uuid'] : null;
 $player_data = $data['player_data'] ?? null;
 $sell_price = (int) ($data['sell_price'] ?? 0);
 
@@ -38,15 +39,18 @@ if (empty($action)) {
 }
 // For single-item actions, validate required fields
 if (in_array($action, ['assign', 'sell', 'delete'], true)) {
-    if ($inventory_id <= 0) {
-        http_response_code(400);
-        echo json_encode(['success' => false, 'message' => 'Missing inventory_id']);
-        exit;
-    }
-    if ($action === 'assign' && !$player_data) {
-        http_response_code(400);
-        echo json_encode(['success' => false, 'message' => 'Missing player_data']);
-        exit;
+    if ($action === 'assign') {
+        if (!$player_uuid) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => 'Missing player_uuid']);
+            exit;
+        }
+    } else {
+        if ($inventory_id <= 0) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => 'Missing inventory_id']);
+            exit;
+        }
     }
     if ($action === 'sell' && $sell_price <= 0) {
         http_response_code(400);
@@ -62,14 +66,23 @@ try {
 
     // Verify the inventory item belongs to the current club (only for single-item actions)
     if (in_array($action, ['assign', 'sell', 'delete'], true)) {
-        $stmt = $db->prepare('SELECT * FROM player_inventory WHERE id = :id AND club_uuid = (SELECT club_uuid FROM user_club WHERE user_uuid = :user_uuid) AND status = "available"');
-        $stmt->bindValue(':id', $inventory_id, SQLITE3_INTEGER);
-        $stmt->bindValue(':user_uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
+        if ($action === 'assign') {
+            $stmt = $db->prepare('SELECT * FROM player_inventory WHERE player_uuid = :player_uuid AND status = "available" AND user_uuid = :user_uuid ORDER BY id DESC LIMIT 1');
+            $stmt->bindValue(':player_uuid', $player_uuid, SQLITE3_TEXT);
+            $stmt->bindValue(':user_uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
+        } else {
+            $stmt = $db->prepare('SELECT * FROM player_inventory WHERE id = :id AND club_uuid = (SELECT club_uuid FROM user_club WHERE user_uuid = :user_uuid) AND status = "available"');
+            $stmt->bindValue(':id', $inventory_id, SQLITE3_INTEGER);
+            $stmt->bindValue(':user_uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
+        }
         $result = $stmt->execute();
-        $inventory_item = $result->fetchArray(SQLITE3_ASSOC);
+        $inventory_item = $result ? $result->fetchArray(SQLITE3_ASSOC) : null;
 
         if (!$inventory_item) {
-            throw new Exception('Player not found in your inventory');
+            throw new Exception('Player not found in your inventory '.$_SESSION['user_uuid']);
+        }
+        if ($action === 'assign') {
+            $inventory_id = (int)($inventory_item['id'] ?? 0);
         }
     }
 
@@ -106,6 +119,12 @@ try {
                 throw new Exception('Your squad is full. Maximum players allowed: ' . $max_players);
             }
 
+            // Load player data from inventory (override client)
+            $player_data = json_decode($inventory_item['player_data'] ?? '[]', true) ?: null;
+            if (!$player_data) {
+                throw new Exception('Invalid player data in inventory');
+            }
+
             // Prevent duplicates across entire squad by name
             foreach (array_merge($lineup, $subs) as $existing_player) {
                 if (
@@ -131,11 +150,11 @@ try {
                 throw new Exception('Failed to add player to squad: ' . $db->lastErrorMsg());
             }
 
-            // Mark inventory item as assigned
-            $stmt = $db->prepare('UPDATE player_inventory SET status = "assigned" WHERE id = :id');
+            // Remove inventory item after assignment
+            $stmt = $db->prepare('DELETE FROM player_inventory WHERE id = :id');
             $stmt->bindValue(':id', $inventory_id, SQLITE3_INTEGER);
             if (!$stmt->execute()) {
-                throw new Exception('Failed to update inventory: ' . $db->lastErrorMsg());
+                throw new Exception('Failed to remove inventory item: ' . $db->lastErrorMsg());
             }
 
             break;
@@ -211,9 +230,9 @@ try {
                 throw new Exception('Failed to update squad: ' . $db->lastErrorMsg());
             }
 
-            // Mark assigned inventory items
+            // Remove assigned inventory items
             $idsList = implode(',', array_map('intval', $assigned_ids));
-            $db->exec('UPDATE player_inventory SET status = "assigned" WHERE id IN (' . $idsList . ')');
+            $db->exec('DELETE FROM player_inventory WHERE id IN (' . $idsList . ')');
 
             break;
 
@@ -273,7 +292,6 @@ try {
         'message' => 'Action completed successfully',
         'action' => $action
     ]);
-
 } catch (Exception $e) {
     // Rollback transaction on error
     if (isset($db)) {

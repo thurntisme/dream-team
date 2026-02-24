@@ -65,6 +65,7 @@ foreach ($inv as $row) {
     $pdata = json_decode($row['player_data'] ?? '[]', true) ?: [];
     $players[] = [
         'id' => (int)($row['id'] ?? 0),
+        'uuid' => ($row['player_uuid'] ?? ($pdata['uuid'] ?? null)),
         'name' => $pdata['name'] ?? 'Unknown',
         'position' => $pdata['position'] ?? 'CM',
         'rating' => (int)($pdata['rating'] ?? 0),
@@ -114,7 +115,7 @@ startContent();
                         </div>
                         <div class="flex items-center gap-2">
                             <?php if ($p['status'] === 'available'): ?>
-                                <button class="assign-btn px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm" data-id="<?php echo (int)$p['id']; ?>">
+                                <button class="assign-btn px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm" data-id="<?php echo (int)$p['id']; ?>" data-uuid="<?php echo htmlspecialchars($p['uuid'] ?? '', ENT_QUOTES); ?>">
                                     Add to Squad
                                 </button>
                             <?php else: ?>
@@ -161,8 +162,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             btn.disabled = true;
             btn.textContent = 'Adding...';
+            const uuid = String(btn.dataset.uuid || '').trim();
             try {
-                await Swal.fire({
+                Swal.fire({
                     title: 'Adding Player...',
                     text: 'Please wait',
                     allowOutsideClick: false,
@@ -173,7 +175,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const res = await fetch('api/manage_inventory_api.php', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({action: 'assign', inventory_id: id})
+                    body: JSON.stringify({action: 'assign', inventory_id: id, player_uuid: uuid})
                 });
                 const data = await res.json();
                 Swal.close();
