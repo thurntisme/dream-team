@@ -82,6 +82,12 @@ class UseItemController
 
             $picked = $eligible[array_rand($eligible)];
             $picked = initializePlayerCondition($picked);
+            // Normalize player UUID to 16-char hex (strip hyphens) for schema compatibility
+            $resolvedUuid = substr(str_replace('-', '', $picked['uuid'] ?? ''), 0, 16);
+            if ($resolvedUuid === '') {
+                throw new Exception('Player UUID missing for pack reward');
+            }
+            $picked['uuid'] = $resolvedUuid;
 
             $reveal = [];
             $decoys = [];
@@ -117,16 +123,32 @@ class UseItemController
                 $stmtClub->bindValue(':uuid', $this->userUuid, SQLITE3_TEXT);
                 $resClub = $stmtClub->execute();
                 $rowClub = $resClub ? $resClub->fetchArray(SQLITE3_ASSOC) : null;
-                if (!$rowClub || !isset($rowClub['club_uuid'])) {
-                    throw new Exception('User not associated with a club');
+                if (!$rowClub || !isset($rowClub['club_uuid']) || ($rowClub['club_uuid'] === '' || $rowClub['club_uuid'] === null)) {
+                    // Initialize missing club_uuid for this user
+                    $newClubUuid = generateUUID();
+                    $stmtSetClub = $this->db->prepare('UPDATE user_club SET club_uuid = :club_uuid WHERE user_uuid = :user_uuid');
+                    if ($stmtSetClub === false) {
+                        throw new Exception('Failed to initialize club: ' . $this->db->lastErrorMsg());
+                    }
+                    $stmtSetClub->bindValue(':club_uuid', $newClubUuid, SQLITE3_TEXT);
+                    $stmtSetClub->bindValue(':user_uuid', $this->userUuid, SQLITE3_TEXT);
+                    if (!$stmtSetClub->execute()) {
+                        throw new Exception('Failed to initialize club: ' . $this->db->lastErrorMsg());
+                    }
+                    $rowClub = ['club_uuid' => $newClubUuid];
                 }
                 $stmtIns2 = $this->db->prepare('INSERT INTO player_inventory (club_uuid, player_uuid, player_data) VALUES (:club_uuid, :player_uuid, :player_data)');
-                if ($stmtIns2 !== false) {
-                    $stmtIns2->bindValue(':club_uuid', $rowClub['club_uuid'], SQLITE3_TEXT);
-                    $stmtIns2->bindValue(':player_uuid', $picked['uuid'], SQLITE3_TEXT);
-                    $stmtIns2->bindValue(':player_data', json_encode($picked), SQLITE3_TEXT);
-                    $inserted = $stmtIns2->execute();
+                if ($stmtIns2 === false) {
+                    throw new Exception('Failed to prepare player_inventory insert: ' . $this->db->lastErrorMsg());
                 }
+                $stmtIns2->bindValue(':club_uuid', $rowClub['club_uuid'], SQLITE3_TEXT);
+                $stmtIns2->bindValue(':player_uuid', $picked['uuid'], SQLITE3_TEXT);
+                $stmtIns2->bindValue(':player_data', json_encode($picked), SQLITE3_TEXT);
+                $result = $stmtIns2->execute();
+                if ($result === false) {
+                    throw new Exception('Failed to insert player into inventory: ' . $this->db->lastErrorMsg());
+                }
+                $inserted = true;
             }
 
             $stmtDec = $this->db->prepare('UPDATE user_inventory SET quantity = quantity - 1 WHERE id = :id');
