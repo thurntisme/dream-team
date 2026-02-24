@@ -17,7 +17,7 @@ try {
 
     // Database tables are now created in install.php
 
-    // Get all available players from players.json (excluding players already in user's team)
+    // Get all available players from standard-players.json (excluding players already in user's team)
     $all_players = getDefaultPlayers();
     // Build quick lookup by uuid to enrich inventory items with latest JSON fields
     $players_by_uuid = [];
