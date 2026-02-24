@@ -71,6 +71,46 @@ try {
             'category' => 'premium',
             'icon' => 'crown',
             'duration' => 0
+        ],
+        [
+            'name' => 'Goalkeeper Pack',
+            'description' => 'Random goalkeeper. Favor GK positions.',
+            'price' => 7000000,
+            'effect_type' => 'player_pack',
+            'effect_value' => '{"min_rating":70,"max_rating":89,"positions":["GK"],"tier":"gk"}',
+            'category' => 'premium',
+            'icon' => 'shield',
+            'duration' => 0
+        ],
+        [
+            'name' => 'Defender Pack',
+            'description' => 'Random defender. CB/LB/RB/LWB/RWB only.',
+            'price' => 8000000,
+            'effect_type' => 'player_pack',
+            'effect_value' => '{"min_rating":70,"max_rating":89,"positions":["CB","LB","RB","LWB","RWB"],"tier":"defender"}',
+            'category' => 'premium',
+            'icon' => 'shield-check',
+            'duration' => 0
+        ],
+        [
+            'name' => 'Midfielder Pack',
+            'description' => 'Random midfielder. CDM/CM/CAM/LM/RM only.',
+            'price' => 9000000,
+            'effect_type' => 'player_pack',
+            'effect_value' => '{"min_rating":70,"max_rating":89,"positions":["CDM","CM","CAM","LM","RM"],"tier":"midfielder"}',
+            'category' => 'premium',
+            'icon' => 'layout-grid',
+            'duration' => 0
+        ],
+        [
+            'name' => 'Forward Pack',
+            'description' => 'Random forward. ST/CF/LW/RW only.',
+            'price' => 11000000,
+            'effect_type' => 'player_pack',
+            'effect_value' => '{"min_rating":75,"max_rating":92,"positions":["ST","CF","LW","RW"],"tier":"forward"}',
+            'category' => 'premium',
+            'icon' => 'target',
+            'duration' => 0
         ]
     ];
 
