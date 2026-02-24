@@ -13,8 +13,8 @@ try {
     // Database tables are now created in install.php
 
     // Get user data
-    $stmt = $db->prepare('SELECT name, email, club_name, budget FROM users WHERE id = :id');
-    $stmt->bindValue(':id', $_SESSION['user_id'], SQLITE3_INTEGER);
+    $stmt = $db->prepare('SELECT name, email FROM users WHERE uuid = :uuid');
+    $stmt->bindValue(':uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
     $result = $stmt->execute();
     $user = $result->fetchArray(SQLITE3_ASSOC);
 
@@ -53,8 +53,8 @@ try {
             }
 
             // Insert ticket
-            $stmt = $db->prepare('INSERT INTO support_tickets (user_id, ticket_number, priority, category, subject, message) VALUES (:user_id, :ticket_number, :priority, :category, :subject, :message)');
-            $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+            $stmt = $db->prepare('INSERT INTO support_tickets (user_uuid, ticket_number, priority, category, subject, message) VALUES (:user_uuid, :ticket_number, :priority, :category, :subject, :message)');
+            $stmt->bindValue(':user_uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
             $stmt->bindValue(':ticket_number', $ticket_number, SQLITE3_TEXT);
             $stmt->bindValue(':priority', $priority, SQLITE3_TEXT);
             $stmt->bindValue(':category', $category, SQLITE3_TEXT);
@@ -72,8 +72,8 @@ try {
     }
 
     // Get user's ticket history
-    $stmt = $db->prepare('SELECT * FROM support_tickets WHERE user_id = :user_id ORDER BY created_at DESC LIMIT 20');
-    $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+    $stmt = $db->prepare('SELECT * FROM support_tickets WHERE user_uuid = :user_uuid ORDER BY created_at DESC LIMIT 20');
+    $stmt->bindValue(':user_uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
     $result = $stmt->execute();
 
     $ticket_history = [];
@@ -341,6 +341,10 @@ startContent();
                                         ?>">
                                             <?php echo ucfirst($ticket['priority']); ?>
                                         </span>
+                                    <button onclick="viewTicketDetail(<?php echo htmlspecialchars(json_encode($ticket), ENT_QUOTES); ?>)"
+                                        class="text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 transition-colors">
+                                        View Detail
+                                    </button>
                                     </div>
                                 </div>
                                 <div class="text-xs text-gray-500 mb-1">
@@ -363,6 +367,59 @@ startContent();
 </div>
 
 <script src="assets/js/support.js"></script>
+<script>
+    function viewTicketDetail(t) {
+        const statusClass = t.status === 'resolved' ? 'text-green-600' : (t.status === 'closed' ? 'text-gray-600' : 'text-blue-600');
+        const priorityClass = t.priority === 'urgent' ? 'text-red-600' : (t.priority === 'high' ? 'text-orange-600' : (t.priority === 'medium' ? 'text-yellow-600' : 'text-gray-600'));
+        const created = t.created_at ? new Date(t.created_at).toLocaleString() : '';
+        const updated = t.updated_at ? new Date(t.updated_at).toLocaleString() : '';
+        const lastResp = t.last_response_at ? new Date(t.last_response_at).toLocaleString() : '';
+        const adminResp = t.admin_response ? String(t.admin_response).replace(/</g,'&lt;').replace(/>/g,'&gt;') : '';
+        const msg = (t.message || '').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        Swal.fire({
+            title: t.subject || 'Ticket Detail',
+            html: `
+                <div class="text-left space-y-3">
+                    <div class="flex items-center gap-2">
+                        <span class="text-gray-600">Ticket #:</span>
+                        <span class="font-medium">${t.ticket_number || ''}</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-gray-600">Category:</span>
+                        <span class="font-medium">${String(t.category || '').replace(/_/g, ' ')}</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-gray-600">Status:</span>
+                        <span class="font-medium ${statusClass}">${String(t.status || '')}</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-gray-600">Priority:</span>
+                        <span class="font-medium ${priorityClass}">${String(t.priority || '')}</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-gray-600">Created:</span>
+                        <span class="font-medium">${created}</span>
+                    </div>
+                    ${updated ? `<div class="flex items-center gap-2"><span class="text-gray-600">Updated:</span><span class="font-medium">${updated}</span></div>` : ''}
+                    ${lastResp ? `<div class="flex items-center gap-2"><span class="text-gray-600">Last Response:</span><span class="font-medium">${lastResp}</span></div>` : ''}
+                    <div>
+                        <div class="text-gray-600 mb-1">Message:</div>
+                        <div class="p-3 bg-gray-50 border border-gray-200 rounded text-sm">${msg}</div>
+                    </div>
+                    ${adminResp ? `
+                        <div>
+                            <div class="text-gray-600 mb-1">Admin Response:</div>
+                            <div class="p-3 bg-green-50 border border-green-200 rounded text-sm">${adminResp}</div>
+                        </div>
+                    ` : ''}
+                </div>
+            `,
+            confirmButtonColor: '#2563eb',
+            confirmButtonText: 'Close'
+        });
+    }
+    window.viewTicketDetail = viewTicketDetail;
+</script>
 
 <?php
 // End content capture and render layout
