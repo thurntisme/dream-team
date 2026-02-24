@@ -275,7 +275,7 @@ startContent();
                                         <div class="text-sm font-medium text-green-600">Permanent</div>
                                     <?php endif; ?>
                                     <?php if (($item['effect_type'] ?? '') === 'player_pack' && (int)$item['quantity'] > 0): ?>
-                                        <button onclick="openPlayerPack(<?php echo (int)$item['id']; ?>, '<?php echo htmlspecialchars($item['name'], ENT_QUOTES); ?>')"
+                                        <button onclick="openPlayerPack('<?php echo isset($item['item_uuid']) ? htmlspecialchars($item['item_uuid'], ENT_QUOTES) : ''; ?>', '<?php echo htmlspecialchars($item['name'], ENT_QUOTES); ?>')"
                                                 class="mt-2 px-3 py-2 rounded-lg text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white">
                                             Open Pack
                                         </button>
@@ -517,7 +517,7 @@ startContent();
             });
     }
 
-    async function openPlayerPack(inventoryId, itemName) {
+    async function openPlayerPack(itemUuid, itemName) {
         Swal.fire({
             title: 'Opening Pack...',
             text: 'Please wait',
@@ -532,7 +532,7 @@ startContent();
             const res = await fetch('api/use_item_api.php', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({action: 'open_pack', inventory_id: parseInt(inventoryId)})
+                body: JSON.stringify({action: 'open_pack', item_uuid: String(itemUuid || '').trim()})
             });
             const data = await res.json();
             if (!res.ok || !data.success) {

@@ -129,11 +129,14 @@ try {
     } else {
         // Insert new item (support both user_uuid and legacy user_id schemas)
         if ($inventoryUsesUuid) {
-            $stmt = $db->prepare('INSERT INTO user_inventory (user_uuid, item_id, expires_at, quantity) VALUES (:user_uuid, :item_id, :expires_at, 1)');
+            $stmt = $db->prepare('INSERT INTO user_inventory (user_uuid, item_id, item_uuid, expires_at, quantity) VALUES (:user_uuid, :item_id, :item_uuid, :expires_at, 1)');
             if ($stmt === false) {
                 throw new Exception('Failed to prepare inventory insert');
             }
             $stmt->bindValue(':user_uuid', $user_uuid, SQLITE3_TEXT);
+            // Deterministic 16-char code derived from item_id for consistency
+            $item_uuid = substr(sha1('shop_item_' . $item_id), 0, 16);
+            $stmt->bindValue(':item_uuid', $item_uuid, SQLITE3_TEXT);
         } else {
             if ($user_id === null) {
                 throw new Exception('User session invalid for inventory insert');

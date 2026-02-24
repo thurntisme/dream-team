@@ -307,14 +307,17 @@ try {
             id INT AUTO_INCREMENT PRIMARY KEY,
             user_uuid CHAR(16) NOT NULL,
             item_id INT NOT NULL,
+            item_uuid CHAR(16) NOT NULL DEFAULT "",
             purchased_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             expires_at DATETIME NULL,
             quantity INT DEFAULT 1,
             FOREIGN KEY (user_uuid) REFERENCES users(uuid),
-            FOREIGN KEY (item_id) REFERENCES shop_items(id)
+            FOREIGN KEY (item_id) REFERENCES shop_items(id),
+            INDEX idx_user_inventory_item_uuid (item_uuid)
         )');
     $ensureIdx('user_inventory', 'idx_user_inventory_user_uuid', 'user_uuid');
     $ensureIdx('user_inventory', 'idx_user_inventory_expires', 'expires_at');
+    $ensureIdx('user_inventory', 'idx_user_inventory_item_uuid', 'item_uuid');
     $postOk = $postOk && $db->exec('CREATE TABLE IF NOT EXISTS club_staff (
             id INT AUTO_INCREMENT PRIMARY KEY,
             club_uuid CHAR(16) NOT NULL,

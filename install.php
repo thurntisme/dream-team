@@ -627,14 +627,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install'])) {
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 user_uuid CHAR(16) NOT NULL,
                 item_id INT NOT NULL,
+                item_uuid CHAR(16) NOT NULL DEFAULT "",
                 purchased_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 expires_at DATETIME NULL,
                 quantity INT DEFAULT 1,
                 FOREIGN KEY (user_uuid) REFERENCES users(uuid),
-                FOREIGN KEY (item_id) REFERENCES shop_items(id)
+                FOREIGN KEY (item_id) REFERENCES shop_items(id),
+                INDEX idx_user_inventory_item_uuid (item_uuid)
             )');
             $ensureIdx('user_inventory', 'idx_user_inventory_user_uuid', 'user_uuid');
             $ensureIdx('user_inventory', 'idx_user_inventory_expires', 'expires_at');
+            $ensureIdx('user_inventory', 'idx_user_inventory_item_uuid', 'item_uuid');
             $ok = $ok && $db->exec('CREATE TABLE IF NOT EXISTS club_staff (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 user_uuid CHAR(16) NOT NULL,
@@ -1010,6 +1013,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install'])) {
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_uuid TEXT NOT NULL,
                 item_id INTEGER NOT NULL,
+                item_uuid TEXT NOT NULL DEFAULT "",
                 purchased_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 expires_at DATETIME NULL,
                 quantity INTEGER DEFAULT 1,
@@ -1018,6 +1022,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install'])) {
             )');
                 $db->exec('CREATE INDEX IF NOT EXISTS idx_user_inventory_user_uuid ON user_inventory (user_uuid)');
                 $db->exec('CREATE INDEX IF NOT EXISTS idx_user_inventory_expires ON user_inventory (expires_at)');
+                $db->exec('CREATE INDEX IF NOT EXISTS idx_user_inventory_item_uuid ON user_inventory (item_uuid)');
+
+                // Ensure item_uuid exists for older installations
+                try {
+                    $result = $db->query("PRAGMA table_info(user_inventory)");
+                    $uicolumns = [];
+                    while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+                        $uicolumns[] = $row['name'];
+                    }
+                    if (!in_array('item_uuid', $uicolumns)) {
+                        $db->exec('ALTER TABLE user_inventory ADD COLUMN item_uuid TEXT NOT NULL DEFAULT ""');
+                        $db->exec('CREATE INDEX IF NOT EXISTS idx_user_inventory_item_uuid ON user_inventory (item_uuid)');
+                    }
+                } catch (Exception $e) {
+                    // Ignore migration errors
+                }
 
                 // Staff system table
                 $db->exec('CREATE TABLE IF NOT EXISTS club_staff (
