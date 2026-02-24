@@ -110,43 +110,112 @@ class UseItemController
 
         if ($assignedTo !== 'squad') {
             $inserted = false;
+            $newInventoryId = null;
 
-            $stmtIns = $this->db->prepare('INSERT INTO player_inventory (user_uuid, player_uuid, player_data, purchase_price) VALUES (:user_uuid, :player_uuid, :player_data, 0)');
-            if ($stmtIns !== false) {
-                $stmtIns->bindValue(':user_uuid', $this->userUuid, SQLITE3_TEXT);
-                $stmtIns->bindValue(':player_uuid', $picked['uuid'], SQLITE3_TEXT);
-                $stmtIns->bindValue(':player_data', json_encode($picked), SQLITE3_TEXT);
-                $inserted = $stmtIns->execute() ? true : false;
-            }
-
-            if (!$inserted) {
-                $stmtClub = $this->db->prepare('SELECT club_uuid FROM user_club WHERE user_uuid = :uuid');
-                if ($stmtClub !== false) {
-                    $stmtClub->bindValue(':uuid', $this->userUuid, SQLITE3_TEXT);
-                    $resClub = $stmtClub->execute();
-                    $rowClub = $resClub ? $resClub->fetchArray(SQLITE3_ASSOC) : null;
-                    $clubUuidVal = $rowClub['club_uuid'] ?? '';
-                    if ($clubUuidVal === '' || $clubUuidVal === null) {
-                        $clubUuidVal = generateUUID();
-                        $stmtSetClub = $this->db->prepare('UPDATE user_club SET club_uuid = :club_uuid WHERE user_uuid = :user_uuid');
-                        if ($stmtSetClub !== false) {
-                            $stmtSetClub->bindValue(':club_uuid', $clubUuidVal, SQLITE3_TEXT);
-                            $stmtSetClub->bindValue(':user_uuid', $this->userUuid, SQLITE3_TEXT);
-                            $stmtSetClub->execute();
-                        }
+            // Prefer club inventory first
+            $stmtClub = $this->db->prepare('SELECT club_uuid FROM user_club WHERE user_uuid = :uuid');
+            if ($stmtClub !== false) {
+                $stmtClub->bindValue(':uuid', $this->userUuid, SQLITE3_TEXT);
+                $resClub = $stmtClub->execute();
+                $rowClub = $resClub ? $resClub->fetchArray(SQLITE3_ASSOC) : null;
+                $clubUuidVal = $rowClub['club_uuid'] ?? '';
+                if ($clubUuidVal === '' || $clubUuidVal === null) {
+                    $clubUuidVal = generateUUID();
+                    $stmtSetClub = $this->db->prepare('UPDATE user_club SET club_uuid = :club_uuid WHERE user_uuid = :user_uuid');
+                    if ($stmtSetClub !== false) {
+                        $stmtSetClub->bindValue(':club_uuid', $clubUuidVal, SQLITE3_TEXT);
+                        $stmtSetClub->bindValue(':user_uuid', $this->userUuid, SQLITE3_TEXT);
+                        $stmtSetClub->execute();
                     }
-                    $stmtIns2 = $this->db->prepare('INSERT INTO player_inventory (club_uuid, player_uuid, player_data, purchase_price) VALUES (:club_uuid, :player_uuid, :player_data, 0)');
-                    if ($stmtIns2 !== false) {
-                        $stmtIns2->bindValue(':club_uuid', $clubUuidVal, SQLITE3_TEXT);
-                        $stmtIns2->bindValue(':player_uuid', $picked['uuid'], SQLITE3_TEXT);
-                        $stmtIns2->bindValue(':player_data', json_encode($picked), SQLITE3_TEXT);
-                        $inserted = $stmtIns2->execute() ? true : false;
+                }
+                $stmtIns2 = $this->db->prepare('INSERT INTO player_inventory (club_uuid, player_uuid, player_data, purchase_price) VALUES (:club_uuid, :player_uuid, :player_data, 0)');
+                if ($stmtIns2 !== false) {
+                    $stmtIns2->bindValue(':club_uuid', $clubUuidVal, SQLITE3_TEXT);
+                    $stmtIns2->bindValue(':player_uuid', $picked['uuid'], SQLITE3_TEXT);
+                    $stmtIns2->bindValue(':player_data', json_encode($picked), SQLITE3_TEXT);
+                    $inserted = $stmtIns2->execute() ? true : false;
+                    if ($inserted) {
+                        $q = $this->db->prepare('SELECT id FROM player_inventory WHERE club_uuid = :club_uuid AND player_uuid = :player_uuid ORDER BY id DESC LIMIT 1');
+                        if ($q) {
+                            $q->bindValue(':club_uuid', $clubUuidVal, SQLITE3_TEXT);
+                            $q->bindValue(':player_uuid', $picked['uuid'], SQLITE3_TEXT);
+                            $r = $q->execute();
+                            $row = $r ? $r->fetchArray(SQLITE3_ASSOC) : null;
+                            if ($row && isset($row['id'])) {
+                                $newInventoryId = (int)$row['id'];
+                            }
+                        }
                     }
                 }
             }
 
+            // Fallback to user inventory
             if (!$inserted) {
-                $this->db->exec('ALTER TABLE player_inventory ADD COLUMN user_uuid CHAR(16) NOT NULL DEFAULT ""');
+                $stmtIns = $this->db->prepare('INSERT INTO player_inventory (user_uuid, player_uuid, player_data, purchase_price) VALUES (:user_uuid, :player_uuid, :player_data, 0)');
+                if ($stmtIns !== false) {
+                    $stmtIns->bindValue(':user_uuid', $this->userUuid, SQLITE3_TEXT);
+                    $stmtIns->bindValue(':player_uuid', $picked['uuid'], SQLITE3_TEXT);
+                    $stmtIns->bindValue(':player_data', json_encode($picked), SQLITE3_TEXT);
+                    $inserted = $stmtIns->execute() ? true : false;
+                    if ($inserted) {
+                        $q = $this->db->prepare('SELECT id FROM player_inventory WHERE user_uuid = :user_uuid AND player_uuid = :player_uuid ORDER BY id DESC LIMIT 1');
+                        if ($q) {
+                            $q->bindValue(':user_uuid', $this->userUuid, SQLITE3_TEXT);
+                            $q->bindValue(':player_uuid', $picked['uuid'], SQLITE3_TEXT);
+                            $r = $q->execute();
+                            $row = $r ? $r->fetchArray(SQLITE3_ASSOC) : null;
+                            if ($row && isset($row['id'])) {
+                                $newInventoryId = (int)$row['id'];
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Auto-migrate: add club_uuid and retry club insert
+            if (!$inserted) {
+                @$this->db->exec('ALTER TABLE player_inventory ADD COLUMN club_uuid CHAR(16) NOT NULL DEFAULT ""');
+                @$this->db->exec('CREATE INDEX idx_player_inventory_club_uuid ON player_inventory (club_uuid)');
+                $stmtClub2 = $this->db->prepare('SELECT club_uuid FROM user_club WHERE user_uuid = :uuid');
+                if ($stmtClub2 !== false) {
+                    $stmtClub2->bindValue(':uuid', $this->userUuid, SQLITE3_TEXT);
+                    $resClub2 = $stmtClub2->execute();
+                    $rowClub2 = $resClub2 ? $resClub2->fetchArray(SQLITE3_ASSOC) : null;
+                    $clubUuidVal2 = $rowClub2['club_uuid'] ?? '';
+                    if ($clubUuidVal2 === '' || $clubUuidVal2 === null) {
+                        $clubUuidVal2 = generateUUID();
+                        $stmtSetClub2 = $this->db->prepare('UPDATE user_club SET club_uuid = :club_uuid WHERE user_uuid = :user_uuid');
+                        if ($stmtSetClub2 !== false) {
+                            $stmtSetClub2->bindValue(':club_uuid', $clubUuidVal2, SQLITE3_TEXT);
+                            $stmtSetClub2->bindValue(':user_uuid', $this->userUuid, SQLITE3_TEXT);
+                            $stmtSetClub2->execute();
+                        }
+                    }
+                    $stmtInsClubFix = $this->db->prepare('INSERT INTO player_inventory (club_uuid, player_uuid, player_data, purchase_price) VALUES (:club_uuid, :player_uuid, :player_data, 0)');
+                    if ($stmtInsClubFix !== false) {
+                        $stmtInsClubFix->bindValue(':club_uuid', $clubUuidVal2, SQLITE3_TEXT);
+                        $stmtInsClubFix->bindValue(':player_uuid', $picked['uuid'], SQLITE3_TEXT);
+                        $stmtInsClubFix->bindValue(':player_data', json_encode($picked), SQLITE3_TEXT);
+                        $inserted = $stmtInsClubFix->execute() ? true : false;
+                        if ($inserted) {
+                            $q = $this->db->prepare('SELECT id FROM player_inventory WHERE club_uuid = :club_uuid AND player_uuid = :player_uuid ORDER BY id DESC LIMIT 1');
+                            if ($q) {
+                                $q->bindValue(':club_uuid', $clubUuidVal2, SQLITE3_TEXT);
+                                $q->bindValue(':player_uuid', $picked['uuid'], SQLITE3_TEXT);
+                                $r = $q->execute();
+                                $row = $r ? $r->fetchArray(SQLITE3_ASSOC) : null;
+                                if ($row && isset($row['id'])) {
+                                    $newInventoryId = (int)$row['id'];
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Final fallback: add user_uuid and try user insert once more
+            if (!$inserted) {
+                @$this->db->exec('ALTER TABLE player_inventory ADD COLUMN user_uuid CHAR(16) NOT NULL DEFAULT ""');
                 @$this->db->exec('CREATE INDEX idx_player_inventory_user_uuid ON player_inventory (user_uuid)');
                 $stmtInsFix = $this->db->prepare('INSERT INTO player_inventory (user_uuid, player_uuid, player_data, purchase_price) VALUES (:user_uuid, :player_uuid, :player_data, 0)');
                 if ($stmtInsFix !== false) {
@@ -154,6 +223,18 @@ class UseItemController
                     $stmtInsFix->bindValue(':player_uuid', $picked['uuid'], SQLITE3_TEXT);
                     $stmtInsFix->bindValue(':player_data', json_encode($picked), SQLITE3_TEXT);
                     $inserted = $stmtInsFix->execute() ? true : false;
+                    if ($inserted) {
+                        $q = $this->db->prepare('SELECT id FROM player_inventory WHERE user_uuid = :user_uuid AND player_uuid = :player_uuid ORDER BY id DESC LIMIT 1');
+                        if ($q) {
+                            $q->bindValue(':user_uuid', $this->userUuid, SQLITE3_TEXT);
+                            $q->bindValue(':player_uuid', $picked['uuid'], SQLITE3_TEXT);
+                            $r = $q->execute();
+                            $row = $r ? $r->fetchArray(SQLITE3_ASSOC) : null;
+                            if ($row && isset($row['id'])) {
+                                $newInventoryId = (int)$row['id'];
+                            }
+                        }
+                    }
                 }
             }
 
@@ -179,7 +260,8 @@ class UseItemController
             'player' => [
                 'name' => $picked['name'] ?? 'Unknown',
                 'position' => $picked['position'] ?? 'CM',
-                'rating' => $picked['rating'] ?? 0
+                'rating' => $picked['rating'] ?? 0,
+                'inventory_id' => isset($newInventoryId) ? $newInventoryId : null
             ]
         ];
     }

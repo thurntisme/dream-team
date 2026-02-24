@@ -543,14 +543,48 @@ startContent();
             }
             const p = data.player || {};
             const details = p.name ? `${p.name} (${p.position} - ${p.rating})` : '';
-            Swal.fire({
-                icon: 'success',
-                title: 'Pack Opened!',
-                text: details || 'New player added to your inventory',
-                confirmButtonColor: '#10b981'
-            }).then(() => {
+            const invId = p.inventory_id || null;
+            if (invId) {
+                const result = await Swal.fire({
+                    icon: 'success',
+                    title: 'Pack Opened!',
+                    text: details || 'New player added to your inventory',
+                    showCancelButton: true,
+                    confirmButtonText: 'Add to Squad',
+                    cancelButtonText: 'Later',
+                    confirmButtonColor: '#10b981',
+                    cancelButtonColor: '#6b7280'
+                });
+                if (result.isConfirmed) {
+                    const res2 = await fetch('api/manage_inventory_api.php', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({action: 'assign', inventory_id: invId})
+                    });
+                    const data2 = await res2.json();
+                    if (!res2.ok || !data2.success) {
+                        throw new Error(data2.message || 'Failed to add player to squad');
+                    }
+                    await Swal.fire({
+                        icon: 'success',
+                        title: 'Player Added',
+                        text: 'The player has been added to your squad.',
+                        confirmButtonColor: '#10b981'
+                    });
+                    window.location.reload();
+                    return;
+                }
                 window.location.reload();
-            });
+            } else {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Pack Opened!',
+                    text: details || 'New player added to your inventory',
+                    confirmButtonColor: '#10b981'
+                }).then(() => {
+                    window.location.reload();
+                });
+            }
         } catch (e) {
             Swal.fire({
                 icon: 'error',
