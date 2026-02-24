@@ -65,24 +65,6 @@ try {
 
 
 
-    // Get user's player inventory
-    $stmt = $db->prepare('SELECT * FROM player_inventory WHERE club_uuid = (SELECT club_uuid FROM user_club WHERE user_uuid = :uuid) AND status = "available" ORDER BY purchase_date DESC');
-    $stmt->bindValue(':uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
-    $result = $stmt->execute();
-
-    $player_inventory = [];
-    while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
-        $row['player_data'] = json_decode($row['player_data'], true);
-        if (is_array($row['player_data'])) {
-            $uuid = $row['player_data']['uuid'] ?? null;
-            if ($uuid && isset($players_by_uuid[$uuid])) {
-                // Merge latest JSON fields into stored player data without overwriting stored customizations
-                $row['player_data'] = array_merge($players_by_uuid[$uuid], $row['player_data']);
-            }
-        }
-        $player_inventory[] = $row;
-    }
-
     $db->close();
 
 } catch (Exception $e) {
@@ -130,14 +112,7 @@ startContent();
         <!-- Tab Navigation -->
         <div class="flex justify-center mb-6">
             <div class="bg-gray-100 p-1 rounded-lg flex flex-wrap gap-1 max-w-full overflow-x-auto">
-                <button id="playersTab"
-                    class="px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors bg-white text-blue-600 shadow-sm whitespace-nowrap">
-                    Available Players
-                </button>
-                <button id="myPlayersTab"
-                    class="px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors text-gray-600 hover:text-gray-900 whitespace-nowrap">
-                    My Players (<?php echo count($player_inventory); ?>)
-                </button>
+                <button id="playersTab" class="px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors bg-white text-blue-600 shadow-sm whitespace-nowrap">Available Players</button>
             </div>
         </div>
 
@@ -250,80 +225,7 @@ startContent();
             </div>
         </div>
 
-        <!-- My Players Tab -->
-        <div id="myPlayersContent" class="tab-content hidden">
-            <div class="space-y-4">
-                <div class="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg p-3">
-                    <div class="text-sm text-gray-700">
-                        Manage your purchased players. Assign them to your squad.
-                    </div>
-                    <button id="assignAllButton"
-                        class="inline-flex items-center gap-2 bg-blue-600 text-white px-3 py-2 rounded-md hover:bg-blue-700 transition-colors text-sm">
-                        <i data-lucide="user-plus" class="w-4 h-4"></i>
-                        Assign All Players to Team
-                    </button>
-                </div>
-                <?php if (empty($player_inventory)): ?>
-                    <div class="text-center py-12">
-                        <i data-lucide="users" class="w-16 h-16 text-gray-400 mx-auto mb-4"></i>
-                        <h3 class="text-lg font-medium text-gray-900 mb-2">No Players in Inventory</h3>
-                        <p class="text-gray-600">Purchase players from the transfer market to manage them here.</p>
-                    </div> <?php else: ?>
-                    <?php foreach ($player_inventory as $inventory_item): ?>
-                        <?php $player = $inventory_item['player_data']; ?>
-                        <div class="bg-blue-50 rounded-lg p-4 border border-blue-200">
-                            <div class="flex items-center justify-between">
-                                <div class="flex items-center gap-4">
-                                    <div class="w-12 h-12 flex items-center justify-center">
-                                        <?php echo getPlayerAvatarWithImage($player['name'], $player['avatar'] ?? null, 'sm'); ?>
-                                    </div>
-                                    <div>
-                                        <h4 class="font-semibold text-gray-900"><?php echo htmlspecialchars($player['name']); ?>
-                                        </h4>
-                                        <p class=" text-sm text-gray-600">
-                                            <?php echo htmlspecialchars($player['position']); ?> •
-                                            Rating:
-                                            <?php echo $player['rating'] ?? 'N/A'; ?> •
-                                            Value:
-                                            <?php echo formatMarketValue($player['value'] ?? 0); ?>
-                                        </p>
-                                        <p class="text-xs text-gray-500 mt-1">
-                                            Purchased:
-                                            <?php echo date('M j, Y', strtotime($inventory_item['purchase_date'])); ?> •
-                                            Cost: <?php echo formatMarketValue($inventory_item['purchase_price']); ?>
-                                        </p>
-                                    </div>
-                                </div>
-                                <div class=" flex items-center gap-2">
-                                    <button onclick="showPlayerInfo(<?php echo htmlspecialchars(json_encode($player)); ?>)"
-                                        class="p-2 text-blue-600 hover:bg-blue-100 rounded transition-colors"
-                                        title="Player Info">
-                                        <i data-lucide="info" class="w-4 h-4"></i>
-                                    </button>
-                                    <div class="flex flex-col gap-1">
-                                        <button
-                                            onclick="assignToTeam(<?php echo $inventory_item['id']; ?>, <?php echo htmlspecialchars(json_encode($player)); ?>)"
-                                            class="px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition-colors">
-                                            Assign to Team
-                                        </button>
-                                        <button
-                                            onclick="sellPlayer(<?php echo $inventory_item['id']; ?>, <?php echo htmlspecialchars(json_encode($player)); ?>)"
-                                            class="px-3 py-1 bg-yellow-600 text-white text-xs rounded hover:bg-yellow-700 transition-colors">
-                                            Sell Player
-                                        </button>
-                                        <button
-                                            onclick="deletePlayer(<?php echo $inventory_item['id']; ?>, '<?php echo htmlspecialchars($player['name']); ?>')"
-                                            class="px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors">
-                                            Release
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </div>
-        </div>
+        
 
     </div>
 </div>
@@ -372,66 +274,12 @@ startContent();
         document.getElementById('standardPlayersCount').textContent = `${counts.standard} Standard Players`;
     }
 
-    // Tab switching
-    function switchTab(tabName) {
-        // Hide all tab contents
-        document.querySelectorAll('.tab-content').forEach(content => {
-            content.classList.add('hidden');
-        });
-
-        // Remove active class from all tabs
-        document.querySelectorAll('[id$="Tab"]').forEach(tab => {
-            tab.classList.remove('bg-white', 'text-blue-600', 'shadow-sm');
-            tab.classList.add('text-gray-600', 'hover:text-gray-900');
-        });
-
-        // Show selected tab content
-        document.getElementById(tabName + 'Content').classList.remove('hidden');
-
-        // Add active class to selected tab
-        const activeTab = document.getElementById(tabName + 'Tab');
-        activeTab.classList.add('bg-white', 'text-blue-600', 'shadow-sm');
-        activeTab.classList.remove('text-gray-600', 'hover:text-gray-900');
-
-        // Update URL with tab parameter
-        updateTabURL(tabName);
-    }
-
-    // Update URL with tab parameter
-    function updateTabURL(tabName) {
-        const params = new URLSearchParams(window.location.search);
-        
-        if (tabName === 'myPlayers') {
-            params.set('tab', 'myPlayers');
-        } else {
-            params.delete('tab'); // Remove tab param for default "players" tab
-        }
-
-        const newURL = params.toString() ? `${window.location.pathname}?${params.toString()}` : window.location.pathname;
-        window.history.pushState({}, '', newURL);
-    }
-
-    // Load active tab from URL
-    function loadActiveTabFromURL() {
-        const params = new URLSearchParams(window.location.search);
-        const tab = params.get('tab');
-        
-        if (tab === 'myPlayers') {
-            switchTab('myPlayers');
-        } else {
-            switchTab('players');
-        }
-    }
+    function switchTab() {}
+    function updateTabURL() {}
+    function loadActiveTabFromURL() {}
 
     // Event listeners for tabs
-    document.getElementById('playersTab').addEventListener('click', () => {
-        switchTab('players');
-        currentPage = 1;
-        renderPlayers();
-    });
-    document.getElementById('myPlayersTab').addEventListener('click', () => {
-        switchTab('myPlayers');
-    });
+    document.getElementById('playersTab').addEventListener('click', () => { currentPage = 1; renderPlayers(); });
 
     // Update URL parameters without reloading
     function updateURLParams() {
