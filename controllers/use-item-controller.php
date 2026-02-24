@@ -70,6 +70,32 @@ class UseItemController
         }
         $picked = initializePlayerCondition($picked);
 
+        $reveal = [];
+        $decoys = [];
+        $pool = $eligible;
+        $filteredPool = [];
+        foreach ($pool as $pl) {
+            if (($pl['uuid'] ?? '') !== ($picked['uuid'] ?? '')) {
+                $filteredPool[] = $pl;
+            }
+        }
+        if (count($filteredPool) > 0) {
+            shuffle($filteredPool);
+            $decoys = array_slice($filteredPool, 0, min(9, count($filteredPool)));
+        }
+        foreach ($decoys as $dc) {
+            $reveal[] = [
+                'name' => $dc['name'] ?? 'Unknown',
+                'position' => $dc['position'] ?? 'CM',
+                'rating' => (int)($dc['rating'] ?? 0)
+            ];
+        }
+        $reveal[] = [
+            'name' => $picked['name'] ?? 'Unknown',
+            'position' => $picked['position'] ?? 'CM',
+            'rating' => (int)($picked['rating'] ?? 0)
+        ];
+
         $autoAssignTiers = ['standard', 'elite', 'superstar', 'legend', 'gk', 'defender', 'midfielder', 'forward'];
         $isAutoAssignPack = in_array($tier, $autoAssignTiers, true) || ($min === 80 && $max === 89);
 
@@ -262,7 +288,8 @@ class UseItemController
                 'position' => $picked['position'] ?? 'CM',
                 'rating' => $picked['rating'] ?? 0,
                 'inventory_id' => isset($newInventoryId) ? $newInventoryId : null
-            ]
+            ],
+            'reveal' => $reveal
         ];
     }
 }

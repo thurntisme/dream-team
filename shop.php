@@ -275,7 +275,7 @@ startContent();
                                         <div class="text-sm font-medium text-green-600">Permanent</div>
                                     <?php endif; ?>
                                     <?php if (($item['effect_type'] ?? '') === 'player_pack' && (int)$item['quantity'] > 0): ?>
-                                        <button onclick="openPlayerPack('<?php echo isset($item['item_uuid']) ? htmlspecialchars($item['item_uuid'], ENT_QUOTES) : ''; ?>', '<?php echo htmlspecialchars($item['name'], ENT_QUOTES); ?>')"
+                                        <button onclick="openPlayerPack('<?php echo isset($item['item_uuid']) ? htmlspecialchars($item['item_uuid'], ENT_QUOTES) : ''; ?>', '<?php echo htmlspecialchars($item['name'], ENT_QUOTES); ?>', <?php echo (int)$item['item_id']; ?>, '<?php echo htmlspecialchars($item['description'], ENT_QUOTES); ?>')"
                                                 class="mt-2 px-3 py-2 rounded-lg text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white">
                                             Open Pack
                                         </button>
@@ -517,7 +517,20 @@ startContent();
             });
     }
 
-    async function openPlayerPack(itemUuid, itemName) {
+    async function openPlayerPack(itemUuid, itemName, itemId, itemDesc) {
+        const confirm = await Swal.fire({
+            title: itemName || 'Open Pack',
+            html: `<div class="text-left"><div class="text-sm text-gray-700">${(itemDesc || '')}</div><div class="text-xs text-gray-500 mt-2">Opens one pack and adds a player to your inventory. If there is squad space and the pack tier auto-assigns, the player may join your squad.</div></div>`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Open',
+            cancelButtonText: 'Cancel',
+            confirmButtonColor: '#2563eb',
+            cancelButtonColor: '#6b7280'
+        });
+        if (!confirm.isConfirmed) {
+            return;
+        }
         Swal.fire({
             title: 'Opening Pack...',
             text: 'Please wait',
@@ -534,14 +547,48 @@ startContent();
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({
                     action: 'open_pack',
-                    item_uuid: String(itemUuid || '').trim()
+                    item_uuid: String(itemUuid || '').trim(),
+                    item_id: typeof itemId === 'number' ? itemId : parseInt(itemId || 0)
                 })
             });
             const data = await res.json();
+            Swal.close();
             if (!res.ok || !data.success) {
                 throw new Error(data.message || 'Failed to open pack');
             }
             const p = data.player || {};
+            const reveal = Array.isArray(data.reveal) ? data.reveal : [];
+            if (reveal.length > 0) {
+                await Swal.fire({
+                    title: 'Revealing...',
+                    html: '<div id=\"packReveal\" class=\"text-center\"><div class=\"text-xl font-semibold\"></div><div class=\"text-sm text-gray-600 mt-1\"></div><div class=\"mt-4 w-64 mx-auto h-2 bg-gray-200 rounded\"><div id=\"packProgress\" class=\"h-2 bg-blue-600 rounded\" style=\"width:0%\"></div></div></div>',
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    showConfirmButton: false,
+                    didOpen: async () => {
+                        const box = Swal.getHtmlContainer().querySelector('#packReveal');
+                        const bar = box.querySelector('#packProgress');
+                        const total = reveal.length;
+                        let step = 0;
+                        for (let i = 0; i < reveal.length - 1; i++) {
+                            const r = reveal[i] || {};
+                            box.querySelector('div:nth-child(1)').textContent = r.name ? String(r.name) : 'Player';
+                            box.querySelector('div:nth-child(2)').textContent = r.position && r.rating ? `${r.position} - ${r.rating}` : '';
+                            step++;
+                            bar.style.width = Math.floor((step / total) * 100) + '%';
+                            await new Promise(res => setTimeout(res, 350));
+                        }
+                        const last = reveal[reveal.length - 1] || {};
+                        box.querySelector('div:nth-child(1)').textContent = last.name ? String(last.name) : 'Player';
+                        box.querySelector('div:nth-child(2)').textContent = last.position && last.rating ? `${last.position} - ${last.rating}` : '';
+                        step++;
+                        bar.style.width = Math.floor((step / total) * 100) + '%';
+                        await new Promise(res => setTimeout(res, 900));
+                        bar.style.width = '100%';
+                        Swal.close();
+                    }
+                });
+            }
             const details = p.name ? `${p.name} (${p.position} - ${p.rating})` : '';
             const invId = p.inventory_id || null;
             if (invId) {
