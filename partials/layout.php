@@ -23,8 +23,8 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true, $sk
         requireClubName($currentPage);
     }
 
-    $isLoggedIn = isset($_SESSION['user_id']);
-    $clubName = $_SESSION['club_name'] ?? '';
+    $isLoggedIn = isset($_SESSION['user_uuid']);
+    $clubName = '';
     $userName = $_SESSION['user_name'] ?? '';
 
     // Get user budget, fans, and club level if logged in
@@ -35,16 +35,32 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true, $sk
     if ($isLoggedIn && isDatabaseAvailable()) {
         try {
             $db = getDbConnection();
-            $stmt = $db->prepare('SELECT budget, fans, club_level, club_exp FROM users WHERE id = :user_id');
+            $stmt = $db->prepare('
+                SELECT 
+                    u.name,
+                    c.club_name,
+                    c.budget,
+                    c.fans,
+                    c.club_level,
+                    c.club_exp
+                FROM users u
+                LEFT JOIN user_club c ON c.user_uuid = u.uuid
+                WHERE u.uuid = :uuid
+                LIMIT 1
+            ');
             if ($stmt !== false) {
-                $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+                $stmt->bindValue(':uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
                 $result = $stmt->execute();
                 if ($result) {
-                    $userData = $result->fetchArray(SQLITE3_ASSOC);
-                    $userBudget = $userData['budget'] ?? 0;
-                    $userFans = $userData['fans'] ?? 5000;
-                    $clubLevel = $userData['club_level'] ?? 1;
-                    $clubExp = $userData['club_exp'] ?? 0;
+                    $row = $result->fetchArray(SQLITE3_ASSOC);
+                    if ($row) {
+                        $userName = $row['name'] ?? $userName;
+                        $clubName = $row['club_name'] ?? '';
+                        $userBudget = $row['budget'] ?? 0;
+                        $userFans = $row['fans'] ?? 5000;
+                        $clubLevel = $row['club_level'] ?? 1;
+                        $clubExp = $row['club_exp'] ?? 0;
+                    }
                 }
             }
 
@@ -110,8 +126,8 @@ function renderLayout($title, $content, $currentPage = '', $showAuth = true, $sk
         <?php endif; ?>
 
         <!-- Floating Ad for Free Users -->
-        <?php if ($isLoggedIn && shouldShowAds($_SESSION['user_id'])): ?>
-            <?php renderFloatingAd($_SESSION['user_id']); ?>
+        <?php if ($isLoggedIn && shouldShowAds($_SESSION['user_uuid'])): ?>
+            <?php renderFloatingAd($_SESSION['user_uuid']); ?>
         <?php endif; ?>
 
         <!-- JavaScript -->
