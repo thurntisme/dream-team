@@ -70,7 +70,7 @@ class UseItemController
         }
         $picked = initializePlayerCondition($picked);
 
-        $autoAssignTiers = ['elite', 'superstar', 'legend'];
+        $autoAssignTiers = ['standard', 'elite', 'superstar', 'legend', 'gk', 'defender', 'midfielder', 'forward'];
         $isAutoAssignPack = in_array($tier, $autoAssignTiers, true) || ($min === 80 && $max === 89);
 
         $assignedTo = 'inventory';

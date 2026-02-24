@@ -532,7 +532,10 @@ startContent();
             const res = await fetch('api/use_item_api.php', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({action: 'open_pack', item_uuid: String(itemUuid || '').trim()})
+                body: JSON.stringify({
+                    action: 'open_pack',
+                    item_uuid: String(itemUuid || '').trim()
+                })
             });
             const data = await res.json();
             if (!res.ok || !data.success) {

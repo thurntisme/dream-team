@@ -35,11 +35,7 @@ try {
         }
         $db->close();
     } else {
-        if (isset($payload['inventory_id'])) {
-            $inventory_id = (int)$payload['inventory_id'];
-        } elseif (isset($payload['id'])) {
-            $inventory_id = (int)$payload['id'];
-        } elseif (isset($payload['item_id'])) {
+        if (isset($payload['item_id'])) {
             // Compatibility: resolve by item_id if provided
             $db = getDbConnection();
             $stmt = $db->prepare('SELECT id FROM user_inventory WHERE user_uuid = :user_uuid AND item_id = :item_id AND quantity > 0 ORDER BY id ASC LIMIT 1');
