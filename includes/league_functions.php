@@ -1431,17 +1431,11 @@ function updatePlayerConditions($db, $user_uuid, $wins, $draws, $losses, $goals_
     }
 
     // Decode JSON team data
-    $allPlayers = json_decode($userData['team'], true);
+    $team = json_decode($userData['team'], true);
 
-    if (!is_array($allPlayers)) {
+    if (!is_array($team)) {
         return;
     }
-
-    // Main squad + Substitutes
-    $team = array_slice($allPlayers, 0, 16);
-
-    // Substitutes (next 5 players)
-    $substitutes = array_slice($allPlayers, 11, 5);
 
     // Determine match performance
     $performance = 'average';
@@ -1460,7 +1454,8 @@ function updatePlayerConditions($db, $user_uuid, $wins, $draws, $losses, $goals_
         for ($i = 0; $i < count($team); $i++) {
             if ($team[$i]) {
                 // Players who played lose fitness but can gain/lose form
-                $team[$i] = updatePlayerFitness($team[$i], true, 0);
+                $is_played = $i < 16 ? true : false; // Assuming first 16 players are in the matchday squad
+                $team[$i] = updatePlayerFitness($team[$i], $is_played, 0);
                 $team[$i] = updatePlayerForm($team[$i], $performance);
                 $team[$i]['matches_played'] = ($team[$i]['matches_played'] ?? 0) + 1;
                 $team[$i]['last_match_date'] = date('Y-m-d');
@@ -1514,16 +1509,16 @@ function updatePlayerConditions($db, $user_uuid, $wins, $draws, $losses, $goals_
     }
 
     // Update user's matches played counter and check for nation calls
-    // $stmt = $db->prepare('UPDATE users SET matches_played = matches_played + 1 WHERE id = :user_id');
-    // $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
-    // $stmt->execute();
+    $stmt = $db->prepare('UPDATE user_club SET matches_played = matches_played + 1 WHERE user_uuid = :user_uuid');
+    $stmt->bindValue(':user_uuid', $user_uuid, SQLITE3_TEXT);
+    $stmt->execute();
 
     // Process nation calls if conditions are met
-    // $nationCallResult = processNationCalls($db, $user_uuid);
-    // if ($nationCallResult['success']) {
-    //     // Store nation call notification in session for display
-    //     $_SESSION['nation_call_notification'] = $nationCallResult;
-    // }
+    $nationCallResult = processNationCalls($db, $user_uuid);
+    if ($nationCallResult['success']) {
+        // Store nation call notification in session for display
+        $_SESSION['nation_call_notification'] = $nationCallResult;
+    }
 
     // Update player statistics
     $matchResult = 'draw'; // Default

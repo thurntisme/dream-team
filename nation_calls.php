@@ -9,19 +9,19 @@ require_once 'partials/layout.php';
 requireClubName('nation_calls');
 
 $db = getDbConnection();
-$userId = $_SESSION['user_id'];
+$userUuid = $_SESSION['user_uuid'];
 
 // Database tables are now created in install.php
 
 // Get user data
-$stmt = $db->prepare('SELECT * FROM users WHERE id = :id');
-$stmt->bindValue(':id', $userId, SQLITE3_INTEGER);
+$stmt = $db->prepare('SELECT * FROM user_club WHERE user_uuid = :user_uuid');
+$stmt->bindValue(':user_uuid', $userUuid, SQLITE3_TEXT);
 $result = $stmt->execute();
 $user = $result->fetchArray(SQLITE3_ASSOC);
 
 // Get nation call history and statistics
-$history = getNationCallHistory($db, $userId, 20);
-$stats = getNationCallStats($db, $userId);
+$history = getNationCallHistory($db, $userUuid, 20);
+$stats = getNationCallStats($db, $userUuid);
 
 // Calculate matches until next nation call
 $matchesPlayed = $user['matches_played'] ?? 0;

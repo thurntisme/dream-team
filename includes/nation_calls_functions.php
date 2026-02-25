@@ -22,30 +22,28 @@ if (!function_exists('processNationCalls')) {
     function processNationCalls($db, $user_uuid)
     {
         // Get user data
-        $stmt = $db->prepare('SELECT matches_played, team, substitutes FROM users WHERE id = :id');
-        $stmt->bindValue(':id', $user_id, SQLITE3_INTEGER);
+        $stmt = $db->prepare('SELECT matches_played, team FROM user_club WHERE user_uuid = :user_uuid');
+        $stmt->bindValue(':user_uuid', $user_uuid, SQLITE3_TEXT);
         $result = $stmt->execute();
-        $userData = $result->fetchArray(SQLITE3_ASSOC);
+        $userClubData = $result->fetchArray(SQLITE3_ASSOC);
     
-        if (!$userData) {
-            return ['success' => false, 'message' => 'User not found'];
+        if (!$userClubData) {
+            return ['success' => false, 'message' => 'User club data not found'];
         }
 
-        $matchesPlayed = $userData['matches_played'] ?? 0;
+        $matchesPlayed = $userClubData['matches_played'] ?? 0;
 
         // Check if nation calls should be triggered (every 8 matches)
         if ($matchesPlayed > 0 && $matchesPlayed % 8 === 0) {
             // Get all players
-            $team = json_decode($userData['team'] ?? '[]', true) ?: [];
-            $substitutes = json_decode($userData['substitutes'] ?? '[]', true) ?: [];
-            $allPlayers = array_merge(array_filter($team), array_filter($substitutes));
+            $team = json_decode($userClubData['team'] ?? '[]', true) ?: [];
 
-            if (empty($allPlayers)) {
+            if (empty($team)) {
                 return ['success' => false, 'message' => 'No players available'];
             }
 
             // Select best performing players for nation calls
-            $calledPlayers = selectPlayersForNationCall($allPlayers);
+            $calledPlayers = selectPlayersForNationCall($team);
 
             if (empty($calledPlayers)) {
                 return ['success' => false, 'message' => 'No players selected for nation call'];
@@ -59,13 +57,13 @@ if (!function_exists('processNationCalls')) {
             }
 
             // Update user budget
-            $stmt = $db->prepare('UPDATE users SET budget = budget + :reward WHERE id = :id');
+            $stmt = $db->prepare('UPDATE user_club SET budget = budget + :reward WHERE user_uuid = :user_uuid');
             $stmt->bindValue(':reward', $totalReward, SQLITE3_INTEGER);
-            $stmt->bindValue(':id', $user_id, SQLITE3_INTEGER);
+            $stmt->bindValue(':user_uuid', $user_uuid, SQLITE3_TEXT);
             $stmt->execute();
 
             // Save nation call record
-            saveNationCallRecord($db, $user_id, $calledPlayers, $totalReward);
+            saveNationCallRecord($db, $user_uuid, $calledPlayers, $totalReward);
 
             return [
                 'success' => true,
@@ -187,19 +185,9 @@ if (!function_exists('calculateNationCallReward')) {
  * @return bool Success status
  */
 if (!function_exists('saveNationCallRecord')) {
-    function saveNationCallRecord($db, $user_id, $calledPlayers, $totalReward)
+    function saveNationCallRecord($db, $user_uuid, $calledPlayers, $totalReward)
     {
         try {
-            // Resolve UUID from provided key (accepts legacy numeric id or uuid)
-            $user_uuid = $user_id;
-            if (!is_string($user_uuid) || strlen($user_uuid) < 16) {
-                $stmtUuid = $db->prepare('SELECT uuid FROM users WHERE id = :id LIMIT 1');
-                $stmtUuid->bindValue(':id', $user_id, SQLITE3_INTEGER);
-                $resUuid = $stmtUuid->execute();
-                $rowUuid = $resUuid ? $resUuid->fetchArray(SQLITE3_ASSOC) : null;
-                $user_uuid = $rowUuid['uuid'] ?? null;
-            }
-
             $stmt = $db->prepare('
                 INSERT INTO nation_calls (user_uuid, called_players, total_reward, call_date)
                 VALUES (:user_uuid, :called_players, :total_reward, NOW())
@@ -226,20 +214,10 @@ if (!function_exists('saveNationCallRecord')) {
  * @return array Nation call history
  */
 if (!function_exists('getNationCallHistory')) {
-    function getNationCallHistory($db, $user_id, $limit = 10)
+    function getNationCallHistory($db, $user_uuid, $limit = 10)
     {
         try {
             $limit = max(1, (int)$limit);
-            // Resolve UUID from provided key (accepts legacy numeric id or uuid)
-            $user_uuid = $user_id;
-            if (!is_string($user_uuid) || strlen($user_uuid) < 16) {
-                $stmtUuid = $db->prepare('SELECT uuid FROM users WHERE id = :id LIMIT 1');
-                $stmtUuid->bindValue(':id', $user_id, SQLITE3_INTEGER);
-                $resUuid = $stmtUuid->execute();
-                $rowUuid = $resUuid ? $resUuid->fetchArray(SQLITE3_ASSOC) : null;
-                $user_uuid = $rowUuid['uuid'] ?? null;
-            }
-
             $sql = '
                 SELECT * FROM nation_calls
                 WHERE user_uuid = :user_uuid
@@ -272,19 +250,9 @@ if (!function_exists('getNationCallHistory')) {
  * @return array Statistics
  */
 if (!function_exists('getNationCallStats')) {
-    function getNationCallStats($db, $user_id)
+    function getNationCallStats($db, $user_uuid)
     {
         try {
-            // Resolve UUID from provided key (accepts legacy numeric id or uuid)
-            $user_uuid = $user_id;
-            if (!is_string($user_uuid) || strlen($user_uuid) < 16) {
-                $stmtUuid = $db->prepare('SELECT uuid FROM users WHERE id = :id LIMIT 1');
-                $stmtUuid->bindValue(':id', $user_id, SQLITE3_INTEGER);
-                $resUuid = $stmtUuid->execute();
-                $rowUuid = $resUuid ? $resUuid->fetchArray(SQLITE3_ASSOC) : null;
-                $user_uuid = $rowUuid['uuid'] ?? null;
-            }
-
             $stmt = $db->prepare('
                 SELECT 
                     COUNT(*) as total_calls,
@@ -344,23 +312,21 @@ if (!function_exists('triggerNationCallsManually')) {
         $stmt = $db->prepare('SELECT team, substitutes FROM users WHERE id = :id');
         $stmt->bindValue(':id', $user_id, SQLITE3_INTEGER);
         $result = $stmt->execute();
-        $userData = $result->fetchArray(SQLITE3_ASSOC);
+        $userClubData = $result->fetchArray(SQLITE3_ASSOC);
 
-        if (!$userData) {
+        if (!$userClubData) {
             return ['success' => false, 'message' => 'User not found'];
         }
 
         // Get all players
-        $team = json_decode($userData['team'] ?? '[]', true) ?: [];
-        $substitutes = json_decode($userData['substitutes'] ?? '[]', true) ?: [];
-        $allPlayers = array_merge(array_filter($team), array_filter($substitutes));
+        $team = json_decode($userClubData['team'] ?? '[]', true) ?: [];
 
-        if (empty($allPlayers)) {
+        if (empty($team)) {
             return ['success' => false, 'message' => 'No players available'];
         }
 
         // Select best performing players for nation calls
-        $calledPlayers = selectPlayersForNationCall($allPlayers);
+        $calledPlayers = selectPlayersForNationCall($team);
 
         if (empty($calledPlayers)) {
             return ['success' => false, 'message' => 'No players selected for nation call'];

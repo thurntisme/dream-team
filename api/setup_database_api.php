@@ -92,6 +92,7 @@ try {
             fans INT DEFAULT 5000,
             club_exp INT DEFAULT 0,
             club_level INT DEFAULT 1,
+            matches_played INT DEFAULT 0,
             user_plan VARCHAR(20) DEFAULT "free",
             plan_expires_at DATETIME NULL,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
