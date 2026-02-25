@@ -1226,14 +1226,18 @@ startContent();
                                     <?php echo date('M j, Y', strtotime($match['match_date'])); ?>
                                 </div>
                                 <div class="flex items-center gap-2">
-                                    <span
-                                        class="font-medium <?php echo (($match['home_user_uuid'] ?? null) === $user['uuid']) ? 'text-blue-600' : ''; ?>">
+                                    <span class="font-medium <?php echo (($match['home_user_uuid'] ?? null) === $user['uuid']) ? 'text-blue-600' : ''; ?>">
                                         <?php echo htmlspecialchars($match['home_team']); ?>
+                                        <?php if (($match['home_user_uuid'] ?? null) === $user['uuid']): ?>
+                                            <span class="ml-1 px-2 py-0.5 rounded bg-blue-100 text-blue-700 text-xs font-semibold align-middle">H</span>
+                                        <?php endif; ?>
                                     </span>
                                     <span class="text-gray-400">vs</span>
-                                    <span
-                                        class="font-medium <?php echo (($match['away_user_uuid'] ?? null) === $user['uuid']) ? 'text-blue-600' : ''; ?>">
+                                    <span class="font-medium <?php echo (($match['away_user_uuid'] ?? null) === $user['uuid']) ? 'text-blue-600' : ''; ?>">
                                         <?php echo htmlspecialchars($match['away_team']); ?>
+                                        <?php if (($match['away_user_uuid'] ?? null) === $user['uuid']): ?>
+                                            <span class="ml-1 px-2 py-0.5 rounded bg-green-100 text-green-700 text-xs font-semibold align-middle">A</span>
+                                        <?php endif; ?>
                                     </span>
                                 </div>
                             </div>
@@ -1241,11 +1245,9 @@ startContent();
                             <?php if ($match['status'] === 'scheduled' && ((($match['home_user_uuid'] ?? null) === $user['uuid']) || (($match['away_user_uuid'] ?? null) === $user['uuid']))): ?>
                                 <?php if ($match['gameweek'] == $current_gameweek): ?>
                                     <?php if ($current_validation['is_valid']): ?>
-                                        <button type="button" data-uuid="<?php echo htmlspecialchars($match['uuid'] ?? ''); ?>"
-                                            class="play-match-btn bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700"
-                                            title="Play your next scheduled league match">
-                                            Play Match
-                                        </button>
+                                        <span class="play-match-btn bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700">
+                                            Next Match
+                                        </span>
                                     <?php else: ?>
                                         <div class="flex items-center gap-2">
                                             <button disabled class="bg-gray-400 text-white px-3 py-1 rounded text-sm cursor-not-allowed"
@@ -1286,29 +1288,6 @@ startContent();
             <?php endif; ?>
         </div>
     </div>
-    <script>
-        (function() {
-            const btns = document.querySelectorAll('.play-match-btn');
-            btns.forEach(function (btn) {
-                btn.addEventListener('click', async function () {
-                    const original = btn.innerHTML;
-                    btn.disabled = true;
-                    btn.classList.add('opacity-50');
-                    const u = btn.dataset.uuid;
-                    if (u) {
-                        window.location.href = 'match-simulator.php?uuid=' + encodeURIComponent(u);
-                    } else {
-                        alert('Match UUID not available.');
-                    }
-                    setTimeout(function() {
-                        btn.disabled = false;
-                        btn.classList.remove('opacity-50');
-                        btn.innerHTML = original;
-                    }, 100);
-                });
-            });
-        })();
-    </script>
 
     <!-- League History Tab -->
     <div id="league-history-tab" class="tab-content hidden">

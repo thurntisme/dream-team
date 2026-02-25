@@ -225,8 +225,8 @@ try {
             break;
 
         case 'item':
-            // Get a randome item from table shop_items where type = 'player_pack'
-            $stmt = $db->prepare('SELECT * FROM shop_items WHERE type = "player_pack" ORDER BY RANDOM() LIMIT 1');
+            // Get a randome item from table shop_items where effect_type = 'player_pack'
+            $stmt = $db->prepare('SELECT * FROM shop_items WHERE effect_type = "player_pack" ORDER BY RANDOM() LIMIT 1');
             $result = $stmt->execute();
             $pack = $result ? $result->fetchArray(SQLITE3_ASSOC) : null;
             if (!$pack) {
