@@ -119,7 +119,7 @@ startContent();
             .trim();
     }
     // Best Line-up Logic
-    $('#bestLineup').click(function() {
+    $('#bestLineup').click(function () {
         // 1. Gather all current players (Starting + Subs)
         let squad = [];
         selectedPlayers.forEach(p => {
@@ -289,7 +289,7 @@ startContent();
 
     // UUID generation function
     function generateUUID() {
-        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
             var r = Math.random() * 16 | 0,
                 v = c == 'x' ? r : (r & 0x3 | 0x8);
             return v.toString(16);
@@ -459,7 +459,7 @@ startContent();
 
     // Get contract status information
     function getContractStatus(player) {
-        const remaining = player.contract_matches_remaining || player.contract_matches || 25;
+        const remaining = player.contract_matches_remaining;
 
         if (remaining <= 0) {
             return {
@@ -879,7 +879,7 @@ startContent();
 
         // Update challenge status
         const canChallenge = playerCount >= 11;
-        const $challengeStatus = $('.text-lg.font-bold').filter(function() {
+        const $challengeStatus = $('.text-lg.font-bold').filter(function () {
             return $(this).text() === 'Ready' || $(this).text() === 'Not Ready';
         });
 
@@ -981,7 +981,7 @@ startContent();
                     formation: $('#formation').val(),
                     team: JSON.stringify(selectedPlayers),
                     substitutes: JSON.stringify(substitutePlayers)
-                }, function(response) {
+                }, function (response) {
                     if (response.success) {
                         Swal.fire({
                             icon: 'success',
@@ -1007,7 +1007,7 @@ startContent();
                             confirmButtonColor: '#ef4444'
                         });
                     }
-                }, 'json').fail(function() {
+                }, 'json').fail(function () {
                     // If request failed, revert the change
                     substitutePlayers[idx] = player;
                     renderSubstitutes();
@@ -1053,7 +1053,7 @@ startContent();
                 formation: $('#formation').val(),
                 team: JSON.stringify(selectedPlayers),
                 substitutes: JSON.stringify(substitutePlayers)
-            }, function(response) {
+            }, function (response) {
                 if (response.success) {
                     Swal.fire({
                         icon: 'success',
@@ -1080,7 +1080,7 @@ startContent();
                         confirmButtonColor: '#ef4444'
                     });
                 }
-            }, 'json').fail(function() {
+            }, 'json').fail(function () {
                 // If request failed, revert the change
                 selectedPlayers[emptyStartingSlot] = null;
                 substitutePlayers[subIdx] = substitute;
@@ -1176,7 +1176,7 @@ startContent();
             formation: $('#formation').val(),
             team: JSON.stringify(selectedPlayers),
             substitutes: JSON.stringify(substitutePlayers)
-        }, function(response) {
+        }, function (response) {
             if (response.success) {
                 Swal.fire({
                     icon: 'success',
@@ -1203,7 +1203,7 @@ startContent();
                     confirmButtonColor: '#ef4444'
                 });
             }
-        }, 'json').fail(function() {
+        }, 'json').fail(function () {
             // If request failed, revert the change
             selectedPlayers[startingIdx] = startingPlayer;
             substitutePlayers[subIdx] = substitute;
@@ -1294,7 +1294,7 @@ startContent();
             formation: $('#formation').val(),
             team: JSON.stringify(selectedPlayers),
             substitutes: JSON.stringify(substitutePlayers)
-        }, function(response) {
+        }, function (response) {
             if (response.success) {
                 Swal.fire({
                     icon: 'success',
@@ -1333,7 +1333,7 @@ startContent();
                     confirmButtonColor: '#ef4444'
                 });
             }
-        }, 'json').fail(function() {
+        }, 'json').fail(function () {
             // If request failed, revert the change
             selectedPlayers[startingIdx] = startingPlayer;
             substitutePlayers[subIdx] = substitute;
@@ -1475,20 +1475,31 @@ startContent();
         $('#selectedPlayerNationality').text(player.nation || player.nationality || 'Unknown');
 
         // Update contract (remaining matches)
-        const remainingMatches = player.contract_remaining || player.contract_matches_remaining || player.contract_matches || 0;
+        const remainingMatches = player.contract_matches_remaining || 0;
         const contractColor = remainingMatches <= 5 ? 'text-red-600' : remainingMatches <= 10 ? 'text-yellow-600' : 'text-gray-900';
         $('#selectedPlayerContract').html(`<span class="${contractColor}">${remainingMatches} matches</span>`);
+        // find in #field and update contract info there as well
+        $(`#field .player-slot[data-idx="${selectedPlayerIdx}"] .contract-status`).html(
+            `<div class="w-6 h-6 rounded-lg border ${getContractStatus(player).bg} ${getContractStatus(player).border} flex items-center justify-center" title="Contract: ${player.contract_matches_remaining} matches remaining">
+                                                <div class="text-sm font-medium ${getContractStatus(player).color}">
+                                                    <i data-lucide="receipt" class="w-3 h-3"></i>
+                                                </div>
+                                            </div>`
+        );
+        if (remainingMatches > 15) {
+            $(`#field .player-slot[data-idx="${selectedPlayerIdx}"] .contract-status`).remove();
+        }
 
         // Update salary
         const salary = player.salary || 0;
         $('#selectedPlayerSalary').text(formatMarketValue(salary) + '/week');
 
         // Update action buttons
-        $('#playerInfoBtn').off('click').on('click', function() {
+        $('#playerInfoBtn').off('click').on('click', function () {
             showPlayerInfo(player);
         });
 
-        $('#changePlayerBtn').off('click').on('click', function() {
+        $('#changePlayerBtn').off('click').on('click', function () {
             if (context === 'team') {
                 choosePlayer(selectedPlayerIdx);
             } else {
@@ -1499,7 +1510,7 @@ startContent();
             }
         });
 
-        $('#removePlayerBtn').off('click').on('click', function() {
+        $('#removePlayerBtn').off('click').on('click', function () {
             if (context === 'team') {
                 removePlayer(selectedPlayerIdx);
             } else {
@@ -1508,13 +1519,13 @@ startContent();
         });
 
         // Update renew contract button
-        $('#renewContractBtn').off('click').on('click', function() {
+        $('#renewContractBtn').off('click').on('click', function () {
             renewPlayerContract(player, context === 'team' ? selectedPlayerIdx : selectedSubIdx);
         });
 
-        
+
         // Upgrade Fitness button handler
-        $('#upgradePlayerFitnessBtn').off('click').on('click', function() {
+        $('#upgradePlayerFitnessBtn').off('click').on('click', function () {
             const fitness = player.fitness || 0;
             if (fitness >= 100) {
                 Swal.fire({
@@ -1571,7 +1582,7 @@ startContent();
                     });
                     $.post('api/upgrade_team_fitness_api.php', {
                         player_uuid: player.uuid
-                    }, function(response) {
+                    }, function (response) {
                         if (response.success) {
                             player.fitness = 100;
                             if (context === 'team') {
@@ -1601,7 +1612,7 @@ startContent();
                                 confirmButtonColor: '#ef4444'
                             });
                         }
-                    }, 'json').fail(function() {
+                    }, 'json').fail(function () {
                         Swal.fire({
                             icon: 'error',
                             title: 'Connection Error',
@@ -1614,7 +1625,7 @@ startContent();
         });
 
         // Upgrade Form button handler
-        $('#upgradePlayerFormBtn').off('click').on('click', function() {
+        $('#upgradePlayerFormBtn').off('click').on('click', function () {
             const form = player.form || 7;
             if (form >= 10) {
                 Swal.fire({
@@ -1671,7 +1682,7 @@ startContent();
                     });
                     $.post('api/upgrade_team_form_api.php', {
                         player_uuid: player.uuid
-                    }, function(response) {
+                    }, function (response) {
                         if (response.success) {
                             player.form = 10.0;
                             if (context === 'team') {
@@ -1701,7 +1712,7 @@ startContent();
                                 confirmButtonColor: '#ef4444'
                             });
                         }
-                    }, 'json').fail(function() {
+                    }, 'json').fail(function () {
                         Swal.fire({
                             icon: 'error',
                             title: 'Connection Error',
@@ -1735,11 +1746,11 @@ startContent();
                             </div>
                             <div class="flex justify-between mb-1">
                                 <span class="text-gray-600">Current Contract:</span>
-                                <span class="font-medium">${player.contract_remaining || 0} matches</span>
+                                <span class="font-medium">${player.contract_matches_remaining || 0} matches</span>
                             </div>
                             <div class="flex justify-between">
                                 <span class="text-gray-600">After Renewal:</span>
-                                <span class="font-medium text-green-600">${(player.contract_remaining || 0) + contractExtension} matches</span>
+                                <span class="font-medium text-green-600">${(player.contract_matches_remaining || 0) + contractExtension} matches</span>
                             </div>
                         </div>
                     </div>
@@ -1779,10 +1790,10 @@ startContent();
                     player_uuid: player.uuid,
                     renewal_cost: renewalCost,
                     contract_extension: contractExtension
-                }, function(response) {
+                }, function (response) {
                     if (response.success) {
                         // Update local player data
-                        player.contract_remaining = (player.contract_remaining || 0) + contractExtension;
+                        player.contract_matches_remaining = (player.contract_matches_remaining || 0) + contractExtension;
                         selectedPlayers[playerIdx] = player;
 
                         // Update budget
@@ -1801,7 +1812,7 @@ startContent();
                             html: `
                                 <div class="text-center">
                                     <p class="mb-2">${player.name}'s contract has been extended!</p>
-                                    <p class="text-sm text-gray-600">New contract: ${player.contract_remaining} matches</p>
+                                    <p class="text-sm text-gray-600">New contract: ${player.contract_matches_remaining} matches</p>
                                     <p class="text-sm text-blue-600">Remaining Budget: ${formatMarketValue(response.new_budget)}</p>
                                 </div>
                             `,
@@ -1818,7 +1829,7 @@ startContent();
                             confirmButtonColor: '#3b82f6'
                         });
                     }
-                }).fail(function() {
+                }).fail(function () {
                     Swal.fire({
                         icon: 'error',
                         title: 'Error',
@@ -1909,7 +1920,7 @@ startContent();
                     formation: $('#formation').val(),
                     team: JSON.stringify(selectedPlayers),
                     substitutes: JSON.stringify(substitutePlayers)
-                }, function(response) {
+                }, function (response) {
                     if (response.success) {
                         Swal.fire({
                             icon: 'success',
@@ -1935,7 +1946,7 @@ startContent();
                             confirmButtonColor: '#ef4444'
                         });
                     }
-                }, 'json').fail(function() {
+                }, 'json').fail(function () {
                     // If request failed, revert the change
                     selectedPlayers[idx] = player;
                     renderPlayers();
@@ -1969,45 +1980,45 @@ startContent();
     // Generate player avatar HTML
     function getPlayerAvatarHtml(playerName, imageUrl = null) {
         const colors = [{
-                bg: 'bg-blue-600',
-                text: 'text-white'
-            },
-            {
-                bg: 'bg-green-600',
-                text: 'text-white'
-            },
-            {
-                bg: 'bg-purple-600',
-                text: 'text-white'
-            },
-            {
-                bg: 'bg-red-600',
-                text: 'text-white'
-            },
-            {
-                bg: 'bg-yellow-600',
-                text: 'text-white'
-            },
-            {
-                bg: 'bg-indigo-600',
-                text: 'text-white'
-            },
-            {
-                bg: 'bg-pink-600',
-                text: 'text-white'
-            },
-            {
-                bg: 'bg-teal-600',
-                text: 'text-white'
-            },
-            {
-                bg: 'bg-orange-600',
-                text: 'text-white'
-            },
-            {
-                bg: 'bg-cyan-600',
-                text: 'text-white'
-            }
+            bg: 'bg-blue-600',
+            text: 'text-white'
+        },
+        {
+            bg: 'bg-green-600',
+            text: 'text-white'
+        },
+        {
+            bg: 'bg-purple-600',
+            text: 'text-white'
+        },
+        {
+            bg: 'bg-red-600',
+            text: 'text-white'
+        },
+        {
+            bg: 'bg-yellow-600',
+            text: 'text-white'
+        },
+        {
+            bg: 'bg-indigo-600',
+            text: 'text-white'
+        },
+        {
+            bg: 'bg-pink-600',
+            text: 'text-white'
+        },
+        {
+            bg: 'bg-teal-600',
+            text: 'text-white'
+        },
+        {
+            bg: 'bg-orange-600',
+            text: 'text-white'
+        },
+        {
+            bg: 'bg-cyan-600',
+            text: 'text-white'
+        }
         ];
 
         // Get initials from player name
@@ -2183,12 +2194,28 @@ startContent();
                                     <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-lg border-2 ${colors.border} transition-all duration-200 player-circle ${isSelected ? 'ring-4 ring-yellow-400 ring-opacity-80' : ''} overflow-hidden">
                                         ${getPlayerAvatarHtml(player.name, player.avatar)}
                                     </div>
-                                    
-                                    <!-- Form Icon -->
-                                    <div class="form-icon absolute top-0 -right-2 rounded-full shadow-md ring-1 ring-white z-10 overflow-hidden">
-                                        <div class="w-6 h-6 flex items-center justify-center ${formBadgeColor}"  title="Form: ${form.toFixed(1)}">
-                                            ${formArrowIcon}
+
+                                    <div class="absolute -top-1 -right-2 flex flex-col justify-start space-y-1">
+
+                                        <!-- Form Icon -->
+                                        <div class="form-icon rounded-full shadow-md ring-1 ring-white z-10 overflow-hidden">
+                                            <div class="w-6 h-6 flex items-center justify-center ${formBadgeColor}"  title="Form: ${form.toFixed(1)}">
+                                                ${formArrowIcon}
+                                            </div>
                                         </div>
+
+                ${getContractStatus(player).urgency != 'none' ? `
+                                        <!-- Player Contract Status -->
+                                        <div class="contract-status rounded-full shadow-md ring-1 ring-white z-10 overflow-hidden">
+                                            <div class="w-6 h-6 rounded-lg border ${getContractStatus(player).bg} ${getContractStatus(player).border} flex items-center justify-center" title="Contract: ${player.contract_matches_remaining} matches remaining">
+                                                <div class="text-sm font-medium ${getContractStatus(player).color}">
+                                                    <i data-lucide="receipt" class="w-3 h-3"></i>
+                                                </div>
+                                            </div>
+                                        </div>
+                    `      : ''
+                        }
+
                                     </div>
 
                                     <!-- Fitness progress bar -->
@@ -2243,12 +2270,12 @@ startContent();
         lucide.createIcons();
 
         // Click handlers
-        $('.player-slot').click(function() {
+        $('.player-slot').click(function () {
             const idx = $(this).data('idx');
             selectPlayer(idx);
         });
 
-        $('.empty-slot').click(function() {
+        $('.empty-slot').click(function () {
             const idx = $(this).data('idx');
             if (selectedSubIdx !== null) {
                 performPlayerSwitch(idx, selectedSubIdx);
@@ -2260,7 +2287,7 @@ startContent();
 
         // Hover effects
         $('.player-slot').hover(
-            function() {
+            function () {
                 const idx = $(this).data('idx');
                 const isSelected = selectedPlayerIdx === idx;
 
@@ -2276,7 +2303,7 @@ startContent();
                     }
                 }
             },
-            function() {
+            function () {
                 const idx = $(this).data('idx');
                 const isSelected = selectedPlayerIdx === idx;
 
@@ -2289,14 +2316,14 @@ startContent();
         );
 
         // Right-click context menu for quick removal
-        $('.player-slot').on('contextmenu', function(e) {
+        $('.player-slot').on('contextmenu', function (e) {
             e.preventDefault();
             const idx = $(this).data('idx');
             removePlayer(idx);
         });
 
         // Click on field background to clear selection
-        $('#field-wrapper').off('click').on('click', function(e) {
+        $('#field-wrapper').off('click').on('click', function (e) {
             const $t = $(e.target);
             const clickedOnInteractive = $t.closest('.player-slot, .empty-slot, .action-buttons, .hover-switch-btn').length > 0;
             if (!clickedOnInteractive) {
@@ -2508,7 +2535,7 @@ startContent();
         }
 
         // Handle modal player selection
-        window.selectModalPlayer = function(idx) {
+        window.selectModalPlayer = function (idx) {
             if (idx !== undefined) {
                 const player = players[idx];
 
@@ -2557,7 +2584,7 @@ startContent();
                         formation: $('#formation').val(),
                         team: JSON.stringify(selectedPlayers),
                         substitutes: JSON.stringify(substitutePlayers)
-                    }, function(response) {
+                    }, function (response) {
                         if (response.success) {
                             closeModal('playerModal');
                             isSelectingSubstitute = false;
@@ -2589,7 +2616,7 @@ startContent();
                                 confirmButtonColor: '#3b82f6'
                             });
                         }
-                    }).fail(function() {
+                    }).fail(function () {
                         Swal.fire({
                             icon: 'error',
                             title: 'Error',
@@ -2748,7 +2775,7 @@ startContent();
                             substitutes: JSON.stringify(substitutePlayers),
                             player_cost: player.value || 0,
                             player_uuid: player.uuid
-                        }, function(response) {
+                        }, function (response) {
                             if (response.success) {
                                 // Update local budget variable
                                 maxBudget = response.new_budget;
@@ -2802,7 +2829,7 @@ startContent();
                                     confirmButtonColor: '#ef4444'
                                 });
                             }
-                        }, 'json').fail(function() {
+                        }, 'json').fail(function () {
                             // Revert the change if request failed
                             if (isSelectingSubstitute) {
                                 substitutePlayers[currentSlotIdx] = null;
@@ -2829,16 +2856,16 @@ startContent();
     }
 
 
-    $('#playerSearch').on('input', function() {
+    $('#playerSearch').on('input', function () {
         renderModalPlayers($(this).val());
     });
 
-    $('#closeModal').click(function() {
+    $('#closeModal').click(function () {
         closeModal('playerModal');
         isSelectingSubstitute = false;
     });
 
-    $('#playerModal').click(function(e) {
+    $('#playerModal').click(function (e) {
         if (e.target === this) {
             closeModal('playerModal');
             isSelectingSubstitute = false;
@@ -2847,7 +2874,7 @@ startContent();
 
 
 
-    $('#formation').change(function() {
+    $('#formation').change(function () {
         const formation = $('#formation').val();
         const newFormation = formations[formation];
         const newRoles = newFormation.roles;
@@ -2890,7 +2917,7 @@ startContent();
         renderField();
     });
 
-    $('#resetTeam').click(function() {
+    $('#resetTeam').click(function () {
         Swal.fire({
             icon: 'warning',
             title: 'Reset Team?',
@@ -2907,7 +2934,7 @@ startContent();
         });
     });
 
-    $('#saveTeam').click(function() {
+    $('#saveTeam').click(function () {
         const filledSlots = selectedPlayers.filter(p => p !== null).length;
         const totalSlots = selectedPlayers.length;
 
@@ -2941,7 +2968,7 @@ startContent();
                     formation: $('#formation').val(),
                     team: JSON.stringify(selectedPlayers),
                     substitutes: JSON.stringify(substitutePlayers)
-                }, function(response) {
+                }, function (response) {
                     if (response.redirect) {
                         window.location.href = response.redirect;
                     } else if (response.success) {
@@ -2965,7 +2992,7 @@ startContent();
                             confirmButtonColor: '#ef4444'
                         });
                     }
-                }, 'json').fail(function() {
+                }, 'json').fail(function () {
                     Swal.fire({
                         icon: 'error',
                         title: 'Connection Error',
@@ -3223,7 +3250,7 @@ startContent();
     }
 
     // Contract renewal functionality
-    window.renewContract = function(playerUuid, playerName, currentRemaining) {
+    window.renewContract = function (playerUuid, playerName, currentRemaining) {
         const renewalCost = Math.floor(Math.random() * 5000000) + 2000000; // €2M - €7M
         const newMatches = Math.floor(Math.random() * 21) + 20; // 20-40 new matches
 
@@ -3275,7 +3302,7 @@ startContent();
                     player_uuid: playerUuid,
                     renewal_cost: renewalCost,
                     new_matches: newMatches
-                }, function(response) {
+                }, function (response) {
                     if (response.success) {
                         // Update local budget
                         maxBudget = response.new_budget;
@@ -3316,7 +3343,7 @@ startContent();
                             confirmButtonColor: '#ef4444'
                         });
                     }
-                }, 'json').fail(function() {
+                }, 'json').fail(function () {
                     Swal.fire({
                         icon: 'error',
                         title: 'Connection Error',
@@ -3329,7 +3356,7 @@ startContent();
     };
 
     // Card level upgrade functionality
-    window.upgradeCardLevel = function(playerUuid, playerName, currentCardLevel, playerValue) {
+    window.upgradeCardLevel = function (playerUuid, playerName, currentCardLevel, playerValue) {
         const upgradeCost = getCardLevelUpgradeCost(currentCardLevel, playerValue);
         const newCardLevel = currentCardLevel + 1;
         const cardInfo = getCardLevelDisplayInfo(newCardLevel);
@@ -3555,7 +3582,7 @@ startContent();
         $.post('api/upgrade_card_level_api.php', {
             player_uuid: playerUuid,
             player_type: playerType
-        }, function(response) {
+        }, function (response) {
             if (response.success) {
                 // Update local budget
                 maxBudget = response.new_budget;
@@ -3678,7 +3705,7 @@ startContent();
                     confirmButtonColor: '#ef4444'
                 });
             }
-        }, 'json').fail(function() {
+        }, 'json').fail(function () {
             Swal.fire({
                 icon: 'error',
                 title: 'Connection Error',
@@ -3689,7 +3716,7 @@ startContent();
     }
 
     // Training functionality (only if button exists)
-    $('#trainAllBtn').click(function() {
+    $('#trainAllBtn').click(function () {
         Swal.fire({
             icon: 'question',
             title: 'Train All Players?',
@@ -3731,9 +3758,9 @@ startContent();
 
                 // Send training request
                 $.post('api/train_players_api.php', {
-                        action: 'train_all'
-                    })
-                    .done(function(response) {
+                    action: 'train_all'
+                })
+                    .done(function (response) {
                         if (response.success) {
                             // Handle level up notification first
                             if (response.level_up) {
@@ -3770,7 +3797,7 @@ startContent();
                             });
                         }
                     })
-                    .fail(function() {
+                    .fail(function () {
                         Swal.fire({
                             icon: 'error',
                             title: 'Training Failed',
@@ -3783,7 +3810,7 @@ startContent();
     });
 
     // Daily Recovery functionality
-    $('#dailyRecoveryBtn').click(function() {
+    $('#dailyRecoveryBtn').click(function () {
         Swal.fire({
             icon: 'question',
             title: 'Process Daily Recovery?',
@@ -3819,9 +3846,9 @@ startContent();
 
                 // Send recovery request
                 $.post('api/daily_recovery_api.php', {
-                        action: 'process_daily_recovery'
-                    })
-                    .done(function(response) {
+                    action: 'process_daily_recovery'
+                })
+                    .done(function (response) {
                         if (response.success) {
                             let resultHtml = '<div class="text-left">';
 
@@ -3868,7 +3895,7 @@ startContent();
                             });
                         }
                     })
-                    .fail(function() {
+                    .fail(function () {
                         Swal.fire({
                             icon: 'error',
                             title: 'Recovery Failed',
@@ -3912,11 +3939,11 @@ startContent();
     }
 
     // Close player info modal
-    $('#closePlayerInfoModal ').click(function() {
+    $('#closePlayerInfoModal ').click(function () {
         closeModal('playerInfoModal');
     });
 
-    $('#playerInfoModal').click(function(e) {
+    $('#playerInfoModal').click(function (e) {
         if (e.target === this) {
             closeModal('playerInfoModal');
         }
@@ -3926,11 +3953,11 @@ startContent();
     let currentRecommendations = [];
 
     // Open recommendations modal with cost confirmation
-    $('#recommendPlayersBtn').click(function() {
+    $('#recommendPlayersBtn').click(function () {
         // First get the cost
         $.post('api/recommend_players_api.php', {
             action: 'get_cost'
-        }, function(response) {
+        }, function (response) {
             if (response.success) {
                 showRecommendationCostConfirmation(response.cost, response.formatted_cost);
             } else {
@@ -3941,7 +3968,7 @@ startContent();
                     confirmButtonColor: '#ef4444'
                 });
             }
-        }, 'json').fail(function() {
+        }, 'json').fail(function () {
             Swal.fire({
                 icon: 'error',
                 title: 'Connection Error',
@@ -4084,24 +4111,24 @@ startContent();
     }
 
     // Close recommendations modal
-    $('#closeRecommendationsModal, #closeRecommendationsModalFooter').click(function() {
+    $('#closeRecommendationsModal, #closeRecommendationsModalFooter').click(function () {
         closeModal('recommendationsModal');
     });
 
     // Close modal when clicking outside
-    $('#recommendationsModal').click(function(e) {
+    $('#recommendationsModal').click(function (e) {
         if (e.target === this) {
             closeModal('recommendationsModal');
         }
     });
 
     // Retry button
-    $('#retryRecommendations').click(function() {
+    $('#retryRecommendations').click(function () {
         loadRecommendations();
     });
 
     // Filter recommendations
-    $('.recommendation-filter').click(function() {
+    $('.recommendation-filter').click(function () {
         $('.recommendation-filter').removeClass('active bg-blue-600 text-white').addClass('bg-gray-200 text-gray-700');
         $(this).removeClass('bg-gray-200 text-gray-700').addClass('active bg-blue-600 text-white');
 
@@ -4122,45 +4149,45 @@ startContent();
         let progressInterval = null;
 
         const analysisSteps = [{
-                text: 'Initializing AI analysis engine...',
-                duration: 800
-            },
-            {
-                text: 'Scanning current team composition...',
-                duration: 1200
-            },
-            {
-                text: 'Analyzing formation requirements...',
-                duration: 1000
-            },
-            {
-                text: 'Evaluating player ratings and positions...',
-                duration: 1500
-            },
-            {
-                text: 'Identifying team weaknesses...',
-                duration: 1000
-            },
-            {
-                text: 'Searching player database...',
-                duration: 1800
-            },
-            {
-                text: 'Calculating compatibility scores...',
-                duration: 1200
-            },
-            {
-                text: 'Applying budget constraints...',
-                duration: 800
-            },
-            {
-                text: 'Ranking recommendations by priority...',
-                duration: 1000
-            },
-            {
-                text: 'Finalizing analysis results...',
-                duration: 600
-            }
+            text: 'Initializing AI analysis engine...',
+            duration: 800
+        },
+        {
+            text: 'Scanning current team composition...',
+            duration: 1200
+        },
+        {
+            text: 'Analyzing formation requirements...',
+            duration: 1000
+        },
+        {
+            text: 'Evaluating player ratings and positions...',
+            duration: 1500
+        },
+        {
+            text: 'Identifying team weaknesses...',
+            duration: 1000
+        },
+        {
+            text: 'Searching player database...',
+            duration: 1800
+        },
+        {
+            text: 'Calculating compatibility scores...',
+            duration: 1200
+        },
+        {
+            text: 'Applying budget constraints...',
+            duration: 800
+        },
+        {
+            text: 'Ranking recommendations by priority...',
+            duration: 1000
+        },
+        {
+            text: 'Finalizing analysis results...',
+            duration: 600
+        }
         ];
 
         // Update loading content with progress bar
@@ -4279,7 +4306,7 @@ startContent();
     function loadActualRecommendations() {
         $.post('api/recommend_players_api.php', {
             action: 'get_recommendations'
-        }, function(response) {
+        }, function (response) {
             $('#recommendationsLoading').addClass('hidden');
 
             if (response.success) {
@@ -4337,7 +4364,7 @@ startContent();
                     $('#recommendationsError').removeClass('hidden');
                 }
             }
-        }, 'json').fail(function() {
+        }, 'json').fail(function () {
             $('#recommendationsLoading').addClass('hidden');
             $('#recommendationsError').removeClass('hidden');
         });
@@ -4459,7 +4486,7 @@ startContent();
 
     // Filter recommendations by priority
     function filterRecommendations(filter) {
-        $('.recommendation-item').each(function() {
+        $('.recommendation-item').each(function () {
             const priority = $(this).data('priority');
             if (filter === 'all' || priority === filter) {
                 $(this).removeClass('hidden');
@@ -4470,7 +4497,7 @@ startContent();
     }
 
     // Select recommended player
-    window.selectRecommendedPlayer = function(player) {
+    window.selectRecommendedPlayer = function (player) {
         // Close recommendations modal
         closeModal('recommendationsModal');
 
@@ -4596,7 +4623,7 @@ startContent();
     window.showPlayerInfo = showPlayerInfo;
 
     // Quick search for substitute functionality
-    $('#quickSearchSubstitute').on('click', function() {
+    $('#quickSearchSubstitute').on('click', function () {
         const maxSubstitutes = maxPlayers - 11;
 
         // Ensure substitutePlayers array has the correct length
@@ -4637,7 +4664,7 @@ startContent();
     });
 
     // Team Fitness Upgrade
-    $('#upgradeFitnessBtn').click(function() {
+    $('#upgradeFitnessBtn').click(function () {
         // Calculate estimated cost (client-side estimation)
         let totalCost = 0;
         let playersToHeal = 0;
@@ -4734,7 +4761,7 @@ startContent();
                 });
 
                 // Call API
-                $.post('api/upgrade_team_fitness_api.php', {}, function(response) {
+                $.post('api/upgrade_team_fitness_api.php', {}, function (response) {
                     if (response.success) {
                         // Update local data
                         if (response.updated_team) {
@@ -4774,7 +4801,7 @@ startContent();
                             confirmButtonColor: '#ef4444'
                         });
                     }
-                }, 'json').fail(function() {
+                }, 'json').fail(function () {
                     Swal.fire({
                         icon: 'error',
                         title: 'Connection Error',
@@ -4787,7 +4814,7 @@ startContent();
     });
 
     // Team Form Upgrade
-    $('#upgradeFormBtn').click(function() {
+    $('#upgradeFormBtn').click(function () {
         // Calculate estimated cost (client-side estimation)
         let totalCost = 0;
         let playersToBoost = 0;
@@ -4884,7 +4911,7 @@ startContent();
                 });
 
                 // Call API
-                $.post('api/upgrade_team_form_api.php', {}, function(response) {
+                $.post('api/upgrade_team_form_api.php', {}, function (response) {
                     if (response.success) {
                         // Update local data
                         if (response.updated_team) {
@@ -4924,7 +4951,7 @@ startContent();
                             confirmButtonColor: '#ef4444'
                         });
                     }
-                }, 'json').fail(function() {
+                }, 'json').fail(function () {
                     Swal.fire({
                         icon: 'error',
                         title: 'Connection Error',
@@ -4937,14 +4964,14 @@ startContent();
     });
 
     // Export dropdown behavior
-    $('#exportDropdownBtn').on('click', function(e) {
+    $('#exportDropdownBtn').on('click', function (e) {
         e.stopPropagation();
         $('#exportDropdown').toggleClass('hidden');
         if (typeof lucide !== 'undefined') {
             lucide.createIcons();
         }
     });
-    $(document).on('click', function(e) {
+    $(document).on('click', function (e) {
         const $menu = $('#exportDropdown');
         const $btn = $('#exportDropdownBtn');
         if (!$menu.hasClass('hidden')) {
@@ -4955,7 +4982,7 @@ startContent();
     });
 
     // Export team line-up field as PNG
-    $('#exportPngOption').on('click', function() {
+    $('#exportPngOption').on('click', function () {
         $('#exportDropdown').addClass('hidden');
         const fieldEl = document.getElementById('field-wrapper');
         if (!fieldEl) {
@@ -4970,7 +4997,7 @@ startContent();
 
         const $transient = $(fieldEl).find('.action-buttons, .hover-switch-btn');
         const prevStyles = [];
-        $transient.each(function() {
+        $transient.each(function () {
             prevStyles.push($(this).attr('style'));
             $(this).css('display', 'none');
         });
@@ -4992,7 +5019,7 @@ startContent();
                 confirmButtonColor: '#ef4444'
             });
         }).finally(() => {
-            $transient.each(function(i) {
+            $transient.each(function (i) {
                 const s = prevStyles[i];
                 if (s !== undefined && s !== null) {
                     $(this).attr('style', s);
@@ -5003,7 +5030,7 @@ startContent();
         });
     });
 
-    $('#exportJsonOption').on('click', function() {
+    $('#exportJsonOption').on('click', function () {
         $('#exportDropdown').addClass('hidden');
         const uuids = [];
         const addUuid = (p) => {
@@ -5035,16 +5062,16 @@ startContent();
     });
 
     // Import team from JSON
-    $('#importJsonOption').on('click', function() {
+    $('#importJsonOption').on('click', function () {
         $('#exportDropdown').addClass('hidden');
         const input = document.createElement('input');
         input.type = 'file';
         input.accept = 'application/json,.json';
-        input.onchange = function(e) {
+        input.onchange = function (e) {
             const file = e.target.files && e.target.files[0];
             if (!file) return;
             const reader = new FileReader();
-            reader.onload = function() {
+            reader.onload = function () {
                 try {
                     const data = JSON.parse(reader.result);
                     if (!data || !Array.isArray(data.team_players)) {
@@ -5130,7 +5157,7 @@ startContent();
                             formation: $('#formation').val(),
                             team: JSON.stringify(selectedPlayers),
                             substitutes: JSON.stringify(substitutePlayers)
-                        }, function(response) {
+                        }, function (response) {
                             if (response.success) {
                                 Swal.fire({
                                     icon: 'success',
@@ -5151,7 +5178,7 @@ startContent();
                                     confirmButtonColor: '#ef4444'
                                 });
                             }
-                        }, 'json').fail(function() {
+                        }, 'json').fail(function () {
                             Swal.fire({
                                 icon: 'error',
                                 title: 'Connection Error',

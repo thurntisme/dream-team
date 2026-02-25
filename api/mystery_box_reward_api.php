@@ -202,14 +202,6 @@ try {
             $random_key = array_rand($all_players);
             $new_player = $all_players[$random_key];
 
-            // Generate UUID and initialize stats if not present
-            if (!isset($new_player['uuid'])) {
-                $new_player['uuid'] = substr(str_replace('-', '', $new_player['uuid']), 0, 16);
-            }
-            if (!isset($new_player['fitness'])) {
-                $new_player['fitness'] = 100;
-            }
-
             // Insert into player_inventory
             $stmt = $db->prepare('INSERT INTO player_inventory (club_uuid, player_uuid, player_data, status) VALUES (:club_uuid, :player_uuid, :player_data, "available")');
             $stmt->bindValue(':club_uuid', $club_uuid, SQLITE3_TEXT);

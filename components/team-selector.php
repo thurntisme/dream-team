@@ -113,7 +113,8 @@
                 </div>
                 <div class="bg-gray-50 rounded-lg p-3">
                     <div class="text-xs text-gray-500 mb-1">Form</div>
-                    <div id="selectedPlayerForm" class="flex items-center gap-1">
+                    <div id="selectedPlayerForm" class="flex items-center gap-2">
+                        <div id="contractStatusIcon" class="flex-shrink-0"></div>
                         <span class="text-sm font-bold text-gray-900">7.0</span>
                     </div>
                 </div>
