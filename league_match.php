@@ -6,7 +6,34 @@ require_once 'config/constants.php';
 require_once 'partials/layout.php';
 require_once 'includes/league_functions.php';
 
-$displayTeamLineup = function ($team_data, $league_roster = null) {
+function getFitnessColor($fitness) {
+    if ($fitness >= 80) {
+        return 'bg-green-500';
+    } elseif ($fitness >= 50) {
+        return 'bg-yellow-500';
+    } else {
+        return 'bg-red-500';
+    }
+}
+
+function getFormBadgeColor($form) {
+    if ($form >= 8.5) return 'bg-purple-100 text-purple-800 border border-purple-200';
+    if ($form >= 7.5) return 'bg-green-100 text-green-800 border border-green-200';
+    if ($form >= 6.5) return 'bg-blue-100 text-blue-800 border border-blue-200';
+    if ($form >= 5.5) return 'bg-yellow-100 text-yellow-800 border border-yellow-200';
+    if ($form >= 4) return 'bg-orange-100 text-orange-800 border border-orange-200';
+    return 'bg-red-100 text-red-800 border border-red-200';
+}
+
+function getFormArrowIcon($form) {
+    if ($form >= 8) return '<i data-lucide="trending-up" class="w-3 h-3"></i>';
+    if ($form >= 6.5) return '<i data-lucide="arrow-up" class="w-3 h-3"></i>';
+    if ($form >= 5.5) return '<i data-lucide="minus" class="w-3 h-3"></i>';
+    if ($form >= 4) return '<i data-lucide="arrow-down" class="w-3 h-3"></i>';
+    return '<i data-lucide="trending-down" class="w-3 h-3"></i>';
+}
+
+$displayTeamLineup = function ($team_data, $league_roster = null, $is_home = false) {
     if ($league_roster) {
 ?>
         <div class="space-y-2">
@@ -70,6 +97,17 @@ $displayTeamLineup = function ($team_data, $league_roster = null) {
                         <div class="font-medium"><?php echo htmlspecialchars($player['name']); ?></div>
                         <div class="text-sm text-gray-600"><?php echo htmlspecialchars($roles[$index] ?? $player['position']); ?></div>
                     </div>
+                    <div class="w-16 text-center">
+                        <div class="mt-2 bg-gray-700 bg-opacity-80 rounded-full h-1.5 overflow-hidden shadow-md border border-white border-opacity-30">
+                            <div class="<?php echo getFitnessColor($player['fitness'] ?? 0); ?> h-full transition-all duration-300" style="width: <?= $player['fitness'] ?? 0 ?>%"></div>
+                        </div>
+                        <div class="text-xs text-gray-500 mt-1">Fitness</div>
+                    </div>
+                    <div class="w-16 text-center">
+                        <div class="w-6 h-6 mx-auto rounded-full flex items-center justify-center shadow-md <?php echo getFormBadgeColor($player['form'] ?? 0); ?> ring-1 ring-white z-10">
+                            <?php echo getFormArrowIcon($player['form'] ?? 0); ?>
+                        </div>
+                    </div>  
                     <div class="text-right">
                         <div class="text-sm font-medium"><?php echo $player['rating'] ?? '-'; ?></div>
                         <div class="text-xs text-gray-500">Rating</div>
@@ -508,7 +546,7 @@ try {
                             </div>
                         </div>
                         <div class="p-4">
-                            <?php $displayTeamLineup($is_home ? $user_data : null, $is_home ? null : $home_roster); ?>
+                            <?php $displayTeamLineup($is_home ? $user_data : null, $is_home ? null : $home_roster, $is_home); ?>
                         </div>
                     </div>
 
@@ -529,7 +567,7 @@ try {
                             </div>
                         </div>
                         <div class="p-4">
-                            <?php $displayTeamLineup(!$is_home ? $user_data : null, !$is_home ? null : $away_roster); ?>
+                            <?php $displayTeamLineup(!$is_home ? $user_data : null, !$is_home ? null : $away_roster, $is_home); ?>
                         </div>
                     </div>
                 </div>

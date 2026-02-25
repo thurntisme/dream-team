@@ -1958,7 +1958,7 @@ startContent();
 
                 if (player) {
                     const isSelected = selectedPlayerIdx === idx;
-                    const fitness = player.fitness || 100;
+                    const fitness = player.fitness || 0;
                     const fitnessColor = fitness >= 80 ? 'bg-green-500' : fitness >= 50 ? 'bg-yellow-500' : 'bg-red-500';
                     const form = player.form || 7;
                     const formArrowIcon = getFormArrowIcon(form);
