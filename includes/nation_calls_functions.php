@@ -19,14 +19,14 @@ if (!defined('DREAM_TEAM_APP')) {
  * @return array Nation call results
  */
 if (!function_exists('processNationCalls')) {
-    function processNationCalls($db, $user_id)
+    function processNationCalls($db, $user_uuid)
     {
         // Get user data
         $stmt = $db->prepare('SELECT matches_played, team, substitutes FROM users WHERE id = :id');
         $stmt->bindValue(':id', $user_id, SQLITE3_INTEGER);
         $result = $stmt->execute();
         $userData = $result->fetchArray(SQLITE3_ASSOC);
-
+    
         if (!$userData) {
             return ['success' => false, 'message' => 'User not found'];
         }

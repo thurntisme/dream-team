@@ -1409,34 +1409,39 @@ function updateTeamStats($db, $team_id, $goals_for, $goals_against, $is_home)
     $result = $stmt->execute();
     $user_team = $result->fetchArray(SQLITE3_ASSOC);
 
-    if ($user_team) {
-        // Update player conditions (fitness and form) after match
-        // Resolve numeric id from uuid then call update
-        $stmtU = $db->prepare('SELECT id FROM users WHERE uuid = :uuid');
-        if ($stmtU === false) return;
-        $stmtU->bindValue(':uuid', $user_team['user_uuid'], SQLITE3_TEXT);
-        $resU = $stmtU->execute();
-        $rowU = $resU ? $resU->fetchArray(SQLITE3_ASSOC) : null;
-        if ($rowU && isset($rowU['id'])) {
-            updatePlayerConditions($db, (int)$rowU['id'], $wins, $draws, $losses, $goals_for, $goals_against);
-        }
+    if ($user_team && $user_team['user_uuid']) {
+        updatePlayerConditions($db, $user_team['user_uuid'], $wins, $draws, $losses, $goals_for, $goals_against);
     }
 }
 
-function updatePlayerConditions($db, $user_id, $wins, $draws, $losses, $goals_for, $goals_against)
+function updatePlayerConditions($db, $user_uuid, $wins, $draws, $losses, $goals_for, $goals_against)
 {
-    // Get user's team and substitutes
-    $stmt = $db->prepare('SELECT team, substitutes FROM users WHERE id = :user_id');
+    // Get user's team
+    $stmt = $db->prepare('SELECT team FROM user_club WHERE user_uuid = :user_uuid');
     if ($stmt === false) return;
-    $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+    $stmt->bindValue(':user_uuid', $user_uuid, SQLITE3_TEXT);
     $result = $stmt->execute();
-    $user_data = $result->fetchArray(SQLITE3_ASSOC);
-
-    if (!$user_data)
+    if (!$result) {
         return;
+    }
+    $userData = $result->fetchArray(SQLITE3_ASSOC);
 
-    $team = json_decode($user_data['team'], true);
-    $substitutes = json_decode($user_data['substitutes'], true);
+    if (!$userData || empty($userData['team'])) {
+        return;
+    }
+
+    // Decode JSON team data
+    $allPlayers = json_decode($userData['team'], true);
+
+    if (!is_array($allPlayers)) {
+        return;
+    }
+
+    // Main squad + Substitutes
+    $team = array_slice($allPlayers, 0, 16);
+
+    // Substitutes (next 5 players)
+    $substitutes = array_slice($allPlayers, 11, 5);
 
     // Determine match performance
     $performance = 'average';
@@ -1449,7 +1454,6 @@ function updatePlayerConditions($db, $user_id, $wins, $draws, $losses, $goals_fo
     }
 
     $team_updated = false;
-    $subs_updated = false;
 
     // Update main team players (they played the match)
     if (is_array($team)) {
@@ -1501,44 +1505,25 @@ function updatePlayerConditions($db, $user_id, $wins, $draws, $losses, $goals_fo
         }
     }
 
-    // Update substitute players (they rested, so fitness improves)
-    if (is_array($substitutes)) {
-        for ($i = 0; $i < count($substitutes); $i++) {
-            if ($substitutes[$i]) {
-                // Calculate days since last match for recovery
-                $last_match = $substitutes[$i]['last_match_date'] ?? null;
-                $days_since = $last_match ? (strtotime(date('Y-m-d')) - strtotime($last_match)) / 86400 : 7;
-
-                $substitutes[$i] = updatePlayerFitness($substitutes[$i], false, $days_since);
-                // Form slowly declines when not playing
-                if (rand(1, 3) === 1) { // 33% chance
-                    $substitutes[$i]['form'] = max(1, ($substitutes[$i]['form'] ?? 7) - 0.1);
-                }
-                $subs_updated = true;
-            }
-        }
-    }
-
     // Update database if players were modified
-    if ($team_updated || $subs_updated) {
-        $stmt = $db->prepare('UPDATE users SET team = :team, substitutes = :substitutes WHERE id = :user_id');
+    if ($team_updated) {
+        $stmt = $db->prepare('UPDATE user_club SET team = :team WHERE user_uuid = :user_uuid');
         $stmt->bindValue(':team', json_encode($team), SQLITE3_TEXT);
-        $stmt->bindValue(':substitutes', json_encode($substitutes), SQLITE3_TEXT);
-        $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+        $stmt->bindValue(':user_uuid', $user_uuid, SQLITE3_TEXT);
         $stmt->execute();
     }
 
     // Update user's matches played counter and check for nation calls
-    $stmt = $db->prepare('UPDATE users SET matches_played = matches_played + 1 WHERE id = :user_id');
-    $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
-    $stmt->execute();
+    // $stmt = $db->prepare('UPDATE users SET matches_played = matches_played + 1 WHERE id = :user_id');
+    // $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
+    // $stmt->execute();
 
     // Process nation calls if conditions are met
-    $nationCallResult = processNationCalls($db, $user_id);
-    if ($nationCallResult['success']) {
-        // Store nation call notification in session for display
-        $_SESSION['nation_call_notification'] = $nationCallResult;
-    }
+    // $nationCallResult = processNationCalls($db, $user_uuid);
+    // if ($nationCallResult['success']) {
+    //     // Store nation call notification in session for display
+    //     $_SESSION['nation_call_notification'] = $nationCallResult;
+    // }
 
     // Update player statistics
     $matchResult = 'draw'; // Default
@@ -1549,10 +1534,10 @@ function updatePlayerConditions($db, $user_id, $wins, $draws, $losses, $goals_fo
     }
 
     // Update statistics for main team players (they played the match)
-    if (is_array($team) && !empty($team)) {
-        $playingPlayers = array_filter($team);
-        updatePlayerStatistics($db, $user_id, $playingPlayers, $matchResult, $goals_for, $goals_against);
-    }
+    // if (is_array($team) && !empty($team)) {
+    //     $playingPlayers = array_filter($team);
+    //     updatePlayerStatistics($db, $user_id, $playingPlayers, $matchResult, $goals_for, $goals_against);
+    // }
 }
 /**
  * Generate 3 random players (young or standard) for post-match selection
