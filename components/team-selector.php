@@ -132,13 +132,23 @@
             </div>
 
             <!-- Action buttons -->
-            <div class="flex gap-2 pt-2">
+            <div class="flex gap-2">
                 <button id="changePlayerBtn" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 transition-colors">
                     <i data-lucide="user-plus" class="w-4 h-4"></i>
                     Change
                 </button>
                 <button id="removePlayerBtn" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg flex items-center justify-center transition-colors">
                     <i data-lucide="trash-2" class="w-4 h-4"></i>
+                </button>
+            </div>
+            <div class="flex gap-2">
+                <button id="upgradePlayerFitnessBtn" class="w-1/2 bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg flex items-center justify-center transition-colors" title="Upgrade Fitness">
+                    <i data-lucide="activity" class="w-4 h-4"></i>
+                    Upgrade Fitness
+                </button>
+                <button id="upgradePlayerFormBtn" class="w-1/2 bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center justify-center transition-colors" title="Upgrade Form">
+                    <i data-lucide="trending-up" class="w-4 h-4"></i>
+                    Upgrade Form
                 </button>
             </div>
 

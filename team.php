@@ -1447,6 +1447,12 @@ startContent();
                 <div class="${fitnessColor} h-full rounded-full transition-all duration-300" style="width: ${fitness}%"></div>
             </div>
         `);
+        // find in #field and update fitness bar there as well
+        $(`#field .player-slot[data-idx="${selectedPlayerIdx}"] .fitness-bar`).html(
+            `<div class="w-full bg-gray-200 rounded-full h-1.5">
+                <div class="${fitnessColor} h-full rounded-full transition-all duration-300" style="width: ${fitness}%"></div>
+            </div>`
+        )
 
         // Update form
         const form = player.form || 7;
@@ -1458,9 +1464,14 @@ startContent();
                 ${form.toFixed(1)}
             </span>
         `);
+        // find in #field and update form badge there as well
+        $(`#field .player-slot[data-idx="${selectedPlayerIdx}"] .form-icon`).html(`
+            <div class="w-6 h-6 flex items-center justify-center ${formBadgeColor}"  title="Form: ${form.toFixed(1)}">
+                ${formArrowIcon}
+            </div>
+        `);
 
         // Update nationality
-        console.log(player)
         $('#selectedPlayerNationality').text(player.nation || player.nationality || 'Unknown');
 
         // Update contract (remaining matches)
@@ -1499,6 +1510,207 @@ startContent();
         // Update renew contract button
         $('#renewContractBtn').off('click').on('click', function() {
             renewPlayerContract(player, context === 'team' ? selectedPlayerIdx : selectedSubIdx);
+        });
+
+        
+        // Upgrade Fitness button handler
+        $('#upgradePlayerFitnessBtn').off('click').on('click', function() {
+            const fitness = player.fitness || 0;
+            if (fitness >= 100) {
+                Swal.fire({
+                    icon: 'info',
+                    title: 'Already Full Fitness',
+                    text: player.name + ' is already at 100% fitness!',
+                    confirmButtonColor: '#3b82f6'
+                });
+                return;
+            }
+            const costPerPoint = 2000; // Single player cost, can be adjusted
+            const missing = 100 - fitness;
+            let cost = missing * costPerPoint;
+            const rating = player.rating || 75;
+            const multiplier = Math.max(1.0, rating / 75);
+            cost = Math.round(cost * multiplier);
+
+            Swal.fire({
+                title: 'Upgrade Fitness?',
+                html: `<div class="text-left space-y-3">
+                        <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                            <h4 class="font-semibold text-blue-900 mb-2">Fitness Restoration</h4>
+                            <div class="flex justify-between text-sm text-blue-800">
+                                <span>Current Fitness:</span>
+                                <span class="font-bold">${fitness}%</span>
+                            </div>
+                            <div class="flex justify-between text-sm text-blue-800">
+                                <span>Target Fitness:</span>
+                                <span class="font-bold text-green-600">100%</span>
+                            </div>
+                        </div>
+                        <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                            <h4 class="font-semibold text-yellow-900 mb-2">Cost:</h4>
+                            <div class="text-2xl font-bold text-yellow-600">${formatMarketValue(cost)}</div>
+                            <p class="text-xs text-yellow-700 mt-1">Cost depends on player rating and missing fitness.</p>
+                        </div>
+                    </div>`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#10b981',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: '<i data-lucide="zap" class="w-4 h-4 inline mr-1"></i> Confirm',
+                cancelButtonText: 'Cancel',
+                didOpen: () => { lucide.createIcons(); }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.fire({
+                        title: 'Restoring Fitness...',
+                        text: 'Please wait...',
+                        allowOutsideClick: false,
+                        allowEscapeKey: false,
+                        showConfirmButton: false,
+                        didOpen: () => { Swal.showLoading(); }
+                    });
+                    $.post('api/upgrade_team_fitness_api.php', {
+                        player_uuid: player.uuid
+                    }, function(response) {
+                        if (response.success) {
+                            player.fitness = 100;
+                            if (context === 'team') {
+                                selectedPlayers[selectedPlayerIdx] = player;
+                            } else {
+                                substitutePlayers[selectedSubIdx] = player;
+                            }
+                            maxBudget = response.new_budget;
+                            $('#clubBudget').text(formatMarketValue(response.new_budget));
+                            updateSelectedPlayerInfo();
+                            renderPlayers();
+                            updateClubStats();
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Fitness Restored!',
+                                text: player.name + ' is now at 100% fitness.',
+                                timer: 2000,
+                                showConfirmButton: false,
+                                toast: true,
+                                position: 'top-end'
+                            });
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Upgrade Failed',
+                                text: response.message || 'Could not upgrade fitness',
+                                confirmButtonColor: '#ef4444'
+                            });
+                        }
+                    }, 'json').fail(function() {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Connection Error',
+                            text: 'Failed to connect to server',
+                            confirmButtonColor: '#ef4444'
+                        });
+                    });
+                }
+            });
+        });
+
+        // Upgrade Form button handler
+        $('#upgradePlayerFormBtn').off('click').on('click', function() {
+            const form = player.form || 7;
+            if (form >= 10) {
+                Swal.fire({
+                    icon: 'info',
+                    title: 'Already Peak Form',
+                    text: player.name + ' is already at 10.0 form!',
+                    confirmButtonColor: '#3b82f6'
+                });
+                return;
+            }
+            const costPerPoint = 100000; // Single player form cost
+            const missing = 10 - form;
+            let cost = missing * costPerPoint;
+            const rating = player.rating || 75;
+            const multiplier = Math.max(1.0, rating / 75);
+            cost = Math.round(cost * multiplier);
+
+            Swal.fire({
+                title: 'Upgrade Form?',
+                html: `<div class="text-left space-y-3">
+                        <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                            <h4 class="font-semibold text-purple-900 mb-2">Form Boost</h4>
+                            <div class="flex justify-between text-sm text-purple-800">
+                                <span>Current Form:</span>
+                                <span class="font-bold">${form.toFixed(1)}</span>
+                            </div>
+                            <div class="flex justify-between text-sm text-purple-800">
+                                <span>Target Form:</span>
+                                <span class="font-bold text-green-600">10.0 (Superb)</span>
+                            </div>
+                        </div>
+                        <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                            <h4 class="font-semibold text-yellow-900 mb-2">Cost:</h4>
+                            <div class="text-2xl font-bold text-yellow-600">${formatMarketValue(cost)}</div>
+                            <p class="text-xs text-yellow-700 mt-1">Form upgrades are premium services.</p>
+                        </div>
+                    </div>`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#8b5cf6',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: '<i data-lucide="trending-up" class="w-4 h-4 inline mr-1"></i> Confirm',
+                cancelButtonText: 'Cancel',
+                didOpen: () => { lucide.createIcons(); }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.fire({
+                        title: 'Boosting Form...',
+                        text: 'Please wait...',
+                        allowOutsideClick: false,
+                        allowEscapeKey: false,
+                        showConfirmButton: false,
+                        didOpen: () => { Swal.showLoading(); }
+                    });
+                    $.post('api/upgrade_team_form_api.php', {
+                        player_uuid: player.uuid
+                    }, function(response) {
+                        if (response.success) {
+                            player.form = 10.0;
+                            if (context === 'team') {
+                                selectedPlayers[selectedPlayerIdx] = player;
+                            } else {
+                                substitutePlayers[selectedSubIdx] = player;
+                            }
+                            maxBudget = response.new_budget;
+                            $('#clubBudget').text(formatMarketValue(response.new_budget));
+                            updateSelectedPlayerInfo();
+                            renderPlayers();
+                            updateClubStats();
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Form Boosted!',
+                                text: player.name + ' is now at 10.0 form.',
+                                timer: 2000,
+                                showConfirmButton: false,
+                                toast: true,
+                                position: 'top-end'
+                            });
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Upgrade Failed',
+                                text: response.message || 'Could not upgrade form',
+                                confirmButtonColor: '#ef4444'
+                            });
+                        }
+                    }, 'json').fail(function() {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Connection Error',
+                            text: 'Failed to connect to server',
+                            confirmButtonColor: '#ef4444'
+                        });
+                    });
+                }
+            });
         });
 
         // Reinitialize lucide icons
@@ -1973,12 +2185,14 @@ startContent();
                                     </div>
                                     
                                     <!-- Form Icon -->
-                                    <div class="absolute top-0 -right-2 w-6 h-6 rounded-full flex items-center justify-center shadow-md ${formBadgeColor} ring-1 ring-white z-10" title="Form: ${form.toFixed(1)}">
-                                        ${formArrowIcon}
+                                    <div class="form-icon absolute top-0 -right-2 rounded-full shadow-md ring-1 ring-white z-10 overflow-hidden">
+                                        <div class="w-6 h-6 flex items-center justify-center ${formBadgeColor}"  title="Form: ${form.toFixed(1)}">
+                                            ${formArrowIcon}
+                                        </div>
                                     </div>
 
                                     <!-- Fitness progress bar -->
-                                    <div class="absolute top-full left-1/2 transform -translate-x-1/2 mt-1 w-16">
+                                    <div class="absolute top-full left-1/2 transform -translate-x-1/2 mt-1 w-16 fitness-bar">
                                         <div class="bg-gray-700 bg-opacity-80 rounded-full h-1.5 overflow-hidden shadow-md border border-white border-opacity-30">
                                             <div class="${fitnessColor} h-full transition-all duration-300" style="width: ${fitness}%"></div>
                                         </div>
