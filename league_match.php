@@ -5,6 +5,7 @@ require_once 'config/config.php';
 require_once 'config/constants.php';
 require_once 'partials/layout.php';
 require_once 'includes/league_functions.php';
+require_once 'includes/club_functions.php';
 
 function getFitnessColor($fitness) {
     if ($fitness >= 80) {
@@ -280,6 +281,10 @@ try {
         if ($rowRoster) {
             $opponent_roster = json_decode($rowRoster['player_data'], true);
         }
+    }
+
+    if (($match['status'] ?? 'scheduled') === 'scheduled' && $is_user_match) {
+        $club_ready = areClubPlayersReady($db, $user_uuid);
     }
 
     if (($match['status'] ?? '') === 'completed') {
@@ -869,7 +874,10 @@ try {
                 <?php endif; ?>
 
                 <div class="mt-6 text-center">
-                    <?php if (($match['status'] ?? 'scheduled') === 'scheduled' && $is_user_match): ?>
+                    <?php
+                    if (($match['status'] ?? 'scheduled') === 'scheduled' && $is_user_match) {
+                        if ($club_ready) {
+                    ?>
                         <button id="simulateBtn" class="mx-auto bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 font-medium transition-colors inline-flex items-center gap-2 shadow-md">
                             <i data-lucide="play" class="w-4 h-4"></i>
                             Simulate Match
@@ -897,7 +905,6 @@ try {
                                             })()
                                         });
                                         const data = await res.json().catch(() => null);
-                                        console.log(res, data);
                                         if (res.ok && data && data.ok) {
                                             window.location.href = 'league_match.php?uuid=<?php echo urlencode($match_uuid); ?>';
                                             return;
@@ -915,13 +922,28 @@ try {
                                 });
                             })();
                         </script>
-                    <?php elseif (($match['status'] ?? 'scheduled') === 'scheduled' && !$is_user_match): ?>
+                    <?php
+                        } else {
+                    ?>
+                        <div class="flex flex-col items-center mt-3">
+                            <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-100 text-red-700 text-sm font-semibold border border-red-200">
+                                <i data-lucide="alert-circle" class="w-4 h-4"></i>
+                                Your squad for the next match must include at least 16 eligible players with fitness above 20 and remaining contract matches.
+                            </span>
+                            <a href="team.php" class="mt-2 inline-flex items-center gap-2 px-4 py-1.5 rounded-lg bg-blue-600 text-white font-medium shadow hover:bg-blue-700 transition-colors">
+                                <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                                Go to Team
+                            </a>
+                        </div>
+                    <?php
+                        }
+                    } elseif (($match['status'] ?? 'scheduled') === 'scheduled' && !$is_user_match) {
+                    ?>
                         <div class="inline-flex items-center gap-2 bg-gray-300 text-gray-700 px-6 py-2 rounded-lg font-medium shadow-md cursor-not-allowed">
                             <i data-lucide="lock" class="w-4 h-4"></i>
                             Not your match
                         </div>
-                    <?php else: ?>
-                    <?php endif; ?>
+                    <?php } ?>
                 </div>
             </div>
         </div>

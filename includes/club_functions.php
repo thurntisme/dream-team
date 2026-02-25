@@ -191,3 +191,36 @@ if (!function_exists('getLevelColor')) {
         return 'text-gray-600';
     }
 }
+
+// Function check club players status is ready for match
+if (!function_exists('areClubPlayersReady')) {
+    function areClubPlayersReady($db, $user_uuid)
+    {
+        // Get the team JSON from user_club
+        $stmt = $db->prepare('SELECT team FROM user_club WHERE user_uuid = :user_uuid');
+        $stmt->bindValue(':user_uuid', $user_uuid, SQLITE3_TEXT);
+        $result = $stmt->execute();
+        $row = $result ? $result->fetchArray(SQLITE3_ASSOC) : null;
+        if (!$row || empty($row['team'])) {
+            return false;
+        }
+        $team = json_decode($row['team'], true);
+        if (!is_array($team)) {
+            return false;
+        }
+        // Only check the first 16 players
+        $players = array_slice($team, 0, 16);
+        foreach ($players as $player) {
+            if (!$player) continue;
+            // Check fitness
+            if (!isset($player['fitness']) || $player['fitness'] <= 20) {
+                return false;
+            }
+            // Check contract_matches_remaining
+            if (!isset($player['contract_matches_remaining']) || $player['contract_matches_remaining'] <= 0) {
+                return false;
+            }
+        }
+        return true;
+    }
+}

@@ -359,7 +359,7 @@ startContent();
     // Get effective player rating based on fitness and form
     function getEffectiveRating(player) {
         const baseRating = (player.effective_rating ?? player.rating) || 70;
-        const fitness = player.fitness || 100;
+        const fitness = player.fitness || 0;
         const form = player.form || 7;
 
         // Fitness affects rating (0.5-1.0 multiplier)
@@ -726,7 +726,7 @@ startContent();
                             <div class="flex-1" onclick="selectPlayer(${idx})">
                                 <div class="flex items-center gap-2">
                                     <div class="${nameClass}">${player.name}${customBadge}</div>
-                                    ${(player.fitness || 100) < 20 ? '<i data-lucide="alert-circle" class="w-4 h-4 text-red-600" title="Low Fitness - Player needs rest"></i>' : ''}
+                                    ${(player.fitness || 0) < 20 ? '<i data-lucide="alert-circle" class="w-4 h-4 text-red-600" title="Low Fitness - Player needs rest"></i>' : ''}
                                 </div>
                                 <div class="${valueClass}">${formatMarketValue(player.value || 0)}</div>
                                 <div class="text-xs text-gray-500 mt-1">${player.position} • ★${getEffectiveRating(player)}</div>
@@ -734,7 +734,7 @@ startContent();
                                     <div class="flex-1">
                                         <div class="text-xs text-gray-500 mb-1">Fitness</div>
                                         <div class="w-full bg-gray-200 rounded-full h-2">
-                                            <div class="h-2 rounded-full transition-all duration-300 ${getFitnessProgressColor(player.fitness || 100)}" style="width: ${player.fitness || 100}%"></div>
+                                            <div class="h-2 rounded-full transition-all duration-300 ${getFitnessProgressColor(player.fitness || 0)}" style="width: ${player.fitness || 0}%"></div>
                                         </div>
                                     </div>
                                 </div>
@@ -813,7 +813,7 @@ startContent();
                         <div class="flex-1">
                             <div class="flex items-center gap-2">
                                 <div class="${nameClass}">${player.name}${customBadge}</div>
-                                ${(player.fitness || 100) < 20 ? '<i data-lucide="alert-circle" class="w-4 h-4 text-red-600" title="Low Fitness - Player needs rest"></i>' : ''}
+                                ${(player.fitness || 0) < 20 ? '<i data-lucide="alert-circle" class="w-4 h-4 text-red-600" title="Low Fitness - Player needs rest"></i>' : ''}
                             </div>
                             <div class="${valueClass}">${formatMarketValue(player.value || 0)}</div>
                             <div class="text-xs text-gray-500 mt-1">${player.position} • ★${getEffectiveRating(player)}</div>
@@ -821,7 +821,7 @@ startContent();
                                 <div class="flex-1">
                                     <div class="text-xs text-gray-500 mb-1">Fitness</div>
                                     <div class="w-full bg-gray-200 rounded-full h-2">
-                                        <div class="h-2 rounded-full transition-all duration-300 ${getFitnessProgressColor(player.fitness || 100)}" style="width: ${player.fitness || 100}%"></div>
+                                        <div class="h-2 rounded-full transition-all duration-300 ${getFitnessProgressColor(player.fitness || 0)}" style="width: ${player.fitness || 0}%"></div>
                                     </div>
                                 </div>
                             </div>
@@ -1239,7 +1239,7 @@ startContent();
                             <div class="${nameClass}">${player.name}${customBadge}${getInjuryBadge(player)}</div>
                             <div class="text-sm text-gray-600">${position} • ★${getEffectiveRating(player)} • Lv.${player.level || 1}</div>
                             <div class="text-xs text-gray-500">
-                                Fitness: ${player.fitness || 100}% • Form: ${(player.form || 7).toFixed(1)}
+                                Fitness: ${player.fitness || 0}% • Form: ${(player.form || 7).toFixed(1)}
                                 ${isPlayerInjured(player) ? `<br><span class="text-red-600">⚕️ ${getInjuryStatusText(player)}</span>` : ''}
                             </div>
                         </div>
@@ -1439,7 +1439,7 @@ startContent();
         $('#selectedPlayerCardLevel').text(player.card_level || 1);
 
         // Update fitness
-        const fitness = player.fitness || 100;
+        const fitness = player.fitness || 0;
         const fitnessColor = fitness >= 80 ? 'bg-green-500' : fitness >= 50 ? 'bg-yellow-500' : 'bg-red-500';
         $('#selectedPlayerFitness').html(`
             <div class="text-sm font-bold text-gray-900">${fitness}%</div>
@@ -2859,12 +2859,12 @@ startContent();
                         <div>
                             <div class="flex justify-between items-center mb-2">
                                 <span class="text-gray-600">Fitness:</span>
-                                <span class="font-medium text-gray-700">${getFitnessStatusText(player.fitness || 100)}</span>
+                                <span class="font-medium text-gray-700">${getFitnessStatusText(player.fitness || 0)}</span>
                             </div>
                             <div class="w-full bg-gray-200 rounded-full h-2">
-                                <div class="${getFitnessProgressColor(player.fitness || 100)} h-2 rounded-full transition-all duration-300" style="width: ${player.fitness || 100}%"></div>
+                                <div class="${getFitnessProgressColor(player.fitness || 0)} h-2 rounded-full transition-all duration-300" style="width: ${player.fitness || 0}%"></div>
                             </div>
-                            <div class="text-xs text-gray-500 mt-1">${player.fitness || 100}/100</div>
+                            <div class="text-xs text-gray-500 mt-1">${player.fitness || 0}/100</div>
                         </div>
                         <div>
                             <div class="flex justify-between items-center mb-2">
@@ -4431,8 +4431,8 @@ startContent();
 
         // Check starting players
         selectedPlayers.forEach(player => {
-            if (player && (player.fitness || 100) < 100) {
-                const missing = 100 - (player.fitness || 100);
+            if (player && (player.fitness || 0) < 100) {
+                const missing = 100 - (player.fitness || 0);
                 let cost = missing * costPerPoint;
 
                 // Rating multiplier logic (approximate to server)
@@ -4447,8 +4447,8 @@ startContent();
 
         // Check substitutes
         substitutePlayers.forEach(player => {
-            if (player && (player.fitness || 100) < 100) {
-                const missing = 100 - (player.fitness || 100);
+            if (player && (player.fitness || 0) < 100) {
+                const missing = 100 - (player.fitness || 0);
                 let cost = missing * costPerPoint;
 
                 // Rating multiplier logic (approximate to server)

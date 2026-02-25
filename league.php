@@ -7,6 +7,7 @@ require_once 'partials/layout.php';
 
 
 require_once 'includes/league_functions.php';
+require_once 'includes/club_functions.php';
 
 try {
     $db = getDbConnection();
@@ -251,6 +252,8 @@ try {
         $canProcessNationCall = $recentCalls['count'] == 0;
     }
 
+    $isClubReadyLeague = areClubPlayersReady($db, $user['uuid']);
+
     $db->close();
 } catch (Exception $e) {
     error_log("League page error: " . $e->getMessage());
@@ -386,6 +389,33 @@ startContent();
             </div>
         </div>
         <?php unset($_SESSION['nation_call_notification']); ?>
+    <?php endif; ?>
+
+    <!-- Club Not Ready Notification -->
+    <?php
+    if (!$isClubReadyLeague): ?>
+        <div class="mb-6 bg-gradient-to-r from-red-500 to-orange-600 text-white rounded-lg shadow-lg border border-red-300 overflow-hidden">
+            <div class="p-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                        <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold">Club Not Ready for Match</h3>
+                        <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white bg-opacity-20 text-white text-sm font-semibold border border-white border-opacity-30 mt-2">
+                            <i data-lucide="alert-circle" class="w-4 h-4"></i>
+                            You must have at least 16 players with fitness &gt; 20 and contract matches remaining.
+                        </span>
+                        <div class="mt-3">
+                            <a href="team.php" class="inline-flex items-center gap-2 px-4 py-1.5 rounded-lg bg-white text-red-700 font-medium shadow hover:bg-red-100 transition-colors">
+                                <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                                Go to Team
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     <?php endif; ?>
 
     <!-- Nation Call Processing Box -->
@@ -665,31 +695,45 @@ startContent();
                     </div>
 
                     <?php if ($next_match): ?>
-                        <button id="playMatchBtn" data-uuid="<?php echo htmlspecialchars($next_match['uuid'] ?? ''); ?>"
-                            class="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 font-medium transition-colors flex items-center gap-2 shadow-md">
-                            <i data-lucide="play" class="w-4 h-4"></i>
-                            Play Match
-                        </button>
-                        <script>
-                            (function() {
-                                const btn = document.getElementById('playMatchBtn');
-                                if (!btn) return;
-                                btn.addEventListener('click', async function () {
-                                    btn.disabled = true;
-                                    btn.classList.add('opacity-50');
-                                    const u = btn.dataset.uuid;
-                                    if (u) {
-                                        window.location.href = 'league_match.php?uuid=' + encodeURIComponent(u);
-                                    } else {
-                                        alert('Match UUID not available.');
-                                    }
-                                    setTimeout(function() {
-                                        btn.disabled = false;
-                                        btn.classList.remove('opacity-50');
-                                    }, 100);
-                                });
-                            })();
-                        </script>
+                        <?php if ($isClubReadyLeague): ?>
+                            <button id="playMatchBtn" data-uuid="<?php echo htmlspecialchars($next_match['uuid'] ?? ''); ?>"
+                                class="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 font-medium transition-colors flex items-center gap-2 shadow-md">
+                                <i data-lucide="play" class="w-4 h-4"></i>
+                                Play Match
+                            </button>
+                            <script>
+                                (function() {
+                                    const btn = document.getElementById('playMatchBtn');
+                                    if (!btn) return;
+                                    btn.addEventListener('click', async function () {
+                                        btn.disabled = true;
+                                        btn.classList.add('opacity-50');
+                                        const u = btn.dataset.uuid;
+                                        if (u) {
+                                            window.location.href = 'league_match.php?uuid=' + encodeURIComponent(u);
+                                        } else {
+                                            alert('Match UUID not available.');
+                                        }
+                                        setTimeout(function() {
+                                            btn.disabled = false;
+                                            btn.classList.remove('opacity-50');
+                                        }, 100);
+                                    });
+                                })();
+                            </script>
+                        <?php else: ?>
+                            <div class="flex gap-2">
+                                <button disabled
+                                    class="bg-gray-400 text-white px-6 py-2 rounded-lg font-medium flex items-center gap-2 cursor-not-allowed">
+                                    <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+                                    Club Not Ready
+                                </button>
+                                <a href="team.php" class="inline-flex items-center gap-2 px-4 py-1.5 rounded-lg bg-white text-blue-700 font-medium shadow hover:bg-blue-100 transition-colors">
+                                    <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                                    Go to Team
+                                </a>
+                            </div>
+                        <?php endif; ?>
                     <?php endif; ?>
                 </div>
             </div>
