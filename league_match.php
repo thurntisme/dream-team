@@ -144,6 +144,20 @@ $displayTeamLineup = function ($team_data, $league_roster = null, $is_home = fal
                             <div class="font-medium"><?php echo htmlspecialchars($player['name']); ?></div>
                             <div class="text-sm text-gray-600"><?php echo htmlspecialchars($player['position']); ?></div>
                         </div>
+                        <div class="w-16 text-center">
+                            <div
+                                class="mt-2 bg-gray-700 bg-opacity-80 rounded-full h-1.5 overflow-hidden shadow-md border border-white border-opacity-30">
+                                <div class="<?php echo getFitnessColor($player['fitness']); ?> h-full transition-all duration-300"
+                                    style="width: <?= max(0, min(100, $player['fitness'] ?? 0)) ?>%"></div>
+                            </div>
+                            <div class="text-xs text-gray-500 mt-1">Fitness</div>
+                        </div>
+                        <div class="w-16 text-center">
+                            <div
+                                class="w-6 h-6 mx-auto rounded-full flex items-center justify-center shadow-md <?php echo getFormBadgeColor($player['form'] ?? 0); ?> ring-1 ring-white z-10">
+                                <?php echo getFormArrowIcon($player['form'] ?? 0); ?>
+                            </div>
+                        </div>
                         <div class="text-right">
                             <div class="text-sm font-medium"><?php echo $player['rating'] ?? '-'; ?></div>
                             <div class="text-xs text-gray-500">Rating</div>
