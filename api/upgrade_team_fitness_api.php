@@ -49,8 +49,18 @@ if ($target_player_uuid) {
     // Upgrade only the specified player
     foreach ($team_players as $index => &$player) {
         if ($player && isset($player['uuid']) && $player['uuid'] === $target_player_uuid) {
-            if (isset($player['fitness']) && $player['fitness'] < 100) {
-                $missing_fitness = 100 - $player['fitness'];
+            $player_found = true;
+            $fitnessVal = $player['fitness'] ?? 0;
+            if ($fitnessVal < 0) {
+                // injured, recommend injury power instead
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Player is injured; consider using an injury power to treat them.'
+                ]);
+                exit;
+            }
+            if ($fitnessVal < 100) {
+                $missing_fitness = 100 - $fitnessVal;
                 $cost = $missing_fitness * $cost_per_point;
                 $rating_multiplier = 1.0;
                 if (isset($player['rating'])) {
@@ -59,10 +69,6 @@ if ($target_player_uuid) {
                 $cost = round($cost * $rating_multiplier);
                 $total_cost += $cost;
                 $player['fitness'] = 100;
-                $player_found = true;
-            } else {
-                // Already at full fitness
-                $player_found = true;
             }
             break;
         }
@@ -78,7 +84,7 @@ if ($target_player_uuid) {
 } else {
     // Upgrade all players as before
     foreach ($team_players as $index => &$player) {
-        if ($player && isset($player['fitness']) && $player['fitness'] < 100) {
+        if ($player && isset($player['fitness']) && $player['fitness'] < 100 && $player['fitness'] >= 0) {
             $missing_fitness = 100 - $player['fitness'];
             $cost = $missing_fitness * $cost_per_point;
             $rating_multiplier = 1.0;

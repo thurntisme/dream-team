@@ -4670,6 +4670,7 @@ startContent();
         let totalCost = 0;
         let playersToHeal = 0;
         const costPerPoint = 1000;
+        const healList = [];
 
         // Check starting players
         selectedPlayers.forEach(player => {
@@ -4684,6 +4685,7 @@ startContent();
 
                 totalCost += cost;
                 playersToHeal++;
+                healList.push(player);
             }
         });
 
@@ -4700,6 +4702,7 @@ startContent();
 
                 totalCost += cost;
                 playersToHeal++;
+                healList.push(player);
             }
         });
 
@@ -4712,6 +4715,16 @@ startContent();
             });
             return;
         }
+
+        const budgetBefore = maxBudget;
+        const budgetAfter = budgetBefore - totalCost;
+
+        // build list of players for display
+        let healListHtml = '<ul class="list-disc pl-5 text-left">';
+        healList.forEach(p => {
+            healListHtml += `<li>${p.name || 'Unknown'} (${p.position || 'N/A'})</li>`;
+        });
+        healListHtml += '</ul>';
 
         Swal.fire({
             title: 'Upgrade Team Fitness?',
@@ -4729,12 +4742,19 @@ startContent();
                                 <span class="font-bold text-green-600">100%</span>
                             </div>
                         </div>
+                        <div class="mt-2">
+                            ${healListHtml}
+                        </div>
                     </div>
                     
                     <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
                         <h4 class="font-semibold text-yellow-900 mb-2">Estimated Cost:</h4>
                         <div class="text-2xl font-bold text-yellow-600">${formatMarketValue(totalCost)}</div>
                         <p class="text-xs text-yellow-700 mt-1">Cost depends on player ratings and missing fitness.</p>
+                        <div class="mt-2 text-sm">
+                            <p><strong>Budget before:</strong> ${formatMarketValue(budgetBefore)}</p>
+                            <p><strong>Budget after:</strong> ${formatMarketValue(budgetAfter)}</p>
+                        </div>
                     </div>
                 </div>
             `,
@@ -4788,7 +4808,10 @@ startContent();
                         Swal.fire({
                             icon: 'success',
                             title: 'Fitness Restored!',
-                            text: `Successfully restored fitness for all players. Cost: ${formatMarketValue(response.cost)}`,
+                            html: `Successfully restored fitness for all players.<br>
+                                   Cost: ${formatMarketValue(response.cost)}<br>
+                                   Budget before: ${formatMarketValue(budgetBefore)}<br>
+                                   Budget after: ${formatMarketValue(response.new_budget)}`,
                             timer: 3000,
                             showConfirmButton: false,
                             toast: true,
@@ -4949,6 +4972,157 @@ startContent();
                             icon: 'error',
                             title: 'Upgrade Failed',
                             text: response.message || 'Could not upgrade form',
+                            confirmButtonColor: '#ef4444'
+                        });
+                    }
+                }, 'json').fail(function () {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Connection Error',
+                        text: 'Failed to connect to server',
+                        confirmButtonColor: '#ef4444'
+                    });
+                });
+            }
+        });
+    });
+
+
+    // Resolve player injuries
+    $('#resolveInjuriesBtn').click(function () {
+        // gather injured players locally
+        const injuredPlayers = [];
+        const costPerPlayer = 500000; // must match server
+
+        selectedPlayers.forEach(p => {
+            if (p && typeof p.fitness === 'number' && p.fitness < 0) {
+                injuredPlayers.push(p);
+            }
+        });
+        substitutePlayers.forEach(p => {
+            if (p && typeof p.fitness === 'number' && p.fitness < 0) {
+                injuredPlayers.push(p);
+            }
+        });
+
+        if (injuredPlayers.length === 0) {
+            Swal.fire({
+                icon: 'info',
+                title: 'No Injuries',
+                text: 'You have no injured players right now.',
+                confirmButtonColor: '#3b82f6'
+            });
+            return;
+        }
+
+        const totalCost = injuredPlayers.length * costPerPlayer;
+        const budgetBefore = maxBudget;
+        const budgetAfter = budgetBefore - totalCost;
+
+        let playerListHtml = '<ul class="list-disc pl-5 text-left">';
+        injuredPlayers.forEach(p => {
+            playerListHtml += `<li>${p.name || 'Unnamed'} (${p.position || 'N/A'})</li>`;
+        });
+        playerListHtml += '</ul>';
+
+        Swal.fire({
+            icon: 'question',
+            title: 'Heal Injured Players?',
+            html: `
+                <div class="text-left space-y-3">
+                    <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                        <h4 class="font-semibold text-blue-900 mb-2">Injury Treatment</h4>
+                        <div class="space-y-1 text-sm text-blue-800">
+                            <div class="flex justify-between">
+                                <span>Players injured:</span>
+                                <span class="font-bold">${injuredPlayers.length}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>New Fitness:</span>
+                                <span class="font-bold text-green-600">50%</span>
+                            </div>
+                        </div>
+                        <div class="mt-2">
+                            ${playerListHtml}
+                        </div>
+                    </div>
+                    <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                        <h4 class="font-semibold text-yellow-900 mb-2">Estimated Cost</h4>
+                        <div class="text-2xl font-bold text-yellow-600">${formatMarketValue(totalCost)}</div>
+                        <div class="mt-2 text-sm">
+                            <p><strong>Budget before:</strong> ${formatMarketValue(budgetBefore)}</p>
+                            <p><strong>Budget after:</strong> ${formatMarketValue(budgetAfter)}</p>
+                        </div>
+                    </div>
+                </div>
+            `,
+            showCancelButton: true,
+            confirmButtonColor: '#10b981',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Treat Injuries',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                Swal.fire({
+                    title: 'Treating Injuries...',
+                    html: 'Please wait while injured players are treated',
+                    allowOutsideClick: false,
+                    didOpen: () => { Swal.showLoading(); }
+                });
+
+                $.post('api/resolve_player_injury.php', {}, function (response) {
+                    if (response.success) {
+                        let msg = '';
+                        if (response.resolved_count > 0) {
+                            msg += `${response.resolved_count} player(s) fitness restored to 50.<br>`;
+                            msg += `Cost: ${formatMarketValue(response.cost)}<br>`;
+                            msg += `Budget before: ${formatMarketValue(budgetBefore)}<br>`;
+                            msg += `Budget after: ${formatMarketValue(response.new_budget)}<br>`;
+                            if (Array.isArray(response.injured_players) && response.injured_players.length) {
+                                msg += '<ul class="text-left list-disc pl-5 mt-2">';
+                                response.injured_players.forEach(p => {
+                                    msg += `<li>${p.name || 'Unknown'} (${p.position || 'N/A'})</li>`;
+                                });
+                                msg += '</ul>';
+                            }
+                        }
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Injuries Treated',
+                            html: msg || 'No injured players found.',
+                            timer: 3000,
+                            showConfirmButton: false,
+                            toast: true,
+                            position: 'top-end'
+                        });
+
+                        // Update local data
+                        if (response.updated_team) {
+                            selectedPlayers = response.updated_team;
+                        }
+                        if (response.updated_substitutes) {
+                            substitutePlayers = response.updated_substitutes;
+                        }
+
+                        // Update budget
+                        maxBudget = response.new_budget;
+                        $('#remainingBudget').text(formatMarketValue(maxBudget));
+                        $('#clubBudget').text(formatMarketValue(maxBudget));
+
+                        renderPlayers();
+                        renderField();
+                        renderSubstitutes();
+                        updateClubStats();
+                        if (typeof selectedPlayerIdx !== 'undefined' && selectedPlayerIdx !== null) {
+                            updateSelectedPlayerInfo();
+                        }
+
+                        $('#remainingBudget').text(formatMarketValue(response.new_budget));
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Treatment Failed',
+                            text: response.message || 'Could not treat injuries',
                             confirmButtonColor: '#ef4444'
                         });
                     }
