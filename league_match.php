@@ -7,7 +7,8 @@ require_once 'partials/layout.php';
 require_once 'includes/league_functions.php';
 require_once 'includes/club_functions.php';
 
-function getFitnessColor($fitness) {
+function getFitnessColor($fitness)
+{
     if ($fitness >= 80) {
         return 'bg-green-500';
     } elseif ($fitness >= 50) {
@@ -17,26 +18,37 @@ function getFitnessColor($fitness) {
     }
 }
 
-function getFormBadgeColor($form) {
-    if ($form >= 8.5) return 'bg-purple-100 text-purple-800 border border-purple-200';
-    if ($form >= 7.5) return 'bg-green-100 text-green-800 border border-green-200';
-    if ($form >= 6.5) return 'bg-blue-100 text-blue-800 border border-blue-200';
-    if ($form >= 5.5) return 'bg-yellow-100 text-yellow-800 border border-yellow-200';
-    if ($form >= 4) return 'bg-orange-100 text-orange-800 border border-orange-200';
+function getFormBadgeColor($form)
+{
+    if ($form >= 8.5)
+        return 'bg-purple-100 text-purple-800 border border-purple-200';
+    if ($form >= 7.5)
+        return 'bg-green-100 text-green-800 border border-green-200';
+    if ($form >= 6.5)
+        return 'bg-blue-100 text-blue-800 border border-blue-200';
+    if ($form >= 5.5)
+        return 'bg-yellow-100 text-yellow-800 border border-yellow-200';
+    if ($form >= 4)
+        return 'bg-orange-100 text-orange-800 border border-orange-200';
     return 'bg-red-100 text-red-800 border border-red-200';
 }
 
-function getFormArrowIcon($form) {
-    if ($form >= 8) return '<i data-lucide="trending-up" class="w-3 h-3"></i>';
-    if ($form >= 6.5) return '<i data-lucide="arrow-up" class="w-3 h-3"></i>';
-    if ($form >= 5.5) return '<i data-lucide="minus" class="w-3 h-3"></i>';
-    if ($form >= 4) return '<i data-lucide="arrow-down" class="w-3 h-3"></i>';
+function getFormArrowIcon($form)
+{
+    if ($form >= 8)
+        return '<i data-lucide="trending-up" class="w-3 h-3"></i>';
+    if ($form >= 6.5)
+        return '<i data-lucide="arrow-up" class="w-3 h-3"></i>';
+    if ($form >= 5.5)
+        return '<i data-lucide="minus" class="w-3 h-3"></i>';
+    if ($form >= 4)
+        return '<i data-lucide="arrow-down" class="w-3 h-3"></i>';
     return '<i data-lucide="trending-down" class="w-3 h-3"></i>';
 }
 
 $displayTeamLineup = function ($team_data, $league_roster = null, $is_home = false) {
     if ($league_roster) {
-?>
+        ?>
         <div class="space-y-2">
             <?php foreach (array_slice($league_roster, 0, 11) as $index => $player): ?>
                 <?php if ($player): ?>
@@ -76,7 +88,7 @@ $displayTeamLineup = function ($team_data, $league_roster = null, $is_home = fal
                 <?php endforeach; ?>
             <?php endif; ?>
         </div>
-    <?php
+        <?php
         return;
     }
     if (!$team_data) {
@@ -96,19 +108,23 @@ $displayTeamLineup = function ($team_data, $league_roster = null, $is_home = fal
                     </div>
                     <div class="flex-1">
                         <div class="font-medium"><?php echo htmlspecialchars($player['name']); ?></div>
-                        <div class="text-sm text-gray-600"><?php echo htmlspecialchars($roles[$index] ?? $player['position']); ?></div>
+                        <div class="text-sm text-gray-600"><?php echo htmlspecialchars($roles[$index] ?? $player['position']); ?>
+                        </div>
                     </div>
                     <div class="w-16 text-center">
-                        <div class="mt-2 bg-gray-700 bg-opacity-80 rounded-full h-1.5 overflow-hidden shadow-md border border-white border-opacity-30">
-                            <div class="<?php echo getFitnessColor($player['fitness'] ?? 0); ?> h-full transition-all duration-300" style="width: <?= $player['fitness'] ?? 0 ?>%"></div>
+                        <div
+                            class="mt-2 bg-gray-700 bg-opacity-80 rounded-full h-1.5 overflow-hidden shadow-md border border-white border-opacity-30">
+                            <div class="<?php echo getFitnessColor($player['fitness']); ?> h-full transition-all duration-300"
+                                style="width: <?= max(0, min(100, $player['fitness'] ?? 0)) ?>%"></div>
                         </div>
                         <div class="text-xs text-gray-500 mt-1">Fitness</div>
                     </div>
                     <div class="w-16 text-center">
-                        <div class="w-6 h-6 mx-auto rounded-full flex items-center justify-center shadow-md <?php echo getFormBadgeColor($player['form'] ?? 0); ?> ring-1 ring-white z-10">
+                        <div
+                            class="w-6 h-6 mx-auto rounded-full flex items-center justify-center shadow-md <?php echo getFormBadgeColor($player['form'] ?? 0); ?> ring-1 ring-white z-10">
                             <?php echo getFormArrowIcon($player['form'] ?? 0); ?>
                         </div>
-                    </div>  
+                    </div>
                     <div class="text-right">
                         <div class="text-sm font-medium"><?php echo $player['rating'] ?? '-'; ?></div>
                         <div class="text-xs text-gray-500">Rating</div>
@@ -137,12 +153,12 @@ $displayTeamLineup = function ($team_data, $league_roster = null, $is_home = fal
             <?php endforeach; ?>
         <?php endif; ?>
     </div>
-<?php
+    <?php
 };
 
 $renderError = function ($message) {
     startContent();
-?>
+    ?>
     <div class="container mx-auto py-10">
         <div class="max-w-xl mx-auto bg-white rounded-lg shadow-lg border border-red-200 overflow-hidden">
             <div class="bg-gradient-to-r from-red-500 to-red-600 text-white p-4">
@@ -159,7 +175,8 @@ $renderError = function ($message) {
             <div class="p-6">
                 <p class="text-red-700 font-medium"><?php echo htmlspecialchars($message); ?></p>
                 <div class="mt-6">
-                    <a href="league.php" class="inline-flex items-center gap-2 bg-gray-800 text-white px-4 py-2 rounded-lg hover:bg-gray-900 transition-colors">
+                    <a href="league.php"
+                        class="inline-flex items-center gap-2 bg-gray-800 text-white px-4 py-2 rounded-lg hover:bg-gray-900 transition-colors">
                         <i data-lucide="arrow-left" class="w-4 h-4"></i>
                         Back to League
                     </a>
@@ -167,7 +184,7 @@ $renderError = function ($message) {
             </div>
         </div>
     </div>
-<?php
+    <?php
     endContent('Error');
 };
 
@@ -223,12 +240,12 @@ try {
         $stmtUserId->bindValue(':uuid', $user_uuid);
         $resUserId = $stmtUserId->execute();
         $rowUserId = $resUserId ? $resUserId->fetchArray(SQLITE3_ASSOC) : null;
-        $user_id_resolved = (int)($rowUserId['id'] ?? 0);
+        $user_id_resolved = (int) ($rowUserId['id'] ?? 0);
     }
     if (!empty($match['home_team_id'])) {
         $stmtHomeRoster = $db->prepare('SELECT player_data FROM league_team_rosters WHERE league_team_id = :id AND season = :season');
         if ($stmtHomeRoster) {
-            $stmtHomeRoster->bindValue(':id', (int)$match['home_team_id']);
+            $stmtHomeRoster->bindValue(':id', (int) $match['home_team_id']);
             $stmtHomeRoster->bindValue(':season', $match['season']);
             $resHomeRoster = $stmtHomeRoster->execute();
             $rowHomeRoster = $resHomeRoster ? $resHomeRoster->fetchArray(SQLITE3_ASSOC) : null;
@@ -240,7 +257,7 @@ try {
     if (!empty($match['away_team_id'])) {
         $stmtAwayRoster = $db->prepare('SELECT player_data FROM league_team_rosters WHERE league_team_id = :id AND season = :season');
         if ($stmtAwayRoster) {
-            $stmtAwayRoster->bindValue(':id', (int)$match['away_team_id']);
+            $stmtAwayRoster->bindValue(':id', (int) $match['away_team_id']);
             $stmtAwayRoster->bindValue(':season', $match['season']);
             $resAwayRoster = $stmtAwayRoster->execute();
             $rowAwayRoster = $resAwayRoster ? $resAwayRoster->fetchArray(SQLITE3_ASSOC) : null;
@@ -269,7 +286,7 @@ try {
         $rowTeam = $resTeam ? $resTeam->fetchArray(SQLITE3_ASSOC) : null;
     }
     if ($rowTeam) {
-        $team_id = (int)$rowTeam['id'];
+        $team_id = (int) $rowTeam['id'];
         $stmtOppRoster = $db->prepare('SELECT player_data FROM league_team_rosters WHERE league_team_id = :id AND season = :season');
         $rowRoster = null;
         if ($stmtOppRoster) {
@@ -288,8 +305,8 @@ try {
     }
 
     if (($match['status'] ?? '') === 'completed') {
-        $user_score = $is_home ? (int)($match['home_score'] ?? 0) : (int)($match['away_score'] ?? 0);
-        $opponent_score = $is_home ? (int)($match['away_score'] ?? 0) : (int)($match['home_score'] ?? 0);
+        $user_score = $is_home ? (int) ($match['home_score'] ?? 0) : (int) ($match['away_score'] ?? 0);
+        $opponent_score = $is_home ? (int) ($match['away_score'] ?? 0) : (int) ($match['home_score'] ?? 0);
         $match_result = 'draw';
         if ($user_score > $opponent_score) {
             $match_result = 'win';
@@ -300,7 +317,7 @@ try {
         $fan_change = 0;
         $gameweek_results = $_SESSION['gameweek_results'] ?? null;
         if ($gameweek_results && isset($gameweek_results['fan_change_info'])) {
-            $fan_change = (int)$gameweek_results['fan_change_info']['fan_change'];
+            $fan_change = (int) $gameweek_results['fan_change_info']['fan_change'];
             $rewards['budget_earned'] = $gameweek_results['budget_earned'];
             $rewards['breakdown'] = $gameweek_results['budget_breakdown'];
         } else {
@@ -309,7 +326,7 @@ try {
                 $stmtId->bindValue(':uuid', $user_uuid);
                 $resId = $stmtId->execute();
                 $rowId = $resId ? $resId->fetchArray(SQLITE3_ASSOC) : null;
-                $user_id_resolved = (int)($rowId['id'] ?? 0);
+                $user_id_resolved = (int) ($rowId['id'] ?? 0);
                 $fan_breakdown = getFanRevenueBreakdown($db, $user_uuid, $is_home, 100);
                 foreach ($fan_breakdown as $item) {
                     $rewards['breakdown'][] = $item;
@@ -344,7 +361,7 @@ try {
     $db->close();
 
     startContent();
-?>
+    ?>
     <div class="container mx-auto py-6">
         <div class="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden mb-6">
             <div class="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-4">
@@ -371,7 +388,8 @@ try {
             <div class="p-6">
                 <div class="flex items-center justify-between">
                     <div class="flex-1 text-center">
-                        <div class="w-16 h-16 mx-auto mb-3 <?php echo $is_home ? 'bg-blue-600' : 'bg-gray-500'; ?> rounded-full flex items-center justify-center shadow-md">
+                        <div
+                            class="w-16 h-16 mx-auto mb-3 <?php echo $is_home ? 'bg-blue-600' : 'bg-gray-500'; ?> rounded-full flex items-center justify-center shadow-md">
                             <i data-lucide="<?php echo $is_home ? 'user' : 'users'; ?>" class="w-6 h-6 text-white"></i>
                         </div>
                         <h4 class="font-bold text-lg <?php echo $is_home ? 'text-blue-600' : 'text-gray-700'; ?> mb-1">
@@ -384,13 +402,15 @@ try {
                     </div>
 
                     <div class="flex-shrink-0 mx-8">
-                        <div class="w-16 h-16 bg-gray-100 border-2 border-gray-300 rounded-full flex items-center justify-center">
+                        <div
+                            class="w-16 h-16 bg-gray-100 border-2 border-gray-300 rounded-full flex items-center justify-center">
                             <span class="text-gray-600 font-black text-xl">VS</span>
                         </div>
                     </div>
 
                     <div class="flex-1 text-center">
-                        <div class="w-16 h-16 mx-auto mb-3 <?php echo !$is_home ? 'bg-blue-600' : 'bg-gray-500'; ?> rounded-full flex items-center justify-center shadow-md">
+                        <div
+                            class="w-16 h-16 mx-auto mb-3 <?php echo !$is_home ? 'bg-blue-600' : 'bg-gray-500'; ?> rounded-full flex items-center justify-center shadow-md">
                             <i data-lucide="<?php echo !$is_home ? 'user' : 'users'; ?>" class="w-6 h-6 text-white"></i>
                         </div>
                         <h4 class="font-bold text-lg <?php echo !$is_home ? 'text-blue-600' : 'text-gray-700'; ?> mb-1">
@@ -419,29 +439,33 @@ try {
                         <div class="p-6">
                             <div class="flex items-center justify-center gap-8">
                                 <div class="text-center">
-                                    <div class="text-lg font-semibold text-gray-800"><?php echo htmlspecialchars($match['home_team_name']); ?></div>
-                                    <div class="text-4xl font-black text-gray-900"><?php echo (int)($match['home_score'] ?? 0); ?></div>
+                                    <div class="text-lg font-semibold text-gray-800">
+                                        <?php echo htmlspecialchars($match['home_team_name']); ?></div>
+                                    <div class="text-4xl font-black text-gray-900">
+                                        <?php echo (int) ($match['home_score'] ?? 0); ?></div>
                                 </div>
                                 <div class="text-3xl font-black text-gray-500">-</div>
                                 <div class="text-center">
-                                    <div class="text-lg font-semibold text-gray-800"><?php echo htmlspecialchars($match['away_team_name']); ?></div>
-                                    <div class="text-4xl font-black text-gray-900"><?php echo (int)($match['away_score'] ?? 0); ?></div>
+                                    <div class="text-lg font-semibold text-gray-800">
+                                        <?php echo htmlspecialchars($match['away_team_name']); ?></div>
+                                    <div class="text-4xl font-black text-gray-900">
+                                        <?php echo (int) ($match['away_score'] ?? 0); ?></div>
                                 </div>
                             </div>
                         </div>
                     </div>
                     <?php if (!empty($is_user_match)): ?>
                         <?php
-                        $user_score = $is_home ? (int)($match['home_score'] ?? 0) : (int)($match['away_score'] ?? 0);
-                        $opponent_score = $is_home ? (int)($match['away_score'] ?? 0) : (int)($match['home_score'] ?? 0);
+                        $user_score = $is_home ? (int) ($match['home_score'] ?? 0) : (int) ($match['away_score'] ?? 0);
+                        $opponent_score = $is_home ? (int) ($match['away_score'] ?? 0) : (int) ($match['home_score'] ?? 0);
                         $result_label = $user_score > $opponent_score ? 'You won!' : ($user_score < $opponent_score ? 'You were beaten.' : 'Draw.');
                         $result_color = $user_score > $opponent_score ? 'bg-green-50 border-green-200 text-green-700' : ($user_score < $opponent_score ? 'bg-red-50 border-red-200 text-red-700' : 'bg-yellow-50 border-yellow-200 text-yellow-700');
                         $result_icon = $user_score > $opponent_score ? 'trophy' : ($user_score < $opponent_score ? 'alert-triangle' : 'minus');
                         ?>
                         <div class="rounded-lg border <?php echo $result_color; ?> p-4 mb-6 flex justify-center items-center gap-3">
                             <div class="text-2xl font-bold <?php
-                                                            echo $user_score > $opponent_score ? 'text-green-600' : ($user_score < $opponent_score ? 'text-red-600' : 'text-yellow-600');
-                                                            ?>">
+                            echo $user_score > $opponent_score ? 'text-green-600' : ($user_score < $opponent_score ? 'text-red-600' : 'text-yellow-600');
+                            ?>">
                                 <?php
                                 echo $user_score > $opponent_score ? '🎉 VICTORY!' : ($user_score < $opponent_score ? '😞 DEFEAT!' : '🤝 DRAW!');
                                 ?>
@@ -471,13 +495,15 @@ try {
                                         <?php foreach (($rewards['breakdown'] ?? []) as $reward): ?>
                                             <div class="flex justify-between items-center p-2 bg-gray-50 rounded">
                                                 <span class="text-sm"><?php echo htmlspecialchars($reward['description']); ?></span>
-                                                <span class="font-medium text-green-600">+€<?php echo number_format($reward['amount']); ?></span>
+                                                <span
+                                                    class="font-medium text-green-600">+€<?php echo number_format($reward['amount']); ?></span>
                                             </div>
                                         <?php endforeach; ?>
                                         <div class="border-t pt-2 mt-3">
                                             <div class="flex justify-between items-center font-bold mb-3">
                                                 <span>Total Budget Earned:</span>
-                                                <span class="text-green-600 text-lg">+€<?php echo number_format($rewards['budget_earned'] ?? 0); ?></span>
+                                                <span
+                                                    class="text-green-600 text-lg">+€<?php echo number_format($rewards['budget_earned'] ?? 0); ?></span>
                                             </div>
                                             <div class="grid grid-cols-2 gap-3">
                                                 <div class="bg-red-50 border border-red-200 rounded-lg p-3">
@@ -505,13 +531,15 @@ try {
                                         <div class="p-4 bg-blue-50 rounded-lg">
                                             <div class="flex items-center justify-between mb-2">
                                                 <span class="text-sm text-gray-600">Fan Change:</span>
-                                                <span class="font-bold <?php echo ($fan_change ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'; ?>">
-                                                    <?php echo ($fan_change ?? 0) >= 0 ? '+' : ''; ?><?php echo number_format($fan_change ?? 0); ?>
+                                                <span
+                                                    class="font-bold <?php echo ($fan_change ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'; ?>">
+                                                    <?php echo ($fan_change ?? 0) >= 0 ? '+' : ''; ?>        <?php echo number_format($fan_change ?? 0); ?>
                                                 </span>
                                             </div>
                                             <div class="flex items-center justify-between">
                                                 <span class="text-sm text-gray-600">Current Fans:</span>
-                                                <span class="font-medium text-blue-600"><?php echo number_format($user_data['fans'] ?? 5000); ?></span>
+                                                <span
+                                                    class="font-medium text-blue-600"><?php echo number_format($user_data['fans'] ?? 5000); ?></span>
                                             </div>
                                         </div>
                                         <div class="text-xs text-gray-500">
@@ -537,11 +565,14 @@ try {
                     <div class="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
                         <div class="bg-green-50 border-b border-green-200 p-4">
                             <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 <?php echo $is_home ? 'bg-blue-600' : 'bg-gray-500'; ?> rounded-full flex items-center justify-center">
-                                    <i data-lucide="<?php echo $is_home ? 'user' : 'users'; ?>" class="w-5 h-5 text-white"></i>
+                                <div
+                                    class="w-10 h-10 <?php echo $is_home ? 'bg-blue-600' : 'bg-gray-500'; ?> rounded-full flex items-center justify-center">
+                                    <i data-lucide="<?php echo $is_home ? 'user' : 'users'; ?>"
+                                        class="w-5 h-5 text-white"></i>
                                 </div>
                                 <div>
-                                    <h3 class="font-bold text-lg <?php echo $is_home ? 'text-blue-600' : 'text-gray-700'; ?>">
+                                    <h3
+                                        class="font-bold text-lg <?php echo $is_home ? 'text-blue-600' : 'text-gray-700'; ?>">
                                         <?php echo htmlspecialchars($match['home_team_name']); ?>
                                     </h3>
                                     <div class="text-sm">
@@ -558,11 +589,14 @@ try {
                     <div class="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
                         <div class="bg-orange-50 border-b border-orange-200 p-4">
                             <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 <?php echo !$is_home ? 'bg-blue-600' : 'bg-gray-500'; ?> rounded-full flex items-center justify-center">
-                                    <i data-lucide="<?php echo !$is_home ? 'user' : 'users'; ?>" class="w-5 h-5 text-white"></i>
+                                <div
+                                    class="w-10 h-10 <?php echo !$is_home ? 'bg-blue-600' : 'bg-gray-500'; ?> rounded-full flex items-center justify-center">
+                                    <i data-lucide="<?php echo !$is_home ? 'user' : 'users'; ?>"
+                                        class="w-5 h-5 text-white"></i>
                                 </div>
                                 <div>
-                                    <h3 class="font-bold text-lg <?php echo !$is_home ? 'text-blue-600' : 'text-gray-700'; ?>">
+                                    <h3
+                                        class="font-bold text-lg <?php echo !$is_home ? 'text-blue-600' : 'text-gray-700'; ?>">
                                         <?php echo htmlspecialchars($match['away_team_name']); ?>
                                     </h3>
                                     <div class="text-sm">
@@ -599,15 +633,18 @@ try {
                                 <?php for ($i = 1; $i <= 3; $i++): ?>
                                     <div class="mystery-box cursor-pointer transform hover:scale-105 transition-transform duration-200 <?php echo $mystery_box_claimed ? 'opacity-50 cursor-not-allowed' : ''; ?>"
                                         data-box="<?php echo $i; ?>" <?php echo $mystery_box_claimed ? 'style=\"pointer-events: none;\"' : ''; ?>>
-                                        <div class="bg-gradient-to-br from-purple-400 to-purple-600 rounded-lg p-6 text-center text-white shadow-lg">
+                                        <div
+                                            class="bg-gradient-to-br from-purple-400 to-purple-600 rounded-lg p-6 text-center text-white shadow-lg">
                                             <?php if ($mystery_box_claimed): ?>
-                                                <div class="w-16 h-16 mx-auto mb-3 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                                                <div
+                                                    class="w-16 h-16 mx-auto mb-3 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
                                                     <i data-lucide="lock" class="w-8 h-8"></i>
                                                 </div>
                                                 <div class="font-bold text-lg">Already Claimed</div>
                                                 <div class="text-sm opacity-90">Reward used</div>
                                             <?php else: ?>
-                                                <div class="w-16 h-16 mx-auto mb-3 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                                                <div
+                                                    class="w-16 h-16 mx-auto mb-3 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
                                                     <i data-lucide="gift" class="w-8 h-8"></i>
                                                 </div>
                                                 <div class="font-bold text-lg">Mystery Box <?php echo $i; ?></div>
@@ -625,7 +662,8 @@ try {
                                         <div class="text-sm mt-2 opacity-90">Each match allows only one mystery box claim.</div>
                                     </div>
                                 <?php else: ?>
-                                    <div class="bg-gradient-to-r from-yellow-400 to-orange-500 rounded-lg p-6 text-center text-white">
+                                    <div
+                                        class="bg-gradient-to-r from-yellow-400 to-orange-500 rounded-lg p-6 text-center text-white">
                                         <div class="text-2xl font-bold mb-2">🎁 Congratulations!</div>
                                         <div id="reward-content" class="text-lg"></div>
                                     </div>
@@ -634,15 +672,16 @@ try {
                         </div>
                     </div>
                     <div class="text-center mt-6">
-                        <button id="approveBtn" class="mx-auto bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 font-bold transition-colors inline-flex items-center gap-2 shadow-md">
+                        <button id="approveBtn"
+                            class="mx-auto bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 font-bold transition-colors inline-flex items-center gap-2 shadow-md">
                             <i data-lucide="check-circle" class="w-5 h-5"></i>
                             Approve
                         </button>
                         <script>
-                            (function() {
+                            (function () {
                                 const btn = document.getElementById('approveBtn');
                                 if (!btn) return;
-                                btn.addEventListener('click', function() {
+                                btn.addEventListener('click', function () {
                                     window.location.href = 'league.php?tab=standings';
                                 });
                             })();
@@ -650,7 +689,7 @@ try {
                     </div>
                     <script>
                         <?php if (!$mystery_box_claimed): ?>
-                                (function() {
+                                (function () {
                                     let rewardOptions = null;
 
                                     async function ensureRewardOptions() {
@@ -659,8 +698,8 @@ try {
                                         try {
                                             const res = await fetch(
                                                 'api/mystery_box_reward_api.php?match_uuid=<?= urlencode($match['uuid'] ?? ''); ?>', {
-                                                    method: 'GET'
-                                                }
+                                                method: 'GET'
+                                            }
                                             );
 
                                             const data = await res.json().catch(() => null);
@@ -700,7 +739,7 @@ try {
                                     }
 
                                     document.querySelectorAll('.mystery-box').forEach(box => {
-                                        box.addEventListener('click', async function() {
+                                        box.addEventListener('click', async function () {
 
                                             // 🔒 Prevent double click
                                             if (this.dataset.locked) return;
@@ -817,15 +856,15 @@ try {
 
                                                         // POST save reward
                                                         fetch('api/mystery_box_reward_api.php', {
-                                                                method: 'POST',
-                                                                headers: {
-                                                                    'Content-Type': 'application/json'
-                                                                },
-                                                                body: JSON.stringify({
-                                                                    reward: selectedReward,
-                                                                    match_uuid: <?= json_encode($match['uuid'] ?? null); ?>
-                                                                })
+                                                            method: 'POST',
+                                                            headers: {
+                                                                'Content-Type': 'application/json'
+                                                            },
+                                                            body: JSON.stringify({
+                                                                reward: selectedReward,
+                                                                match_uuid: <?= json_encode($match['uuid'] ?? null); ?>
                                                             })
+                                                        })
                                                             .then(res => {
                                                                 if (!res.ok) throw new Error('Server error');
                                                                 return res.json();
@@ -877,69 +916,74 @@ try {
                     <?php
                     if (($match['status'] ?? 'scheduled') === 'scheduled' && $is_user_match) {
                         if ($club_ready) {
-                    ?>
-                        <button id="simulateBtn" class="mx-auto bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 font-medium transition-colors inline-flex items-center gap-2 shadow-md">
-                            <i data-lucide="play" class="w-4 h-4"></i>
-                            Simulate Match
-                        </button>
-                        <script>
-                            (function() {
-                                const btn = document.getElementById('simulateBtn');
-                                if (!btn) return;
-                                btn.addEventListener('click', async function() {
-                                    if (btn.disabled) return;
-                                    btn.disabled = true;
-                                    btn.classList.add('opacity-50');
-                                    btn.innerHTML = '<svg class="animate-spin h-4 w-4 text-white" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="white" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="white" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path></svg><span>Simulating…</span>';
-                                    try {
-                                        const fd = new URLSearchParams();
-                                        fd.set('simulate_match', '1');
-                                        const res = await fetch('api/match_simulator_api.php', {
-                                            method: 'POST',
-                                            headers: {
-                                                'Content-Type': 'application/x-www-form-urlencoded'
-                                            },
-                                            body: (function() {
-                                                fd.set('uuid', '<?php echo urlencode($match_uuid); ?>');
-                                                return fd.toString();
-                                            })()
+                            ?>
+                            <button id="simulateBtn"
+                                class="mx-auto bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 font-medium transition-colors inline-flex items-center gap-2 shadow-md">
+                                <i data-lucide="play" class="w-4 h-4"></i>
+                                Simulate Match
+                            </button>
+                            <script>
+                                    (function () {
+                                        const btn = document.getElementById('simulateBtn');
+                                        if (!btn) return;
+                                        btn.addEventListener('click', async function () {
+                                            if (btn.disabled) return;
+                                            btn.disabled = true;
+                                            btn.classList.add('opacity-50');
+                                            btn.innerHTML = '<svg class="animate-spin h-4 w-4 text-white" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="white" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="white" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path></svg><span>Simulating…</span>';
+                                            try {
+                                                const fd = new URLSearchParams();
+                                                fd.set('simulate_match', '1');
+                                                const res = await fetch('api/match_simulator_api.php', {
+                                                    method: 'POST',
+                                                    headers: {
+                                                        'Content-Type': 'application/x-www-form-urlencoded'
+                                                    },
+                                                    body: (function () {
+                                                        fd.set('uuid', '<?php echo urlencode($match_uuid); ?>');
+                                                        return fd.toString();
+                                                    })()
+                                                });
+                                                const data = await res.json().catch(() => null);
+                                                if (res.ok && data && data.ok) {
+                                                    window.location.href = 'league_match.php?uuid=<?php echo urlencode($match_uuid); ?>';
+                                                    return;
+                                                }
+                                                alert('Simulation failed. Please try again.');
+                                                btn.disabled = false;
+                                                btn.classList.remove('opacity-50');
+                                                btn.innerHTML = '<i data-lucide="play" class="w-4 h-4"></i><span>Simulate Match</span>';
+                                            } catch (e) {
+                                                alert('Simulation failed. Please try again.');
+                                                btn.disabled = false;
+                                                btn.classList.remove('opacity-50');
+                                                btn.innerHTML = '<i data-lucide="play" class="w-4 h-4"></i><span>Simulate Match</span>';
+                                            }
                                         });
-                                        const data = await res.json().catch(() => null);
-                                        if (res.ok && data && data.ok) {
-                                            window.location.href = 'league_match.php?uuid=<?php echo urlencode($match_uuid); ?>';
-                                            return;
-                                        }
-                                        alert('Simulation failed. Please try again.');
-                                        btn.disabled = false;
-                                        btn.classList.remove('opacity-50');
-                                        btn.innerHTML = '<i data-lucide="play" class="w-4 h-4"></i><span>Simulate Match</span>';
-                                    } catch (e) {
-                                        alert('Simulation failed. Please try again.');
-                                        btn.disabled = false;
-                                        btn.classList.remove('opacity-50');
-                                        btn.innerHTML = '<i data-lucide="play" class="w-4 h-4"></i><span>Simulate Match</span>';
-                                    }
-                                });
-                            })();
-                        </script>
-                    <?php
+                                    })();
+                            </script>
+                            <?php
                         } else {
-                    ?>
-                        <div class="flex flex-col items-center mt-3">
-                            <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-100 text-red-700 text-sm font-semibold border border-red-200">
-                                <i data-lucide="alert-circle" class="w-4 h-4"></i>
-                                Your squad for the next match must include at least 16 eligible players with fitness above 20 and remaining contract matches.
-                            </span>
-                            <a href="team.php" class="mt-2 inline-flex items-center gap-2 px-4 py-1.5 rounded-lg bg-blue-600 text-white font-medium shadow hover:bg-blue-700 transition-colors">
-                                <i data-lucide="arrow-right" class="w-4 h-4"></i>
-                                Go to Team
-                            </a>
-                        </div>
-                    <?php
+                            ?>
+                            <div class="flex flex-col items-center mt-3">
+                                <span
+                                    class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-100 text-red-700 text-sm font-semibold border border-red-200">
+                                    <i data-lucide="alert-circle" class="w-4 h-4"></i>
+                                    Your squad for the next match must include at least 16 eligible players with fitness above 20
+                                    and remaining contract matches.
+                                </span>
+                                <a href="team.php"
+                                    class="mt-2 inline-flex items-center gap-2 px-4 py-1.5 rounded-lg bg-blue-600 text-white font-medium shadow hover:bg-blue-700 transition-colors">
+                                    <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                                    Go to Team
+                                </a>
+                            </div>
+                            <?php
                         }
                     } elseif (($match['status'] ?? 'scheduled') === 'scheduled' && !$is_user_match) {
-                    ?>
-                        <div class="inline-flex items-center gap-2 bg-gray-300 text-gray-700 px-6 py-2 rounded-lg font-medium shadow-md cursor-not-allowed">
+                        ?>
+                        <div
+                            class="inline-flex items-center gap-2 bg-gray-300 text-gray-700 px-6 py-2 rounded-lg font-medium shadow-md cursor-not-allowed">
                             <i data-lucide="lock" class="w-4 h-4"></i>
                             Not your match
                         </div>
@@ -948,7 +992,7 @@ try {
             </div>
         </div>
     </div>
-<?php
+    <?php
     endContent('League Match');
 } catch (Throwable $e) {
     $renderError('An error occurred while loading the match. ' . $e->getMessage());

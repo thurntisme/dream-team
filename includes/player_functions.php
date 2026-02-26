@@ -202,6 +202,26 @@ if (!function_exists('updatePlayerFitness')) {
                 $loss = (int) round($loss * $player['fitness_bonus']);
             }
             $fitness -= $loss;
+
+            // Clamp fitness to minimum 0
+            $fitness = max($fitness, 0);
+
+            // Determine injury chance
+            $injuryChance = 5; // default 5%
+
+            if ($fitness < 30) {
+                $injuryChance = 20;
+            } elseif ($fitness < 40) {
+                $injuryChance = 10;
+            }
+
+            // Random injury roll (1 - 100)
+            $roll = rand(1, 100);
+
+            if ($roll <= $injuryChance) {
+                // Player gets injured
+                $fitness -= rand(20, 50);
+            }
         } else {
             // Fitness recovers when resting
             $recovery = min(3 + ($days_since_last_match * 2), 10);
@@ -209,7 +229,7 @@ if (!function_exists('updatePlayerFitness')) {
         }
 
         // Keep fitness between 0 and 100
-        $player['fitness'] = max(0, min(100, $fitness));
+        $player['fitness'] = max(min($fitness, 0), min(100, $fitness));
 
         return $player;
     }
@@ -237,7 +257,8 @@ if (!function_exists('updatePlayerForm')) {
             case 'average':
                 // Fluctuation
                 $change = rand(-10, 10) / 10; // -1.0 to +1.0
-                if ($change == 0) $change = (rand(0, 1) ? 0.2 : -0.2);
+                if ($change == 0)
+                    $change = (rand(0, 1) ? 0.2 : -0.2);
                 $form += $change;
                 break;
             case 'poor':
