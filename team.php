@@ -2195,7 +2195,7 @@ startContent();
                                         ${getPlayerAvatarHtml(player.name, player.avatar)}
                                     </div>
 
-                                    <div class="absolute -top-1 -right-2 flex flex-col justify-start space-y-1">
+                                    <div class="absolute -top-1 -right-2 flex flex-col justify-start space-y-1.5">
 
                                         <!-- Form Icon -->
                                         <div class="form-icon rounded-full shadow-md ring-1 ring-white z-10 overflow-hidden">

@@ -54,12 +54,12 @@ $players = [];
 foreach ($inv as $row) {
     $pdata = json_decode($row['player_data'] ?? '[]', true) ?: [];
     $players[] = [
-        'id' => (int)($row['id'] ?? 0),
+        'id' => (int) ($row['id'] ?? 0),
         'uuid' => ($row['player_uuid'] ?? ($pdata['uuid'] ?? null)),
         'name' => $pdata['name'] ?? 'Unknown',
         'position' => $pdata['position'] ?? 'CM',
-        'rating' => (int)($pdata['rating'] ?? 0),
-        'value' => (int)($pdata['value'] ?? 0),
+        'rating' => (int) ($pdata['rating'] ?? 0),
+        'value' => (int) ($pdata['value'] ?? 0),
         'status' => $row['status'] ?? 'available',
     ];
 }
@@ -67,23 +67,34 @@ foreach ($inv as $row) {
 startContent();
 ?>
 <div class="container mx-auto p-6">
-    <div class="mb-6">
-        <h1 class="text-2xl font-bold text-gray-900">Player Inventory</h1>
-        <p class="text-gray-600">All players you own but not in your active squad.</p>
+    <div class="flex items-center justify-between mb-6">
+        <div class="flex flex-col items-start gap-2">
+            <h1 class="text-2xl font-bold text-gray-900">Player Inventory</h1>
+            <p class="text-gray-600">All players you own but not in your active squad.</p>
+        </div>
+        <a href="team.php"
+            class="mt-2 inline-flex items-center gap-2 px-4 py-1.5 rounded-lg bg-blue-600 text-white font-medium shadow hover:bg-blue-700 transition-colors">
+            <i data-lucide="arrow-right" class="w-4 h-4"></i>
+            Go to Team
+        </a>
     </div>
 
     <div class="bg-white border rounded-lg overflow-hidden">
         <div class="p-4 border-b flex items-center gap-3">
             <div class="flex-1">
-                <input id="searchInput" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Search players by name or position...">
+                <input id="searchInput"
+                    class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Search players by name or position...">
             </div>
-            <select id="statusFilter" class="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <select id="statusFilter"
+                class="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                 <option value="">All Status</option>
                 <option value="available">Available</option>
                 <option value="assigned">Assigned</option>
                 <option value="sold">Sold</option>
             </select>
-            <button id="clearHistoryBtn" class="px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg text-sm">Clear History</button>
+            <button id="clearHistoryBtn"
+                class="px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg text-sm">Clear History</button>
         </div>
         <div id="listContainer" class="divide-y">
             <?php if (empty($players)): ?>
@@ -92,35 +103,46 @@ startContent();
                 <?php foreach ($players as $p): ?>
                     <div class="p-4 flex items-center justify-between hover:bg-gray-50">
                         <div class="flex items-center gap-4">
-                            <div class="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold">
+                            <div
+                                class="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold">
                                 <?php echo htmlspecialchars(substr($p['position'], 0, 2)); ?>
                             </div>
                             <div>
                                 <div class="font-semibold text-gray-900 flex items-center gap-2">
                                     <span><?php echo htmlspecialchars($p['name']); ?></span>
-                                    <button onclick="showPlayerInfo(<?php echo htmlspecialchars(json_encode($p), ENT_QUOTES); ?>)" class="p-1 text-blue-600 hover:bg-blue-100 rounded" title="Player Info">
+                                    <button
+                                        onclick="showPlayerInfo(<?php echo htmlspecialchars(json_encode($p), ENT_QUOTES); ?>)"
+                                        class="p-1 text-blue-600 hover:bg-blue-100 rounded" title="Player Info">
                                         <i data-lucide="info" class="w-4 h-4"></i>
                                     </button>
                                 </div>
                                 <div class="text-sm text-gray-600">
-                                    <?php echo htmlspecialchars($p['position']); ?> • Rating <?php echo (int)$p['rating']; ?> • Value <?php echo formatMarketValue($p['value']); ?>
+                                    <?php echo htmlspecialchars($p['position']); ?> • Rating <?php echo (int) $p['rating']; ?> •
+                                    Value <?php echo formatMarketValue($p['value']); ?>
                                 </div>
                                 <div class="text-xs text-gray-500">Status: <?php echo htmlspecialchars($p['status']); ?></div>
                             </div>
                         </div>
                         <div class="flex items-center gap-2">
                             <?php if ($p['status'] === 'available'): ?>
-                                <button class="assign-btn px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm" data-id="<?php echo (int)$p['id']; ?>" data-uuid="<?php echo htmlspecialchars($p['uuid'] ?? '', ENT_QUOTES); ?>">
+                                <button class="assign-btn px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm"
+                                    data-id="<?php echo (int) $p['id']; ?>"
+                                    data-uuid="<?php echo htmlspecialchars($p['uuid'] ?? '', ENT_QUOTES); ?>">
                                     Add to Squad
                                 </button>
-                                <button onclick="placeOnMarket(<?php echo (int)$p['id']; ?>, <?php echo htmlspecialchars(json_encode($p), ENT_QUOTES); ?>)" class="px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-sm">
+                                <button
+                                    onclick="placeOnMarket(<?php echo (int) $p['id']; ?>, <?php echo htmlspecialchars(json_encode($p), ENT_QUOTES); ?>)"
+                                    class="px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-sm">
                                     Place on Market
                                 </button>
-                                <button onclick="releasePlayer(<?php echo (int)$p['id']; ?>, <?php echo '\'' . htmlspecialchars($p['name'], ENT_QUOTES) . '\''; ?>)" class="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm">
+                                <button
+                                    onclick="releasePlayer(<?php echo (int) $p['id']; ?>, <?php echo '\'' . htmlspecialchars($p['name'], ENT_QUOTES) . '\''; ?>)"
+                                    class="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm">
                                     Release
                                 </button>
                             <?php else: ?>
-                                <span class="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs"><?php echo htmlspecialchars(ucfirst($p['status'])); ?></span>
+                                <span
+                                    class="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs"><?php echo htmlspecialchars(ucfirst($p['status'])); ?></span>
                             <?php endif; ?>
                         </div>
                     </div>
@@ -139,114 +161,114 @@ startContent();
         </div>
         <div id="playerInfoContent"></div>
     </div>
-    </div>
+</div>
 <link rel="stylesheet" href="assets/css/player-modal.css">
 
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-    function filterList() {
-        const q = document.getElementById('searchInput').value.trim().toLowerCase();
-        const s = document.getElementById('statusFilter').value;
-        document.querySelectorAll('#listContainer > div.p-4').forEach(row => {
-            const text = row.textContent.toLowerCase();
-            const statusMatch = !s || text.includes(`status: ${s}`);
-            const queryMatch = !q || text.includes(q);
-            row.style.display = (statusMatch && queryMatch) ? '' : 'none';
-        });
-    }
-    document.getElementById('searchInput').addEventListener('input', filterList);
-    document.getElementById('statusFilter').addEventListener('change', filterList);
-
-    document.querySelectorAll('.assign-btn').forEach(btn => {
-        btn.addEventListener('click', async () => {
-            const id = parseInt(btn.dataset.id);
-            const result = await Swal.fire({
-                title: 'Add to Squad?',
-                text: 'This will move the player from inventory to your squad if space is available.',
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonText: 'Add to Squad',
-                cancelButtonText: 'Cancel',
-                confirmButtonColor: '#10b981',
-                cancelButtonColor: '#6b7280'
+    document.addEventListener('DOMContentLoaded', () => {
+        function filterList() {
+            const q = document.getElementById('searchInput').value.trim().toLowerCase();
+            const s = document.getElementById('statusFilter').value;
+            document.querySelectorAll('#listContainer > div.p-4').forEach(row => {
+                const text = row.textContent.toLowerCase();
+                const statusMatch = !s || text.includes(`status: ${s}`);
+                const queryMatch = !q || text.includes(q);
+                row.style.display = (statusMatch && queryMatch) ? '' : 'none';
             });
-            if (!result.isConfirmed) {
-                return;
-            }
-            btn.disabled = true;
-            btn.textContent = 'Adding...';
-            const uuid = String(btn.dataset.uuid || '').trim();
-            try {
-                Swal.fire({
-                    title: 'Adding Player...',
-                    text: 'Please wait',
-                    allowOutsideClick: false,
-                    allowEscapeKey: false,
-                    showConfirmButton: false,
-                    didOpen: () => Swal.showLoading()
+        }
+        document.getElementById('searchInput').addEventListener('input', filterList);
+        document.getElementById('statusFilter').addEventListener('change', filterList);
+
+        document.querySelectorAll('.assign-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const id = parseInt(btn.dataset.id);
+                const result = await Swal.fire({
+                    title: 'Add to Squad?',
+                    text: 'This will move the player from inventory to your squad if space is available.',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Add to Squad',
+                    cancelButtonText: 'Cancel',
+                    confirmButtonColor: '#10b981',
+                    cancelButtonColor: '#6b7280'
                 });
+                if (!result.isConfirmed) {
+                    return;
+                }
+                btn.disabled = true;
+                btn.textContent = 'Adding...';
+                const uuid = String(btn.dataset.uuid || '').trim();
+                try {
+                    Swal.fire({
+                        title: 'Adding Player...',
+                        text: 'Please wait',
+                        allowOutsideClick: false,
+                        allowEscapeKey: false,
+                        showConfirmButton: false,
+                        didOpen: () => Swal.showLoading()
+                    });
+                    const res = await fetch('api/manage_inventory_api.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'assign', inventory_id: id, player_uuid: uuid })
+                    });
+                    const data = await res.json();
+                    Swal.close();
+                    if (!res.ok || !data.success) {
+                        throw new Error(data.message || 'Failed to add player to squad');
+                    }
+                    await Swal.fire({
+                        icon: 'success',
+                        title: 'Player Added',
+                        text: 'The player has been added to your squad.',
+                        confirmButtonColor: '#10b981'
+                    });
+                    location.reload();
+                } catch (e) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Failed',
+                        text: e.message || 'Failed to add player to squad',
+                        confirmButtonColor: '#ef4444'
+                    });
+                    btn.disabled = false;
+                    btn.textContent = 'Add to Squad';
+                }
+            });
+        });
+        document.getElementById('clearHistoryBtn').addEventListener('click', async () => {
+            const result = await Swal.fire({
+                title: 'Clear History?',
+                text: 'This will delete all non-available players from your inventory.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: 'Clear History',
+                cancelButtonText: 'Cancel'
+            });
+            if (!result.isConfirmed) return;
+            try {
+                Swal.fire({ title: 'Processing...', allowOutsideClick: false, allowEscapeKey: false, showConfirmButton: false, didOpen: () => Swal.showLoading() });
                 const res = await fetch('api/manage_inventory_api.php', {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({action: 'assign', inventory_id: id, player_uuid: uuid})
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'clear_history' })
                 });
                 const data = await res.json();
                 Swal.close();
-                if (!res.ok || !data.success) {
-                    throw new Error(data.message || 'Failed to add player to squad');
-                }
-                await Swal.fire({
-                    icon: 'success',
-                    title: 'Player Added',
-                    text: 'The player has been added to your squad.',
-                    confirmButtonColor: '#10b981'
-                });
+                if (!res.ok || !data.success) throw new Error(data.message || 'Failed to clear history');
+                await Swal.fire({ icon: 'success', title: 'History Cleared', text: 'Non-available players have been removed.', confirmButtonColor: '#10b981' });
                 location.reload();
             } catch (e) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Failed',
-                    text: e.message || 'Failed to add player to squad',
-                    confirmButtonColor: '#ef4444'
-                });
-                btn.disabled = false;
-                btn.textContent = 'Add to Squad';
+                Swal.fire({ icon: 'error', title: 'Failed', text: e.message || 'Failed to clear history', confirmButtonColor: '#ef4444' });
             }
         });
-    });
-    document.getElementById('clearHistoryBtn').addEventListener('click', async () => {
-        const result = await Swal.fire({
-            title: 'Clear History?',
-            text: 'This will delete all non-available players from your inventory.',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#ef4444',
-            cancelButtonColor: '#6b7280',
-            confirmButtonText: 'Clear History',
-            cancelButtonText: 'Cancel'
-        });
-        if (!result.isConfirmed) return;
-        try {
-            Swal.fire({ title: 'Processing...', allowOutsideClick: false, allowEscapeKey: false, showConfirmButton: false, didOpen: () => Swal.showLoading() });
-            const res = await fetch('api/manage_inventory_api.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'clear_history' })
-            });
-            const data = await res.json();
-            Swal.close();
-            if (!res.ok || !data.success) throw new Error(data.message || 'Failed to clear history');
-            await Swal.fire({ icon: 'success', title: 'History Cleared', text: 'Non-available players have been removed.', confirmButtonColor: '#10b981' });
-            location.reload();
-        } catch (e) {
-            Swal.fire({ icon: 'error', title: 'Failed', text: e.message || 'Failed to clear history', confirmButtonColor: '#ef4444' });
-        }
-    });
-    async function placeOnMarket(inventoryId, playerData) {
-        const sellPrice = Math.round((playerData.value || 0) * 0.7);
-        const result = await Swal.fire({
-            title: `Place ${playerData.name} on Market?`,
-            html: `
+        async function placeOnMarket(inventoryId, playerData) {
+            const sellPrice = Math.round((playerData.value || 0) * 0.7);
+            const result = await Swal.fire({
+                title: `Place ${playerData.name} on Market?`,
+                html: `
                 <div class="text-left space-y-4">
                     <div class="bg-gray-50 p-4 rounded-lg">
                         <div class="space-y-1 text-sm">
@@ -263,126 +285,126 @@ document.addEventListener('DOMContentLoaded', () => {
                     <p class="text-sm text-gray-600">This will mark the player as sold and credit your budget.</p>
                 </div>
             `,
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonColor: '#f59e0b',
-            cancelButtonColor: '#6b7280',
-            confirmButtonText: 'Place on Market',
-            cancelButtonText: 'Cancel',
-            didOpen: () => { lucide.createIcons(); }
-        });
-        if (!result.isConfirmed) return;
-        try {
-            Swal.fire({ title: 'Processing...', allowOutsideClick: false, allowEscapeKey: false, showConfirmButton: false, didOpen: () => Swal.showLoading() });
-            const res = await fetch('api/manage_inventory_api.php', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ action: 'sell', inventory_id: inventoryId, player_data: playerData, sell_price: sellPrice })
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#f59e0b',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: 'Place on Market',
+                cancelButtonText: 'Cancel',
+                didOpen: () => { lucide.createIcons(); }
             });
-            const data = await res.json();
-            Swal.close();
-            if (!res.ok || !data.success) throw new Error(data.message || 'Failed to place on market');
-            await Swal.fire({ icon: 'success', title: 'Placed on Market', text: `${playerData.name} has been sold for ${formatMarketValue(sellPrice)}.`, confirmButtonColor: '#10b981' });
-            location.reload();
-        } catch (e) {
-            Swal.fire({ icon: 'error', title: 'Failed', text: e.message || 'Failed to place on market', confirmButtonColor: '#ef4444' });
+            if (!result.isConfirmed) return;
+            try {
+                Swal.fire({ title: 'Processing...', allowOutsideClick: false, allowEscapeKey: false, showConfirmButton: false, didOpen: () => Swal.showLoading() });
+                const res = await fetch('api/manage_inventory_api.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'sell', inventory_id: inventoryId, player_data: playerData, sell_price: sellPrice })
+                });
+                const data = await res.json();
+                Swal.close();
+                if (!res.ok || !data.success) throw new Error(data.message || 'Failed to place on market');
+                await Swal.fire({ icon: 'success', title: 'Placed on Market', text: `${playerData.name} has been sold for ${formatMarketValue(sellPrice)}.`, confirmButtonColor: '#10b981' });
+                location.reload();
+            } catch (e) {
+                Swal.fire({ icon: 'error', title: 'Failed', text: e.message || 'Failed to place on market', confirmButtonColor: '#ef4444' });
+            }
         }
-    }
-    async function releasePlayer(inventoryId, playerName) {
-        const result = await Swal.fire({
-            title: `Release ${playerName}?`,
-            text: 'This will permanently remove the player from your inventory without compensation.',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#ef4444',
-            cancelButtonColor: '#6b7280',
-            confirmButtonText: 'Release',
-            cancelButtonText: 'Cancel'
-        });
-        if (!result.isConfirmed) return;
-        try {
-            Swal.fire({ title: 'Processing...', allowOutsideClick: false, allowEscapeKey: false, showConfirmButton: false, didOpen: () => Swal.showLoading() });
-            const res = await fetch('api/manage_inventory_api.php', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ action: 'delete', inventory_id: inventoryId, player_data: { name: playerName } })
+        async function releasePlayer(inventoryId, playerName) {
+            const result = await Swal.fire({
+                title: `Release ${playerName}?`,
+                text: 'This will permanently remove the player from your inventory without compensation.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: 'Release',
+                cancelButtonText: 'Cancel'
             });
-            const data = await res.json();
-            Swal.close();
-            if (!res.ok || !data.success) throw new Error(data.message || 'Failed to release player');
-            await Swal.fire({ icon: 'success', title: 'Player Released', text: `${playerName} has been released.`, confirmButtonColor: '#10b981' });
-            location.reload();
-        } catch (e) {
-            Swal.fire({ icon: 'error', title: 'Failed', text: e.message || 'Failed to release player', confirmButtonColor: '#ef4444' });
+            if (!result.isConfirmed) return;
+            try {
+                Swal.fire({ title: 'Processing...', allowOutsideClick: false, allowEscapeKey: false, showConfirmButton: false, didOpen: () => Swal.showLoading() });
+                const res = await fetch('api/manage_inventory_api.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'delete', inventory_id: inventoryId, player_data: { name: playerName } })
+                });
+                const data = await res.json();
+                Swal.close();
+                if (!res.ok || !data.success) throw new Error(data.message || 'Failed to release player');
+                await Swal.fire({ icon: 'success', title: 'Player Released', text: `${playerName} has been released.`, confirmButtonColor: '#10b981' });
+                location.reload();
+            } catch (e) {
+                Swal.fire({ icon: 'error', title: 'Failed', text: e.message || 'Failed to release player', confirmButtonColor: '#ef4444' });
+            }
         }
-    }
-    window.placeOnMarket = placeOnMarket;
-    window.releasePlayer = releasePlayer;
-    function formatMarketValue(value) {
-        if (value >= 1000000) {
-            return '€' + (value / 1000000).toFixed(1) + 'M';
-        } else if (value >= 1000) {
-            return '€' + (value / 1000).toFixed(0) + 'K';
-        } else {
-            return '€' + value;
+        window.placeOnMarket = placeOnMarket;
+        window.releasePlayer = releasePlayer;
+        function formatMarketValue(value) {
+            if (value >= 1000000) {
+                return '€' + (value / 1000000).toFixed(1) + 'M';
+            } else if (value >= 1000) {
+                return '€' + (value / 1000).toFixed(0) + 'K';
+            } else {
+                return '€' + value;
+            }
         }
-    }
-    function calculateSalary(player) {
-        if (player && typeof player.salary === 'number' && player.salary > 0) {
-            return player.salary;
+        function calculateSalary(player) {
+            if (player && typeof player.salary === 'number' && player.salary > 0) {
+                return player.salary;
+            }
+            const baseValue = player.value || 1000000;
+            const rating = player.rating || 70;
+            let salaryPercentage = 0.001;
+            if (rating >= 90) salaryPercentage = 0.002;
+            else if (rating >= 85) salaryPercentage = 0.0018;
+            else if (rating >= 80) salaryPercentage = 0.0015;
+            else if (rating >= 75) salaryPercentage = 0.0012;
+            const weeklySalary = Math.round(baseValue * salaryPercentage);
+            return Math.max(weeklySalary, 10000);
         }
-        const baseValue = player.value || 1000000;
-        const rating = player.rating || 70;
-        let salaryPercentage = 0.001;
-        if (rating >= 90) salaryPercentage = 0.002;
-        else if (rating >= 85) salaryPercentage = 0.0018;
-        else if (rating >= 80) salaryPercentage = 0.0015;
-        else if (rating >= 75) salaryPercentage = 0.0012;
-        const weeklySalary = Math.round(baseValue * salaryPercentage);
-        return Math.max(weeklySalary, 10000);
-    }
-    function generatePlayerStats(position, rating) {
-        const base = {
-            'GK': ['Diving', 'Handling', 'Kicking', 'Reflexes', 'Positioning'],
-            'CB': ['Defending', 'Heading', 'Strength', 'Marking', 'Tackling'],
-            'LB': ['Pace', 'Crossing', 'Defending', 'Stamina', 'Dribbling'],
-            'RB': ['Pace', 'Crossing', 'Defending', 'Stamina', 'Dribbling'],
-            'CDM': ['Passing', 'Tackling', 'Positioning', 'Strength', 'Vision'],
-            'CM': ['Passing', 'Dribbling', 'Vision', 'Stamina', 'Shooting'],
-            'CAM': ['Passing', 'Dribbling', 'Vision', 'Shooting', 'Creativity'],
-            'LM': ['Pace', 'Crossing', 'Dribbling', 'Stamina', 'Passing'],
-            'RM': ['Pace', 'Crossing', 'Dribbling', 'Stamina', 'Passing'],
-            'LW': ['Pace', 'Dribbling', 'Crossing', 'Shooting', 'Agility'],
-            'RW': ['Pace', 'Dribbling', 'Crossing', 'Shooting', 'Agility'],
-            'ST': ['Shooting', 'Finishing', 'Positioning', 'Strength', 'Heading'],
-            'CF': ['Shooting', 'Dribbling', 'Passing', 'Positioning', 'Creativity']
-        };
-        const stats = {};
-        const list = base[position] || base['CM'];
-        list.forEach(stat => {
-            const variation = Math.floor(Math.random() * 10) - 5;
-            const val = Math.max(30, Math.min(99, (rating || 70) + variation));
-            stats[stat] = val;
-        });
-        return stats;
-    }
-    function showPlayerInfo(player) {
-        const contractMatches = player.contract_matches || Math.floor(Math.random() * 36) + 15;
-        const contractRemaining = player.contract_matches_remaining || contractMatches;
-        let stats = player.attributes || generatePlayerStats(player.position, player.rating);
-        const normalizedStats = {};
-        Object.entries(stats).forEach(([key, value]) => {
-            const k = key.charAt(0).toUpperCase() + key.slice(1);
-            normalizedStats[k] = value;
-        });
-        const imageBaseUrl = '<?php echo PLAYER_IMAGES_BASE_PATH; ?>';
-        const avatarHtml = player.avatar
-            ? `<img src="${player.avatar.startsWith('http') ? player.avatar : imageBaseUrl + player.avatar}" alt="${player.name}" class="w-full h-full object-cover" onerror="this.onerror=null; this.parentElement.innerHTML='<i data-lucide=\\'user\\' class=\\'w-12 h-12\\'></i>';">`
-            : `<i data-lucide="user" class="w-12 h-12"></i>`;
-        const playable = (player.playablePositions || [player.position]).map(pos =>
-            `<span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm font-medium">${pos}</span>`
-        ).join('');
-        const attrs = Object.entries(normalizedStats).map(([stat, value]) => `
+        function generatePlayerStats(position, rating) {
+            const base = {
+                'GK': ['Diving', 'Handling', 'Kicking', 'Reflexes', 'Positioning'],
+                'CB': ['Defending', 'Heading', 'Strength', 'Marking', 'Tackling'],
+                'LB': ['Pace', 'Crossing', 'Defending', 'Stamina', 'Dribbling'],
+                'RB': ['Pace', 'Crossing', 'Defending', 'Stamina', 'Dribbling'],
+                'CDM': ['Passing', 'Tackling', 'Positioning', 'Strength', 'Vision'],
+                'CM': ['Passing', 'Dribbling', 'Vision', 'Stamina', 'Shooting'],
+                'CAM': ['Passing', 'Dribbling', 'Vision', 'Shooting', 'Creativity'],
+                'LM': ['Pace', 'Crossing', 'Dribbling', 'Stamina', 'Passing'],
+                'RM': ['Pace', 'Crossing', 'Dribbling', 'Stamina', 'Passing'],
+                'LW': ['Pace', 'Dribbling', 'Crossing', 'Shooting', 'Agility'],
+                'RW': ['Pace', 'Dribbling', 'Crossing', 'Shooting', 'Agility'],
+                'ST': ['Shooting', 'Finishing', 'Positioning', 'Strength', 'Heading'],
+                'CF': ['Shooting', 'Dribbling', 'Passing', 'Positioning', 'Creativity']
+            };
+            const stats = {};
+            const list = base[position] || base['CM'];
+            list.forEach(stat => {
+                const variation = Math.floor(Math.random() * 10) - 5;
+                const val = Math.max(30, Math.min(99, (rating || 70) + variation));
+                stats[stat] = val;
+            });
+            return stats;
+        }
+        function showPlayerInfo(player) {
+            const contractMatches = player.contract_matches || Math.floor(Math.random() * 36) + 15;
+            const contractRemaining = player.contract_matches_remaining || contractMatches;
+            let stats = player.attributes || generatePlayerStats(player.position, player.rating);
+            const normalizedStats = {};
+            Object.entries(stats).forEach(([key, value]) => {
+                const k = key.charAt(0).toUpperCase() + key.slice(1);
+                normalizedStats[k] = value;
+            });
+            const imageBaseUrl = '<?php echo PLAYER_IMAGES_BASE_PATH; ?>';
+            const avatarHtml = player.avatar
+                ? `<img src="${player.avatar.startsWith('http') ? player.avatar : imageBaseUrl + player.avatar}" alt="${player.name}" class="w-full h-full object-cover" onerror="this.onerror=null; this.parentElement.innerHTML='<i data-lucide=\\'user\\' class=\\'w-12 h-12\\'></i>';">`
+                : `<i data-lucide="user" class="w-12 h-12"></i>`;
+            const playable = (player.playablePositions || [player.position]).map(pos =>
+                `<span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm font-medium">${pos}</span>`
+            ).join('');
+            const attrs = Object.entries(normalizedStats).map(([stat, value]) => `
             <div class="flex items-center gap-3">
                 <span class="text-sm w-28">${stat}</span>
                 <div class="flex-1 bg-gray-200 rounded-full h-2">
@@ -391,7 +413,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <span class="text-sm font-medium w-8 text-right">${value}</span>
             </div>
         `).join('');
-        const html = `
+            const html = `
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div class="lg:col-span-2 bg-gradient-to-r from-blue-600 to-blue-800 text-white rounded-lg p-6">
                     <div class="flex items-center gap-6">
@@ -449,19 +471,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             </div>
         `;
-        document.getElementById('playerInfoContent').innerHTML = html;
-        document.getElementById('playerInfoModal').classList.remove('hidden');
-        lucide.createIcons();
-    }
-    // Expose for inline onclick usage
-    window.showPlayerInfo = showPlayerInfo;
-    document.getElementById('closePlayerInfoModal').addEventListener('click', function () {
-        document.getElementById('playerInfoModal').classList.add('hidden');
+            document.getElementById('playerInfoContent').innerHTML = html;
+            document.getElementById('playerInfoModal').classList.remove('hidden');
+            lucide.createIcons();
+        }
+        // Expose for inline onclick usage
+        window.showPlayerInfo = showPlayerInfo;
+        document.getElementById('closePlayerInfoModal').addEventListener('click', function () {
+            document.getElementById('playerInfoModal').classList.add('hidden');
+        });
+        document.getElementById('playerInfoModal').addEventListener('click', function (e) {
+            if (e.target === this) this.classList.add('hidden');
+        });
     });
-    document.getElementById('playerInfoModal').addEventListener('click', function (e) {
-        if (e.target === this) this.classList.add('hidden');
-    });
-});
 </script>
 <?php
 endContent('Player Inventory', 'player_inventory', true, false, true, true);

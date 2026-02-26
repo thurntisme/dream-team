@@ -614,7 +614,8 @@ try {
                 <?php if (($match['status'] ?? '') === 'completed'): ?>
                     <?php
                     $session_key = "mystery_box_claimed_{$match['uuid']}_{$user_uuid}";
-                    $mystery_box_claimed = isset($_SESSION[$session_key]) && $_SESSION[$session_key] === true;
+                    // $mystery_box_claimed = isset($_SESSION[$session_key]) && $_SESSION[$session_key] === true;
+                    $mystery_box_claimed = false;
                     ?>
                     <div class="bg-white rounded-lg shadow border border-gray-200 overflow-hidden mt-6">
                         <div class="bg-gradient-to-r from-purple-500 to-purple-600 text-white p-4">

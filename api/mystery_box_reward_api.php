@@ -12,10 +12,33 @@ if (!isLoggedIn()) {
     exit;
 }
 
+function checkMatchIsReadyToClaim($db, $match_uuid)
+{
+    $stmt = $db->prepare('SELECT status FROM league_matches WHERE uuid = :uuid LIMIT 1');
+    $stmt->bindValue(':uuid', $match_uuid, SQLITE3_TEXT);
+    $result = $stmt->execute();
+    if (!$result) {
+        return 'Failed to check match status';
+    }
+    $match = $result->fetchArray(SQLITE3_ASSOC);
+    if (!$match) {
+        return 'Match not found';
+    }
+    if ($match['status'] === 'scheduled') {
+        return 'Match is not completed';
+    }
+    if ($match['status'] === 'claimed') {
+        return 'Mystery box reward already claimed for this match';
+    }
+    return 'ready';
+}
+
 // Support GET (reward options) and POST (apply selected reward)
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     header('Content-Type: application/json');
     try {
+        $db = getDbConnection();
+
         $user_uuid = $_SESSION['user_uuid'];
         $match_uuid = isset($_GET['match_uuid']) ? $_GET['match_uuid'] : null;
         if (!$match_uuid) {
@@ -23,9 +46,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             echo json_encode(['success' => false, 'message' => 'Match ID is required']);
             exit;
         }
-        $claimed_key = "mystery_box_claimed_{$match_uuid}_{$user_uuid}";
-        if (isset($_SESSION[$claimed_key]) && $_SESSION[$claimed_key] === true) {
-            echo json_encode(['success' => true, 'claimed' => true, 'options' => []]);
+
+        $matchStatus = checkMatchIsReadyToClaim($db, $match_uuid);
+        if ($matchStatus !== 'ready') {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => $matchStatus]);
             exit;
         }
 
@@ -103,9 +128,11 @@ try {
         throw new Exception('Match ID is required');
     }
 
-    $session_key = "mystery_box_claimed_{$match_uuid}_{$user_uuid}";
-    if (isset($_SESSION[$session_key]) && $_SESSION[$session_key] === true) {
-        throw new Exception('Mystery box reward already claimed for this match');
+    $matchStatus = checkMatchIsReadyToClaim($db, $match_uuid);
+    if ($matchStatus !== 'ready') {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => $matchStatus]);
+        exit;
     }
 
     // Validate reward data
@@ -203,10 +230,14 @@ try {
             $new_player = $all_players[$random_key];
 
             // Insert into player_inventory
-            $stmt = $db->prepare('INSERT INTO player_inventory (club_uuid, player_uuid, player_data, status) VALUES (:club_uuid, :player_uuid, :player_data, "available")');
-            $stmt->bindValue(':club_uuid', $club_uuid, SQLITE3_TEXT);
+            $stmt = $db->prepare('INSERT INTO player_inventory (club_uuid, player_uuid, player_data, status) 
+                      VALUES (:club_uuid, :player_uuid, :player_data, :status)');
+
+            $stmt->bindValue(':club_uuid', $club_uuid);
             $stmt->bindValue(':player_uuid', $new_player['uuid'], SQLITE3_TEXT);
-            $stmt->bindValue(':player_data', json_encode($new_player), SQLITE3_TEXT);
+            $stmt->bindValue(':player_data', json_encode($new_player));
+            $stmt->bindValue(':status', 'available');
+
             $result = $stmt->execute();
 
             if ($result) {
@@ -218,7 +249,7 @@ try {
 
         case 'item':
             // Get a randome item from table shop_items where effect_type = 'player_pack'
-            $stmt = $db->prepare('SELECT * FROM shop_items WHERE effect_type = "player_pack" ORDER BY RANDOM() LIMIT 1');
+            $stmt = $db->prepare('SELECT * FROM shop_items WHERE effect_type = "player_pack" ORDER BY RAND() LIMIT 1');
             $result = $stmt->execute();
             $pack = $result ? $result->fetchArray(SQLITE3_ASSOC) : null;
             if (!$pack) {
@@ -234,7 +265,7 @@ try {
                 $success = true;
                 $message = "You received a " . $pack['name'] . "!";
             }
-            
+
             break;
 
         default:
@@ -245,8 +276,10 @@ try {
         throw new Exception('Failed to apply reward');
     }
 
-    // Mark mystery box as claimed for this match
-    $_SESSION[$session_key] = true;
+    // Mark mystery box reward as claimed for this match and user
+    $stmt = $db->prepare('UPDATE league_matches SET status = "claimed" WHERE uuid = :uuid');
+    $stmt->bindValue(':uuid', $match_uuid, SQLITE3_TEXT);
+    $result = $stmt->execute();
 
     // Get updated user data
     $stmt = $db->prepare('SELECT budget, fans FROM user_club WHERE user_uuid = :user_uuid');
