@@ -843,14 +843,14 @@ function getFanRevenueBreakdown($db, $user_uuid, $is_home, $total_revenue, $prev
 
     // 1. Merchandise/Media Revenue (All matches, based on total fans)
     $merch_revenue = $current_fans * 10;
-    $breakdown[] = ['description' => "Fan Engagement ({$current_fans} fans)", 'amount' => $merch_revenue];
+    $breakdown[] = ['description' => "Fan Engagement (" . number_format($current_fans) . " fans)", 'amount' => $merch_revenue];
 
     // 2. Ticket Revenue (Home matches only, capped by capacity)
     if ($is_home) {
         $attendance = min($current_fans, $stadium_capacity);
         $ticket_price = 30; // Average ticket price
         $ticket_revenue = $attendance * $ticket_price;
-        $breakdown[] = ['description' => "Ticket Sales ({$attendance} attendance)", 'amount' => $ticket_revenue];
+        $breakdown[] = ['description' => "Ticket Sales (" . number_format($attendance) . " attendance)", 'amount' => $ticket_revenue];
 
         // 3. Stadium Facilities (Home matches only)
         $stadium_multipliers = [1 => 1.0, 2 => 1.2, 3 => 1.5, 4 => 1.8, 5 => 2.2];

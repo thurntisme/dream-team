@@ -278,6 +278,50 @@ startContent();
                         ?>
                     </div>
                 </div>
+
+                <!-- Stadium Revenue Info -->
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <h4 class="font-semibold text-gray-900 mb-2">Revenue Information</h3>
+                        <div class="space-y-1 text-sm text-gray-600">
+                            <div class="flex justify-between">
+                                <span>Base Match Revenue:</span>
+                                <span class="font-medium">€50,000</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Stadium Multiplier:</span>
+                                <span class="font-medium">
+                                    <?php echo $current_stadium['revenue_multiplier']; ?>x
+                                </span>
+                            </div>
+                            <?php
+                            // Calculate expected attendance (fans can't exceed stadium capacity)
+                            $expected_attendance = min($user_fans, $stadium_data['capacity']);
+                            $attendance_percentage = ($expected_attendance / $stadium_data['capacity']) * 100;
+                            $fan_bonus = $expected_attendance * 10; // €10 per fan
+                            $total_revenue = (50000 * $current_stadium['revenue_multiplier']) + $fan_bonus;
+                            ?>
+                            <div class="flex justify-between">
+                                <span>Expected Attendance:</span>
+                                <span class="font-medium text-blue-600">
+                                    <?php echo number_format($expected_attendance); ?>
+                                    (
+                                    <?php echo number_format($attendance_percentage, 1); ?>%)
+                                </span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Fan Revenue Bonus:</span>
+                                <span class="font-medium text-blue-600">
+                                    <?php echo formatMarketValue($fan_bonus); ?>
+                                </span>
+                            </div>
+                            <div class="flex justify-between border-t pt-1">
+                                <span>Total per Match:</span>
+                                <span class="font-medium text-green-600">
+                                    <?php echo formatMarketValue($total_revenue); ?>
+                                </span>
+                            </div>
+                        </div>
+                </div>
             </div>
         </div>
 
@@ -386,70 +430,6 @@ startContent();
         </h2>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <!-- Rename Stadium -->
-            <div class="bg-gray-50 rounded-lg p-4">
-                <h3 class="font-semibold text-gray-900 mb-2">Stadium Name</h3>
-                <div class="flex gap-2">
-                    <input type="text" id="stadiumName" value="<?php echo htmlspecialchars($stadium_data['name']); ?>"
-                        class="flex-1 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 <?php echo !$can_rename_stadium ? 'bg-gray-100 cursor-not-allowed' : ''; ?>"
-                        <?php echo !$can_rename_stadium ? 'readonly' : ''; ?>>
-                    <button id="renameStadium"
-                        class="px-4 py-2 rounded-lg transition-colors <?php echo $can_rename_stadium ? 'bg-gray-600 text-white hover:bg-gray-700' : 'bg-gray-300 text-gray-500 cursor-not-allowed'; ?>"
-                        <?php echo !$can_rename_stadium ? 'disabled' : ''; ?>>
-                        <i data-lucide="edit" class="w-4 h-4"></i>
-                    </button>
-                </div>
-                <?php if (!$can_rename_stadium): ?>
-                    <div class="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                        <div class="flex items-start gap-2">
-                            <i data-lucide="lock" class="w-4 h-4 text-yellow-600 mt-0.5 flex-shrink-0"></i>
-                            <div class="text-sm">
-                                <p class="text-yellow-800 font-medium">Stadium name cannot be changed</p>
-                                <p class="text-yellow-700 mt-1">Purchase the "Stadium Name Change" item from the <a
-                                        href="shop.php" class="underline hover:text-yellow-900">Club Shop</a> to unlock this
-                                    feature.</p>
-                            </div>
-                        </div>
-                    </div>
-                <?php endif; ?>
-            </div>
-
-            <!-- Stadium Revenue Info -->
-            <div class="bg-gray-50 rounded-lg p-4">
-                <h3 class="font-semibold text-gray-900 mb-2">Revenue Information</h3>
-                <div class="space-y-1 text-sm text-gray-600">
-                    <div class="flex justify-between">
-                        <span>Base Match Revenue:</span>
-                        <span class="font-medium">€50,000</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span>Stadium Multiplier:</span>
-                        <span class="font-medium"><?php echo $current_stadium['revenue_multiplier']; ?>x</span>
-                    </div>
-                    <?php
-                    // Calculate expected attendance (fans can't exceed stadium capacity)
-                    $expected_attendance = min($user_fans, $stadium_data['capacity']);
-                    $attendance_percentage = ($expected_attendance / $stadium_data['capacity']) * 100;
-                    $fan_bonus = $expected_attendance * 10; // €10 per fan
-                    $total_revenue = (50000 * $current_stadium['revenue_multiplier']) + $fan_bonus;
-                    ?>
-                    <div class="flex justify-between">
-                        <span>Expected Attendance:</span>
-                        <span class="font-medium text-blue-600"><?php echo number_format($expected_attendance); ?>
-                            (<?php echo number_format($attendance_percentage, 1); ?>%)</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span>Fan Revenue Bonus:</span>
-                        <span class="font-medium text-blue-600"><?php echo formatMarketValue($fan_bonus); ?></span>
-                    </div>
-                    <div class="flex justify-between border-t pt-1">
-                        <span>Total per Match:</span>
-                        <span class="font-medium text-green-600">
-                            <?php echo formatMarketValue($total_revenue); ?>
-                        </span>
-                    </div>
-                </div>
-            </div>
         </div>
     </div>
 </div>
