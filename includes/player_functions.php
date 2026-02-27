@@ -243,27 +243,32 @@ if (!function_exists('updatePlayerFitness')) {
  * @return array Updated player data
  */
 if (!function_exists('updatePlayerForm')) {
-    function updatePlayerForm($player, $performance = 'average')
+    function updatePlayerForm($player, $performance = 'average', $played_match = false)
     {
         $form = $player['form'] ?? 7;
 
-        switch ($performance) {
-            case 'excellent':
-                $form += (rand(15, 25) / 10); // +1.5 to +2.5
-                break;
-            case 'good':
-                $form += (rand(5, 15) / 10); // +0.5 to +1.5
-                break;
-            case 'average':
-                // Fluctuation
-                $change = rand(-10, 10) / 10; // -1.0 to +1.0
-                if ($change == 0)
-                    $change = (rand(0, 1) ? 0.2 : -0.2);
-                $form += $change;
-                break;
-            case 'poor':
-                $form -= (rand(10, 25) / 10); // -1.0 to -2.5
-                break;
+        if ($played_match) {
+            switch ($performance) {
+                case 'excellent':
+                    $form += (rand(15, 25) / 10); // +1.5 to +2.5
+                    break;
+                case 'good':
+                    $form += (rand(5, 15) / 10); // +0.5 to +1.5
+                    break;
+                case 'average':
+                    // Fluctuation
+                    $change = rand(-10, 10) / 10; // -1.0 to +1.0
+                    if ($change == 0)
+                        $change = (rand(0, 1) ? 0.2 : -0.2);
+                    $form += $change;
+                    break;
+                case 'poor':
+                    $form -= (rand(10, 25) / 10); // -1.0 to -2.5
+                    break;
+            }
+        } else {
+            // Small form recovery when resting
+            $form += rand(1, 5) / 10; // +0.1 to +0.5
         }
 
         // Keep form between 1 and 10
