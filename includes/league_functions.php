@@ -1549,7 +1549,7 @@ function updatePlayerConditions($db, $user_uuid, $wins, $draws, $losses, $goals_
 
     // Update statistics for main team players (they played the match)
     if (is_array($team) && !empty($team)) {
-        $playingPlayers = array_filter($team);
+        $playingPlayers = array_slice(array_filter($team), 0, 16);
         updatePlayerStatistics($db, $user_uuid, $playingPlayers, $matchResult, $goals_for, $goals_against);
     }
 }

@@ -34,7 +34,7 @@ try {
         $existsStmt->bindValue(':t', $table, SQLITE3_TEXT);
         $existsRes = $existsStmt->execute();
         $existsRow = $existsRes ? $existsRes->fetchArray(SQLITE3_ASSOC) : ['c' => 0];
-        if ((int)($existsRow['c'] ?? 0) === 0) {
+        if ((int) ($existsRow['c'] ?? 0) === 0) {
             return;
         }
         $stmt = $db->prepare('SELECT COUNT(*) as c FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = :t AND index_name = :i');
@@ -43,7 +43,7 @@ try {
             $stmt->bindValue(':i', $index, SQLITE3_TEXT);
             $res = $stmt->execute();
             $row = $res ? $res->fetchArray(SQLITE3_ASSOC) : ['c' => 0];
-            if ((int)($row['c'] ?? 0) === 0) {
+            if ((int) ($row['c'] ?? 0) === 0) {
                 $db->exec('CREATE INDEX ' . $index . ' ON ' . $table . ' (' . $columns . ')');
             }
         }
@@ -168,7 +168,7 @@ try {
                     $check->bindValue(':email', $adminEmail, SQLITE3_TEXT);
                     $res = $check->execute();
                     $row = $res ? $res->fetchArray(SQLITE3_ASSOC) : ['c' => 0];
-                    if ((int)($row['c'] ?? 0) > 0) {
+                    if ((int) ($row['c'] ?? 0) > 0) {
                         $logs[] = ['type' => 'detail', 'message' => 'Admin already exists: ' . $adminEmail];
                     } else {
                         $stmt = $db->prepare('INSERT INTO users (name, email, password, uuid) VALUES (:name, :email, :password, :uuid)');
@@ -177,11 +177,11 @@ try {
                             $stmt->bindValue(':email', $adminEmail, SQLITE3_TEXT);
                             $stmt->bindValue(':password', password_hash($adminPassword, PASSWORD_DEFAULT), SQLITE3_TEXT);
                             $stmt->bindValue(':uuid', generateUUID(), SQLITE3_TEXT);
-                            $ins = $stmt->execute();    
+                            $ins = $stmt->execute();
                             if ($ins) {
                                 $adminId = $db->lastInsertRowID();
                                 $stmtUuid = $db->prepare('SELECT uuid FROM users WHERE id = :id');
-                                $stmtUuid->bindValue(':id', (int)$adminId, SQLITE3_INTEGER);
+                                $stmtUuid->bindValue(':id', (int) $adminId, SQLITE3_INTEGER);
                                 $resUuid = $stmtUuid->execute();
                                 $rowUuid = $resUuid ? $resUuid->fetchArray(SQLITE3_ASSOC) : null;
                                 $uuidVal = $rowUuid['uuid'] ?? null;
@@ -204,7 +204,7 @@ try {
                                         $stmtStChk->bindValue(':uuid', $uuidVal, SQLITE3_TEXT);
                                         $resStChk = $stmtStChk->execute();
                                         $rowStChk = $resStChk ? $resStChk->fetchArray(SQLITE3_ASSOC) : ['c' => 0];
-                                        $exists = ((int)($rowStChk['c'] ?? 0)) > 0;
+                                        $exists = ((int) ($rowStChk['c'] ?? 0)) > 0;
                                     } else {
                                         $exists = false;
                                     }
@@ -384,7 +384,7 @@ try {
     $postOk = $postOk && $db->exec('CREATE TABLE IF NOT EXISTS player_stats (
             id INT AUTO_INCREMENT PRIMARY KEY,
             user_uuid CHAR(16) NOT NULL,
-            player_id VARCHAR(64) NOT NULL,
+            player_uuid VARCHAR(64) NOT NULL,
             player_name VARCHAR(255) NOT NULL,
             position VARCHAR(10) NOT NULL,
             matches_played INT DEFAULT 0,

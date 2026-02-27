@@ -70,7 +70,7 @@ function __seed_shop_items_simple($db, $driver, &$messages)
         if ($res) {
             $row = $res->fetchArray(SQLITE3_ASSOC);
             if ($row && isset($row['count'])) {
-                $count = (int)$row['count'];
+                $count = (int) $row['count'];
             }
         }
     } else {
@@ -78,7 +78,7 @@ function __seed_shop_items_simple($db, $driver, &$messages)
         if ($res) {
             $row = $res->fetchArray(SQLITE3_ASSOC);
             if ($row && isset($row['count'])) {
-                $count = (int)$row['count'];
+                $count = (int) $row['count'];
             }
         }
     }
@@ -229,7 +229,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['start_setup'])) {
 }
 
 if (false) {
-?>
+    ?>
     <!doctype html>
     <html>
 
@@ -370,34 +370,42 @@ if (false) {
                             <label><input type="radio" name="driver" value="mysql" <?php echo (($_POST['driver'] ?? 'sqlite') === 'mysql') ? 'checked' : '' ?>> MySQL</label>
                         </div>
                     </div>
-                    <div id="sqliteFields" style="margin-top:8px; <?php echo (($_POST['driver'] ?? 'sqlite') === 'mysql') ? 'display:none' : '' ?>">
+                    <div id="sqliteFields"
+                        style="margin-top:8px; <?php echo (($_POST['driver'] ?? 'sqlite') === 'mysql') ? 'display:none' : '' ?>">
                         <label>SQLite file path</label>
-                        <input type="text" name="sqlite_file" value="<?php echo htmlspecialchars($_POST['sqlite_file'] ?? (__DIR__ . '/database/dreamteam.db')); ?>">
+                        <input type="text" name="sqlite_file"
+                            value="<?php echo htmlspecialchars($_POST['sqlite_file'] ?? (__DIR__ . '/database/dreamteam.db')); ?>">
                         <div class="note">Example: d:/code/dream-team/database/dreamteam.db</div>
                     </div>
-                    <div id="mysqlFields" style="margin-top:8px; <?php echo (($_POST['driver'] ?? 'sqlite') === 'mysql') ? '' : 'display:none' ?>">
+                    <div id="mysqlFields"
+                        style="margin-top:8px; <?php echo (($_POST['driver'] ?? 'sqlite') === 'mysql') ? '' : 'display:none' ?>">
                         <div class="row">
                             <div>
                                 <label>Host</label>
-                                <input type="text" name="mysql_host" value="<?php echo htmlspecialchars($_POST['mysql_host'] ?? '127.0.0.1'); ?>">
+                                <input type="text" name="mysql_host"
+                                    value="<?php echo htmlspecialchars($_POST['mysql_host'] ?? '127.0.0.1'); ?>">
                             </div>
                             <div>
                                 <label>Port</label>
-                                <input type="text" name="mysql_port" value="<?php echo htmlspecialchars($_POST['mysql_port'] ?? '3306'); ?>">
+                                <input type="text" name="mysql_port"
+                                    value="<?php echo htmlspecialchars($_POST['mysql_port'] ?? '3306'); ?>">
                             </div>
                         </div>
                         <div class="row">
                             <div>
                                 <label>Database</label>
-                                <input type="text" name="mysql_db" value="<?php echo htmlspecialchars($_POST['mysql_db'] ?? 'dreamteam'); ?>">
+                                <input type="text" name="mysql_db"
+                                    value="<?php echo htmlspecialchars($_POST['mysql_db'] ?? 'dreamteam'); ?>">
                             </div>
                             <div>
                                 <label>User</label>
-                                <input type="text" name="mysql_user" value="<?php echo htmlspecialchars($_POST['mysql_user'] ?? 'root'); ?>">
+                                <input type="text" name="mysql_user"
+                                    value="<?php echo htmlspecialchars($_POST['mysql_user'] ?? 'root'); ?>">
                             </div>
                         </div>
                         <label>Password</label>
-                        <input type="password" name="mysql_password" value="<?php echo htmlspecialchars($_POST['mysql_password'] ?? ''); ?>">
+                        <input type="password" name="mysql_password"
+                            value="<?php echo htmlspecialchars($_POST['mysql_password'] ?? ''); ?>">
                     </div>
                 </fieldset>
 
@@ -406,19 +414,23 @@ if (false) {
                     <div class="row">
                         <div>
                             <label>Name</label>
-                            <input type="text" name="admin_name" value="<?php echo htmlspecialchars($_POST['admin_name'] ?? ''); ?>">
+                            <input type="text" name="admin_name"
+                                value="<?php echo htmlspecialchars($_POST['admin_name'] ?? ''); ?>">
                         </div>
                         <div>
                             <label>Email</label>
-                            <input type="email" name="admin_email" value="<?php echo htmlspecialchars($_POST['admin_email'] ?? ''); ?>">
+                            <input type="email" name="admin_email"
+                                value="<?php echo htmlspecialchars($_POST['admin_email'] ?? ''); ?>">
                         </div>
                     </div>
                     <label>Password</label>
-                    <input type="password" name="admin_password" value="<?php echo htmlspecialchars($_POST['admin_password'] ?? ''); ?>">
+                    <input type="password" name="admin_password"
+                        value="<?php echo htmlspecialchars($_POST['admin_password'] ?? ''); ?>">
                 </fieldset>
 
                 <div class="actions">
-                    <label><input type="checkbox" name="seed" <?php echo !empty($_POST['seed']) ? 'checked' : '' ?>> Seed data</label>
+                    <label><input type="checkbox" name="seed" <?php echo !empty($_POST['seed']) ? 'checked' : '' ?>> Seed
+                        data</label>
                     <button type="submit" class="btn">Start</button>
                 </div>
             </form>
@@ -445,7 +457,7 @@ if (false) {
     </body>
 
     </html>
-<?php
+    <?php
     exit;
 }
 
@@ -479,7 +491,7 @@ if ($db_exists) {
             $stmt = $db->query("SELECT COUNT(*) as count FROM users");
             if ($stmt) {
                 $row = $stmt->fetchArray(SQLITE3_ASSOC);
-                $has_users = $row && isset($row['count']) ? ((int)$row['count'] > 0) : false;
+                $has_users = $row && isset($row['count']) ? ((int) $row['count'] > 0) : false;
             }
         }
         $db->close();
@@ -490,7 +502,7 @@ if ($db_exists) {
 }
 
 // Configuration via environment variables only; no web-based DB config
-$step = isset($_POST['step']) ? (int)$_POST['step'] : (isset($_GET['step']) ? (int)$_GET['step'] : 1);
+$step = isset($_POST['step']) ? (int) $_POST['step'] : (isset($_GET['step']) ? (int) $_GET['step'] : 1);
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['test_conn'])) {
     try {
         $db = getDbConnection();
@@ -502,8 +514,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['test_conn'])) {
             echo json_encode(['ok' => $ok]);
             exit;
         }
-        if ($ok) $success[] = 'Database connection successful';
-        else $errors[] = 'Database connection failed';
+        if ($ok)
+            $success[] = 'Database connection successful';
+        else
+            $errors[] = 'Database connection failed';
     } catch (Exception $e) {
         if (!empty($_POST['ajax'])) {
             header('Content-Type: application/json');
@@ -527,7 +541,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install'])) {
                     $stmt->bindValue(':i', $index, SQLITE3_TEXT);
                     $res = $stmt->execute();
                     $row = $res ? $res->fetchArray(SQLITE3_ASSOC) : ['c' => 0];
-                    if ((int)($row['c'] ?? 0) === 0) {
+                    if ((int) ($row['c'] ?? 0) === 0) {
                         $db->exec('CREATE INDEX ' . $index . ' ON ' . $table . ' (' . $columns . ')');
                     }
                 }
@@ -704,7 +718,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install'])) {
             $ok = $ok && $db->exec('CREATE TABLE IF NOT EXISTS player_stats (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 user_uuid CHAR(16) NOT NULL,
-                player_id VARCHAR(64) NOT NULL,
+                player_uuid VARCHAR(64) NOT NULL,
                 player_name VARCHAR(255) NOT NULL,
                 position VARCHAR(10) NOT NULL,
                 matches_played INT DEFAULT 0,
@@ -740,7 +754,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install'])) {
             // Seed shop items if empty
             $result = $db->query('SELECT COUNT(*) as count FROM shop_items');
             $row = $result ? $result->fetchArray(SQLITE3_ASSOC) : ['count' => 0];
-            $count = isset($row['count']) ? (int)$row['count'] : 0;
+            $count = isset($row['count']) ? (int) $row['count'] : 0;
             if ($count === 0) {
                 $default_items = [
                     ['Training Camp', 'Boost all players rating by +2 for 7 days', 5000000, 'player_boost', '{"rating": 2}', 'training', 'dumbbell', 7],
@@ -1223,7 +1237,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install'])) {
                 $db->exec('CREATE TABLE IF NOT EXISTS player_stats (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_uuid TEXT NOT NULL,
-                player_id TEXT NOT NULL,
+                player_uuid TEXT NOT NULL,
                 player_name TEXT NOT NULL,
                 position TEXT NOT NULL,
                 matches_played INTEGER DEFAULT 0,
@@ -1389,7 +1403,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['complete_admin'])) {
                 $stmt->bindValue(':email', $email, SQLITE3_TEXT);
                 $res = $stmt->execute();
                 $row = $res ? $res->fetchArray(SQLITE3_ASSOC) : ['c' => 0];
-                if ((int)($row['c'] ?? 0) > 0) {
+                if ((int) ($row['c'] ?? 0) > 0) {
                     $errors[] = 'Email already exists';
                 } else {
                     $ins = $db->prepare('INSERT INTO users (name, email, password, club_name, formation, team, budget) VALUES (:name, :email, :password, :club_name, :formation, :team, :budget)');
@@ -1505,7 +1519,8 @@ startContent();
             <?php if ($step === 1): ?>
                 <div class="mb-8 border-t pt-6">
                     <h2 class="text-xl font-semibold mb-4">Environment Configuration</h2>
-                    <p class="text-sm text-gray-600 mb-4">Database settings are managed via environment variables (.env). Review the current values:</p>
+                    <p class="text-sm text-gray-600 mb-4">Database settings are managed via environment variables (.env). Review
+                        the current values:</p>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div class="bg-gray-50 p-3 rounded border">
                             <div class="text-xs text-gray-500">DB_DRIVER</div>
@@ -1537,23 +1552,28 @@ startContent();
                         <div id="uiMysql" class="grid grid-cols-1 md:grid-cols-2 gap-3">
                             <div>
                                 <label class="block text-sm font-medium mb-1">MYSQL_HOST</label>
-                                <input type="text" class="w-full px-3 py-2 border rounded-lg" value="<?php echo htmlspecialchars(MYSQL_HOST); ?>" readonly>
+                                <input type="text" class="w-full px-3 py-2 border rounded-lg"
+                                    value="<?php echo htmlspecialchars(MYSQL_HOST); ?>" readonly>
                             </div>
                             <div>
                                 <label class="block text-sm font-medium mb-1">MYSQL_PORT</label>
-                                <input type="text" class="w-full px-3 py-2 border rounded-lg" value="<?php echo htmlspecialchars(MYSQL_PORT); ?>" readonly>
+                                <input type="text" class="w-full px-3 py-2 border rounded-lg"
+                                    value="<?php echo htmlspecialchars(MYSQL_PORT); ?>" readonly>
                             </div>
                             <div>
                                 <label class="block text-sm font-medium mb-1">MYSQL_DB</label>
-                                <input type="text" class="w-full px-3 py-2 border rounded-lg" value="<?php echo htmlspecialchars(MYSQL_DB); ?>" readonly>
+                                <input type="text" class="w-full px-3 py-2 border rounded-lg"
+                                    value="<?php echo htmlspecialchars(MYSQL_DB); ?>" readonly>
                             </div>
                             <div>
                                 <label class="block text-sm font-medium mb-1">MYSQL_USER</label>
-                                <input type="text" class="w-full px-3 py-2 border rounded-lg" value="<?php echo htmlspecialchars(MYSQL_USER); ?>" readonly>
+                                <input type="text" class="w-full px-3 py-2 border rounded-lg"
+                                    value="<?php echo htmlspecialchars(MYSQL_USER); ?>" readonly>
                             </div>
                             <div class="md:col-span-2">
                                 <label class="block text-sm font-medium mb-1">MYSQL_PASSWORD</label>
-                                <input type="password" class="w-full px-3 py-2 border rounded-lg" value="<?php echo htmlspecialchars(MYSQL_PASSWORD); ?>" readonly>
+                                <input type="password" class="w-full px-3 py-2 border rounded-lg"
+                                    value="<?php echo htmlspecialchars(MYSQL_PASSWORD); ?>" readonly>
                             </div>
                         </div>
                     </div>
@@ -1585,7 +1605,8 @@ startContent();
                                     <div class="mb-2">Total: <?php echo count(DEMO_CLUBS); ?> clubs</div>
                                     <ul class="list-disc list-inside">
                                         <?php foreach (array_slice(DEMO_CLUBS, 0, 5) as $club): ?>
-                                            <li><?php echo htmlspecialchars($club['name']); ?> (<?php echo htmlspecialchars($club['formation']); ?>)</li>
+                                            <li><?php echo htmlspecialchars($club['name']); ?>
+                                                (<?php echo htmlspecialchars($club['formation']); ?>)</li>
                                         <?php endforeach; ?>
                                         <?php if (count(DEMO_CLUBS) > 5): ?>
                                             <li>... and <?php echo count(DEMO_CLUBS) - 5; ?> more</li>
@@ -1617,25 +1638,30 @@ startContent();
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-sm font-medium mb-1">Admin Name</label>
-                                <input id="ui_admin_name" type="text" class="w-full px-3 py-2 border rounded-lg" placeholder="Admin User">
+                                <input id="ui_admin_name" type="text" class="w-full px-3 py-2 border rounded-lg"
+                                    placeholder="Admin User">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium mb-1">Admin Email</label>
-                                <input id="ui_admin_email" type="email" class="w-full px-3 py-2 border rounded-lg" placeholder="admin@example.com">
+                                <input id="ui_admin_email" type="email" class="w-full px-3 py-2 border rounded-lg"
+                                    placeholder="admin@example.com">
                             </div>
                             <div class="md:col-span-2">
                                 <label class="block text-sm font-medium mb-1">Admin Password</label>
-                                <input id="ui_admin_password" type="password" class="w-full px-3 py-2 border rounded-lg" placeholder="Password">
+                                <input id="ui_admin_password" type="password" class="w-full px-3 py-2 border rounded-lg"
+                                    placeholder="Password">
                             </div>
                         </div>
                         <div class="text-sm text-gray-600 mt-3">Inputs persist locally until admin creation.</div>
                     </div>
                     <div class="mt-4">
                         <h3 class="text-lg font-semibold mb-2">Setup</h3>
-                        <p class="text-sm text-gray-600 mb-4">Run database setup with progress logs (connection, database, tables, seed).</p>
+                        <p class="text-sm text-gray-600 mb-4">Run database setup with progress logs (connection, database,
+                            tables, seed).</p>
                         <form method="POST" id="connTestForm" class="flex gap-3 items-center">
                             <input type="hidden" name="step" value="1">
-                            <button type="submit" id="setupBtnStep1" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">Setup</button>
+                            <button type="submit" id="setupBtnStep1"
+                                class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">Setup</button>
                         </form>
                     </div>
                 </div>
@@ -1689,7 +1715,8 @@ startContent();
                         </div>
 
                         <div class="flex justify-center">
-                            <a href="index.php" class="inline-flex items-center gap-2 bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 font-semibold">
+                            <a href="index.php"
+                                class="inline-flex items-center gap-2 bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 font-semibold">
                                 <i data-lucide="play" class="w-5 h-5"></i>
                                 Go to <?php echo htmlspecialchars($app_name); ?>
                             </a>
@@ -1703,7 +1730,8 @@ startContent();
                             <h2 class="text-xl font-semibold mb-4">Setup Database (Install + Seed)</h2>
                             <div class="flex gap-3 flex-wrap">
                                 <input type="hidden" name="step" value="2">
-                                <button type="button" id="runSetupBtn" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">Run Setup</button>
+                                <button type="button" id="runSetupBtn"
+                                    class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">Run Setup</button>
                                 <a href="?step=1" class="inline-block px-6 py-2 rounded-lg border">Back</a>
                                 <a href="?step=3" class="inline-block px-6 py-2 rounded-lg border">Next</a>
                             </div>
@@ -1719,21 +1747,31 @@ startContent();
                             <h2 class="text-xl font-semibold mb-4">Create Admin User</h2>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                                 <div>
-                                    <label class="block text-sm font-medium mb-1">Admin Name <?php echo !$has_users ? '(Required)' : '(Optional)'; ?></label>
-                                    <input type="text" name="admin_name" <?php echo !$has_users ? 'required' : ''; ?> class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Admin User">
+                                    <label class="block text-sm font-medium mb-1">Admin Name
+                                        <?php echo !$has_users ? '(Required)' : '(Optional)'; ?></label>
+                                    <input type="text" name="admin_name" <?php echo !$has_users ? 'required' : ''; ?>
+                                        class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        placeholder="Admin User">
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-medium mb-1">Admin Email <?php echo !$has_users ? '(Required)' : '(Optional)'; ?></label>
-                                    <input type="email" name="admin_email" <?php echo !$has_users ? 'required' : ''; ?> class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="admin@example.com">
+                                    <label class="block text-sm font-medium mb-1">Admin Email
+                                        <?php echo !$has_users ? '(Required)' : '(Optional)'; ?></label>
+                                    <input type="email" name="admin_email" <?php echo !$has_users ? 'required' : ''; ?>
+                                        class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        placeholder="admin@example.com">
                                 </div>
                                 <div class="md:col-span-2">
-                                    <label class="block text-sm font-medium mb-1">Admin Password <?php echo !$has_users ? '(Required)' : '(Optional)'; ?></label>
-                                    <input type="password" name="admin_password" <?php echo !$has_users ? 'required' : ''; ?> class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Password">
+                                    <label class="block text-sm font-medium mb-1">Admin Password
+                                        <?php echo !$has_users ? '(Required)' : '(Optional)'; ?></label>
+                                    <input type="password" name="admin_password" <?php echo !$has_users ? 'required' : ''; ?>
+                                        class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        placeholder="Password">
                                 </div>
                             </div>
                             <div class="flex gap-3 flex-wrap">
                                 <input type="hidden" name="step" value="3">
-                                <button type="submit" name="complete_admin" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">Create Admin</button>
+                                <button type="submit" name="complete_admin"
+                                    class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">Create Admin</button>
                                 <a href="?step=2" class="inline-block px-6 py-2 rounded-lg border">Back</a>
                                 <a href="?step=4" class="inline-block px-6 py-2 rounded-lg border">Next</a>
                             </div>
@@ -1743,7 +1781,8 @@ startContent();
                     <div class="border-t pt-6">
                         <h2 class="text-xl font-semibold mb-4">Finish</h2>
                         <div class="flex justify-center gap-3 flex-wrap">
-                            <a href="index.php" class="inline-flex items-center gap-2 bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 font-semibold">
+                            <a href="index.php"
+                                class="inline-flex items-center gap-2 bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 font-semibold">
                                 <i data-lucide="play" class="w-5 h-5"></i>
                                 Go to <?php echo htmlspecialchars($app_name); ?>
                             </a>
@@ -1779,7 +1818,7 @@ startContent();
         lucide.createIcons();
 
         // SweetAlert for reset system button
-        document.getElementById('resetSystemBtn')?.addEventListener('click', function() {
+        document.getElementById('resetSystemBtn')?.addEventListener('click', function () {
             Swal.fire({
                 icon: 'warning',
                 title: 'Reset System?',
@@ -1802,7 +1841,7 @@ startContent();
         });
 
         // SweetAlert for reset database button
-        document.getElementById('resetDatabaseBtn')?.addEventListener('click', function() {
+        document.getElementById('resetDatabaseBtn')?.addEventListener('click', function () {
             Swal.fire({
                 icon: 'warning',
                 title: 'Reset Database?',
@@ -1825,7 +1864,7 @@ startContent();
         });
 
         // SweetAlert for seed all data button (combined)
-        document.getElementById('seedAllBtn')?.addEventListener('click', function() {
+        document.getElementById('seedAllBtn')?.addEventListener('click', function () {
             Swal.fire({
                 icon: 'question',
                 title: 'Seed Complete Demo Data?',
@@ -1914,7 +1953,7 @@ startContent();
         });
 
         // SweetAlert for seed clubs button
-        document.getElementById('seedClubsBtn')?.addEventListener('click', function() {
+        document.getElementById('seedClubsBtn')?.addEventListener('click', function () {
             Swal.fire({
                 icon: 'question',
                 title: 'Seed Demo Clubs?',
@@ -1967,7 +2006,7 @@ startContent();
         });
 
         // SweetAlert for seed shop items button
-        document.getElementById('seedShopBtn')?.addEventListener('click', function() {
+        document.getElementById('seedShopBtn')?.addEventListener('click', function () {
             Swal.fire({
                 icon: 'question',
                 title: 'Seed Shop Items?',
@@ -2027,11 +2066,11 @@ startContent();
         });
 
         // Step 1 Setup with popup logs
-        (function() {
+        (function () {
             const form = document.getElementById('connTestForm');
             const btn = document.getElementById('setupBtnStep1');
             if (!form || !btn) return;
-            form.addEventListener('submit', function(e) {
+            form.addEventListener('submit', function (e) {
                 e.preventDefault();
                 const name = (document.getElementById('ui_admin_name')?.value || '').trim();
                 const email = (document.getElementById('ui_admin_email')?.value || '').trim();
@@ -2063,17 +2102,17 @@ startContent();
                     allowOutsideClick: false
                 });
                 fetch('api/setup_database_api.php', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/x-www-form-urlencoded'
-                        },
-                        body: new URLSearchParams({
-                            mode: seedMode,
-                            admin_name: name,
-                            admin_email: email,
-                            admin_password: password
-                        })
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: new URLSearchParams({
+                        mode: seedMode,
+                        admin_name: name,
+                        admin_email: email,
+                        admin_password: password
                     })
+                })
                     .then(r => r.json())
                     .then(data => {
                         const entries = Array.isArray(data.logs) ? data.logs : [];
@@ -2081,7 +2120,7 @@ startContent();
                         entries.forEach(entry => {
                             const cls = entry.type === 'error' ? 'text-red-600' :
                                 entry.type === 'detail' ? 'text-gray-600' :
-                                'text-green-700';
+                                    'text-green-700';
                             html.push('<li class=\"' + cls + '\">' + (entry.message || '') + '</li>');
                         });
                         html.push('</ul></div>');
@@ -2107,7 +2146,7 @@ startContent();
                     });
             });
         })();
-        (function() {
+        (function () {
             const n = document.getElementById('ui_admin_name');
             const e = document.getElementById('ui_admin_email');
             const p = document.getElementById('ui_admin_password');
@@ -2141,11 +2180,11 @@ startContent();
         })();
 
         // Setup Database (Install + Seed) with logs
-        (function() {
+        (function () {
             const btn = document.getElementById('runSetupBtn');
             const logsEl = document.getElementById('setupLogs');
             if (!btn || !logsEl) return;
-            btn.addEventListener('click', function() {
+            btn.addEventListener('click', function () {
                 btn.disabled = true;
                 logsEl.innerHTML = '';
                 const li = (msg, cls) => {
@@ -2157,21 +2196,21 @@ startContent();
                 li('Starting setup...', 'text-gray-700');
                 const seedMode = localStorage.getItem('seed_mode') || 'all';
                 fetch('api/setup_database_api.php', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/x-www-form-urlencoded'
-                        },
-                        body: new URLSearchParams({
-                            mode: seedMode
-                        })
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: new URLSearchParams({
+                        mode: seedMode
                     })
+                })
                     .then(r => r.json())
                     .then(data => {
                         const entries = Array.isArray(data.logs) ? data.logs : [];
                         entries.forEach(entry => {
                             const cls = entry.type === 'error' ? 'text-red-600' :
                                 entry.type === 'detail' ? 'text-gray-600' :
-                                'text-green-700';
+                                    'text-green-700';
                             li(entry.message, cls);
                         });
                         if (data.ok) {
@@ -2209,7 +2248,7 @@ startContent();
                     });
             });
         })();
-        (function() {
+        (function () {
             const radios = document.querySelectorAll('input[name="ui_seed_mode"]');
             const saved = localStorage.getItem('seed_mode') || 'all';
             let found = false;

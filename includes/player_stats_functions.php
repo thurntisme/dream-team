@@ -15,22 +15,23 @@ if (!defined('DREAM_TEAM_APP')) {
  * Update player statistics after a match
  * 
  * @param SQLite3 $db Database connection
- * @param int $user_id User ID
- * @param array $players Array of players who played
+ * @param string $user_uuid User UUID
+ * @param array $players Array of players who played (should include uuid)
  * @param string $result Match result (win/draw/loss)
  * @param int $goals_for Goals scored by team
  * @param int $goals_against Goals conceded by team
  * @return bool Success status
  */
 if (!function_exists('updatePlayerStatistics')) {
-    function updatePlayerStatistics($db, $user_id, $players, $result, $goals_for = 0, $goals_against = 0)
+    function updatePlayerStatistics($db, $user_uuid, $players, $result, $goals_for = 0, $goals_against = 0)
     {
         try {
             foreach ($players as $player) {
                 if (!$player || !isset($player['name']))
                     continue;
 
-                $playerId = $player['id'] ?? $player['name'];
+                // prefer uuid for players; fallback for legacy data
+                $playerUuid = $player['uuid'] ?? $player['id'] ?? $player['name'];
                 $position = $player['position'] ?? 'Unknown';
 
                 // Generate random match statistics
@@ -49,47 +50,30 @@ if (!function_exists('updatePlayerStatistics')) {
                 }
 
                 // Update or insert player statistics
-                if (DB_DRIVER === 'mysql') {
-                    $stmt = $db->prepare('
-                        INSERT INTO player_stats (user_id, player_id, player_name, position, matches_played, goals, assists, yellow_cards, red_cards, total_rating, clean_sheets, saves)
-                        VALUES (:user_id, :player_id, :player_name, :position, 1, :goals, :assists, :yellow_cards, :red_cards, :rating, :clean_sheets, :saves)
-                        ON DUPLICATE KEY UPDATE
-                            matches_played = matches_played + 1,
-                            goals = goals + VALUES(goals),
-                            assists = assists + VALUES(assists),
-                            yellow_cards = yellow_cards + VALUES(yellow_cards),
-                            red_cards = red_cards + VALUES(red_cards),
-                            total_rating = total_rating + VALUES(total_rating),
-                            clean_sheets = clean_sheets + VALUES(clean_sheets),
-                            saves = saves + VALUES(saves),
-                            updated_at = NOW()
-                    ');
-                } else {
-                    $stmt = $db->prepare('
-                        INSERT INTO player_stats (user_id, player_id, player_name, position, matches_played, goals, assists, yellow_cards, red_cards, total_rating, clean_sheets, saves)
-                        VALUES (:user_id, :player_id, :player_name, :position, 1, :goals, :assists, :yellow_cards, :red_cards, :rating, :clean_sheets, :saves)
-                        ON CONFLICT(user_id, player_id) DO UPDATE SET
-                            matches_played = matches_played + 1,
-                            goals = goals + :goals,
-                            assists = assists + :assists,
-                            yellow_cards = yellow_cards + :yellow_cards,
-                            red_cards = red_cards + :red_cards,
-                            total_rating = total_rating + :rating,
-                            clean_sheets = clean_sheets + :clean_sheets,
-                            saves = saves + :saves,
-                            updated_at = datetime("now")
-                    ');
-                }
+                $stmt = $db->prepare('
+                    INSERT INTO player_stats (user_uuid, player_uuid, player_name, position, matches_played, goals, assists, yellow_cards, red_cards, total_rating, clean_sheets, saves)
+                    VALUES (:user_uuid, :player_uuid, :player_name, :position, 1, :goals, :assists, :yellow_cards, :red_cards, :total_rating, :clean_sheets, :saves)
+                    ON DUPLICATE KEY UPDATE
+                        matches_played = matches_played + 1,
+                        goals = goals + VALUES(goals),
+                        assists = assists + VALUES(assists),
+                        yellow_cards = yellow_cards + VALUES(yellow_cards),
+                        red_cards = red_cards + VALUES(red_cards),
+                        total_rating = total_rating + VALUES(total_rating),
+                        clean_sheets = clean_sheets + VALUES(clean_sheets),
+                        saves = saves + VALUES(saves),
+                        updated_at = NOW()
+                ');
 
-                $stmt->bindValue(':user_id', $user_id, SQLITE3_INTEGER);
-                $stmt->bindValue(':player_id', $playerId, SQLITE3_TEXT);
+                $stmt->bindValue(':user_uuid', $user_uuid, SQLITE3_TEXT);
+                $stmt->bindValue(':player_uuid', $playerUuid, SQLITE3_TEXT);
                 $stmt->bindValue(':player_name', $player['name'], SQLITE3_TEXT);
                 $stmt->bindValue(':position', $position, SQLITE3_TEXT);
                 $stmt->bindValue(':goals', $goals, SQLITE3_INTEGER);
                 $stmt->bindValue(':assists', $assists, SQLITE3_INTEGER);
                 $stmt->bindValue(':yellow_cards', $yellowCard, SQLITE3_INTEGER);
                 $stmt->bindValue(':red_cards', $redCard, SQLITE3_INTEGER);
-                $stmt->bindValue(':rating', $matchRating, SQLITE3_FLOAT);
+                $stmt->bindValue(':total_rating', $matchRating, SQLITE3_FLOAT);
                 $stmt->bindValue(':clean_sheets', $cleanSheet, SQLITE3_INTEGER);
                 $stmt->bindValue(':saves', $saves, SQLITE3_INTEGER);
 
@@ -167,6 +151,8 @@ if (!function_exists('generatePlayerGoals')) {
                 break;
             case 'LW':
             case 'RW':
+            case 'LM':
+            case 'RM':
             case 'CAM':
                 $goalChance = 15; // 15% chance
                 break;
@@ -235,6 +221,8 @@ if (!function_exists('generatePlayerAssists')) {
                 break;
             case 'LW':
             case 'RW':
+            case 'LM':
+            case 'RM':
                 $assistChance = 18; // 18% chance
                 break;
             case 'ST':

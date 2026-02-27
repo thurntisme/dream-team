@@ -240,6 +240,7 @@ if (!function_exists('updatePlayerFitness')) {
  * 
  * @param array $player Player data
  * @param string $performance Performance rating (excellent, good, average, poor)
+ * @param bool $played_match Whether player played a match
  * @return array Updated player data
  */
 if (!function_exists('updatePlayerForm')) {

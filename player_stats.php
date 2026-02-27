@@ -11,21 +11,8 @@ requireClubName('player_stats');
 $db = getDbConnection();
 $userUuid = $_SESSION['user_uuid'];
 
-// Database tables are now created in install.php
-
-// Migrate existing table to use REAL for total_rating if needed
-try {
-    $db->exec('ALTER TABLE player_stats ADD COLUMN total_rating_new REAL DEFAULT 0');
-    $db->exec('UPDATE player_stats SET total_rating_new = CAST(total_rating AS REAL) / 10.0 WHERE total_rating > 0');
-    $db->exec('ALTER TABLE player_stats DROP COLUMN total_rating');
-    $db->exec('ALTER TABLE player_stats RENAME COLUMN total_rating_new TO total_rating');
-} catch (Exception $e) {
-    // Migration already done or table structure is correct
-}
-
 $stmt = $db->prepare('SELECT team FROM user_club WHERE user_uuid = :uuid');
 $team = [];
-$substitutes = [];
 $allPlayers = [];
 if ($stmt) {
     $stmt->bindValue(':uuid', $userUuid, SQLITE3_TEXT);
@@ -35,28 +22,12 @@ if ($stmt) {
     $allPlayers = array_filter($team);
 }
 
-// Initialize player stats for new players
-foreach ($allPlayers as $player) {
-    if (!$player || !isset($player['name']))
-        continue;
-
-    $playerId = $player['id'] ?? $player['name'];
-    $stmt = $db->prepare('INSERT INTO player_stats (user_id, player_id, player_name, position) VALUES ((SELECT id FROM users WHERE uuid = :uuid), :player_id, :player_name, :position) ON DUPLICATE KEY UPDATE player_name = VALUES(player_name), position = VALUES(position)');
-    if ($stmt) {
-        $stmt->bindValue(':uuid', $userUuid, SQLITE3_TEXT);
-        $stmt->bindValue(':player_id', $playerId, SQLITE3_TEXT);
-        $stmt->bindValue(':player_name', $player['name'], SQLITE3_TEXT);
-        $stmt->bindValue(':position', $player['position'] ?? 'Unknown', SQLITE3_TEXT);
-        $stmt->execute();
-    }
-}
-
 // Get player statistics (MySQL-compatible)
 $statsSql = '
     SELECT ps.*, 
            CASE WHEN ps.matches_played > 0 THEN ROUND(ps.total_rating / ps.matches_played, 1) ELSE 0 END as calculated_avg_rating
     FROM player_stats ps 
-    WHERE ps.user_id = (SELECT id FROM users WHERE uuid = :uuid) 
+    WHERE ps.user_uuid = :uuid
     ORDER BY ps.matches_played DESC, ps.goals DESC, ps.assists DESC
 ';
 $stmt = $db->prepare($statsSql);
@@ -213,10 +184,12 @@ startContent();
                     <tbody class="bg-white divide-y divide-gray-200">
                         <?php foreach ($playerStats as $stat): ?>
                             <?php
-                            // Find current player data for additional info
+                            // Find current player data for additional info (match using uuid if available)
                             $currentPlayer = null;
                             foreach ($allPlayers as $player) {
-                                if (($player['id'] ?? $player['name']) === $stat['player_id']) {
+                                $check = $player['uuid'] ?? ($player['id'] ?? $player['name']);
+                                $statKey = $stat['player_uuid'] ?? $stat['player_id'];
+                                if ($check === $statKey) {
                                     $currentPlayer = $player;
                                     break;
                                 }
@@ -253,8 +226,8 @@ startContent();
                                 <td class="px-4 py-4 text-center">
                                     <?php if ($stat['matches_played'] > 0): ?>
                                         <span
-                                            class="font-medium <?php echo $stat['calculated_avg_rating'] >= 7.5 ? 'text-green-600' : ($stat['calculated_avg_rating'] >= 6.5 ? 'text-blue-600' : 'text-gray-600'); ?>">
-                                            <?php echo number_format($stat['calculated_avg_rating'], 1); ?>
+                                            class="font-medium <?php echo $calculated_avg_rating >= 7.5 ? 'text-green-600' : ($calculated_avg_rating >= 6.5 ? 'text-blue-600' : 'text-gray-600'); ?>">
+                                            <?php echo $stat['calculated_avg_rating']; ?>
                                         </span>
                                     <?php else: ?>
                                         <span class="text-gray-400">-</span>
