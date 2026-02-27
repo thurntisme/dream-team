@@ -20,6 +20,90 @@ try {
         exit;
     }
 
+    // Handle bulk contract renewal (threshold-based)
+    // note: bulk renewal always uses a fixed 20-match length and no salary increase
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['bulk_renew'])) {
+        // parameters from form
+        $threshold = (int) ($_POST['threshold'] ?? 0);
+        // contract length for bulk is hardcoded to 20 matches
+        $contract_length = 20;
+        $salary_increase = 0.0; // no increase
+
+        // reload club data just to be safe
+        $stmt = $db->prepare('SELECT team, budget FROM user_club WHERE user_uuid = :uuid');
+        $stmt->bindValue(':uuid', $user_uuid, SQLITE3_TEXT);
+        $result = $stmt->execute();
+        $club = $result->fetchArray(SQLITE3_ASSOC);
+
+        $full_team = json_decode($club['team'] ?? '[]', true) ?: [];
+        if (!is_array($full_team))
+            $full_team = [];
+        if (count($full_team) < 11)
+            $full_team = array_pad($full_team, 11, null);
+        $team = array_slice($full_team, 0, 11);
+        $substitutes = array_slice($full_team, 11);
+
+        $total_cost = 0;
+        // compute cost for matching players
+        foreach (['team', 'substitutes'] as $group) {
+            foreach (${$group} as $player) {
+                if ($player) {
+                    $matches_remaining = $player['contract_matches_remaining'] ?? ($player['contract_matches'] ?? 0);
+                    if ($matches_remaining > 0 && $matches_remaining <= $threshold) {
+                        $current_salary = $player['salary'] ?? ($player['value'] * 0.1);
+                        // salary stays the same for bulk
+                        $new_salary = $current_salary;
+                        $total_cost += $new_salary * ($contract_length / 38);
+                    }
+                }
+            }
+        }
+
+        if ($total_cost === 0) {
+            $_SESSION['error'] = 'No players match the selected threshold';
+        } elseif (($club['budget'] ?? 0) < $total_cost) {
+            $_SESSION['error'] = 'Insufficient budget to renew all matching contracts. Need ' . formatMarketValue($total_cost) . ' but only have ' . formatMarketValue($club['budget'] ?? 0);
+        } else {
+            // apply the renewals
+            foreach (['team', 'substitutes'] as $group) {
+                foreach (${$group} as &$player_ref) {
+                    if ($player_ref) {
+                        $matches_remaining = $player_ref['contract_matches_remaining'] ?? ($player_ref['contract_matches'] ?? 0);
+                        if ($matches_remaining > 0 && $matches_remaining <= $threshold) {
+                            $current_salary = $player_ref['salary'] ?? ($player_ref['value'] * 0.1);
+                            $new_salary = $current_salary;
+                            $player_ref['contract_matches'] = $contract_length;
+                            $player_ref['contract_matches_remaining'] = $contract_length;
+                            $player_ref['salary'] = $new_salary;
+                            $player_ref['contract_renewed_date'] = date('Y-m-d');
+                        }
+                    }
+                }
+                unset($player_ref); // break reference
+            }
+
+            // update budget
+            $new_budget = ($club['budget'] ?? 0) - $total_cost;
+            // write back combined team
+            $combined = $team;
+            if (count($combined) < 11)
+                $combined = array_pad($combined, 11, null);
+            else
+                $combined = array_slice($combined, 0, 11);
+            $combined = array_merge($combined, $substitutes);
+            $stmt = $db->prepare('UPDATE user_club SET team = :team, budget = :budget WHERE user_uuid = :uuid');
+            $stmt->bindValue(':team', json_encode($combined), SQLITE3_TEXT);
+            $stmt->bindValue(':budget', $new_budget, SQLITE3_INTEGER);
+            $stmt->bindValue(':uuid', $user_uuid, SQLITE3_TEXT);
+            $stmt->execute();
+
+            $_SESSION['success'] = 'Bulk renewal completed. Cost: ' . formatMarketValue($total_cost);
+        }
+
+        header('Location: contracts.php');
+        exit;
+    }
+
     // Handle contract renewal
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['renew_contract'])) {
         $player_uuid = $_POST['player_uuid'];
@@ -35,8 +119,10 @@ try {
             $_SESSION['error'] = 'Salary increase must be between 0% and 100%';
         } else {
             $full_team = json_decode($club['team'] ?? '[]', true) ?: [];
-            if (!is_array($full_team)) $full_team = [];
-            if (count($full_team) < 11) $full_team = array_pad($full_team, 11, null);
+            if (!is_array($full_team))
+                $full_team = [];
+            if (count($full_team) < 11)
+                $full_team = array_pad($full_team, 11, null);
             $team = array_slice($full_team, 0, 11);
             $substitutes = array_slice($full_team, 11);
 
@@ -83,8 +169,10 @@ try {
 
                     // Update database
                     $combined = $team;
-                    if (count($combined) < 11) $combined = array_pad($combined, 11, null);
-                    else $combined = array_slice($combined, 0, 11);
+                    if (count($combined) < 11)
+                        $combined = array_pad($combined, 11, null);
+                    else
+                        $combined = array_slice($combined, 0, 11);
                     $combined = array_merge($combined, $substitutes);
                     $stmt = $db->prepare('UPDATE user_club SET team = :team, budget = :budget WHERE user_uuid = :uuid');
                     $stmt->bindValue(':team', json_encode($combined), SQLITE3_TEXT);
@@ -110,8 +198,10 @@ try {
         $position = $_POST['position'];
 
         $full_team = json_decode($club['team'] ?? '[]', true) ?: [];
-        if (!is_array($full_team)) $full_team = [];
-        if (count($full_team) < 11) $full_team = array_pad($full_team, 11, null);
+        if (!is_array($full_team))
+            $full_team = [];
+        if (count($full_team) < 11)
+            $full_team = array_pad($full_team, 11, null);
         $team = array_slice($full_team, 0, 11);
         $substitutes = array_slice($full_team, 11);
 
@@ -140,8 +230,10 @@ try {
 
         if ($updated) {
             $combined = $team;
-            if (count($combined) < 11) $combined = array_pad($combined, 11, null);
-            else $combined = array_slice($combined, 0, 11);
+            if (count($combined) < 11)
+                $combined = array_pad($combined, 11, null);
+            else
+                $combined = array_slice($combined, 0, 11);
             $combined = array_merge($combined, $substitutes);
             $stmt = $db->prepare('UPDATE user_club SET team = :team WHERE user_uuid = :uuid');
             $stmt->bindValue(':team', json_encode($combined), SQLITE3_TEXT);
@@ -161,8 +253,10 @@ try {
     $club = $result->fetchArray(SQLITE3_ASSOC);
 
     $full_team = json_decode($club['team'] ?? '[]', true) ?: [];
-    if (!is_array($full_team)) $full_team = [];
-    if (count($full_team) < 11) $full_team = array_pad($full_team, 11, null);
+    if (!is_array($full_team))
+        $full_team = [];
+    if (count($full_team) < 11)
+        $full_team = array_pad($full_team, 11, null);
     $team = array_slice($full_team, 0, 11);
     $substitutes = array_slice($full_team, 11);
 
@@ -186,6 +280,107 @@ try {
     error_log("Contracts page error: " . $e->getMessage());
     header('Location: welcome.php?error=page_unavailable');
     exit;
+}
+
+// helper to render contract table for either main team or substitutes
+function renderContractTable($players, $positionType = 'team')
+{
+    ?>
+    <div class="overflow-x-auto">
+        <?php if (empty(array_filter($players))): ?>
+            <div class="p-8 text-center">
+                <i data-lucide="<?php echo $positionType === 'team' ? 'users-x' : 'user-x'; ?>"
+                    class="w-12 h-12 text-gray-400 mx-auto mb-4"></i>
+                <p class="text-gray-600">
+                    <?php echo $positionType === 'team' ? 'No players in your main team' : 'No substitute players'; ?>
+                </p>
+                <a href="team.php"
+                    class="text-blue-600 hover:text-blue-800"><?php echo $positionType === 'team' ? 'Set up your team first' : 'Add substitutes'; ?></a>
+            </div>
+        <?php else: ?>
+            <table class="w-full">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Player</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Position</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Salary</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Matches
+                            Played</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contract Left
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    <?php foreach ($players as $index => $player): ?>
+                        <?php if ($player): ?>
+                            <?php
+                            $matches_played = $player['matches_played'] ?? 0;
+                            $matches_remaining = $player['contract_matches_remaining'] ?? ($player['contract_matches'] ?? 0);
+                            $salary = $player['salary'] ?? ($player['value'] * 0.1);
+                            $status = 'Active';
+                            $status_color = 'text-green-600';
+
+                            if ($matches_remaining <= 10 && $matches_remaining > 0) {
+                                $status = 'Expiring Soon';
+                                $status_color = 'text-red-600';
+                            } elseif ($matches_remaining <= 0) {
+                                $status = 'Expired';
+                                $status_color = 'text-red-600';
+                            }
+                            ?>
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center gap-3">
+                                        <div
+                                            class="w-10 h-10 bg-<?php echo $positionType === 'team' ? 'blue' : 'green'; ?>-600 rounded-full flex items-center justify-center">
+                                            <span class="text-white font-bold text-sm"><?php echo $player['rating']; ?></span>
+                                        </div>
+                                        <div>
+                                            <div class="font-medium"><?php echo htmlspecialchars($player['name']); ?></div>
+                                            <div class="text-sm text-gray-500">Rating: <?php echo $player['rating']; ?></div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <span
+                                        class="px-2 py-1 bg-gray-100 rounded text-sm"><?php echo htmlspecialchars($player['position']); ?></span>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <div class="font-medium"><?php echo formatMarketValue($salary); ?></div>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <div class="font-medium"><?php echo $matches_played; ?> matches</div>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <div class="font-medium"><?php echo $matches_remaining; ?> matches</div>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <span class="font-medium <?php echo $status_color; ?>"><?php echo $status; ?></span>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center gap-2">
+                                        <button
+                                            onclick="showRenewModal('<?php echo htmlspecialchars($player['uuid']); ?>', '<?php echo htmlspecialchars($player['name']); ?>', '<?php echo $positionType; ?>', <?php echo $salary; ?>)"
+                                            class="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700">
+                                            Renew
+                                        </button>
+                                        <button
+                                            onclick="confirmTerminate('<?php echo htmlspecialchars($player['uuid']); ?>', '<?php echo htmlspecialchars($player['name']); ?>', '<?php echo $positionType; ?>')"
+                                            class="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700">
+                                            Terminate
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        <?php endif; ?>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        <?php endif; ?>
+    </div>
+    <?php
 }
 
 startContent();
@@ -280,6 +475,22 @@ startContent();
         </div>
     </div>
 
+    <!-- Bulk Renewal Control -->
+    <div class="mb-6 bg-white rounded-lg shadow p-6">
+        <h3 class="text-lg font-semibold mb-4">Renew Contracts in Bulk</h3>
+        <div class="flex items-center gap-3">
+            <select id="bulkThreshold" class="border border-gray-300 rounded px-3 py-2">
+                <option value="10">Players &lt; 10 matches left</option>
+                <option value="20">Players &lt; 20 matches left</option>
+                <option value="30">Players &lt; 30 matches left</option>
+                <option value="50">Players &lt; 50 matches left</option>
+            </select>
+            <button onclick="prepareBulkRenew()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                View / Renew
+            </button>
+        </div>
+    </div>
+
     <!-- Main Team Contracts -->
     <div class="mb-8 bg-white rounded-lg shadow overflow-hidden">
         <div class="bg-blue-50 px-6 py-4 border-b border-blue-200">
@@ -288,95 +499,7 @@ startContent();
                 Main Team Contracts
             </h3>
         </div>
-        <div class="overflow-x-auto">
-            <?php if (empty(array_filter($team))): ?>
-                <div class="p-8 text-center">
-                    <i data-lucide="users-x" class="w-12 h-12 text-gray-400 mx-auto mb-4"></i>
-                    <p class="text-gray-600">No players in your main team</p>
-                    <a href="team.php" class="text-blue-600 hover:text-blue-800">Set up your team first</a>
-                </div>
-            <?php else: ?>
-                <table class="w-full">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Player</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Position</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Salary</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Contract</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Status</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
-                        <?php foreach ($team as $index => $player): ?>
-                            <?php if ($player): ?>
-                                <?php
-                                $matches_remaining = $player['contract_matches_remaining'] ?? ($player['contract_matches'] ?? 0);
-                                $salary = $player['salary'] ?? ($player['value'] * 0.1);
-                                $total_matches = $player['contract_matches'] ?? $matches_remaining;
-                                $status = 'Active';
-                                $status_color = 'text-green-600';
-
-                                if ($matches_remaining <= 10 && $matches_remaining > 0) {
-                                    $status = 'Expiring Soon';
-                                    $status_color = 'text-red-600';
-                                } elseif ($matches_remaining <= 0) {
-                                    $status = 'Expired';
-                                    $status_color = 'text-red-600';
-                                }
-                                ?>
-                                <tr class="hover:bg-gray-50">
-                                    <td class="px-6 py-4">
-                                        <div class="flex items-center gap-3">
-                                            <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
-                                                <span class="text-white font-bold text-sm"><?php echo $player['rating']; ?></span>
-                                            </div>
-                                            <div>
-                                                <div class="font-medium"><?php echo htmlspecialchars($player['name']); ?></div>
-                                                <div class="text-sm text-gray-500">Rating: <?php echo $player['rating']; ?></div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td class="px-6 py-4">
-                                        <span
-                                            class="px-2 py-1 bg-gray-100 rounded text-sm"><?php echo htmlspecialchars($player['position']); ?></span>
-                                    </td>
-                                    <td class="px-6 py-4">
-                                        <div class="font-medium"><?php echo formatMarketValue($salary); ?></div>
-                                    </td>
-                                    <td class="px-6 py-4">
-                                        <div class="font-medium"><?php echo $total_matches; ?> matches</div>
-                                    </td>
-                                    <td class="px-6 py-4">
-                                        <span class="font-medium <?php echo $status_color; ?>"><?php echo $status; ?></span>
-                                    </td>
-                                    <td class="px-6 py-4">
-                                        <div class="flex items-center gap-2">
-                                            <button
-                                                onclick="showRenewModal('<?php echo htmlspecialchars($player['uuid']); ?>', '<?php echo htmlspecialchars($player['name']); ?>', 'team', <?php echo $salary; ?>)"
-                                                class="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700">
-                                                Renew
-                                            </button>
-                                            <button
-                                                onclick="confirmTerminate('<?php echo htmlspecialchars($player['uuid']); ?>', '<?php echo htmlspecialchars($player['name']); ?>', 'team')"
-                                                class="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700">
-                                                Terminate
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            <?php endif; ?>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            <?php endif; ?>
-        </div>
+        <?php renderContractTable($team, 'team'); ?>
     </div>
 
     <!-- Substitute Contracts -->
@@ -387,95 +510,7 @@ startContent();
                 Substitute Contracts
             </h3>
         </div>
-        <div class="overflow-x-auto">
-            <?php if (empty(array_filter($substitutes))): ?>
-                <div class="p-8 text-center">
-                    <i data-lucide="user-x" class="w-12 h-12 text-gray-400 mx-auto mb-4"></i>
-                    <p class="text-gray-600">No substitute players</p>
-                    <a href="team.php" class="text-blue-600 hover:text-blue-800">Add substitutes</a>
-                </div>
-            <?php else: ?>
-                <table class="w-full">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Player</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Position</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Salary</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Contract</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Status</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
-                        <?php foreach ($substitutes as $index => $player): ?>
-                            <?php if ($player): ?>
-                                <?php
-                                $matches_remaining = $player['contract_matches_remaining'] ?? ($player['contract_matches'] ?? 0);
-                                $salary = $player['salary'] ?? ($player['value'] * 0.1);
-                                $total_matches = $player['contract_matches'] ?? $matches_remaining;
-                                $status = 'Active';
-                                $status_color = 'text-green-600';
-
-                                if ($matches_remaining <= 10 && $matches_remaining > 0) {
-                                    $status = 'Expiring Soon';
-                                    $status_color = 'text-red-600';
-                                } elseif ($matches_remaining <= 0) {
-                                    $status = 'Expired';
-                                    $status_color = 'text-red-600';
-                                }
-                                ?>
-                                <tr class="hover:bg-gray-50">
-                                    <td class="px-6 py-4">
-                                        <div class="flex items-center gap-3">
-                                            <div class="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center">
-                                                <span class="text-white font-bold text-sm"><?php echo $player['rating']; ?></span>
-                                            </div>
-                                            <div>
-                                                <div class="font-medium"><?php echo htmlspecialchars($player['name']); ?></div>
-                                                <div class="text-sm text-gray-500">Rating: <?php echo $player['rating']; ?></div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td class="px-6 py-4">
-                                        <span
-                                            class="px-2 py-1 bg-gray-100 rounded text-sm"><?php echo htmlspecialchars($player['position']); ?></span>
-                                    </td>
-                                    <td class="px-6 py-4">
-                                        <div class="font-medium"><?php echo formatMarketValue($salary); ?></div>
-                                    </td>
-                                    <td class="px-6 py-4">
-                                        <div class="font-medium"><?php echo $total_matches; ?> matches</div>
-                                    </td>
-                                    <td class="px-6 py-4">
-                                        <span class="font-medium <?php echo $status_color; ?>"><?php echo $status; ?></span>
-                                    </td>
-                                    <td class="px-6 py-4">
-                                        <div class="flex items-center gap-2">
-                                            <button
-                                                onclick="showRenewModal('<?php echo htmlspecialchars($player['uuid']); ?>', '<?php echo htmlspecialchars($player['name']); ?>', 'substitute', <?php echo $salary; ?>)"
-                                                class="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700">
-                                                Renew
-                                            </button>
-                                            <button
-                                                onclick="confirmTerminate('<?php echo htmlspecialchars($player['uuid']); ?>', '<?php echo htmlspecialchars($player['name']); ?>', 'substitute')"
-                                                class="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700">
-                                                Terminate
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            <?php endif; ?>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            <?php endif; ?>
-        </div>
+        <?php renderContractTable($substitutes, 'substitute'); ?>
     </div>
 </div>
 
@@ -507,7 +542,8 @@ startContent();
                 <div class="mb-4">
                     <label for="contract_length" class="block text-sm font-medium text-gray-700 mb-2">Contract Length
                         (matches)</label>
-                    <input type="number" name="contract_length" id="contract_length" min="1" max="200" value="38" required
+                    <input type="number" name="contract_length" id="contract_length" min="1" max="200" value="38"
+                        required
                         class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500" />
                     <p class="text-xs text-gray-500 mt-1">Typical season ≈ 38 matches</p>
                 </div>
@@ -547,8 +583,115 @@ startContent();
     </div>
 </div>
 
+<!-- Bulk Renew Modal -->
+<div id="bulkRenewModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4">
+        <div class="p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold">Bulk Contract Renewal</h3>
+                <button onclick="closeBulkRenewModal()" class="text-gray-400 hover:text-gray-600">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <p class="text-sm text-gray-600 mb-4">Selected players will be renewed for <strong>20 matches</strong> at
+                their current salary.</p>
+
+            <form method="POST" id="bulkRenewForm">
+                <input type="hidden" name="bulk_renew" value="1">
+                <input type="hidden" name="threshold" id="bulkThresholdInput">
+
+                <div id="bulkPlayersList" class="mb-4 overflow-y-auto max-h-64"></div>
+
+                <!-- contract length fixed at 20 matches for bulk renewals; hidden input carries the value -->
+                <input type="hidden" name="contract_length" id="bulk_contract_length" value="20">
+
+                <!-- salary increase is not applicable for bulk renewals, field removed -->
+
+                <div class="mb-6 p-3 bg-gray-50 rounded-lg">
+                    <div class="flex justify-between text-sm">
+                        <span>Budget Before:</span>
+                        <span id="bulkBudgetBefore" class="font-medium"></span>
+                    </div>
+                    <div class="flex justify-between text-sm mt-1">
+                        <span>Estimated Total Cost:</span>
+                        <span id="bulkTotalCost" class="font-medium"></span>
+                    </div>
+                    <div class="flex justify-between text-sm mt-1">
+                        <span>Budget After:</span>
+                        <span id="bulkBudgetAfter" class="font-medium"></span>
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-3">
+                    <button type="button" onclick="closeBulkRenewModal()"
+                        class="px-4 py-2 text-gray-600 hover:text-gray-800">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                        Renew All Contracts
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script>
     let currentSalaryValue = 0;
+
+    // prepare data for bulk renew
+    const squadPlayers = <?php echo json_encode(array_values(array_filter(array_merge($team, $substitutes)))); ?>;
+    const clubBudget = <?php echo json_encode($club['budget'] ?? 0); ?>;
+
+    function prepareBulkRenew() {
+        const threshold = parseInt(document.getElementById('bulkThreshold').value);
+        const matches = squadPlayers.filter(p => {
+            const rem = p.contract_matches_remaining ?? p.contract_matches ?? 0;
+            return rem > 0 && rem <= threshold;
+        });
+        document.getElementById('bulkThresholdInput').value = threshold;
+
+        const listContainer = document.getElementById('bulkPlayersList');
+        listContainer.innerHTML = '';
+        if (matches.length === 0) {
+            listContainer.innerHTML = '<p class="text-center text-gray-600">No players match the threshold.</p>';
+        } else {
+            let html = '<table class="w-full text-sm"><thead><tr><th class="p-2 text-left">Player</th><th class="p-2 text-left">Remaining</th><th class="p-2 text-left">Current Salary</th></tr></thead><tbody>';
+            matches.forEach(p => {
+                html += `<tr><td class="p-2">${p.name}</td><td class="p-2">${p.contract_matches_remaining || p.contract_matches || 0} matches</td><td class="p-2">${formatMarketValue(p.salary ?? (p.value * 0.1))}</td></tr>`;
+            });
+            html += '</tbody></table>';
+            listContainer.innerHTML = html;
+        }
+        calculateBulkCosts();
+        document.getElementById('bulkRenewModal').classList.remove('hidden');
+    }
+
+    function closeBulkRenewModal() {
+        document.getElementById('bulkRenewModal').classList.add('hidden');
+    }
+
+    function calculateBulkCosts() {
+        const threshold = parseInt(document.getElementById('bulkThreshold').value);
+        // fixed 20-match contract
+        const length = 20;
+        const matches = squadPlayers.filter(p => {
+            const rem = p.contract_matches_remaining ?? p.contract_matches ?? 0;
+            return rem > 0 && rem <= threshold;
+        });
+        let total = 0;
+        matches.forEach(p => {
+            const curr = p.salary ?? (p.value * 0.1);
+            // salary unchanged
+            total += curr * (length / 38);
+        });
+        document.getElementById('bulkBudgetBefore').textContent = formatMarketValue(clubBudget);
+        document.getElementById('bulkTotalCost').textContent = formatMarketValue(total);
+        document.getElementById('bulkBudgetAfter').textContent = formatMarketValue(clubBudget - total);
+    }
+
+    // bulk-length and salary fields are hidden/fixed; no listeners required
+
 
     function showRenewModal(playerUuid, playerName, position, salary) {
         currentSalaryValue = salary;
@@ -614,10 +757,16 @@ startContent();
     document.getElementById('contract_length').addEventListener('change', updateCostCalculation);
     document.getElementById('salary_increase').addEventListener('input', updateCostCalculation);
 
-    // Close modal when clicking outside
+    // Close modal when clicking outside (renew)
     document.getElementById('renewModal').addEventListener('click', function (e) {
         if (e.target.id === 'renewModal') {
             closeRenewModal();
+        }
+    });
+    // Close modal when clicking outside (bulk)
+    document.getElementById('bulkRenewModal').addEventListener('click', function (e) {
+        if (e.target.id === 'bulkRenewModal') {
+            closeBulkRenewModal();
         }
     });
 
@@ -625,6 +774,7 @@ startContent();
     document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape') {
             closeRenewModal();
+            closeBulkRenewModal();
         }
     });
 
