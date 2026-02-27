@@ -24,8 +24,8 @@ try {
         $user_data = ['budget' => 0, 'team' => '[]', 'club_level' => 1];
     }
 
-    // Get all clubs except current user's club
-    $stmt = $db->prepare('SELECT u.id, u.name, u.email, c.club_name, c.formation, c.team, c.budget, u.created_at FROM users u JOIN user_club c ON c.user_uuid = u.uuid WHERE u.uuid != :user_uuid AND c.club_name IS NOT NULL AND c.club_name != ""');
+    // Get all clubs except current user's club (use club UUID)
+    $stmt = $db->prepare('SELECT u.uuid AS club_uuid, u.name, u.email, c.club_name, c.formation, c.team, c.budget, u.created_at FROM users u JOIN user_club c ON c.user_uuid = u.uuid WHERE u.uuid != :user_uuid AND c.club_name IS NOT NULL AND c.club_name != ""');
     if ($stmt !== false) {
         $stmt->bindValue(':user_uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
         $result = $stmt->execute();
@@ -383,13 +383,13 @@ startContent();
 
                         <!-- Actions -->
                         <div class="flex gap-2">
-                            <button onclick="viewClub(<?php echo $club['id']; ?>)"
+                            <button onclick="viewClub('<?php echo $club['club_uuid']; ?>')"
                                 class="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2">
                                 <i data-lucide="eye" class="w-4 h-4"></i>
                                 View Club
                             </button>
                             <?php if ($playerCount > 0): ?>
-                                <button onclick="compareTeams(<?php echo $club['id']; ?>)"
+                                <button onclick="compareTeams('<?php echo $club['club_uuid']; ?>')"
                                     class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors flex items-center justify-center">
                                     <i data-lucide="bar-chart-3" class="w-4 h-4"></i>
                                 </button>
@@ -433,8 +433,8 @@ startContent();
     // Club data for JavaScript
     const clubsData = <?php echo json_encode($clubs); ?>;
 
-    function viewClub(clubId) {
-        const club = clubsData.find(c => c.id == clubId);
+    function viewClub(clubUuid) {
+        const club = clubsData.find(c => c.club_uuid == clubUuid);
         if (!club) return;
 
         const team = JSON.parse(club.team || '[]');
@@ -566,7 +566,7 @@ startContent();
 
                 <!-- Challenge Button -->
                 <div class="flex justify-center pt-4 border-t">
-                    <button onclick="challengeClub(${club.id})" class="inline-flex items-center gap-2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold px-6 py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105">
+                    <button onclick="challengeClub('${club.club_uuid}')" class="inline-flex items-center gap-2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold px-6 py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105">
                         <i data-lucide="sword" class="w-5 h-5"></i>
                         Challenge ${club.club_name}
                     </button>
@@ -708,7 +708,7 @@ startContent();
         }
 
         // Load field via AJAX
-        fetch(`api/field_modal.php?club_id=${clubId}&formation=${encodeURIComponent(club.formation)}`)
+        fetch(`api/field_modal.php?club_uuid=${clubUuid}&formation=${encodeURIComponent(club.formation)}`)
             .then(response => response.text())
             .then(result => {
                 const { club, formation, players } = JSON.parse(result);
@@ -750,7 +750,7 @@ startContent();
             });
     }
 
-    function compareTeams(clubId) {
+    function compareTeams(clubUuid) {
         // Future feature: Team comparison
         Swal.fire({
             icon: 'info',
@@ -760,8 +760,8 @@ startContent();
         });
     }
 
-    function challengeClub(clubId) {
-        const club = clubsData.find(c => c.id == clubId);
+    function challengeClub(clubUuid) {
+        const club = clubsData.find(c => c.club_uuid == clubUuid);
         if (!club) return;
 
         const team = JSON.parse(club.team || '[]');
@@ -953,7 +953,7 @@ startContent();
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        opponent_id: clubId
+                        opponent_uuid: clubUuid
                     })
                 })
                     .then(response => response.json())

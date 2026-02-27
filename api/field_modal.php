@@ -16,21 +16,21 @@ if (!isDatabaseAvailable()) {
 }
 
 // Get parameters
-$club_id = $_GET['club_id'] ?? null;
+$club_uuid = $_GET['club_uuid'] ?? null;
 $formation = $_GET['formation'] ?? '4-4-2';
 
-if (!$club_id) {
+if (!$club_uuid) {
     http_response_code(400);
-    echo json_encode(['error' => 'Club ID required']);
+    echo json_encode(['error' => 'Club UUID required']);
     exit;
 }
 
 try {
     $db = getDbConnection();
 
-    // Get club data
-    $stmt = $db->prepare('SELECT id, name, club_name, formation, team, budget FROM users WHERE id = :club_id');
-    $stmt->bindValue(':club_id', $club_id, SQLITE3_INTEGER);
+    // Get club data (lookup by uuid)
+    $stmt = $db->prepare('SELECT u.uuid AS club_uuid, u.name, c.club_name, c.formation, c.team, c.budget FROM users u JOIN user_club c ON c.user_uuid = u.uuid WHERE u.uuid = :club_uuid');
+    $stmt->bindValue(':club_uuid', $club_uuid, SQLITE3_TEXT);
     $result = $stmt->execute();
     $club = $result->fetchArray(SQLITE3_ASSOC);
 
@@ -66,7 +66,7 @@ try {
     // Return data
     echo json_encode([
         'club' => [
-            'id' => $club['id'],
+            'club_uuid' => $club['club_uuid'],
             'name' => $club['name'],
             'club_name' => $club['club_name'],
             'formation' => $formation,

@@ -21,27 +21,27 @@ if (!hasClubName()) {
 
 // Get POST data
 $input = json_decode(file_get_contents('php://input'), true);
-$opponent_id = $input['opponent_id'] ?? null;
+$opponent_uuid = $input['opponent_uuid'] ?? null;
 
-if (!$opponent_id) {
+if (!$opponent_uuid) {
     http_response_code(400);
-    echo json_encode(['success' => false, 'message' => 'Opponent ID required']);
+    echo json_encode(['success' => false, 'message' => 'Opponent UUID required']);
     exit;
 }
 
 try {
     $db = getDbConnection();
 
-    // Get user's team data
-    $stmt = $db->prepare('SELECT name, club_name, formation, team, budget FROM users WHERE id = :id');
-    $stmt->bindValue(':id', $_SESSION['user_id'], SQLITE3_INTEGER);
+    // Get user's team data via user_uuid
+    $stmt = $db->prepare('SELECT u.name, c.club_name, c.formation, c.team, c.budget FROM users u JOIN user_club c ON c.user_uuid = u.uuid WHERE u.uuid = :uuid');
+    $stmt->bindValue(':uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
     $result = $stmt->execute();
     $user_data = $result->fetchArray(SQLITE3_ASSOC);
 
-    // Get opponent's team data
-    $stmt = $db->prepare('SELECT name, club_name, formation, team, budget FROM users WHERE id = :opponent_id AND id != :user_id');
-    $stmt->bindValue(':opponent_id', $opponent_id, SQLITE3_INTEGER);
-    $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+    // Get opponent's team data via opponent_uuid
+    $stmt = $db->prepare('SELECT u.name, c.club_name, c.formation, c.team, c.budget FROM users u JOIN user_club c ON c.user_uuid = u.uuid WHERE u.uuid = :opponent_uuid AND u.uuid != :user_uuid');
+    $stmt->bindValue(':opponent_uuid', $opponent_uuid, SQLITE3_TEXT);
+    $stmt->bindValue(':user_uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
     $result = $stmt->execute();
     $opponent_data = $result->fetchArray(SQLITE3_ASSOC);
 
@@ -90,10 +90,10 @@ try {
         exit;
     }
 
-    // Deduct challenge cost from user's budget
-    $stmt = $db->prepare('UPDATE users SET budget = budget - :cost WHERE id = :user_id');
+    // Deduct challenge cost from user's budget in user_club
+    $stmt = $db->prepare('UPDATE user_club SET budget = budget - :cost WHERE user_uuid = :uuid');
     $stmt->bindValue(':cost', $challenge_cost, SQLITE3_INTEGER);
-    $stmt->bindValue(':user_id', $_SESSION['user_id'], SQLITE3_INTEGER);
+    $stmt->bindValue(':uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
 
     if (!$stmt->execute()) {
         http_response_code(500);
@@ -103,7 +103,7 @@ try {
 
     // Store challenge data in session for match simulator
     $_SESSION['active_challenge'] = [
-        'opponent_id' => $opponent_id,
+        'opponent_uuid' => $opponent_uuid,
         'challenge_cost' => $challenge_cost,
         'initiated_at' => time()
     ];
@@ -113,7 +113,7 @@ try {
     echo json_encode([
         'success' => true,
         'message' => 'Challenge initiated successfully',
-        'redirect_url' => "match-simulator.php?opponent={$opponent_id}"
+        'redirect_url' => "online_match.php?opponent={$opponent_uuid}"
     ]);
 
 } catch (Exception $e) {
