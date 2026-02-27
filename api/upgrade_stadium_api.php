@@ -24,7 +24,7 @@ if (!$input || !isset($input['action'])) {
 
 try {
     $db = getDbConnection();
-    $userId = $_SESSION['user_id'];
+    $user_uuid = $_SESSION['user_uuid'];
 
     if ($input['action'] === 'upgrade') {
         // Stadium upgrade logic
@@ -37,9 +37,9 @@ try {
             exit;
         }
 
-        // Get user's current budget
-        $stmt = $db->prepare('SELECT budget FROM users WHERE id = :user_id');
-        $stmt->bindValue(':user_id', $userId, SQLITE3_INTEGER);
+        // Get user's current budget from user_club (user_uuid)
+        $stmt = $db->prepare('SELECT budget FROM user_club WHERE user_uuid = :uuid');
+        $stmt->bindValue(':uuid', $user_uuid, SQLITE3_TEXT);
         $result = $stmt->execute();
         $userData = $result->fetchArray(SQLITE3_ASSOC);
 
@@ -57,8 +57,8 @@ try {
         }
 
         // Get current stadium data
-        $stmt = $db->prepare('SELECT level, capacity FROM stadiums WHERE user_id = :user_id');
-        $stmt->bindValue(':user_id', $userId, SQLITE3_INTEGER);
+        $stmt = $db->prepare('SELECT level, capacity FROM stadiums WHERE user_uuid = :uuid');
+        $stmt->bindValue(':uuid', $user_uuid, SQLITE3_TEXT);
         $result = $stmt->execute();
         $stadiumData = $result->fetchArray(SQLITE3_ASSOC);
 
@@ -89,22 +89,22 @@ try {
         $db->exec('START TRANSACTION');
 
         try {
-            // Update user budget
-            $stmt = $db->prepare('UPDATE users SET budget = budget - :cost WHERE id = :user_id');
+            // Update user budget in user_club
+            $stmt = $db->prepare('UPDATE user_club SET budget = budget - :cost WHERE user_uuid = :uuid');
             $stmt->bindValue(':cost', $cost, SQLITE3_INTEGER);
-            $stmt->bindValue(':user_id', $userId, SQLITE3_INTEGER);
+            $stmt->bindValue(':uuid', $user_uuid, SQLITE3_TEXT);
             $stmt->execute();
 
             // Update stadium
-            $stmt = $db->prepare('UPDATE stadiums SET level = :level, capacity = :capacity, last_upgrade = CURRENT_TIMESTAMP WHERE user_id = :user_id');
+            $stmt = $db->prepare('UPDATE stadiums SET level = :level, capacity = :capacity, last_upgrade = CURRENT_TIMESTAMP WHERE user_uuid = :uuid');
             $stmt->bindValue(':level', $newLevel, SQLITE3_INTEGER);
             $stmt->bindValue(':capacity', $newCapacity, SQLITE3_INTEGER);
-            $stmt->bindValue(':user_id', $userId, SQLITE3_INTEGER);
+            $stmt->bindValue(':uuid', $user_uuid, SQLITE3_TEXT);
             $stmt->execute();
 
             // Award experience for stadium upgrade
             require_once '../includes/helpers.php';
-            $expResult = addClubExp($userId, 25, 'Stadium upgraded to level ' . $newLevel, $db);
+            $expResult = addClubExp($user_uuid, 25, 'Stadium upgraded to level ' . $newLevel, $db);
 
             // Commit transaction
             $db->exec('COMMIT');
@@ -149,11 +149,11 @@ try {
             // Check if user has purchased stadium name change item and get the first available item
             $stmt = $db->prepare('SELECT ui.id, ui.quantity FROM user_inventory ui 
                                  JOIN shop_items si ON ui.item_id = si.id 
-                                 WHERE ui.user_id = :user_id AND si.effect_type = "stadium_rename" 
+                                 WHERE ui.user_uuid = :uuid AND si.effect_type = "stadium_rename" 
                                  AND ui.quantity > 0 
                                  ORDER BY ui.purchased_at ASC 
                                  LIMIT 1');
-            $stmt->bindValue(':user_id', $userId, SQLITE3_INTEGER);
+            $stmt->bindValue(':uuid', $user_uuid, SQLITE3_TEXT);
             $result = $stmt->execute();
             $rename_item = $result->fetchArray(SQLITE3_ASSOC);
 
@@ -162,9 +162,9 @@ try {
             }
 
             // Update stadium name
-            $stmt = $db->prepare('UPDATE stadiums SET name = :name WHERE user_id = :user_id');
+            $stmt = $db->prepare('UPDATE stadiums SET name = :name WHERE user_uuid = :uuid');
             $stmt->bindValue(':name', $newName, SQLITE3_TEXT);
-            $stmt->bindValue(':user_id', $userId, SQLITE3_INTEGER);
+            $stmt->bindValue(':uuid', $user_uuid, SQLITE3_TEXT);
 
             if (!$stmt->execute()) {
                 throw new Exception('Failed to rename stadium');

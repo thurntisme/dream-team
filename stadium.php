@@ -25,7 +25,7 @@ try {
     $user_fans = $user_data['fans'] ?? 5000;
 
     try {
-        $stmt = $db->prepare('SELECT 1 FROM user_inventory ui JOIN shop_items si ON ui.item_id = si.id WHERE ui.user_id = (SELECT id FROM users WHERE uuid = :uuid) AND si.effect_type = "stadium_rename" AND ui.quantity > 0 LIMIT 1');
+        $stmt = $db->prepare('SELECT 1 FROM user_inventory ui JOIN shop_items si ON ui.item_id = si.id WHERE ui.user_uuid = (SELECT uuid FROM users WHERE uuid = :uuid) AND si.effect_type = "stadium_rename" AND ui.quantity > 0 LIMIT 1');
 
         if ($stmt) {
             $stmt->bindValue(':uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
@@ -39,7 +39,7 @@ try {
         $can_rename_stadium = false;
     }
 
-    // Prefer user_uuid schema; fallback to user_id if present
+    // Prefer user_uuid schema; fallback to user_uuid if present
     $stadium_data = null;
     $stmtSt = $db->prepare('SELECT * FROM stadiums WHERE user_uuid = :uuid');
     if ($stmtSt) {
@@ -47,7 +47,7 @@ try {
         $resSt = $stmtSt->execute();
         $stadium_data = $resSt ? $resSt->fetchArray(SQLITE3_ASSOC) : null;
     } else {
-        $stmtStId = $db->prepare('SELECT * FROM stadiums WHERE user_id = (SELECT id FROM users WHERE uuid = :uuid)');
+        $stmtStId = $db->prepare('SELECT * FROM stadiums WHERE user_uuid = (SELECT uuid FROM users WHERE uuid = :uuid)');
         if ($stmtStId) {
             $stmtStId->bindValue(':uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
             $resStId = $stmtStId->execute();
@@ -71,15 +71,15 @@ try {
                 $stadium_data = $resStReload ? $resStReload->fetchArray(SQLITE3_ASSOC) : null;
             }
         } else {
-            // Fallback for legacy schema with user_id
-            $insId = $db->prepare('INSERT INTO stadiums (user_id, name, capacity, level) VALUES ((SELECT id FROM users WHERE uuid = :uuid), :name, :cap, :lvl)');
+            // Fallback for legacy schema with user_uuid
+            $insId = $db->prepare('INSERT INTO stadiums (user_uuid, name, capacity, level) VALUES ((SELECT uuid FROM users WHERE uuid = :uuid), :name, :cap, :lvl)');
             if ($insId) {
                 $insId->bindValue(':uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
                 $insId->bindValue(':name', $defaultName, SQLITE3_TEXT);
                 $insId->bindValue(':cap', 10000, SQLITE3_INTEGER);
                 $insId->bindValue(':lvl', 1, SQLITE3_INTEGER);
                 $insId->execute();
-                $stmtReloadId = $db->prepare('SELECT * FROM stadiums WHERE user_id = (SELECT id FROM users WHERE uuid = :uuid)');
+                $stmtReloadId = $db->prepare('SELECT * FROM stadiums WHERE user_uuid = (SELECT uuid FROM users WHERE uuid = :uuid)');
                 if ($stmtReloadId) {
                     $stmtReloadId->bindValue(':uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
                     $resReloadId = $stmtReloadId->execute();
@@ -97,7 +97,7 @@ try {
         ];
     }
 
-    $stmt = $db->prepare('SELECT SUM(ui.quantity) as total_quantity FROM user_inventory ui JOIN shop_items si ON ui.item_id = si.id WHERE ui.user_id = (SELECT id FROM users WHERE uuid = :uuid) AND si.effect_type = "stadium_rename" AND ui.quantity > 0');
+    $stmt = $db->prepare('SELECT SUM(ui.quantity) as total_quantity FROM user_inventory ui JOIN shop_items si ON ui.item_id = si.id WHERE ui.user_uuid = (SELECT uuid FROM users WHERE uuid = :uuid) AND si.effect_type = "stadium_rename" AND ui.quantity > 0');
     $current_rename_quantity = 0;
     if ($stmt) {
         $stmt->bindValue(':uuid', $_SESSION['user_uuid'], SQLITE3_TEXT);
@@ -114,7 +114,7 @@ try {
 
 // Stadium upgrade costs and benefits are now defined in config/constants.php
 $stadium_levels = getStadiumLevels();
-$current_level = (int)($stadium_data['level'] ?? 1);
+$current_level = (int) ($stadium_data['level'] ?? 1);
 $current_stadium = $stadium_levels[$current_level] ?? $stadium_levels[1];
 $next_level = $current_level < 5 ? ($stadium_levels[$current_level + 1] ?? null) : null;
 
@@ -194,6 +194,51 @@ startContent();
             </h2>
 
             <div class="space-y-4">
+                <!-- Rename Stadium -->
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <h3 class="font-semibold text-gray-900 mb-2">Stadium Name</h3>
+                    <div class="flex gap-2">
+                        <input type="text" id="stadiumName"
+                            value="<?php echo htmlspecialchars($stadium_data['name']); ?>"
+                            class="flex-1 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 <?php echo !$can_rename_stadium ? 'bg-gray-100 cursor-not-allowed' : ''; ?>"
+                            <?php echo !$can_rename_stadium ? 'readonly' : ''; ?>>
+                        <button id="renameStadium"
+                            class="px-4 py-2 rounded-lg transition-colors <?php echo $can_rename_stadium ? 'bg-gray-600 text-white hover:bg-gray-700' : 'bg-gray-300 text-gray-500 cursor-not-allowed'; ?>"
+                            <?php echo !$can_rename_stadium ? 'disabled' : ''; ?>>
+                            <i data-lucide="edit" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                    <?php if (!$can_rename_stadium): ?>
+                        <div class="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                            <div class="flex items-start gap-2">
+                                <i data-lucide="lock" class="w-4 h-4 text-yellow-600 mt-0.5 flex-shrink-0"></i>
+                                <div class="text-sm">
+                                    <p class="text-yellow-800 font-medium">Stadium name cannot be changed</p>
+                                    <p class="text-yellow-700 mt-1">Purchase the "Stadium Name Change" item from the <a
+                                            href="shop.php" class="underline hover:text-yellow-900">Club Shop</a> to unlock
+                                        this
+                                        feature.</p>
+                                </div>
+                            </div>
+                        </div>
+                    <?php else: ?>
+                        <p class="text-gray-500 text-xs mt-1 mb-2">Input a new name in the field above and click the edit
+                            button to rename your stadium.</p>
+                        <div class="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+                            <div class="flex items-start gap-2">
+                                <i data-lucide="check" class="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0"></i>
+                                <div class="text-sm">
+                                    <p class="text-green-800 font-medium">Stadium name can be changed</p>
+                                    <p class="text-green-700 mt-1">You have
+                                        <strong><?php echo $current_rename_quantity; ?></strong> stadium name change item(s)
+                                        in your inventory.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+                </div>
+
                 <div class="bg-gray-50 rounded-lg p-4">
                     <h3 class="font-semibold text-gray-900 mb-2"><?php echo $current_stadium['name']; ?></h3>
                     <p class="text-gray-600 text-sm mb-3"><?php echo $current_stadium['description']; ?></p>
